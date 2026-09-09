@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사라진 타임캡슐</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap">
+<style>
+  :root{
+    --night:#0f1a2e; --ink:#152744; --ink-soft:#1d3559; --line:#2f4d78;
+    --paper:#f6ead2; --paper-dim:#c7d3e4;
+    --gold:#ffc44d; --gold-soft:#ffe3a6;
+    --coral:#ff7b6b; --mint:#6fe3c4;
+    --display:'Gaegu','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:radial-gradient(120% 60% at 50% 0%,#1f3d66 0%,rgba(31,61,102,0) 60%),var(--night);
+    color:var(--paper);font-family:var(--body);
+    font-size:clamp(17px,1.9vw,20px);line-height:1.7;min-height:100vh;
+  }
+  .stars{position:fixed;inset:0;pointer-events:none;opacity:.5}
+  .wrap{max-width:800px;margin:0 auto;padding:clamp(14px,3vw,30px) clamp(14px,3vw,24px) 60px;position:relative}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,6.2vw,48px);line-height:1.05;margin:0;text-wrap:balance}
+  .hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{
+    border:2px solid var(--line);border-radius:999px;padding:6px 14px;
+    font-size:clamp(14px,1.7vw,16px);color:var(--paper-dim);background:rgba(13,28,51,.5);
+    display:flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums
+  }
+  button{font-family:inherit;font-size:inherit;cursor:pointer;color:inherit}
+  .pill.btn:hover{border-color:var(--gold);color:var(--gold)}
+
+  .map{display:flex;gap:6px;margin:0 0 16px;padding:0;list-style:none}
+  .map li{
+    flex:1;text-align:center;padding:8px 2px;border-radius:12px;border:2px solid var(--line);
+    color:var(--paper-dim);font-size:clamp(12px,1.5vw,15px);line-height:1.3
+  }
+  .map li b{display:block;font-size:clamp(18px,3vw,24px);line-height:1.2}
+  .map li.done{border-color:var(--mint);color:var(--mint);background:rgba(111,227,196,.1)}
+  .map li.now{border-color:var(--gold);color:var(--gold);background:rgba(255,196,77,.12)}
+
+  .room{background:linear-gradient(180deg,var(--ink-soft),var(--ink));border:2px solid var(--line);border-radius:22px;padding:clamp(18px,3.4vw,32px)}
+  .eyebrow{font-size:clamp(12px,1.5vw,14px);letter-spacing:.18em;color:var(--gold);margin:0 0 .4em}
+  h2{font-family:var(--display);font-weight:700;font-size:clamp(25px,4.6vw,38px);margin:0 0 .35em;text-wrap:balance;line-height:1.15}
+  .story{margin:0 0 1em;color:var(--paper-dim)}
+  .story b{color:var(--paper)}
+  .letter{
+    background:var(--paper);color:#3a2d16;border-radius:6px 18px 6px 18px;padding:16px 20px;
+    font-family:var(--display);font-size:clamp(19px,2.5vw,24px);line-height:1.5;margin:0 0 1.1em;
+    box-shadow:4px 6px 0 rgba(0,0,0,.25);transform:rotate(-.6deg)
+  }
+  .task{margin:0 0 1em;font-family:var(--display);font-weight:700;font-size:clamp(20px,2.7vw,26px);line-height:1.4;text-wrap:balance}
+  .task.q{background:rgba(13,28,51,.55);border-left:6px solid var(--gold);padding:10px 16px;border-radius:0 12px 12px 0}
+
+  .clues{list-style:none;padding:0;margin:0 0 1.1em;display:grid;gap:8px}
+  .clues li{background:rgba(13,28,51,.55);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:flex-start}
+  .clues li span:first-child{font-size:1.3em;line-height:1.4}
+
+  .grid{display:grid;gap:10px}
+  .pad{grid-template-columns:repeat(3,1fr);max-width:340px;margin-inline:auto}
+  .cols4{grid-template-columns:repeat(2,1fr)}
+  @media(min-width:560px){.cols4{grid-template-columns:repeat(4,1fr)}}
+  .key,.opt,.tile,.pk{
+    min-height:62px;border-radius:14px;border:2px solid var(--line);background:rgba(13,28,51,.6);
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    transition:transform .12s,border-color .2s,background .2s
+  }
+  .key{font-family:var(--display);font-weight:700;font-size:clamp(26px,4.2vw,34px)}
+  .key.util{font-family:var(--body);font-size:clamp(15px,2vw,18px)}
+  .opt{flex-direction:column;min-height:110px;padding:10px;font-size:clamp(15px,2vw,18px)}
+  .opt em{font-style:normal;font-size:clamp(34px,7vw,48px);line-height:1.1}
+  .key:hover,.opt:hover,.tile:hover,.pk:hover{border-color:var(--gold)}
+  .key:active,.opt:active,.tile:active,.pk:active{transform:scale(.96)}
+  button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+  .used{opacity:.35;pointer-events:none}
+
+  .display{
+    font-family:var(--display);font-weight:700;font-size:clamp(38px,9vw,64px);letter-spacing:.14em;
+    text-align:center;color:var(--gold);font-variant-numeric:tabular-nums;
+    background:rgba(13,28,51,.6);border:2px dashed var(--line);border-radius:16px;
+    padding:6px 8px 10px;margin:0 auto 14px;max-width:420px;min-height:1.35em
+  }
+
+  /* 도서관 */
+  .shelf{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 16px;align-items:end}
+  .book{
+    border-radius:6px 6px 3px 3px;padding:12px 8px 10px;min-height:150px;
+    display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;
+    font-size:clamp(13px,1.7vw,16px);line-height:1.35;color:#1d1608;position:relative
+  }
+  .book .num{
+    position:absolute;top:-10px;right:-6px;background:var(--gold);color:#2a1a00;border-radius:50%;
+    width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-weight:700;font-size:20px;box-shadow:0 2px 0 rgba(0,0,0,.3)
+  }
+  .book .t{font-family:var(--display);font-weight:700;font-size:clamp(15px,2vw,19px)}
+  .word{display:flex;gap:8px;justify-content:center;margin:0 0 12px}
+  .slot{
+    width:clamp(52px,10vw,68px);height:clamp(52px,10vw,68px);border:2px dashed var(--line);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;
+    font-size:clamp(26px,5vw,36px);color:var(--gold);background:rgba(13,28,51,.5)
+  }
+  .tiles{grid-template-columns:repeat(4,1fr);max-width:420px;margin-inline:auto}
+  .tile{font-family:var(--display);font-weight:700;font-size:clamp(24px,4.4vw,32px)}
+
+  /* 음악실 */
+  .piano{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:0 0 12px}
+  .pk{flex-direction:column;min-height:110px;background:var(--paper);color:#3a2d16;border-color:#c9b89a;border-radius:0 0 12px 12px;font-size:clamp(14px,1.9vw,18px)}
+  .pk small{color:#8b7a57;font-size:.8em}
+  .pk.on{background:var(--gold)}
+  .heard{display:flex;gap:8px;justify-content:center;min-height:40px;margin:0 0 10px;flex-wrap:wrap}
+  .note{
+    width:36px;height:36px;border-radius:50%;background:var(--line);display:flex;align-items:center;
+    justify-content:center;font-family:var(--display);font-weight:700;color:var(--paper)
+  }
+  .note.f{background:var(--gold);color:#2a1a00}
+
+  /* 운동장 */
+  .field{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-width:460px;margin:0 auto 12px}
+  .cell{
+    aspect-ratio:1;border-radius:10px;border:2px solid #2d5a3e;background:#1f4530;
+    display:flex;align-items:center;justify-content:center;font-size:clamp(20px,4.5vw,32px);
+    transition:transform .12s,background .2s
+  }
+  .cell:hover{background:#27573c}
+  .cell:active{transform:scale(.94)}
+  .cell.dug{background:#4a3a24;border-color:#6a5434}
+  .compass{text-align:center;color:var(--paper-dim);font-size:clamp(13px,1.6vw,15px);margin:0 0 8px}
+
+  .shake{animation:shake .34s}
+  @keyframes shake{25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}}
+  .say{margin:14px 0 0;min-height:1.8em;font-size:clamp(16px,2.1vw,19px)}
+  .say.no{color:var(--coral)} .say.yes{color:var(--mint)}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+  .ghost{background:none;border:2px solid var(--line);color:var(--paper-dim);border-radius:999px;padding:10px 18px;font-size:clamp(14px,1.8vw,17px)}
+  .ghost:hover{border-color:var(--gold);color:var(--gold)}
+  .go{background:var(--gold);border:none;color:#2a1a00;font-weight:700;font-family:var(--display);font-size:clamp(21px,3vw,27px);border-radius:16px;padding:12px 30px;min-height:60px}
+  .go:hover{background:var(--gold-soft)}
+
+  .found{
+    display:flex;gap:12px;align-items:center;margin-top:16px;padding:12px 16px;
+    border:2px solid var(--mint);border-radius:16px;background:rgba(111,227,196,.08)
+  }
+  .frag{
+    font-family:var(--display);font-weight:700;font-size:clamp(30px,6vw,44px);color:var(--gold);
+    background:var(--paper);border-radius:8px;padding:2px 14px;color:#3a2d16;line-height:1.3;transform:rotate(2deg)
+  }
+
+  .pocket{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding:12px 16px;
+    border:2px dotted var(--line);border-radius:16px;color:var(--paper-dim);font-size:clamp(14px,1.8vw,17px)
+  }
+  .chip{
+    font-family:var(--display);font-weight:700;color:#3a2d16;font-size:clamp(24px,3.6vw,30px);background:var(--paper);
+    border-radius:8px;min-width:2.2em;text-align:center;line-height:1.4;font-variant-numeric:tabular-nums
+  }
+  .chip.blank{color:var(--line);background:none;border:2px dashed var(--line)}
+
+  .end{text-align:center}
+  .end .big{font-size:clamp(60px,15vw,100px);line-height:1;margin:0}
+  footer{margin-top:24px;color:#7f93ad;font-size:clamp(12px,1.5vw,14px);text-align:center}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas class="stars" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <header>
+    <h1>사라진 타임캡슐</h1>
+    <div class="hud">
+      <span class="pill">⏱ <span id="clock">00:00</span></span>
+      <button class="pill btn" id="music">🎵 음악 켜기</button>
+    </div>
+  </header>
+
+  <ul class="map" id="map">
+    <li data-i="0"><b>📚</b>도서관</li>
+    <li data-i="1"><b>🎹</b>음악실</li>
+    <li data-i="2"><b>🔬</b>과학실</li>
+    <li data-i="3"><b>🍱</b>급식실</li>
+    <li data-i="4"><b>🌳</b>운동장</li>
+    <li data-i="5"><b>🔒</b>캡슐</li>
+  </ul>
+
+  <main class="room" id="room" aria-live="polite"></main>
+  <div class="pocket" id="pocket"></div>
+  <footer>창신초등학교 · 15분 미스터리 방탈출 · 태블릿 한 대로 혼자서 도전!</footer>
+</div>
+
+<script>
+/* ===== 별 배경 ===== */
+(function(){
+  var c=document.querySelector('.stars'),x=c.getContext('2d');
+  function draw(){
+    var w=c.width=innerWidth,h=c.height=innerHeight;x.clearRect(0,0,w,h);
+    for(var i=0;i<90;i++){x.globalAlpha=Math.random()*.7+.15;x.fillStyle='#f6ead2';
+      x.beginPath();x.arc(Math.random()*w,Math.random()*h*.8,Math.random()*1.5+.4,0,7);x.fill();}
+  }
+  draw();addEventListener('resize',draw);
+})();
+
+/* ===== 소리 (Web Audio) ===== */
+var AC=null, musicOn=false, musicTimer=null, masterGain=null;
+function ac(){ if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); masterGain=AC.createGain(); masterGain.gain.value=.9; masterGain.connect(AC.destination);} if(AC.state==='suspended') AC.resume(); return AC; }
+function tone(freq,t0,dur,type,vol,dest){
+  var a=ac(),o=a.createOscillator(),g=a.createGain();
+  o.type=type||'sine';o.frequency.value=freq;
+  g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol||.2,t0+.01);g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+  o.connect(g);g.connect(dest||masterGain);o.start(t0);o.stop(t0+dur+.05);
+}
+var NOTE={'도':261.63,'레':293.66,'미':329.63,'파':349.23,'솔':392,'라':440,'시':493.88,'높은도':523.25};
+function piano(name,when){ var f=NOTE[name],t=when||ac().currentTime; tone(f,t,.9,'triangle',.35); tone(f*2,t,.5,'sine',.08); }
+function sfxYes(){ var t=ac().currentTime; [523.25,659.25,783.99,1046.5].forEach(function(f,i){tone(f,t+i*.09,.5,'triangle',.25)}); }
+function sfxNo(){ var t=ac().currentTime; tone(160,t,.25,'square',.12); tone(120,t+.13,.3,'square',.12); }
+function sfxDig(){ var a=ac(),t=a.currentTime,b=a.createBuffer(1,a.sampleRate*.15,a.sampleRate),d=b.getChannelData(0);
+  for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+  var s=a.createBufferSource(),g=a.createGain();s.buffer=b;g.gain.value=.25;s.connect(g);g.connect(masterGain);s.start(t);}
+
+/* 미스터리 배경음악: 라 단조, 음악상자 멜로디 + 낮은 피치카토 */
+var mGain=null, mStep=0;
+var BASS=[110,110,130.81,130.81,146.83,146.83,123.47,164.81];
+var MEL=[[440,0],[523.25,1],[659.25,2],[587.33,3],[523.25,4],[0,5],[659.25,6],[783.99,7],
+         [880,8],[783.99,9],[659.25,10],[0,11],[587.33,12],[523.25,13],[493.88,14],[0,15]];
+function musicTick(){
+  if(!musicOn) return;
+  var a=ac(),t=a.currentTime+.05,beat=.33;
+  var bar=mStep%16;
+  if(bar%2===0){ tone(BASS[(mStep/2)%8|0],t,.5,'triangle',.18,mGain); }
+  var m=MEL[bar]; if(m[0]){ tone(m[0],t,1.1,'sine',.13,mGain); tone(m[0]*2,t,.4,'sine',.03,mGain); }
+  if(bar===0||bar===8){ tone(55,t,2.4,'sine',.16,mGain); }
+  mStep++;
+  musicTimer=setTimeout(musicTick,beat*1000);
+}
+function setMusic(on){
+  musicOn=on; var b=document.getElementById('music');
+  b.textContent=on?'🎵 음악 끄기':'🎵 음악 켜기';
+  if(on){ ac(); if(!mGain){mGain=AC.createGain();mGain.gain.value=1;mGain.connect(masterGain);} musicTick(); }
+  else { clearTimeout(musicTimer); }
+  try{localStorage.setItem('tc_music',on?'1':'0')}catch(e){}
+}
+document.getElementById('music').addEventListener('click',function(){ setMusic(!musicOn); });
+
+/* ===== 이야기와 문제 ===== */
+var STAGES=[
+ { /* 0 */
+  eyebrow:'창신초등학교 · 100번째 생일 전날',
+  title:'이상한 편지가 도착했어요',
+  letter:'창신초 후배들에게.<br>우리는 1996년, 6학년이었어. 학교 어딘가에 <b>타임캡슐</b>을 묻고 지도를 그렸지.<br>그런데 그냥 알려주면 재미없잖아? 지도를 <b>다섯 조각</b>으로 찢어 학교 곳곳에 숨겼어. 조각마다 숫자가 하나씩 적혀 있으니 모두 모으면 캡슐 자물쇠를 열 수 있을 거야.<br>첫 조각은 <b>도서관</b>에 있어. 책들이 말을 걸어올 거야.<br>— 30년 전 6학년 선배들',
+  story:'내일은 학교 100번째 생일. 교장 선생님이 낡은 편지를 들고 교실에 오셨어요. "이 편지대로라면 오늘 안에 찾아야 내일 다 같이 열어볼 수 있단다. 도와줄 탐정이 필요해!"',
+  kind:'intro'
+ },
+ { /* 1 */
+  eyebrow:'첫 번째 조각 · 도서관',
+  title:'책들이 남긴 낱말',
+  story:'도서관 맨 안쪽 책장에 <b>노란 숫자 스티커</b>가 붙은 책 네 권이 꽂혀 있어요. 사서 선생님이 말해요. "저 스티커는 30년 전부터 있었는데, 아무도 이유를 몰랐어."',
+  task:'스티커 숫자 순서(1→2→3→4)대로 책 제목의 <b>첫 글자</b>를 이어 붙이면 낱말이 돼요. 그 낱말을 만들어 보세요.',
+  kind:'word',
+  books:[ {n:3,t:'나비의 긴 여행',c:'#e8a87c'}, {n:1,t:'은하수를 건너는 배',c:'#9bb7e0'}, {n:4,t:'무지개 물고기',c:'#a8d8a0'}, {n:2,t:'행복한 고양이 식당',c:'#f2d777'} ],
+  tiles:['무','고','은','여','나','행','물','배'],
+  answer:'은행나무',
+  hint:'스티커 1번 책은 「은하수를 건너는 배」예요. 첫 글자는 "은". 그다음 2번 책의 첫 글자는?',
+  prize:'1',
+  win:'"은행나무!" 운동장 은행나무 밑동을 파 보니 비닐에 싸인 지도 조각이 나왔어요. 조각 뒷면엔 <b>1</b>, 그리고 "다음은 음악실 피아노에게 물어봐"라고 적혀 있어요.'
+ },
+ { /* 2 */
+  eyebrow:'두 번째 조각 · 음악실',
+  title:'피아노가 기억하는 노래',
+  story:'음악실의 오래된 피아노 위에 쪽지가 붙어 있어요. "나는 노래를 기억해. 내가 부르는 노래를 그대로 따라 쳐 주면 뚜껑을 열어 줄게." 음악 선생님이 말해요. "이 피아노, 30년 전에도 있던 거야!"',
+  task:'▶ 듣기 버튼으로 노래를 들은 다음, 똑같은 순서로 건반을 눌러 보세요. 몇 번이든 다시 들을 수 있어요.',
+  kind:'melody',
+  melody:['미','솔','라','솔','도','레'],
+  hint:'노래는 여섯 음이에요. 처음 세 음은 점점 올라가고, 그다음은 내려와요. 힌트를 본 뒤에는 듣기 버튼을 누르면 음 이름도 함께 보여요.',
+  prize:'9',
+  win:'피아노 뚜껑이 스르륵 열리고, 현 사이에서 지도 조각이 나왔어요. 숫자 <b>9</b>가 적혀 있고, "과학실 상자를 조심해서 열 것"이라 쓰여 있어요.'
+ },
+ { /* 3 */
+  eyebrow:'세 번째 조각 · 과학실',
+  title:'네 개의 상자',
+  story:'과학실 실험대 위에 색깔이 다른 상자 네 개가 나란히 놓여 있어요. 상자들은 모두 꽉 잠겨 있고, 열쇠는 하나뿐이에요. 잘못 열려고 하면 열쇠가 부러질지도 몰라요! 벽에는 세 장의 쪽지가 붙어 있어요.',
+  clues:[ ['📜','지도 조각은 <b>가장 가벼운</b> 상자 안에 있어.'], ['📜','빨간 상자는 파란 상자보다 무거워.'], ['📜','노란 상자는 빨간 상자보다 무거워.'], ['📜','초록 상자는 파란 상자보다 가벼워.'] ],
+  task:'어느 상자를 열어야 할까요? 하나만 골라요.',
+  kind:'choice',
+  options:[['🟥','빨간 상자'],['🟦','파란 상자'],['🟨','노란 상자'],['🟩','초록 상자']],
+  answer:3,
+  hint:'무거운 것부터 줄을 세워 볼까요? 노란 > 빨간 > 파란 > ... 파란 것보다도 가벼운 상자가 있어요.',
+  prize:'9',
+  win:'초록 상자 안에 지도 조각이! 숫자 <b>9</b>가 적혀 있어요. 쪽지 한 장이 더 들어 있어요. "배가 고프지? 급식실 식단표를 잘 봐."'
+ },
+ { /* 4 */
+  eyebrow:'네 번째 조각 · 급식실',
+  title:'식단표에 숨은 암호',
+  story:'급식실 벽에 낡은 식단표가 붙어 있어요. 오늘 메뉴 옆에는 이상한 그림 쪽지가 꽂혀 있고, 식단표 아래엔 <b>암호표</b>가 살짝 적혀 있네요. 그런데 바나나 칸이 얼룩져서 숫자가 지워졌어요.',
+  clues:[ ['🔑','암호표 — 🍎 = 2 &nbsp; 🥛 = 7 &nbsp; 🍞 = 4 &nbsp; 🍌 = ?'], ['🧾','얼룩 옆 메모: "바나나는 사과와 빵을 <b>더한</b> 수야."'], ['📝','그림 쪽지: <span style="font-size:1.4em;letter-spacing:.1em">🥛 🍌 🍎 🍞</span>'] ],
+  task:'그림 쪽지를 숫자 네 개로 바꿔 자물쇠에 눌러 보세요.',
+  kind:'pad',len:4,answer:'7624',
+  hint:'🍌 = 🍎 + 🍞 = 2 + 4. 그다음 쪽지의 그림을 왼쪽부터 하나씩 숫자로 바꿔요.',
+  prize:'6',
+  win:'식단표 뒤 서랍이 열리고 네 번째 조각이 나왔어요. 숫자 <b>6</b>. 그리고 마지막 메모. "조각 네 개를 붙이면 운동장 지도가 완성될 거야. 마지막 조각은 땅속에."'
+ },
+ { /* 5 */
+  eyebrow:'다섯 번째 조각 · 운동장',
+  title:'지도가 가리키는 곳',
+  story:'조각 네 개를 이어 붙였더니 운동장 지도가 완성됐어요! 지도 귀퉁이에 길 안내가 적혀 있어요. 하지만 삽은 하나뿐이니 잘 생각해서 파야 해요.',
+  clues:[ ['🧭','<b>은행나무</b>에서 출발해요.'], ['➡️','동쪽(오른쪽)으로 <b>세 칸</b> 가요.'], ['⬇️','남쪽(아래)으로 <b>두 칸</b> 내려가요.'], ['↩️','마지막으로 서쪽(왼쪽)으로 <b>한 칸</b>. 거기를 파요!'] ],
+  task:'파야 할 자리를 지도에서 눌러 보세요.',
+  kind:'grid',
+  marks:{ '0,0':'🌳', '4,0':'🚩', '1,3':'🛝', '3,4':'⚽', '4,2':'🪑' },
+  answer:'2,2',
+  hint:'은행나무 🌳는 맨 왼쪽 위예요. 오른쪽으로 세 칸 → 아래로 두 칸 → 다시 왼쪽으로 한 칸. 손가락으로 따라가 보세요.',
+  prize:null,
+  win:'철컹! 삽 끝에 무언가 닿았어요. 흙을 걷어내니 작은 쇠상자, 바로 <b>타임캡슐</b>이에요! 자물쇠에는 숫자 네 칸이 있어요.'
+ },
+ { /* 6 */
+  eyebrow:'마지막 · 타임캡슐',
+  title:'자물쇠를 열어요',
+  story:'편지에는 "조각마다 숫자가 하나씩"이라고 했죠. 도서관 → 음악실 → 과학실 → 급식실 순서로 모은 숫자를 떠올려 보세요. 어쩐지 어디서 본 숫자 같지 않나요?',
+  task:'주머니의 숫자를 순서대로 눌러 자물쇠를 열어요.',
+  kind:'pad',len:4,answer:'1996',
+  hint:'주머니에 모인 숫자를 왼쪽부터 그대로! 선배들이 캡슐을 묻은 해이기도 해요.',
+  prize:null,
+  win:'딸깍! 자물쇠가 열렸어요.'
+ }
+];
+
+var room=document.getElementById('room'),pocketEl=document.getElementById('pocket'),mapEl=document.getElementById('map');
+var S={step:0,keys:[],typed:'',word:'',heard:[],startAt:null,hinted:false,revealed:false};
+
+/* ===== 저장/시계 ===== */
+function save(){try{localStorage.setItem('tc_save',JSON.stringify({step:S.step,keys:S.keys,startAt:S.startAt}))}catch(e){}}
+function load(){try{var d=JSON.parse(localStorage.getItem('tc_save')||'null');if(d&&typeof d.step==='number'&&d.step>=0&&d.step<=7){S.step=d.step;S.keys=d.keys||[];S.startAt=d.startAt||null}}catch(e){}}
+function reset(){S={step:0,keys:[],typed:'',word:'',heard:[],startAt:null,hinted:false,revealed:false};save();render()}
+function fmt(ms){var s=Math.floor(ms/1000),m=Math.floor(s/60);s%=60;return (m<10?'0':'')+m+':'+(s<10?'0':'')+s}
+setInterval(function(){ if(S.startAt&&S.step<7) document.getElementById('clock').textContent=fmt(Date.now()-S.startAt); },500);
+
+/* ===== 그리기 ===== */
+function paintMap(){[].forEach.call(mapEl.children,function(li){var i=+li.dataset.i+1;li.className=i<S.step?'done':(i===S.step?'now':'')})}
+function paintPocket(){
+  var h='<span>🗺️ 지도 조각 숫자</span>';
+  for(var i=0;i<4;i++) h+=S.keys[i]?'<span class="chip">'+S.keys[i]+'</span>':'<span class="chip blank">?</span>';
+  pocketEl.innerHTML=h; pocketEl.style.display=S.step===0?'none':'flex';
+}
+function say(msg,cls){var s=room.querySelector('.say');if(!s)return;s.innerHTML=msg;s.className='say '+(cls||'')}
+
+function render(){
+  paintMap();paintPocket();
+  if(S.step>=7){renderEnd();return}
+  var r=STAGES[S.step];S.typed='';S.word='';S.heard=[];S.hinted=false;S.revealed=false;
+  var b='<p class="eyebrow">'+r.eyebrow+'</p><h2>'+r.title+'</h2>';
+  if(r.kind==='intro'){
+    b+='<p class="story">'+r.story+'</p><div class="letter">'+r.letter+'</div>';
+    b+='<div class="row"><button class="go" data-act="start">🔍 탐정 시작!</button><button class="ghost" data-act="reset">처음부터</button></div>';
+    room.innerHTML=b;return;
+  }
+  b+='<p class="story">'+r.story+'</p>';
+  if(r.clues){b+='<ul class="clues">';r.clues.forEach(function(c){b+='<li><span>'+c[0]+'</span><span>'+c[1]+'</span></li>'});b+='</ul>'}
+  b+='<p class="task'+(r.kind==='word'?'':' q')+'">'+r.task+'</p>';
+
+  if(r.kind==='word'){
+    b+='<div class="shelf">';
+    r.books.forEach(function(k){b+='<div class="book" style="background:'+k.c+'"><span class="num">'+k.n+'</span><span class="t">'+k.t+'</span><span>📖</span></div>'});
+    b+='</div><div class="word" id="word">';
+    for(var i=0;i<r.answer.length;i++)b+='<span class="slot"></span>';
+    b+='</div><div class="grid tiles" id="tiles">';
+    r.tiles.forEach(function(t,i){b+='<button class="tile" data-t="'+t+'" data-i="'+i+'">'+t+'</button>'});
+    b+='</div><div class="row" style="justify-content:center;margin-top:12px"><button class="ghost" data-act="undo">한 글자 지우기</button></div>';
+  }
+  if(r.kind==='melody'){
+    b+='<div class="row" style="justify-content:center;margin:0 0 12px"><button class="go" data-act="play">▶ 노래 듣기</button></div>';
+    b+='<div class="heard" id="heard"></div><div class="piano" id="piano">';
+    Object.keys(NOTE).forEach(function(n){b+='<button class="pk" data-n="'+n+'">'+(n==='높은도'?'도':n)+(n==='높은도'?'<small>높은</small>':'')+'</button>'});
+    b+='</div><div class="row" style="justify-content:center;margin-top:8px"><button class="ghost" data-act="undo">한 음 지우기</button></div>';
+  }
+  if(r.kind==='choice'){
+    b+='<div class="grid cols4">';
+    r.options.forEach(function(o,i){b+='<button class="opt" data-i="'+i+'"><em>'+o[0]+'</em>'+o[1]+'</button>'});
+    b+='</div>';
+  }
+  if(r.kind==='pad'){
+    b+='<div class="display" id="disp"></div><div class="grid pad">';
+    [1,2,3,4,5,6,7,8,9].forEach(function(n){b+='<button class="key" data-n="'+n+'">'+n+'</button>'});
+    b+='<button class="key util" data-act="del">지우기</button><button class="key" data-n="0">0</button><button class="key util" data-act="ok">확인</button></div>';
+  }
+  if(r.kind==='grid'){
+    b+='<p class="compass">↑ 북쪽 &nbsp;·&nbsp; 왼쪽이 서쪽, 오른쪽이 동쪽</p><div class="field" id="field">';
+    for(var y=0;y<5;y++)for(var x=0;x<5;x++){var k=x+','+y;b+='<button class="cell" data-k="'+k+'" aria-label="'+(x+1)+'열 '+(y+1)+'행">'+(r.marks[k]||'')+'</button>'}
+    b+='</div>';
+  }
+  b+='<p class="say"></p><div class="row"><button class="ghost" data-act="hint">💡 힌트 보기</button><button class="ghost" data-act="reset">처음부터</button></div>';
+  room.innerHTML=b;
+}
+
+/* ===== 상호작용 ===== */
+room.addEventListener('click',function(e){
+  var btn=e.target.closest('button');if(!btn)return;
+  var act=btn.dataset.act,r=STAGES[S.step];if(!r)return;
+  if(act==='reset'){reset();return}
+  if(act==='start'){ ac(); if(!S.startAt){S.startAt=Date.now()} S.step=1;save(); var wantMusic=true; try{wantMusic=localStorage.getItem('tc_music')!=='0'}catch(x){} if(wantMusic&&!musicOn)setMusic(true); render();return}
+  if(act==='hint'){S.hinted=true;say('💡 '+r.hint,'');return}
+  if(act==='next'){render();return}
+
+  if(r.kind==='word'){
+    var slots=room.querySelectorAll('.slot');
+    if(btn.dataset.t!==undefined&&S.word.length<r.answer.length){
+      S.word+=btn.dataset.t;btn.classList.add('used');btn.dataset.pos=S.word.length-1;
+      slots[S.word.length-1].textContent=btn.dataset.t;
+      if(S.word.length===r.answer.length){
+        if(S.word===r.answer)solved(r);
+        else{wrong(document.getElementById('word'));setTimeout(function(){S.word='';[].forEach.call(slots,function(s){s.textContent=''});[].forEach.call(room.querySelectorAll('.tile'),function(t){t.classList.remove('used')})},700)}
+      }
+    }else if(act==='undo'&&S.word.length){
+      S.word=S.word.slice(0,-1);slots[S.word.length].textContent='';
+      var last=room.querySelector('.tile[data-pos="'+S.word.length+'"]');if(last){last.classList.remove('used');delete last.dataset.pos}
+    }
+    return;
+  }
+
+  if(r.kind==='melody'){
+    var heard=document.getElementById('heard');
+    if(act==='play'){
+      var t=ac().currentTime+.1;heard.innerHTML='';
+      r.melody.forEach(function(n,i){
+        piano(n,t+i*.55);
+        setTimeout(function(){var d=document.createElement('span');d.className='note f';d.textContent=S.hinted?(n==='높은도'?'도↑':n):'♪';heard.appendChild(d)},(i*.55+.1)*1000);
+      });
+      setTimeout(function(){heard.innerHTML='';S.heard.forEach(function(n){addNote(n)})},(r.melody.length*.55+1.2)*1000);
+      return;
+    }
+    if(act==='undo'&&S.heard.length){S.heard.pop();heard.innerHTML='';S.heard.forEach(addNote);return}
+    if(btn.dataset.n){
+      var n=btn.dataset.n;piano(n);btn.classList.add('on');setTimeout(function(){btn.classList.remove('on')},250);
+      if(S.heard.length>=r.melody.length)return;
+      S.heard.push(n);addNote(n);
+      if(S.heard.length===r.melody.length){
+        if(S.heard.join()===r.melody.join())solved(r);
+        else{wrong(document.getElementById('piano'));setTimeout(function(){S.heard=[];heard.innerHTML=''},700)}
+      }
+    }
+    return;
+  }
+  function addNote(n){var d=document.createElement('span');d.className='note';d.textContent=(n==='높은도'?'도↑':n);document.getElementById('heard').appendChild(d)}
+
+  if(r.kind==='choice'&&btn.dataset.i!==undefined){
+    if(+btn.dataset.i===r.answer)solved(r);
+    else{wrong(btn);say('🔑 열쇠가 삐걱! 이 상자는 아니에요. 쪽지를 다시 읽어 봐요.','no')}
+    return;
+  }
+
+  if(r.kind==='pad'){
+    var disp=document.getElementById('disp');
+    if(btn.dataset.n!==undefined&&S.typed.length<r.len)S.typed+=btn.dataset.n;
+    else if(act==='del')S.typed=S.typed.slice(0,-1);
+    disp.textContent=S.typed;
+    if(act==='ok'){
+      if(S.typed.length<r.len){say('숫자 '+r.len+'개를 모두 눌러 주세요.','');return}
+      if(S.typed===r.answer)solved(r);else{wrong(disp);S.typed='';disp.textContent=''}
+    }
+    return;
+  }
+
+  if(r.kind==='grid'&&btn.dataset.k){
+    if(btn.dataset.k===r.answer){btn.classList.add('dug');btn.textContent='📦';solved(r)}
+    else{sfxDig();btn.classList.add('dug');if(!r.marks[btn.dataset.k])btn.textContent='🕳️';say('삽으로 파 봤지만 흙뿐이에요. 길 안내를 한 칸씩 다시 따라가 봐요.','no')}
+  }
+});
+
+function wrong(el){sfxNo();say('아직이에요! 단서를 한 번 더 천천히 읽어 볼까요?','no');if(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake')}}
+
+function solved(r){
+  sfxYes();
+  say('🎉 '+r.win,'yes');
+  if(r.prize)S.keys.push(r.prize);
+  S.step++;save();paintMap();paintPocket();
+  var row=room.querySelector('.row:last-of-type');
+  var extra=r.prize?'<div class="found"><span class="frag">'+r.prize+'</span><span>지도 조각을 찾았어요! 숫자를 주머니에 넣었어요.</span></div>':'';
+  row.insertAdjacentHTML('beforebegin',extra);
+  row.innerHTML='<button class="go" data-act="next">'+(S.step>=7?'타임캡슐 열기 ✨':'다음 장소로 →')+'</button>';
+  row.querySelector('button').focus();
+  [].forEach.call(room.querySelectorAll('.tile,.pk,.opt,.key,.cell'),function(b){b.disabled=true});
+}
+
+function renderEnd(){
+  var t=S.startAt?fmt(Date.now()-S.startAt):'--:--';
+  room.innerHTML='<div class="end"><p class="eyebrow">사건 해결</p><p class="big">📦✨</p>'+
+  '<h2>타임캡슐이 열렸어요!</h2>'+
+  '<div class="letter" style="text-align:left">후배들에게.<br>여기까지 온 너는 진짜 탐정이야. 우리가 남긴 건 보물이 아니라 <b>편지 30장</b>, 그리고 그때 학교 모습을 그린 그림이야.<br>내일 100번째 생일에 다 같이 읽어 줘. 그리고 너희도 다음 아이들을 위해 새 캡슐을 묻어 주면 좋겠어.<br>— 1996년 6학년, 창신초 선배들</div>'+
+  '<p class="story">해결 시간 <b style="font-variant-numeric:tabular-nums">'+t+'</b> · 지도 조각 다섯 개를 모두 찾았어요. 학교 100번째 생일은 무사히 열릴 거예요!</p>'+
+  '<div class="row" style="justify-content:center"><button class="go" id="again">한 번 더 도전하기</button></div></div>';
+  document.getElementById('again').addEventListener('click',reset);
+}
+
+load();render();
+</script>
+</body>
+</html>
