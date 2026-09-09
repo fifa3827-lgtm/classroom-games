@@ -3,7 +3,7 @@
 수업 시간과 자투리 시간에 태블릿으로 바로 쓸 수 있는 웹 게임을 모아 둔 저장소입니다.
 GitHub Pages로 배포되어 있어서 파일을 올리면 잠시 뒤 아래 주소에서 바로 열립니다.
 
-- 대문(게임 목록): https://fifa3827-lgtm.github.io/omok/
+- 대문(게임 목록): https://fifa3827-lgtm.github.io/classroom-games/
 - 게임은 폴더 하나에 하나씩, 실행 파일은 항상 그 폴더의 index.html
 
 ## 게임 목록
