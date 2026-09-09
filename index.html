@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="컴퓨터 실력 5단계와 금수 규칙을 고를 수 있는 오목 게임. 브라우저만 있으면 바로 둘 수 있습니다.">
+<meta name="theme-color" content="#E6E2D6">
+<style>*{margin:0}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>오목 대국</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#E6E2D6; --surface:#F3F0E7; --surface-2:#DBD6C7; --sunk:#D2CCBA;
+  --ink:#1B211E; --ink-2:#5A625B; --ink-3:#8A9189;
+  --line:#C5BFAD; --line-soft:#D8D2C2;
+  --jade:#14675C; --jade-ink:#0C4A41; --jade-soft:#D9E7E2;
+  --verm:#AE3A1E; --verm-soft:#F0DCD4;
+  --wood-1:#E3B579; --wood-2:#C58E4E; --wood-edge:#8A6234; --wood-line:#7A5528;
+  --stone-b1:#4A4F4B; --stone-b2:#0C0F0D;
+  --stone-w1:#FFFEFA; --stone-w2:#CFC9BA;
+  --shadow:0 1px 2px rgba(30,26,14,.10), 0 6px 18px rgba(30,26,14,.08);
+  --radius:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111512; --surface:#1A201C; --surface-2:#252D28; --sunk:#0C0F0D;
+    --ink:#E9E7DD; --ink-2:#98A199; --ink-3:#6C756E;
+    --line:#313A34; --line-soft:#272F2A;
+    --jade:#54C3AB; --jade-ink:#8FDCC9; --jade-soft:#16332D;
+    --verm:#E46A4C; --verm-soft:#3A1E16;
+    --wood-1:#8C6337; --wood-2:#6A4922; --wood-edge:#3D2911; --wood-line:#2A1B09;
+    --stone-b1:#3A403B; --stone-b2:#08 0A09;
+    --stone-b2:#080A09;
+    --stone-w1:#F4F1E7; --stone-w2:#B8B2A3;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111512; --surface:#1A201C; --surface-2:#252D28; --sunk:#0C0F0D;
+  --ink:#E9E7DD; --ink-2:#98A199; --ink-3:#6C756E;
+  --line:#313A34; --line-soft:#272F2A;
+  --jade:#54C3AB; --jade-ink:#8FDCC9; --jade-soft:#16332D;
+  --verm:#E46A4C; --verm-soft:#3A1E16;
+  --wood-1:#8C6337; --wood-2:#6A4922; --wood-edge:#3D2911; --wood-line:#2A1B09;
+  --stone-b1:#3A403B; --stone-b2:#080A09;
+  --stone-w1:#F4F1E7; --stone-w2:#B8B2A3;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  font-size:15px; line-height:1.55;
+  -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent;
+}
+.wrap{max-width:560px;margin:0 auto;padding:18px 14px 40px;display:flex;flex-direction:column;gap:14px}
+@media(min-width:900px){.wrap{max-width:1000px;display:grid;grid-template-columns:minmax(0,1fr) 340px;align-items:start;gap:22px;padding:26px 22px 48px}
+  .col-a{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .col-b{display:flex;flex-direction:column;gap:14px;position:sticky;top:26px}
+  .masthead{grid-column:1/-1}
+}
+
+/* masthead */
+.masthead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.masthead h1{
+  font-family:'Gowun Batang',serif;font-weight:700;
+  font-size:30px;line-height:1;margin:0;letter-spacing:.04em;
+}
+.masthead .sub{font-size:11.5px;color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;margin-top:6px}
+.tally{display:flex;gap:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-2);text-align:right}
+.tally b{display:block;font-size:19px;color:var(--ink);font-weight:600;line-height:1.1}
+
+/* status */
+.status{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:9px 12px;box-shadow:var(--shadow);
+}
+.turn-dot{width:20px;height:20px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 3px rgba(0,0,0,.25)}
+.turn-dot.b{background:radial-gradient(circle at 33% 28%,var(--stone-b1),var(--stone-b2) 72%)}
+.turn-dot.w{background:radial-gradient(circle at 33% 28%,var(--stone-w1),var(--stone-w2) 78%)}
+.status .msg{font-weight:500;flex:1;min-width:0}
+.status .msg small{display:block;font-size:11.5px;color:var(--ink-2);font-weight:400}
+.status.think .turn-dot{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.lvl-chip{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;
+  background:var(--jade-soft);color:var(--jade-ink);border:1px solid color-mix(in srgb,var(--jade) 30%,transparent);
+  padding:3px 8px;border-radius:999px;white-space:nowrap;
+}
+
+/* board */
+.board-frame{
+  position:relative;background:var(--wood-edge);
+  padding:7px;border-radius:8px;box-shadow:var(--shadow);
+}
+canvas{display:block;width:100%;height:auto;border-radius:3px;touch-action:manipulation}
+.overlay{
+  position:absolute;inset:7px;border-radius:3px;
+  background:color-mix(in srgb,var(--sunk) 76%,transparent);
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  backdrop-filter:blur(2px);
+}
+.overlay.on{display:flex}
+.overlay .big{font-family:'Gowun Batang',serif;font-weight:700;font-size:32px;color:var(--ink);letter-spacing:.06em}
+.overlay .why{font-size:12.5px;color:var(--ink-2);max-width:80%;text-align:center}
+.overlay button{margin-top:10px}
+
+/* controls */
+.controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#bSnd.off{color:var(--ink-3)}
+button{
+  font:inherit;font-weight:500;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:11px 10px;border-radius:8px;transition:background .13s,border-color .13s,transform .08s;
+}
+button:hover:not(:disabled){background:var(--surface-2)}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:2px solid var(--jade);outline-offset:2px}
+button.primary{background:var(--jade);border-color:var(--jade);color:#fff;font-weight:600}
+:root[data-theme="dark"] button.primary,
+:root:not([data-theme="light"]) button.primary{color:#08110F}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) button.primary{color:#fff}}
+button.primary:hover:not(:disabled){background:var(--jade-ink)}
+
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.panel > h2{
+  margin:0;padding:11px 14px 9px;font-size:11px;font-family:'IBM Plex Mono',monospace;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);
+  border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+}
+.panel > h2 span{text-transform:none;letter-spacing:0;font-family:'IBM Plex Sans KR',sans-serif;font-size:11.5px;color:var(--ink-2)}
+.panel-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:9px}
+
+/* difficulty */
+.lvls{display:flex;flex-direction:column;gap:0}
+.lvl{
+  display:grid;grid-template-columns:26px 1fr;gap:11px;align-items:start;
+  padding:9px 6px;border-radius:8px;cursor:pointer;border:1px solid transparent;
+}
+.lvl + .lvl{border-top:1px solid var(--line-soft);border-radius:8px}
+.lvl:hover{background:var(--surface-2)}
+.lvl input{position:absolute;opacity:0;pointer-events:none}
+.lvl .num{
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--line);color:var(--ink-3);
+}
+.lvl .nm{font-weight:600;font-size:14.5px}
+.lvl .ds{font-size:12px;color:var(--ink-2);line-height:1.45}
+.lvl.sel{background:var(--jade-soft);border-color:color-mix(in srgb,var(--jade) 40%,transparent)}
+.lvl.sel .num{background:var(--jade);border-color:var(--jade);color:var(--surface)}
+:root[data-theme="dark"] .lvl.sel .num,:root:not([data-theme="light"]) .lvl.sel .num{color:#08110F}
+.lvl.sel .nm{color:var(--jade-ink)}
+
+/* presets */
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.presets button{padding:6px 11px;font-size:12.5px;border-radius:999px}
+.presets button.on{background:var(--jade);border-color:var(--jade);color:#fff;font-weight:600}
+:root[data-theme="dark"] .presets button.on,:root:not([data-theme="light"]) .presets button.on{color:#08110F}
+
+/* rules */
+.rule{display:grid;grid-template-columns:1fr 44px;gap:10px;align-items:start;padding:9px 0}
+.rule + .rule{border-top:1px solid var(--line-soft)}
+.rule .nm{font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rule .ds{font-size:12px;color:var(--ink-2);line-height:1.5;margin-top:2px}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:var(--verm-soft);color:var(--verm);border:1px solid color-mix(in srgb,var(--verm) 25%,transparent)}
+.sw{position:relative;width:44px;height:25px;flex:none;margin-top:2px}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+.sw i{position:absolute;inset:0;border-radius:999px;background:var(--sunk);border:1px solid var(--line);transition:background .15s,border-color .15s}
+.sw i::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .16s cubic-bezier(.3,1.3,.5,1)}
+.sw input:checked + i{background:var(--jade);border-color:var(--jade)}
+.sw input:checked + i::after{transform:translateX(19px)}
+.sw input:focus-visible + i{outline:2px solid var(--jade);outline-offset:2px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:2px}
+.seg button{border:0;border-radius:0;flex:1;padding:8px 4px;font-size:13px;background:transparent}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--jade);color:#fff;font-weight:600}
+:root[data-theme="dark"] .seg button.on,:root:not([data-theme="light"]) .seg button.on{color:#08110F}
+.note{font-size:11.5px;color:var(--ink-3);line-height:1.5;border-top:1px solid var(--line-soft);padding-top:10px}
+.note b{color:var(--ink-2);font-weight:600}
+.log{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 8px;max-height:88px;overflow-y:auto}
+.log span{white-space:nowrap}
+.log em{font-style:normal;color:var(--ink-3)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <h1>오목 대국</h1>
+      <div class="sub">Gomoku · 15×15 · 五目</div>
+    </div>
+    <div class="tally">
+      <div>승<b id="tW">0</b></div>
+      <div>패<b id="tL">0</b></div>
+      <div>무<b id="tD">0</b></div>
+    </div>
+  </header>
+
+  <div class="col-a">
+    <div class="status" id="status">
+      <div class="turn-dot b" id="dot"></div>
+      <div class="msg"><span id="msg">내 차례입니다</span><small id="sub">교차점을 누르면 바로 착수합니다</small></div>
+      <div class="lvl-chip" id="chip">LV 3 · 중급</div>
+    </div>
+
+    <div class="board-frame">
+      <canvas id="cv" aria-label="오목판"></canvas>
+      <div class="overlay" id="ov">
+        <div class="big" id="ovBig">승리</div>
+        <div class="why" id="ovWhy"></div>
+        <button class="primary" id="ovBtn">새 판 시작</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="bUndo" disabled>무르기</button>
+      <button id="bNew">새 판</button>
+      <button id="bSnd" aria-pressed="true">소리 켬</button>
+    </div>
+
+    <div class="panel">
+      <h2>기보 <span id="mvCount">0수</span></h2>
+      <div class="panel-body"><div class="log" id="log"><em>아직 둔 수가 없습니다.</em></div></div>
+    </div>
+  </div>
+
+  <div class="col-b">
+    <div class="panel">
+      <h2>컴퓨터 실력 <span>5단계</span></h2>
+      <div class="panel-body"><div class="lvls" id="lvls"></div></div>
+    </div>
+
+    <div class="panel">
+      <h2>대국 규칙 <span id="presetName">표준룰</span></h2>
+      <div class="panel-body">
+        <div class="presets" id="presets"></div>
+        <div id="rules"></div>
+        <div class="note"><b>금수(禁手)란?</b> 먼저 두어 유리한 흑에게만 적용하는 반칙 자리입니다. 금수 자리에 두면 그 즉시 흑이 집니다. 내가 흑일 때는 판 위에 <span style="color:var(--verm)">✕</span> 로 미리 표시해 드립니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── 규칙 정의 ───────────────────────────────────────── */
+const RULE_DEFS = [
+  { key:'exactFive', name:'정확히 5목만 승리', black:false,
+    ds:'여섯 개 이상 한 줄로 이어지면(장목) 오목으로 쳐주지 않습니다. 끄면 5개 이상 이어지기만 하면 이깁니다.' },
+  { key:'noOverline', name:'장목 금수', black:true,
+    ds:'흑이 한 줄에 여섯 개 이상 늘어놓는 수를 반칙으로 봅니다. 흑이 장목을 두면 그 자리에서 흑의 패배입니다.' },
+  { key:'noDoubleThree', name:'삼삼 금수', black:true,
+    ds:'흑이 한 수로 열린 3(양쪽이 뚫린 석 줄)을 두 개 이상 동시에 만드는 수를 막습니다. 흑의 가장 강한 공격 수단이라 렌주룰에서 금지합니다.' },
+  { key:'noDoubleFour', name:'사사 금수', black:true,
+    ds:'흑이 한 수로 4(한 칸만 더 놓으면 5목이 되는 줄)를 두 개 이상 만드는 수를 막습니다. 상대가 한쪽만 막을 수 있어 사실상 필승수가 되기 때문입니다.' }
+];
+const PRESETS = {
+  free:{ label:'자유룰', v:{exactFive:false,noOverline:false,noDoubleThree:false,noDoubleFour:false} },
+  std :{ label:'표준룰', v:{exactFive:true, noOverline:false,noDoubleThree:false,noDoubleFour:false} },
+  renju:{label:'렌주룰', v:{exactFive:true, noOverline:true, noDoubleThree:true, noDoubleFour:true } }
+};
+const LEVELS = [
+  { n:'입문', ds:'규칙만 겨우 아는 상대. 가까운 자리에 아무렇게나 두고 5목 자리도 자주 놓칩니다.' },
+  { n:'초급', ds:'바로 앞의 한 수만 봅니다. 상대의 4는 막지만 3은 그냥 지나칩니다.' },
+  { n:'중급', ds:'두 수 앞을 읽습니다. 열린 3을 막고 자기 공격도 함께 만들어 갑니다.' },
+  { n:'상급', ds:'네 수 앞을 읽습니다. 쌍삼·사사 같은 이중 위협을 만들어 몰아붙입니다.' },
+  { n:'최상급', ds:'생각할 시간을 다 써서 여섯 수 앞까지 읽습니다. 실수를 기다리지 않고 먼저 덫을 놓습니다.' }
+];
+
+/* ── 상태 ────────────────────────────────────────────── */
+const S = {
+  N:15, bd:null, turn:1, human:1, ai:2,
+  moves:[], over:false, preview:-1, thinking:false,
+  level:3, // 1..5
+  rules:Object.assign({},PRESETS.std.v),
+  boardSize:15,
+  tally:{w:0,l:0,d:0},
+  forbidden:new Set(), last:-1, winLine:null
+};
+
+/* ── 라인 사전 (점수 계산용) ─────────────────────────── */
+let LINES=[], CELL_LINES=[], lineB=null, lineW=null, totB=0, totW=0;
+const DIRS=[[1,0],[0,1],[1,1],[1,-1]];
+
+function buildLines(N){
+  LINES=[]; CELL_LINES=Array.from({length:N*N},()=>[]);
+  for(const [dx,dy] of DIRS){
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++){
+      const px=x-dx, py=y-dy;
+      if(px>=0&&px<N&&py>=0&&py<N) continue; // 시작점만
+      const cells=[]; let cx=x, cy=y;
+      while(cx>=0&&cx<N&&cy>=0&&cy<N){ cells.push(cy*N+cx); cx+=dx; cy+=dy; }
+      if(cells.length>=5){ const li=LINES.length; LINES.push(cells); for(const c of cells) CELL_LINES[c].push(li); }
+    }
+  }
+  lineB=new Int32Array(LINES.length); lineW=new Int32Array(LINES.length);
+}
+
+const WIN=[0,1,15,120,2500];
+function patScore(s){
+  let sc=0;
+  for(let i=0;i+5<=s.length;i++){
+    let own=0,opp=0;
+    for(let j=0;j<5;j++){ const ch=s.charCodeAt(i+j); if(ch===49)own++; else if(ch===50)opp++; }
+    if(opp) continue;
+    if(own===5) return 500000;
+    sc+=WIN[own];
+  }
+  if(s.indexOf('011110')>=0) sc+=40000;
+  if(/011100|001110|010110|011010/.test(s)) sc+=4000;
+  return sc;
+}
+function calcLine(li){
+  const cells=LINES[li], bd=S.bd; let a='2',b='2';
+  for(let i=0;i<cells.length;i++){ const v=bd[cells[i]]; a+= v===0?'0':(v===1?'1':'2'); b+= v===0?'0':(v===2?'1':'2'); }
+  a+='2'; b+='2';
+  return [patScore(a),patScore(b)];
+}
+function fullScore(){
+  totB=0; totW=0;
+  for(let i=0;i<LINES.length;i++){ const [b,w]=calcLine(i); lineB[i]=b; lineW[i]=w; totB+=b; totW+=w; }
+}
+function put(idx,p){
+  S.bd[idx]=p;
+  for(const li of CELL_LINES[idx]){ totB-=lineB[li]; totW-=lineW[li]; const [b,w]=calcLine(li); lineB[li]=b; lineW[li]=w; totB+=b; totW+=w; }
+}
+function pull(idx){
+  S.bd[idx]=0;
+  for(const li of CELL_LINES[idx]){ totB-=lineB[li]; totW-=lineW[li]; const [b,w]=calcLine(li); lineB[li]=b; lineW[li]=w; totB+=b; totW+=w; }
+}
+
+/* ── 승리 / 금수 판정 ────────────────────────────────── */
+function runLen(idx,p,dx,dy){
+  const N=S.N, bd=S.bd, x=idx%N, y=(idx/N)|0;
+  let n=1, cells=[idx];
+  for(const s of [1,-1]){
+    let cx=x+dx*s, cy=y+dy*s;
+    while(cx>=0&&cx<N&&cy>=0&&cy<N&&bd[cy*N+cx]===p){ n++; cells.push(cy*N+cx); cx+=dx*s; cy+=dy*s; }
+  }
+  return {n,cells};
+}
+// 놓인 뒤 호출. {win:bool, over:bool, line:[]}
+function checkWin(idx,p){
+  let best=null, overline=false;
+  for(const [dx,dy] of DIRS){
+    const r=runLen(idx,p,dx,dy);
+    if(r.n===5) return {win:true,line:r.cells};
+    if(r.n>5){ overline=true; if(!best) best=r; }
+  }
+  if(overline && !S.rules.exactFive) return {win:true,line:best.cells};
+  return {win:false,line:null};
+}
+// 흑 금수 판정 (돌을 놓기 전 상태에서 호출)
+function forbiddenAt(idx){
+  if(S.bd[idx]!==0) return null;
+  S.bd[idx]=1;
+  let res=null, made5=false, over=false, fours=0, threes=0;
+  for(const [dx,dy] of DIRS){
+    const r=runLen(idx,1,dx,dy);
+    if(r.n===5) made5=true;
+    if(r.n>5) over=true;
+  }
+  if(made5 && !over){ S.bd[idx]=0; return null; }        // 5목 완성은 언제나 유효
+  if(made5 && over && !S.rules.exactFive){ S.bd[idx]=0; return null; }
+  if(over && S.rules.noOverline) res='장목';
+  if(!res && (S.rules.noDoubleThree||S.rules.noDoubleFour)){
+    for(const [dx,dy] of DIRS){
+      const seg=segment(idx,dx,dy);
+      fours += countFours(seg);
+      threes += hasOpenThree(seg)?1:0;
+    }
+    if(S.rules.noDoubleFour && fours>=2) res='사사';
+    else if(S.rules.noDoubleThree && threes>=2) res='삼삼';
+  }
+  S.bd[idx]=0;
+  return res;
+}
+// idx 중심 ±4칸 문자열 (1=흑,2=백/벽,0=빈)
+function segment(idx,dx,dy){
+  const N=S.N, bd=S.bd, x=idx%N, y=(idx/N)|0; let s='';
+  for(let k=-4;k<=4;k++){
+    const cx=x+dx*k, cy=y+dy*k;
+    if(cx<0||cx>=N||cy<0||cy>=N){ s+='2'; continue; }
+    const v=bd[cy*N+cx]; s += v===0?'0':(v===1?'1':'2');
+  }
+  return s;
+}
+function countFours(seg){
+  // 빈칸에 흑을 채워 정확히 5가 되는 서로 다른 지점 수
+  let c=0;
+  for(let i=0;i<seg.length;i++){
+    if(seg[i]!=='0') continue;
+    const t=seg.slice(0,i)+'1'+seg.slice(i+1);
+    // 중앙(index 4)을 포함한 5연속이 생기는지
+    for(let st=Math.max(0,4-4);st+5<=t.length;st++){
+      if(st>4||st+5<=4) continue;
+      if(t.substr(st,5)==='11111'){
+        const L=(st>0?t[st-1]:'2'), R=(st+5<t.length?t[st+5]:'2');
+        if(L!=='1'&&R!=='1'){ c++; }
+        break;
+      }
+    }
+  }
+  return c;
+}
+function hasOpenThree(seg){
+  // 한 수 더 두어 열린4(011110)를 만들 수 있으면 열린3
+  for(let i=0;i<seg.length;i++){
+    if(seg[i]!=='0') continue;
+    const t=seg.slice(0,i)+'1'+seg.slice(i+1);
+    if(t.indexOf('011110')>=0){
+      // 그 자리가 5를 완성해버리면 4이지 3이 아님
+      if(t.indexOf('11111')<0) return true;
+    }
+  }
+  return false;
+}
+function recalcForbidden(){
+  S.forbidden.clear();
+  if(S.turn!==1) return;
+  if(!(S.rules.noOverline||S.rules.noDoubleThree||S.rules.noDoubleFour)) return;
+  const N=S.N;
+  for(let i=0;i<N*N;i++){ if(S.bd[i]===0 && nearStone(i,2)){ if(forbiddenAt(i)) S.forbidden.add(i); } }
+}
+function nearStone(idx,d){
+  const N=S.N,x=idx%N,y=(idx/N)|0;
+  for(let dy=-d;dy<=d;dy++) for(let dx=-d;dx<=d;dx++){
+    const cx=x+dx,cy=y+dy;
+    if(cx<0||cx>=N||cy<0||cy>=N) continue;
+    if(S.bd[cy*N+cx]!==0) return true;
+  }
+  return false;
+}
+
+/* ── AI ──────────────────────────────────────────────── */
+const CFG={
+  1:{depth:0,cand:10,noise:1.0,time:200},
+  2:{depth:1,cand:10,noise:0.35,time:400},
+  3:{depth:2,cand:10,noise:0.08,time:900},
+  4:{depth:4,cand:10,noise:0,time:1600},
+  5:{depth:6,cand:12,noise:0,time:2600}
+};
+let deadline=0;
+function timeUp(){ return performance.now()>deadline; }
+
+function candidates(limit,forPlayer){
+  const N=S.N, out=[];
+  for(let i=0;i<N*N;i++){
+    if(S.bd[i]!==0) continue;
+    if(!nearStone(i,2)) continue;
+    if(forPlayer===1 && needForbidCheck() && forbiddenAt(i)) continue;
+    put(i,forPlayer);
+    const sc=(forPlayer===1? totB-totW : totW-totB);
+    pull(i);
+    out.push([sc,i]);
+  }
+  if(!out.length){ const c=((N/2)|0)*N+((N/2)|0); if(S.bd[c]===0) return [c];
+    for(let i=0;i<N*N;i++) if(S.bd[i]===0) return [i]; return []; }
+  out.sort((a,b)=>b[0]-a[0]);
+  return out.slice(0,limit).map(v=>v[1]);
+}
+function needForbidCheck(){ return S.rules.noOverline||S.rules.noDoubleThree||S.rules.noDoubleFour; }
+
+function evalFor(p){ return p===1 ? totB - totW*1.08 : totW - totB*1.08; }
+
+function ab(depth,alpha,beta,turn,me){
+  if(timeUp()) throw 'T';
+  if(depth<=0) return evalFor(me);
+  const lim = depth>=5?12 : depth>=3?10 : 8;
+  const cs = candidates(lim,turn);
+  if(!cs.length) return evalFor(me);
+  let best = turn===me ? -Infinity : Infinity;
+  for(const idx of cs){
+    put(idx,turn);
+    const w=checkWin(idx,turn);
+    let v;
+    if(w.win) v = turn===me ? 900000+depth*100 : -900000-depth*100;
+    else v = ab(depth-1,alpha,beta,turn===1?2:1,me);
+    pull(idx);
+    if(turn===me){ if(v>best) best=v; if(best>alpha) alpha=best; }
+    else { if(v<best) best=v; if(best<beta) beta=best; }
+    if(beta<=alpha) break;
+  }
+  return best;
+}
+
+function aiMove(){
+  const me=S.ai, opp=me===1?2:1, cfg=CFG[S.level];
+  deadline=performance.now()+cfg.time;
+  const cs=candidates(Math.max(cfg.cand,10),me);
+  if(!cs.length) return -1;
+
+  // 1) 즉시 이기는 수 (레벨1은 40%만 발견)
+  for(const i of cs){
+    put(i,me); const w=checkWin(i,me); pull(i);
+    if(w.win && (S.level>1 || Math.random()<0.4)) return i;
+  }
+  // 2) 상대의 5목 막기 (레벨2 이상)
+  if(S.level>=2){
+    const oc=candidates(20,opp);
+    for(const i of oc){
+      if(needForbidCheck() && me===1 && forbiddenAt(i)) continue;
+      put(i,opp); const w=checkWin(i,opp); pull(i);
+      if(w.win) return i;
+    }
+  }
+  // 3) 레벨1: 거의 무작위
+  if(S.level===1){
+    const pool=cs.slice(0,Math.min(8,cs.length));
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+  // 4) 탐색
+  let bestMove=cs[0], bestVal=-Infinity;
+  const maxD=cfg.depth;
+  try{
+    for(let d=Math.min(2,maxD); d<=maxD; d+=2){
+      let bm=cs[0], bv=-Infinity, alpha=-Infinity;
+      for(const idx of cs){
+        put(idx,me);
+        const w=checkWin(idx,me);
+        let v;
+        if(w.win) v=900000;
+        else v=ab(d-1,alpha,Infinity,opp,me);
+        pull(idx);
+        const noisy = v + (cfg.noise? (Math.random()-0.5)*cfg.noise*8000 : 0);
+        if(noisy>bv){ bv=noisy; bm=idx; }
+        if(v>alpha) alpha=v;
+      }
+      bestMove=bm; bestVal=bv;
+      if(bestVal>800000) break;
+      if(timeUp()) break;
+    }
+  }catch(e){ /* 시간 초과 — 지금까지의 최선 사용 */ }
+  return bestMove;
+}
+
+/* ── 렌더링 ──────────────────────────────────────────── */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let CELL=0, PAD=0, CSSW=0;
+
+function starPoints(N){
+  if(N===19) return [[3,3],[3,9],[3,15],[9,3],[9,9],[9,15],[15,3],[15,9],[15,15]];
+  return [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
+}
+function resize(){
+  const rect=cv.parentElement.getBoundingClientRect();
+  const w=Math.max(240,Math.floor(rect.width-14));
+  CSSW=w;
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  cv.style.width=w+'px'; cv.style.height=w+'px';
+  cv.width=Math.round(w*dpr); cv.height=Math.round(w*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  PAD=Math.round(w*(S.N===19?0.045:0.052));
+  CELL=(w-PAD*2)/(S.N-1);
+  draw();
+}
+function px(i){ return PAD+i*CELL; }
+function css(k){ return getComputedStyle(document.documentElement).getPropertyValue(k).trim(); }
+
+function draw(){
+  const N=S.N, w=CSSW;
+  const wood1=css('--wood-1'), wood2=css('--wood-2'), wline=css('--wood-line');
+  const g=ctx.createLinearGradient(0,0,w*0.7,w);
+  g.addColorStop(0,wood1); g.addColorStop(.55,wood2); g.addColorStop(1,wood1);
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,w);
+
+  // 나뭇결
+  ctx.save(); ctx.globalAlpha=.055; ctx.strokeStyle=wline; ctx.lineWidth=1;
+  for(let i=0;i<14;i++){
+    const y=(i+.5)*(w/14);
+    ctx.beginPath(); ctx.moveTo(0,y);
+    for(let x=0;x<=w;x+=w/8) ctx.quadraticCurveTo(x+w/16, y+Math.sin(i*1.7+x/90)*5, x+w/8, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // 격자
+  ctx.strokeStyle=wline; ctx.lineWidth=Math.max(.7,CELL*0.028);
+  ctx.globalAlpha=.72;
+  ctx.beginPath();
+  for(let i=0;i<N;i++){
+    ctx.moveTo(px(0),px(i)); ctx.lineTo(px(N-1),px(i));
+    ctx.moveTo(px(i),px(0)); ctx.lineTo(px(i),px(N-1));
+  }
+  ctx.stroke();
+  ctx.globalAlpha=1;
+  ctx.lineWidth=Math.max(1.1,CELL*0.05);
+  ctx.strokeRect(px(0),px(0),px(N-1)-px(0),px(N-1)-px(0));
+
+  // 화점
+  ctx.fillStyle=wline;
+  for(const [sx,sy] of starPoints(N)){
+    ctx.beginPath(); ctx.arc(px(sx),px(sy),Math.max(1.8,CELL*0.09),0,7); ctx.fill();
+  }
+
+  // 좌표
+  ctx.globalAlpha=.5; ctx.fillStyle=wline;
+  ctx.font=`600 ${Math.max(7,Math.min(10,CELL*0.42))}px 'IBM Plex Mono',monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(let i=0;i<N;i++){
+    ctx.fillText(String.fromCharCode(65+i), px(i), PAD*0.48);
+    ctx.fillText(String(N-i), PAD*0.45, px(i));
+  }
+  ctx.globalAlpha=1;
+
+  // 금수 표시
+  if(S.forbidden.size && S.turn===S.human && S.human===1 && !S.over){
+    ctx.strokeStyle=css('--verm'); ctx.lineWidth=Math.max(1.4,CELL*0.075); ctx.globalAlpha=.8;
+    const r=CELL*0.22;
+    for(const i of S.forbidden){
+      const x=px(i%N), y=px((i/N)|0);
+      ctx.beginPath(); ctx.moveTo(x-r,y-r); ctx.lineTo(x+r,y+r); ctx.moveTo(x+r,y-r); ctx.lineTo(x-r,y+r); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // 돌
+  for(let i=0;i<N*N;i++){ if(S.bd[i]) stone(px(i%N),px((i/N)|0),S.bd[i],1); }
+
+  // 마지막 수
+  if(S.last>=0){
+    ctx.strokeStyle=css('--verm'); ctx.lineWidth=Math.max(1.4,CELL*0.07);
+    ctx.beginPath(); ctx.arc(px(S.last%S.N),px((S.last/S.N)|0),CELL*0.17,0,7); ctx.stroke();
+  }
+  // 승리 라인
+  if(S.winLine&&S.winLine.length){
+    ctx.strokeStyle=css('--verm'); ctx.lineWidth=Math.max(2,CELL*0.1); ctx.lineCap='round';
+    const a=S.winLine[0], b=S.winLine[S.winLine.length-1];
+    ctx.globalAlpha=.85;
+    ctx.beginPath(); ctx.moveTo(px(a%N),px((a/N)|0)); ctx.lineTo(px(b%N),px((b/N)|0)); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  // 미리보기
+  if(S.preview>=0 && !S.over){
+    const x=px(S.preview%N), y=px((S.preview/N)|0);
+    stone(x,y,S.turn,.55);
+    ctx.strokeStyle=css('--jade'); ctx.lineWidth=Math.max(1.4,CELL*0.07);
+    ctx.beginPath(); ctx.arc(x,y,CELL*0.55,0,7); ctx.stroke();
+  }
+}
+function stone(x,y,p,alpha){
+  const r=CELL*0.44;
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.beginPath(); ctx.arc(x,y+r*0.14,r,0,7);
+  ctx.fillStyle='rgba(0,0,0,.28)'; ctx.filter='blur(1px)'; ctx.fill(); ctx.filter='none';
+  const g=ctx.createRadialGradient(x-r*0.34,y-r*0.38,r*0.08,x,y,r*1.05);
+  if(p===1){ g.addColorStop(0,css('--stone-b1')); g.addColorStop(1,css('--stone-b2')); }
+  else { g.addColorStop(0,css('--stone-w1')); g.addColorStop(1,css('--stone-w2')); }
+  ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fillStyle=g; ctx.fill();
+  ctx.restore();
+}
+
+/* ── 효과음 (WebAudio 합성) ─────────────────────────── */
+const Snd=(function(){
+  let ctx=null, on=true;
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function ac(){
+    if(!on) return null;
+    if(!ctx){ const C=window.AudioContext||window.webkitAudioContext; if(!C) return null; try{ ctx=new C(); }catch(e){ return null; } }
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  /* 마스터: 저역을 걷어내 소리가 탁해지지 않게 한다 */
+  let bus=null;
+  function out(c){
+    if(!bus || bus.context!==c){
+      const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=140; hp.Q.value=0.7;
+      const g=c.createGain(); g.gain.value=0.9;
+      hp.connect(g).connect(c.destination); bus=hp;
+    }
+    return bus;
+  }
+  /* 감쇠하는 단일 모드(공명 성분) */
+  function mode(c,t,freq,dur,peak,type){
+    const o=c.createOscillator(), g=c.createGain();
+    o.type=type||'sine'; o.frequency.setValueAtTime(freq,t);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(peak,t+0.0012);      // 1.2ms 어택 = 또렷한 타격감
+    g.gain.exponentialRampToValueAtTime(0.00008,t+dur);
+    o.connect(g).connect(out(c)); o.start(t); o.stop(t+dur+0.02);
+  }
+  /* 부딪히는 순간의 짧은 잡음 트랜지언트 */
+  function transient(c,t,cut,q,peak,dur){
+    const n=Math.max(8,Math.floor(c.sampleRate*dur));
+    const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,4);
+    const src=c.createBufferSource(); src.buffer=buf;
+    const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=cut; f.Q.value=q;
+    const g=c.createGain(); g.gain.value=peak;
+    src.connect(f).connect(g).connect(out(c)); src.start(t);
+  }
+
+  /* 바둑돌 착점음: 짧은 트랜지언트 + 비조화 모드 4개 (나무판 공명) */
+  const RATIO=[1, 1.59, 2.44, 3.81];
+  const DECAY=[0.115, 0.078, 0.052, 0.034];
+  const LEVEL=[0.085, 0.060, 0.042, 0.028];
+  function stoneHit(c,t,base,bright){
+    const j=1+(Math.random()-0.5)*0.05;                 // 매번 미세하게 다른 음색
+    transient(c,t,3400*bright,0.9,0.16,0.014);          // 돌끼리 닿는 딱 소리
+    transient(c,t+0.0015,6200*bright,1.6,0.075,0.008);  // 아주 높은 끝맛
+    for(let i=0;i<4;i++) mode(c,t,base*RATIO[i]*j,DECAY[i],LEVEL[i],'sine');
+    mode(c,t,168,0.045,0.045,'sine');                   // 판이 울리는 아주 짧은 몸통
+  }
+
+  return {
+    get on(){ return on; },
+    toggle(){ on=!on; if(on) ac(); return on; },
+    place(p){
+      const c=ac(); if(!c) return; const t=c.currentTime+0.001;
+      // 흑(점판암)은 조금 낮고 묵직, 백(조개)은 조금 높고 맑게
+      stoneHit(c,t, p===1?760:900, p===1?1:1.12);
+    },
+    win(){
+      const c=ac(); if(!c) return; const t=c.currentTime;
+      const step=reduced?0.06:0.11;
+      [587.33,880,1174.66,1760].forEach((f,i)=>{        // 맑은 종소리 상행
+        const s=t+i*step;
+        mode(c,s,f,0.75,0.075,'sine');
+        mode(c,s,f*2.76,0.22,0.022,'sine');             // 종 특유의 배음
+        transient(c,s,f*3,3,0.03,0.01);
+      });
+      mode(c,t+3*step,293.66,1.3,0.05,'sine');
+    },
+    lose(){
+      const c=ac(); if(!c) return; const t=c.currentTime;
+      const step=reduced?0.09:0.16;
+      [440,369.99,293.66].forEach((f,i)=>{              // 차분한 하행 3음
+        const s=t+i*step;
+        mode(c,s,f,0.7,0.07,'sine');
+        mode(c,s,f*1.5,0.3,0.018,'sine');
+      });
+      mode(c,t+2*step,220,1.4,0.055,'sine');            // 낮게 여운
+    },
+    draw(){
+      const c=ac(); if(!c) return; const t=c.currentTime;
+      [523.25,523.25].forEach((f,i)=>mode(c,t+i*0.17,f,0.5,0.06,'sine'));
+    }
+  };
+})();
+
+/* ── 상호작용 ───────────────────────────────────────── */
+function hit(ev){
+  const r=cv.getBoundingClientRect();
+  const cx=(ev.clientX-r.left), cy=(ev.clientY-r.top);
+  const i=Math.round((cx-PAD)/CELL), j=Math.round((cy-PAD)/CELL);
+  if(i<0||i>=S.N||j<0||j>=S.N) return -1;
+  const dx=cx-px(i), dy=cy-px(j);
+  if(Math.hypot(dx,dy)>CELL*0.62) return -1;
+  return j*S.N+i;
+}
+cv.addEventListener('click',e=>{
+  if(S.over||S.thinking||S.turn!==S.human) return;
+  const idx=hit(e); if(idx<0) return;
+  if(S.bd[idx]!==0){ flash('이미 돌이 놓인 자리입니다'); return; }
+  if(S.human===1 && S.forbidden.has(idx)){ flash('금수 자리입니다 — 두면 즉시 패배'); return; }
+  commit(idx);
+});
+document.getElementById('bUndo').onclick=undo;
+document.getElementById('bSnd').onclick=function(){
+  const on=Snd.toggle();
+  this.textContent = on?'소리 켬':'소리 끔';
+  this.classList.toggle('off',!on);
+  this.setAttribute('aria-pressed',String(on));
+  if(on) Snd.place(1);
+};
+document.getElementById('bNew').onclick=()=>newGame();
+document.getElementById('ovBtn').onclick=()=>newGame();
+
+function commit(idx){
+  S.preview=-1;
+  doMove(idx,S.human);
+  if(S.over) return;
+  S.thinking=true; updateStatus(); draw();
+  setTimeout(()=>{
+    const m=aiMove();
+    S.thinking=false;
+    if(m>=0) doMove(m,S.ai); else finish('draw');
+    updateStatus(); draw();
+  },40);
+}
+function doMove(idx,p){
+  Snd.place(p);
+  // 금수 확인 (사람이 흑일 때는 UI에서 이미 막지만 안전장치)
+  if(p===1 && needForbidCheck()){
+    const f=forbiddenAt(idx);
+    if(f){ put(idx,p); S.moves.push({idx,p}); S.last=idx; finish(p===S.human?'lose':'win','흑의 '+f+' 금수'); return; }
+  }
+  put(idx,p); S.moves.push({idx,p}); S.last=idx;
+  const w=checkWin(idx,p);
+  S.turn = p===1?2:1;
+  recalcForbidden();
+  renderLog();
+  if(w.win){ S.winLine=w.line; finish(p===S.human?'win':'lose'); return; }
+  if(S.moves.length>=S.N*S.N) finish('draw');
+}
+function undo(){
+  if(S.thinking) return;
+  if(S.moves.length && S.moves[S.moves.length-1].p===S.ai){ pull(S.moves.pop().idx); }
+  if(S.moves.length && S.moves[S.moves.length-1].p===S.human){ pull(S.moves.pop().idx); }
+  S.turn=S.human; S.over=false; S.winLine=null; S.preview=-1;
+  S.last=S.moves.length?S.moves[S.moves.length-1].idx:-1;
+  document.getElementById('ov').classList.remove('on');
+  recalcForbidden(); renderLog(); updateStatus(); draw();
+}
+function finish(kind,why){
+  S.over=true; S.thinking=false;
+  const ov=document.getElementById('ov');
+  const big=document.getElementById('ovBig'), w=document.getElementById('ovWhy');
+  if(kind==='win'){ big.textContent='승리'; S.tally.w++; setTimeout(()=>Snd.win(),180); }
+  else if(kind==='lose'){ big.textContent='패배'; S.tally.l++; setTimeout(()=>Snd.lose(),180); }
+  else { big.textContent='무승부'; S.tally.d++; setTimeout(()=>Snd.draw(),180); }
+  w.textContent = why || (kind==='draw' ? '판이 가득 찼습니다.' : (S.moves.length+'수 만에 끝났습니다.'));
+  document.getElementById('tW').textContent=S.tally.w;
+  document.getElementById('tL').textContent=S.tally.l;
+  document.getElementById('tD').textContent=S.tally.d;
+  ov.classList.add('on');
+  updateStatus(); draw();
+}
+let flashTimer=0;
+function flash(t){
+  const sub=document.getElementById('sub');
+  sub.textContent=t; sub.style.color='var(--verm)';
+  clearTimeout(flashTimer);
+  flashTimer=setTimeout(()=>{ sub.style.color=''; updateStatus(); },1800);
+}
+function coord(idx){ return String.fromCharCode(65+(idx%S.N))+(S.N-((idx/S.N)|0)); }
+function renderLog(){
+  const el=document.getElementById('log');
+  document.getElementById('mvCount').textContent=S.moves.length+'수';
+  if(!S.moves.length){ el.innerHTML='<em>아직 둔 수가 없습니다.</em>'; return; }
+  el.innerHTML=S.moves.map((m,i)=>`<span><em>${i+1}.</em> ${m.p===1?'●':'○'}${coord(m.idx)}</span>`).join('');
+  el.scrollTop=el.scrollHeight;
+}
+function updateStatus(){
+  const dot=document.getElementById('dot'), msg=document.getElementById('msg'), sub=document.getElementById('sub');
+  const st=document.getElementById('status');
+  dot.className='turn-dot '+(S.turn===1?'b':'w');
+  st.classList.toggle('think',S.thinking);
+  document.getElementById('bUndo').disabled = S.thinking || S.moves.length<1;
+  if(S.over){ msg.textContent='대국 종료'; sub.textContent='새 판을 시작하세요'; return; }
+  if(S.thinking){ msg.textContent='컴퓨터가 생각 중…'; sub.textContent=`레벨 ${S.level} · 최대 ${(CFG[S.level].time/1000).toFixed(1)}초`; return; }
+  if(S.turn===S.human){
+    msg.textContent = `내 차례 · ${S.human===1?'흑':'백'}`;
+    sub.textContent = '교차점을 누르면 바로 착수합니다';
+  } else { msg.textContent='컴퓨터 차례'; sub.textContent=''; }
+}
+
+/* ── 설정 UI ────────────────────────────────────────── */
+function renderLevels(){
+  const el=document.getElementById('lvls');
+  el.innerHTML=LEVELS.map((l,i)=>`
+    <label class="lvl${S.level===i+1?' sel':''}" data-l="${i+1}">
+      <input type="radio" name="lv" ${S.level===i+1?'checked':''}>
+      <span class="num">${i+1}</span>
+      <span><span class="nm">${l.n}</span><span class="ds" style="display:block">${l.ds}</span></span>
+    </label>`).join('');
+  el.querySelectorAll('.lvl').forEach(n=>n.onclick=()=>{
+    S.level=+n.dataset.l; renderLevels(); updateChip(); updateStatus();
+  });
+}
+function updateChip(){ document.getElementById('chip').textContent=`LV ${S.level} · ${LEVELS[S.level-1].n}`; }
+
+function renderPresets(){
+  const el=document.getElementById('presets');
+  const cur=currentPreset();
+  el.innerHTML=Object.entries(PRESETS).map(([k,p])=>`<button data-k="${k}" class="${cur===k?'on':''}">${p.label}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    Object.assign(S.rules,PRESETS[b.dataset.k].v);
+    renderPresets(); renderRules(); recalcForbidden(); draw();
+  });
+  document.getElementById('presetName').textContent = cur? PRESETS[cur].label : '직접 설정';
+}
+function currentPreset(){
+  for(const [k,p] of Object.entries(PRESETS)){
+    if(RULE_DEFS.every(r=>!!S.rules[r.key]===!!p.v[r.key])) return k;
+  }
+  return null;
+}
+function renderRules(){
+  const el=document.getElementById('rules');
+  el.innerHTML = RULE_DEFS.map(r=>`
+    <div class="rule">
+      <div>
+        <div class="nm">${r.name}${r.black?'<span class="tag">흑 전용</span>':''}</div>
+        <div class="ds">${r.ds}</div>
+      </div>
+      <label class="sw"><input type="checkbox" data-k="${r.key}" ${S.rules[r.key]?'checked':''} aria-label="${r.name}"><i></i></label>
+    </div>`).join('') + `
+    <div class="rule" style="grid-template-columns:1fr">
+      <div>
+        <div class="nm">판 크기 · 선공</div>
+        <div class="ds">판이 넓을수록 수읽기 여유가 생기고 초반이 느슨해집니다. 오목은 먼저 두는 쪽(흑)이 유리해서, 금수 규칙으로 균형을 맞춥니다.</div>
+        <div class="seg" id="segSize"></div>
+        <div class="seg" id="segFirst" style="margin-top:6px"></div>
+      </div>
+    </div>`;
+  el.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{
+    S.rules[c.dataset.k]=c.checked; renderPresets(); recalcForbidden(); draw();
+  });
+  seg('segSize',[[15,'15 × 15'],[19,'19 × 19']],S.N,v=>{ S.N=v; renderRules(); newGame(); });
+  seg('segFirst',[[1,'내가 흑(선)'],[2,'내가 백(후)']],S.human,v=>{ S.human=v; S.ai=v===1?2:1; renderRules(); newGame(); });
+}
+function seg(id,opts,cur,cb){
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML=opts.map(([v,l])=>`<button data-v="${v}" class="${cur===v?'on':''}">${l}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>cb(+b.dataset.v));
+}
+
+/* ── 시작 ────────────────────────────────────────────── */
+function newGame(){
+  S.bd=new Int8Array(S.N*S.N);
+  buildLines(S.N); fullScore();
+  S.moves=[]; S.turn=1; S.over=false; S.preview=-1; S.thinking=false; S.last=-1; S.winLine=null;
+  document.getElementById('ov').classList.remove('on');
+  document.querySelector('.masthead .sub').textContent=`Gomoku · ${S.N}×${S.N} · 五目`;
+  recalcForbidden(); renderLog(); resize(); updateStatus();
+  if(S.turn!==S.human){
+    S.thinking=true; updateStatus();
+    setTimeout(()=>{ const m=aiMove(); S.thinking=false; if(m>=0) doMove(m,S.ai); updateStatus(); draw(); },120);
+  }
+}
+
+renderLevels(); updateChip(); renderPresets(); renderRules(); newGame();
+window.addEventListener('resize',resize);
+if(window.matchMedia) window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>setTimeout(draw,30));
+})();
+</script>
+
+</body>
+</html>
