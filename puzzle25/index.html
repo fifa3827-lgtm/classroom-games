@@ -71,7 +71,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-dee
 .stage:active{transform:scale(.96)}
 .stage .no{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1}
 .stage .ty{font-size:11px;color:var(--ink-2);line-height:1.3;word-break:keep-all}
-.stage[data-type=lights]{--tint:var(--lemon)}
+.stage[data-type=rush]{--tint:var(--lemon)}
 .stage[data-type=pipes]{--tint:var(--sky)}
 .stage[data-type=maze]{--tint:var(--mint)}
 .stage[data-type=euler]{--tint:var(--lav)}
@@ -98,11 +98,32 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-dee
 .grid-board{--avail:calc(100vw - 32px - 2*clamp(10px,3vw,24px) - 2px);--cell:min(64px,calc((var(--avail) - (var(--n) - 1)*var(--gap))/var(--n)))}
 @media (min-width:592px){.grid-board{--avail:calc(560px - 32px - 48px - 2px)}}
 
-/* 불 끄기 */
-.lights{display:grid;--gap:8px;gap:var(--gap);grid-template-columns:repeat(var(--n),var(--cell))}
-.lights button{width:var(--cell);height:var(--cell);border-radius:var(--r-cell);background:var(--bg);border:1.5px solid var(--line-2);transition:background-color .15s ease,transform .08s ease,border-color .15s ease,box-shadow .15s ease}
-.lights button:active{transform:scale(.92)}
-.lights button.on{background:var(--lemon);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft), inset 0 -3px 0 rgba(243,154,106,.35)}
+/* 주차장 탈출 */
+.rush-area{position:relative;display:inline-block;padding-right:30px;--gap:6px;--avail:calc(100vw - 32px - 2*clamp(10px,3vw,24px) - 2px - 30px)}
+@media (min-width:592px){.rush-area{--avail:calc(560px - 32px - 48px - 2px - 30px)}}
+.rush{position:relative;touch-action:none;width:calc(var(--n)*var(--cell) + (var(--n) - 1)*var(--gap));height:calc(var(--n)*var(--cell) + (var(--n) - 1)*var(--gap))}
+.rush .slot{position:absolute;width:var(--cell);height:var(--cell);left:calc(var(--c)*(var(--cell) + var(--gap)));top:calc(var(--r)*(var(--cell) + var(--gap)));border-radius:var(--r-cell);background:var(--bg);border:1.5px solid var(--line)}
+.rush .slot.exit{background:#ffe8d6;border-color:#f7d7bf}
+.rush .car{position:absolute;touch-action:none;cursor:grab;border-radius:var(--r-cell);left:calc(var(--c)*(var(--cell) + var(--gap)));top:calc(var(--r)*(var(--cell) + var(--gap)));width:var(--w);height:var(--h);border:1.5px solid rgba(59,53,80,.14);box-shadow:inset 0 -3px 0 rgba(59,53,80,.07);transition:left .16s cubic-bezier(.2,.8,.2,1),top .16s cubic-bezier(.2,.8,.2,1)}
+.rush .car.h{--w:calc(var(--len)*var(--cell) + (var(--len) - 1)*var(--gap));--h:var(--cell)}
+.rush .car.v{--w:var(--cell);--h:calc(var(--len)*var(--cell) + (var(--len) - 1)*var(--gap))}
+.rush .car.c0{background:var(--sky)}
+.rush .car.c1{background:var(--mint)}
+.rush .car.c2{background:var(--lav)}
+.rush .car.c3{background:var(--pink)}
+.rush .car.c4{background:var(--lemon)}
+.rush .car.me{background:#f5866f;border-color:#dd6a52;box-shadow:inset 0 -3px 0 rgba(140,50,35,.22)}
+.rush .car.me::before,.rush .car.me::after{background:rgba(255,255,255,.68)}
+.rush .car.dragging{transition:none;z-index:3;cursor:grabbing;box-shadow:0 10px 22px -8px rgba(120,90,140,.5)}
+.rush .car.out{transition:left .5s cubic-bezier(.4,0,.9,.4)}
+.rush .car::before,.rush .car::after{content:"";position:absolute;background:rgba(255,255,255,.5);border-radius:4px}
+.rush .car.h::before{left:16%;top:24%;bottom:24%;width:11%}
+.rush .car.h::after{right:16%;top:24%;bottom:24%;width:11%}
+.rush .car.v::before{top:16%;left:24%;right:24%;height:11%}
+.rush .car.v::after{bottom:16%;left:24%;right:24%;height:11%}
+.rush-exit{position:absolute;right:0;width:30px;top:calc(2*(var(--cell) + var(--gap)) + var(--cell)/2);transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:none}
+.rush-exit b{font-size:19px;line-height:1;color:#e8714f}
+.rush-exit span{font-size:10px;color:var(--ink-2);word-break:keep-all}
 
 /* 파이프 */
 .pipes{display:grid;--gap:4px;gap:var(--gap);grid-template-columns:repeat(var(--n),var(--cell))}
@@ -187,7 +208,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-dee
     </div>
     <div class="intro">
       <h2>다섯 가지 퍼즐,<br>스물다섯 단계.</h2>
-      <p>불 끄기, 파이프 잇기, 미로, 한 붓 그리기, 물 붓기가 번갈아 나오고 뒤로 갈수록 어려워집니다. 규칙은 각 판 위에 한 줄로 적혀 있습니다.</p>
+      <p>주차장 탈출, 파이프 잇기, 미로, 한 붓 그리기, 물 붓기가 번갈아 나오고 뒤로 갈수록 어려워집니다. 규칙은 각 판 위에 한 줄로 적혀 있습니다.</p>
     </div>
     <div class="progress"><span id="progress-label">시작 전</span><div class="bar"><i id="progress-bar"></i></div></div>
     <div class="rounds" id="rounds"></div>
@@ -239,9 +260,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-dee
    공통
    ========================================================= */
 const $ = s => document.querySelector(s);
-const TYPES = ['lights','pipes','maze','euler','water'];
+const TYPES = ['rush','pipes','maze','euler','water'];
 const META = {
-  lights:{name:'불 끄기',   rule:'칸을 누르면 그 칸과 상하좌우 네 칸이 함께 켜지거나 꺼집니다. 불을 모두 끄세요.'},
+  rush:  {name:'주차장 탈출',rule:'빨간 차를 오른쪽 출구로 빼내세요. 차는 놓인 방향으로만 밀 수 있고 다른 차를 넘지 못합니다. 차를 손가락으로 밀거나, 한 번 누르면 한 칸 갑니다.'},
   pipes: {name:'파이프 잇기',rule:'칸을 누르면 관이 시계 방향으로 90도 돕니다. 끊긴 곳 없이 모든 관을 하나로 이으세요.'},
   maze:  {name:'미로',      rule:'왼쪽 위에서 출발해 주황색 칸까지 가세요. 화살표 키, 아래 버튼, 미로 위에서 밀기(스와이프) 모두 됩니다.'},
   euler: {name:'한 붓 그리기',rule:'점을 차례로 눌러 모든 선을 한 번씩만 지나가세요. 지나간 선은 다시 지날 수 없습니다.'},
@@ -274,49 +295,126 @@ const maxCleared = () => Object.keys(progress.cleared).reduce((m,k)=>Math.max(m,
 const isUnlocked = no => no <= maxCleared()+1;
 
 /* =========================================================
-   1. 불 끄기
+   1. 주차장 탈출
+   판은 6×6, 출구는 세 번째 줄 오른쪽.
+   문제는 미리 너비 우선 탐색으로 풀어 최소 수순(par)까지 확인해 둔 것.
+   차 하나를 한 번 미는 것을 1회로 센다.
    ========================================================= */
-const LIGHTS_PARAMS = [{n:3,k:3},{n:4,k:5},{n:5,k:8},{n:5,k:13},{n:6,k:18}];
-function genLights(round, seed){
-  const {n,k} = LIGHTS_PARAMS[round];
-  const rnd = rng(seed);
-  let grid;
-  do{
-    grid = Array.from({length:n},()=>new Array(n).fill(false));
-    const cells = shuffle([...Array(n*n).keys()], rnd).slice(0,k);
-    for(const c of cells) lightsToggle(grid, Math.floor(c/n), c%n);
-  }while(grid.every(row=>row.every(v=>!v)));
-  return {n, grid, history:[]};
+const RUSH_N = 6, RUSH_EXIT_ROW = 2;
+const RUSH_LEVELS = [                                    // dir,줄,위치,길이 를 4글자씩
+  {cars:'h202h522v423v313v523v213',                      par:6},
+  {cars:'h222v233h502v522v413h442v132',                  par:8},
+  {cars:'h202v222h423v322h113v522v032h532v542',          par:11},
+  {cars:'h202h422v222v413h502v303v132h002v542v202',      par:17},
+  {cars:'h202v213h512v033v512v102h032v322h132v342v532',  par:22}
+];
+function genRush(round){
+  const lv = RUSH_LEVELS[round];
+  const cars = lv.cars.match(/.{4}/g).map(s=>({dir:s[0], f:+s[1], p:+s[2], len:+s[3]}));
+  return {cars, par:lv.par, history:[]};
 }
-function lightsToggle(g,r,c){
-  const n=g.length;
-  for(const [dr,dc] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]){
-    const rr=r+dr, cc=c+dc;
-    if(rr>=0&&cc>=0&&rr<n&&cc<n) g[rr][cc]=!g[rr][cc];
-  }
+function rushOcc(cars, skip){
+  const g = new Array(RUSH_N*RUSH_N).fill(-1);
+  cars.forEach((c,i)=>{
+    if(i===skip) return;
+    for(let k=0;k<c.len;k++){
+      const r = c.dir==='h' ? c.f : c.p+k, cc = c.dir==='h' ? c.p+k : c.f;
+      g[r*RUSH_N+cc] = i;
+    }
+  });
+  return g;
 }
-function mountLights(state, api){
-  const el = document.createElement('div');
-  el.className='lights grid-board'; el.style.setProperty('--n', state.n);
-  el.setAttribute('role','grid'); el.setAttribute('aria-label','불 끄기 판');
-  const btns=[];
-  for(let r=0;r<state.n;r++) for(let c=0;c<state.n;c++){
-    const b=document.createElement('button'); b.type='button';
-    b.addEventListener('click',()=>{
-      state.history.push(state.grid.map(x=>x.slice()));
-      lightsToggle(state.grid,r,c); SFX.tap(); api.move(); paint();
-      if(state.grid.every(row=>row.every(v=>!v))) api.win();
-    });
-    btns.push(b); el.appendChild(b);
+function rushRange(cars, i){                             // 이 차가 갈 수 있는 위치 범위
+  const g = rushOcc(cars, i), c = cars[i];
+  let lo=c.p, hi=c.p;
+  while(lo>0){ const r=c.dir==='h'?c.f:lo-1, cc=c.dir==='h'?lo-1:c.f; if(g[r*RUSH_N+cc]>=0) break; lo--; }
+  while(hi+c.len<RUSH_N){ const r=c.dir==='h'?c.f:hi+c.len, cc=c.dir==='h'?hi+c.len:c.f; if(g[r*RUSH_N+cc]>=0) break; hi++; }
+  return [lo,hi];
+}
+function mountRush(state, api){
+  const area=document.createElement('div');
+  area.className='rush-area grid-board'; area.style.setProperty('--n', RUSH_N);
+  const board=document.createElement('div');
+  board.className='rush'; board.setAttribute('aria-label','주차장 판');
+  for(let r=0;r<RUSH_N;r++) for(let c=0;c<RUSH_N;c++){
+    const slot=document.createElement('i');
+    slot.className = 'slot' + (r===RUSH_EXIT_ROW ? ' exit' : '');
+    slot.style.setProperty('--r',r); slot.style.setProperty('--c',c);
+    board.appendChild(slot);
   }
-  api.setUndo(()=>{ const prev=state.history.pop(); if(prev){ state.grid=prev; SFX.tap(); paint(); } });
+  const els = state.cars.map((c,i)=>{
+    const e=document.createElement('div');
+    e.className = 'car ' + c.dir + (i===0 ? ' me' : ' c'+(i%5));
+    e.style.setProperty('--len', c.len);
+    e.setAttribute('aria-label', i===0 ? '빨간 차' : (c.dir==='h' ? '가로 차' : '세로 차'));
+    e.addEventListener('pointerdown', ev=>startDrag(ev,i,e));
+    board.appendChild(e);
+    return e;
+  });
+  const exit=document.createElement('div');
+  exit.className='rush-exit'; exit.innerHTML='<b>▶</b><span>출구</span>';
+  area.appendChild(board); area.appendChild(exit);
+
+  let won=false, drag=null;
   function paint(){
-    let lit=0;
-    btns.forEach((b,i)=>{ const on=state.grid[Math.floor(i/state.n)][i%state.n]; b.classList.toggle('on',on); b.setAttribute('aria-label', on?'켜짐':'꺼짐'); if(on) lit++; });
-    api.status(`켜진 불 ${lit}개`);
+    state.cars.forEach((c,i)=>{
+      els[i].style.setProperty('--r', c.dir==='h' ? c.f : c.p);
+      els[i].style.setProperty('--c', c.dir==='h' ? c.p : c.f);
+    });
+    api.status(`최소 ${state.par}회`);
   }
+  api.setUndo(()=>{
+    const prev=state.history.pop();
+    if(!prev || won) return;
+    state.cars.forEach((c,i)=>{ c.p=prev[i]; }); SFX.tap(); paint();
+  });
+  function step(){                                       // 칸 하나에서 다음 칸까지의 간격(px)
+    const slot=board.querySelector('.slot').getBoundingClientRect().width;
+    return (board.getBoundingClientRect().width - slot)/(RUSH_N-1);
+  }
+  function startDrag(ev,i,e){
+    if(won || drag) return;
+    const [lo,hi]=rushRange(state.cars,i);
+    const horiz = state.cars[i].dir==='h';
+    drag={i, e, lo, hi, horiz, step:step(), p0:state.cars[i].p,
+          start: horiz?ev.clientX:ev.clientY, d:0};
+    e.classList.add('dragging');
+    try{ e.setPointerCapture(ev.pointerId); }catch(err){}
+    ev.preventDefault();
+  }
+  board.addEventListener('pointermove', ev=>{
+    if(!drag) return;
+    const cur = drag.horiz ? ev.clientX : ev.clientY;
+    const min=(drag.lo-drag.p0)*drag.step, max=(drag.hi-drag.p0)*drag.step;
+    drag.d = Math.max(min, Math.min(max, cur - drag.start));
+    drag.e.style.transform = drag.horiz ? `translateX(${drag.d}px)` : `translateY(${drag.d}px)`;
+  });
+  function endDrag(){
+    if(!drag) return;
+    const {i,e,lo,hi,p0,d} = drag;
+    const cells = Math.round(d/drag.step);
+    drag=null;
+    e.classList.remove('dragging'); e.style.transform='';
+    let np;
+    if(cells!==0) np = p0+cells;                          // 끌어서 옮긴 만큼
+    else if(Math.abs(d)>3){ const s=Math.sign(d); np = (p0+s>=lo && p0+s<=hi) ? p0+s : p0; }
+    else np = p0+1<=hi ? p0+1 : (p0-1>=lo ? p0-1 : p0);   // 그냥 눌렀으면 한 칸
+    if(np===p0){
+      SFX.no(); e.classList.add('shake'); setTimeout(()=>e.classList.remove('shake'),320);
+      return;
+    }
+    state.history.push(state.cars.map(c=>c.p));
+    state.cars[i].p = np; SFX.tap(); api.move(); paint();
+    if(state.cars[0].p + state.cars[0].len === RUSH_N){
+      won=true;
+      setTimeout(()=>{ els[0].classList.add('out'); els[0].style.setProperty('--c', RUSH_N+1); },100);
+      setTimeout(()=>api.win(), 380);                     // 차가 빠져나가는 모습을 먼저 보여준다
+    }
+  }
+  board.addEventListener('pointerup', endDrag);
+  board.addEventListener('pointercancel', endDrag);
   paint();
-  return el;
+  return area;
 }
 
 /* =========================================================
@@ -784,7 +882,7 @@ function startStage(no){
   $('#play-rule').textContent=META[stage.type].rule;
   let state, el;
   switch(stage.type){
-    case 'lights': state=genLights(stage.round,seed); el=mountLights(state,api); break;
+    case 'rush':   state=genRush(stage.round);        el=mountRush(state,api);   break;
     case 'pipes':  state=genPipes(stage.round,seed);  el=mountPipes(state,api);  break;
     case 'maze':   state=genMaze(stage.round,seed);   el=mountMaze(state,api);   break;
     case 'euler':  state=genEuler(stage.round);       el=mountEuler(state,api);  break;
