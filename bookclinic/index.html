@@ -657,7 +657,7 @@
   }
 
   /* ───────── 배경음악: bgm.mp3가 있으면 재생, 없으면 즉석 앰비언트 ───────── */
-  var snd={on:false,audio:null,ctx:null,nodes:null,timer:null,mode:""};
+  var snd={on:false,audio:null,ctx:null,nodes:null,timer:null,mode:"",gen:0,armed:false};
   function soundLabel(){$("sound").setAttribute("aria-pressed",String(snd.on));$("sound-label").textContent=snd.on?"소리 끄기":"소리 켜기";}
   function startFile(){
     return new Promise(function(res){
@@ -698,19 +698,41 @@
     return true;
   }
   async function soundOn(){
+    var g=++snd.gen;
     var ok=await startFile();
+    if(g!==snd.gen){if(snd.audio){snd.audio.pause();snd.audio=null;}return;}
     if(ok){snd.mode="file";$("bgm-credit").textContent="bgm.mp3 재생 중";}
-    else{ if(!startSynth()){setStatus("이 브라우저에서는 소리를 낼 수 없어요.",true);return;} snd.mode="synth";$("bgm-credit").textContent="페이지가 직접 연주하는 서가 앰비언트";}
+    else{
+      var C=window.AudioContext||window.webkitAudioContext;
+      if(!C){setStatus("이 브라우저에서는 소리를 낼 수 없어요.",true);return;}
+      if(!startSynth())return;
+      if(snd.ctx&&snd.ctx.state==="suspended"){ /* 자동 재생이 막힘: 사용자가 누를 때까지 대기 */ var c=snd.ctx;snd.ctx=null;clearTimeout(snd.timer);try{c.close();}catch(e){} return; }
+      snd.mode="synth";$("bgm-credit").textContent="페이지가 직접 연주하는 서가 앰비언트";
+    }
     snd.on=true; soundLabel(); try{localStorage.setItem("bgm","on");}catch(e){}
   }
   function soundOff(){
     if(snd.audio){var a=snd.audio;snd.audio=null;var f=function(){a.volume=Math.max(0,a.volume-0.05);if(a.volume>0)setTimeout(f,60);else a.pause();};f();}
     if(snd.ctx){var c=snd.ctx;snd.ctx=null;clearTimeout(snd.timer);snd.nodes.master.gain.linearRampToValueAtTime(0,c.currentTime+1.2);setTimeout(function(){c.close();},1400);}
-    snd.on=false; soundLabel(); try{localStorage.setItem("bgm","off");}catch(e){}
+    snd.gen++; snd.armed=false; snd.on=false; soundLabel(); try{localStorage.setItem("bgm","off");}catch(e){}
   }
-  $("sound").addEventListener("click",function(){if(snd.on)soundOff();else soundOn();});
-  /* 브라우저 정책상 소리는 사용자가 한 번 눌러야 시작됨. 예전에 켰던 사람은 첫 터치/클릭 때 자동으로 다시 켜줌 */
-  try{if(localStorage.getItem("bgm")==="on"){var once=function(){document.removeEventListener("pointerdown",once);if(!snd.on)soundOn();};document.addEventListener("pointerdown",once);$("sound-label").textContent="소리 켜기 (터치하면 이어서)";}}catch(e){}
+  $("sound").addEventListener("click",function(e){
+    e.stopPropagation();
+    if(snd.on){soundOff();return;}
+    if($("sound").getAttribute("aria-pressed")==="true"){ /* 켜짐 예약 상태에서 누름 = 끄기 */ snd.gen++;snd.armed=false;snd.on=false;soundLabel();try{localStorage.setItem("bgm","off");}catch(x){}return; }
+    soundOn();
+  });
+  /* 기본은 켜짐. 브라우저가 자동 재생을 막으면 첫 터치·클릭 때 시작. 직접 끈 사람만 꺼진 채로 유지 */
+  (function(){
+    var pref="on"; try{pref=localStorage.getItem("bgm")||"on";}catch(e){}
+    if(pref!=="on")return;
+    snd.armed=true;
+    var once=function(ev){if(!snd.armed)return;if(ev&&ev.target&&ev.target.closest&&ev.target.closest("#sound"))return;snd.armed=false;document.removeEventListener("pointerdown",once,true);document.removeEventListener("keydown",once,true);if(!snd.on)soundOn();};
+    document.addEventListener("pointerdown",once,true);document.addEventListener("keydown",once,true);
+    $("sound-label").textContent="소리 켜짐 · 화면을 누르면 시작";
+    $("sound").setAttribute("aria-pressed","true");
+    soundOn().then(function(){if(snd.on){snd.armed=false;}else if(snd.armed){$("sound").setAttribute("aria-pressed","true");$("sound-label").textContent="소리 켜짐 · 화면을 누르면 시작";}}).catch(function(){});
+  })();
 
   /* ───────── 시작 ───────── */
   (function start(){
