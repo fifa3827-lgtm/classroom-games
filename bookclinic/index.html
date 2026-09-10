@@ -130,6 +130,7 @@
   .status.err{color:var(--warn)}
 
   .picks{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 0 18px;}
+  .picks[hidden]{display:none}
   @media (max-width:720px){ .picks{grid-template-columns:1fr} }
   .pick{background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:14px 16px 14px; box-shadow:var(--shadow); min-width:0;}
   .pick-h{display:flex; align-items:baseline; gap:8px; margin:0 0 10px; font-size:15px; font-weight:700;}
@@ -409,7 +410,7 @@
       if(r.status===401||r.status===403)throw new Error("auth");
       if(!r.ok)throw new Error("http"+r.status);
       return r.json();
-    }).then(function(d){cacheSet(ck,d);return d;});
+    }).then(function(d){cacheSet(ck,d);netFail.ok++;return d;});
   }
 
   /* 카카오 책 검색 → 공통 형식 */
@@ -421,7 +422,7 @@
         var isbn13=(x.isbn||"").split(" ").filter(function(s){return s.length===13;})[0]||(x.isbn||"").replace(/\s/g,"");
         return {isbn:isbn13,title:x.title,authors:(x.authors||[]).join(", "),translators:(x.translators||[]).join(", "),publisher:x.publisher,date:(x.datetime||"").slice(0,10),year:parseInt((x.datetime||"").slice(0,4),10)||0,desc:x.contents||"",cover:x.thumbnail||"",link:x.url||"",src:[target==="publisher"?"출판사 신간:"+query:"카카오:"+query+(sort==="latest"?"(최신)":"")],srcCount:1,classNo:"",loanRank:0,pubNew:target==="publisher"};
       });
-    }).catch(function(e){if(e.message==="auth"){kakaoKey="";try{localStorage.removeItem("kakaokey");}catch(x){}authFail.kakao=true;}return [];});
+    }).catch(function(e){if(e.message==="auth"){kakaoKey="";try{localStorage.removeItem("kakaokey");}catch(x){}authFail.kakao=true;}else{netFail.kakao++;netFail.msg=e.message;}return [];});
   }
   /* 정보나루 인기대출 → 공통 형식 */
   function d4lLoan(t,extra,pageSize){
@@ -438,7 +439,7 @@
       return (r.docs||[]).map(function(w){var x=w.doc||w;
         return {isbn:x.isbn13,title:x.bookname,authors:x.authors||"",translators:"",publisher:x.publisher,date:"",year:parseInt(x.publication_year,10)||0,desc:"",cover:x.bookImageURL||"",link:x.bookDtlUrl||"",src:["도서관 인기대출"+(extra&&extra.kdc?"("+kdcName(extra.kdc)+")":"")],srcCount:1,classNo:String(x.class_no||""),loanRank:parseInt(x.ranking,10)||0,loanCount:parseInt(x.loan_count,10)||0,add:String(x.addition_symbol||"")};
       });
-    }).catch(function(e){if(e.message==="auth"){d4lKey="";try{localStorage.removeItem("d4lkey");}catch(x){}authFail.d4l=true;}return [];});
+    }).catch(function(e){if(e.message==="auth"){d4lKey="";try{localStorage.removeItem("d4lkey");}catch(x){}authFail.d4l=true;}else{netFail.d4l++;netFail.msg=e.message;}return [];});
   }
   function d4lDetail(isbn){
     if(!d4lKey||!isbn)return Promise.resolve(null);
@@ -450,6 +451,7 @@
   }
   function kdcName(k){return {"0":"총류","1":"철학·심리","2":"종교","3":"사회","4":"과학","5":"기술","6":"예술·체육","7":"언어","8":"문학","9":"역사"}[String(k)]||"";}
   var authFail={kakao:false,d4l:false};
+  var netFail={kakao:0,d4l:0,ok:0,msg:""};   // 열쇠 문제가 아닌 실패(차단·시간초과·쿼터)
 
   /* ───────── 후보 모으기 ───────── */
   function okItem(it,t){
@@ -570,7 +572,7 @@
     if(state.mode==="kdc"&&!kd)kd=kdcSel();
     if(state.mode==="kdc"&&!kd){setStatus("먼저 분류를 골라주세요.",true);return;}
     if(!kakaoKey&&!d4lKey){$("setup").hidden=false;setStatus("먼저 위에 데이터 열쇠를 저장해 주세요.",true);$("cards").innerHTML="";return;}
-    setBusy(true);callCount=0;authFail={kakao:false,d4l:false};
+    setBusy(true);callCount=0;authFail={kakao:false,d4l:false};netFail={kakao:0,d4l:0,ok:0,msg:""};
     $("cards").innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
     setStatus("도서관과 서점 데이터를 살피는 중…");
     try{
@@ -587,7 +589,11 @@
       var pool=Object.keys(map).map(function(k){return map[k];});
       if(state.onlyNew)pool=pool.filter(function(it){return (it.year||0)>=THIS_YEAR||(it.date&&daysAgo(it.date)<=365);});
       if(!pool.length){
-        $("cards").innerHTML='<p class="empty">'+(authFail.kakao||authFail.d4l?"열쇠가 맞지 않아 데이터를 받지 못했어요. 위에서 다시 확인해 주세요.":"조건에 맞는 책을 찾지 못했어요. 「올해 나온 책만」을 끄거나 답을 바꿔보시겠어요?")+'</p>';
+        var why=authFail.kakao||authFail.d4l?"열쇠가 맞지 않아 데이터를 받지 못했어요. 위에서 다시 확인해 주세요."
+          :(netFail.kakao+netFail.d4l>0&&!netFail.ok)?"서버에서 데이터를 받지 못했어요 ("+(netFail.kakao?"카카오 "+netFail.kakao+"회":"")+(netFail.kakao&&netFail.d4l?", ":"")+(netFail.d4l?"정보나루 "+netFail.d4l+"회":"")+" 실패 · "+netFail.msg+"). 이 네트워크에서 dapi.kakao.com이 막혀 있거나 일시 장애일 수 있어요. 다른 네트워크(휴대폰 핫스팟)로 한 번 열어보세요."
+          :"조건에 맞는 책을 찾지 못했어요. 「올해 나온 책만」을 끄거나 답을 바꿔보시겠어요?";
+        $("cards").innerHTML='<p class="empty">'+why+'</p>';
+        state.pool=[];state.picks=[];state.best=[];state.fresh=[];renderPicks(t);
         if(authFail.kakao||authFail.d4l)$("setup").hidden=false;
         setStatus("");return;
       }
@@ -618,7 +624,7 @@
       await Promise.all(state.fresh.filter(function(it){return top.indexOf(it)===-1&&(!it.desc||!it.cover);}).map(async function(it){var k=await kakaoByIsbn(it.isbn);if(k){it.cover=it.cover||k.thumbnail||"";it.date=it.date||(k.datetime||"").slice(0,10);it.link=k.url||it.link;}}));
       render();
       var srcNote=(d4lKey?"도서관 대출 데이터":"")+(d4lKey&&kakaoKey?" + ":"")+(kakaoKey?"카카오 책 검색":"");
-      setStatus(srcNote+"에서 "+pool.length+"권을 살펴 세 권을 골랐어요"+(storyKW?" · 찾은 낱말: "+storyKW.join(", "):"")+" · 조회 "+callCount+"회"+(authFail.kakao?" · 카카오 키가 거부됨":"")+(authFail.d4l?" · 정보나루 키가 거부됨":""),authFail.kakao||authFail.d4l);
+      setStatus(srcNote+"에서 "+pool.length+"권을 살펴 세 권을 골랐어요"+(storyKW?" · 찾은 낱말: "+storyKW.join(", "):"")+" · 조회 "+callCount+"회"+(authFail.kakao?" · 카카오 키가 거부됨":"")+(authFail.d4l?" · 정보나루 키가 거부됨":"")+(netFail.kakao+netFail.d4l?" · 조회 "+(netFail.kakao+netFail.d4l)+"회 실패("+netFail.msg+")":""),authFail.kakao||authFail.d4l);
       if(authFail.kakao||authFail.d4l)$("setup").hidden=false;
     }catch(e){
       setStatus("데이터를 받지 못했어요. 잠시 뒤 다시 눌러주세요. ("+e.message+")",true);$("cards").innerHTML="";
