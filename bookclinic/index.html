@@ -449,10 +449,12 @@
     setStatus("도서관과 서점 데이터를 살피는 중…");
     try{
       var results=await Promise.all(buildQueries(t,storyKW));
-      var map={};
+      var map={},byName={};
       results.forEach(function(arr){arr.forEach(function(it){
         if(!okItem(it,t))return;
         var k=it.isbn||(it.title+"|"+it.publisher); if(!k)return;
+        var nk=cleanTitle(it.title).replace(/\s+/g,"")+"|"+shortAuthor(it.authors).split(",")[0];
+        if(!map[k]&&byName[nk])k=byName[nk]; else byName[nk]=k;
         if(map[k]){var m=map[k];m.srcCount++;m.src=m.src.concat(it.src);if(!m.desc&&it.desc)m.desc=it.desc;if(!m.cover&&it.cover)m.cover=it.cover;if(!m.date&&it.date)m.date=it.date;if(!m.year&&it.year)m.year=it.year;if(!m.classNo&&it.classNo)m.classNo=it.classNo;if(!m.loanRank&&it.loanRank)m.loanRank=it.loanRank;if(!m.link&&it.link)m.link=it.link;if(!m.translators&&it.translators)m.translators=it.translators;return;}
         map[k]=it;
       });});
@@ -512,19 +514,21 @@
     var kw={위로:/힘들|슬프|슬퍼|슬픔|외로|외롭|지치|우울|허전|헛헛|불안|걱정|무섭|서운|서럽|속상|눈물|돌아가|죽|이별|그리워|헤어/,유쾌:/웃|재미|유머|신나|즐거|장난|개그/,관계:/친구|엄마|아빠|동생|형|누나|언니|오빠|선생|싸|외톨|따돌|왕따|사람|관계|사이/,용기:/용기|자신감|도전|겁|소심|포기|실패|시험|경쟁|주눅|발표|떨/,호기심:/과학|역사|우주|공룡|지식|궁금|왜|사회|철학|수학|실험|알고 싶/,상상:/판타지|마법|모험|SF|게임|상상|마법사/};
     Object.keys(kw).forEach(function(k){if(kw[k].test(text))moods.push(k);});
     var tk={"동물·자연":/동물|강아지|고양이|공룡|곤충|바다|숲|자연|식물|새/,"과학·우주":/과학|우주|실험|로봇|별|행성|생물|발명/,"역사":/역사|조선|전쟁|옛날|위인|독립|왕/,"친구·학교":/친구|학교|교실|반\b|선생|전학/,"가족":/가족|엄마|아빠|동생|형|누나|언니|오빠|할머니|할아버지|부모/,"모험·판타지":/판타지|마법|모험|마법사|용|괴물|미스터리|추리/,"스포츠·게임":/축구|야구|수영|운동|게임|농구|태권도|달리기|경기/,"예술·음악":/음악|그림|미술|노래|악기|춤|피아노|밴드|아이돌/,"사회·세상":/사회|세상|돈|정치|환경|뉴스|정의|직업|진로/,"마음·성장":/마음|성장|자신|고민|사춘기|꿈|감정/};
-    Object.keys(tk).forEach(function(k){if(tk[k].test(text))topics.push(k);});
+    var matched=[];
+    Object.keys(tk).forEach(function(k){var m=tk[k].exec(text);if(m){topics.push(k);matched.push(m[0]);}});
     var words={};
     text.replace(/[「」『』"'“”‘’()\[\],.!?~·/…-]/g," ").split(/\s+/).forEach(function(w){
       w=w.replace(/(이에요|예요|입니다|합니다|했어요|해요|하고|한테|에게|이랑|랑|부터|까지|에서|으로|처럼|보다|이라|라고|고요|네요|거든요|는데|인데|은데|이고|이지만|지만|을|를|이|가|은|는|의|에|와|과|도|만|로)$/,"");
       if(w.length<2||STOP.test(w)||/^\d+$/.test(w))return;
+      if(/(아요|어요|해요|워요|어서|아서|워서|니다|다고|하다|되다|좋아|싫어|싶어|같아|있어|없어|해서|하는|되는|이라|라서|거예요|네요|지요|죠|고요)$/.test(w))return;
       words[w]=(words[w]||0)+1;
     });
     var free=Object.keys(words).sort(function(a,b){return words[b]-words[a]||b.length-a.length;});
     var out=[];
-    topics.forEach(function(k){var tp=byKey(TOPICS,k);if(tp)out.push(tp.kw[0]);});
-    moods.forEach(function(k){var m=byKey(MOODS,k);if(m)out.push(m.kw[0]);});
-    free.slice(0,3).forEach(function(w){if(out.indexOf(w)===-1)out.push(w);});
-    return {kw:out.slice(0,6),moods:moods,topics:topics};
+    matched.forEach(function(w){if(out.indexOf(w)===-1)out.push(w);});
+    moods.slice(0,1).forEach(function(k){var m=byKey(MOODS,k);if(m&&out.indexOf(m.kw[0])===-1)out.push(m.kw[0]);});
+    free.slice(0,3).forEach(function(w){if(out.indexOf(w)===-1&&!matched.some(function(x){return w.indexOf(x)>-1||x.indexOf(w)>-1;}))out.push(w);});
+    return {kw:out.slice(0,5),moods:moods,topics:topics};
   }
 
   /* ───────── UI ───────── */
