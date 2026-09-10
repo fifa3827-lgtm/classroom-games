@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>책 추천 상담원</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#eceee9; --card:#fbfbf9; --card-2:#f3f4f0;
+    --ink:#1d2622; --ink-soft:#4b5851; --ink-faint:#8b968f; --rule:#d5d9d2;
+    --accent:#2f6f5e; --accent-ink:#ffffff; --accent-soft:#e3efea;
+    --shadow:0 1px 2px rgba(29,38,34,.06), 0 8px 24px -12px rgba(29,38,34,.18);
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#151a18; --card:#1e2523; --card-2:#242c29;
+      --ink:#e7ece9; --ink-soft:#a9b5af; --ink-faint:#76837c; --rule:#333c38;
+      --accent:#6bbfa4; --accent-ink:#10201b; --accent-soft:#1f3a32;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#151a18; --card:#1e2523; --card-2:#242c29;
+    --ink:#e7ece9; --ink-soft:#a9b5af; --ink-faint:#76837c; --rule:#333c38;
+    --accent:#6bbfa4; --accent-ink:#10201b; --accent-soft:#1f3a32;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif;
+    font-weight:400; line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:780px; margin:0 auto; padding-inline:20px; padding-block:40px 64px;}
+
+  .eyebrow{font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-faint); font-weight:500; margin:0 0 10px;}
+  h1{font-family:"Gowun Batang", Georgia, serif; font-weight:700; font-size:clamp(34px, 7vw, 50px); line-height:1.15; letter-spacing:-.01em; margin:0 0 12px; text-wrap:balance;}
+  .lede{margin:0; max-width:46ch; color:var(--ink-soft); font-size:15.5px; font-weight:300;}
+  .rule{height:1px; background:var(--rule); border:0; margin:32px 0;}
+
+  .step{margin-top:36px;}
+  .step-head{display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .step-n{font-family:"Gowun Batang", serif; font-size:13px; color:var(--accent); border:1px solid currentColor; border-radius:50%; width:22px; height:22px; display:grid; place-items:center; flex:none;}
+  .step-t{font-size:15px; font-weight:600; margin:0;}
+
+  /* shelf */
+  .shelf{display:grid; grid-template-columns:repeat(auto-fit, minmax(92px,1fr)); gap:10px; align-items:end;}
+  .spine{
+    appearance:none; border:0; cursor:pointer; padding:16px 0 14px; height:158px; border-radius:3px 3px 5px 5px;
+    background:var(--sp); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    font-family:"Gowun Batang", serif; font-size:16px; letter-spacing:.06em;
+    box-shadow:inset -6px 0 12px -8px rgba(0,0,0,.55), inset 3px 0 0 rgba(255,255,255,.14), var(--shadow);
+    transition:transform .18s ease, box-shadow .18s ease, height .18s ease;
+  }
+  .spine .txt{writing-mode:vertical-rl; text-orientation:upright; line-height:1.35;}
+  .spine .band{width:calc(100% - 16px); height:1px; background:rgba(255,255,255,.45); flex:none;}
+  .spine:hover{transform:translateY(-6px)}
+  .spine:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
+  .spine[aria-pressed="true"]{height:176px; box-shadow:inset -6px 0 12px -8px rgba(0,0,0,.55), inset 3px 0 0 rgba(255,255,255,.3), 0 0 0 2px var(--paper), 0 0 0 4px var(--sp), 0 14px 26px -14px rgba(0,0,0,.6);}
+  .shelf-floor{height:6px; background:var(--rule); border-radius:2px;}
+
+  /* modes */
+  .modes{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:520px){ .modes{grid-template-columns:1fr} }
+  .mode{appearance:none; cursor:pointer; text-align:left; font:inherit; background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:16px 18px; color:var(--ink); transition:border-color .15s, box-shadow .15s; display:flex; flex-direction:column; gap:4px;}
+  .mode:hover{border-color:var(--ink-soft)}
+  .mode:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .mode[aria-pressed="true"]{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), var(--shadow);}
+  .mode-t{font-family:"Gowun Batang", serif; font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .mode-t .dot{width:10px; height:10px; border-radius:50%; border:2px solid var(--rule); flex:none; transition:background .15s, border-color .15s;}
+  .mode[aria-pressed="true"] .mode-t .dot{background:var(--accent); border-color:var(--accent);}
+  .mode-d{font-size:13px; color:var(--ink-soft); font-weight:300; line-height:1.6;}
+
+  .panel{margin-top:14px; background:var(--card-2); border:1px solid var(--rule); border-radius:var(--radius); padding:18px;}
+  .q{margin-top:18px;}
+  .q:first-child{margin-top:0}
+  .q-t{font-size:13.5px; font-weight:600; margin:0 0 8px; color:var(--ink);}
+  .q-t small{font-weight:300; color:var(--ink-faint); margin-left:6px;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{appearance:none; cursor:pointer; font:inherit; font-size:13.5px; padding:8px 14px; border-radius:999px; border:1px solid var(--rule); background:var(--card); color:var(--ink-soft); transition:background .15s, color .15s, border-color .15s;}
+  .chip:hover{border-color:var(--accent); color:var(--ink)}
+  .chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:500;}
+
+  textarea{width:100%; min-height:110px; resize:vertical; font:inherit; font-size:15px; color:var(--ink); background:var(--card); border:1px solid var(--rule); border-radius:8px; padding:12px 14px; line-height:1.6;}
+  textarea::placeholder{color:var(--ink-faint)}
+  textarea:focus-visible{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+  .row{display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap;}
+  .hint{font-size:12.5px; color:var(--ink-faint); font-weight:300;}
+  .story-guide{font-size:13px; color:var(--ink-soft); font-weight:300; margin:0 0 10px; line-height:1.7;}
+
+  .btn{appearance:none; cursor:pointer; font:inherit; font-size:14px; font-weight:500; padding:10px 18px; border-radius:999px; border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink); transition:opacity .15s, transform .15s;}
+  .btn:hover{opacity:.88}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+  .btn[disabled]{opacity:.5; cursor:default}
+  .btn.ghost{background:transparent; color:var(--ink-soft); border-color:var(--rule)}
+  .btn.ghost:hover{color:var(--ink); border-color:var(--ink-soft)}
+
+  /* results */
+  .result-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:40px 0 16px;}
+  .result-title{font-family:"Gowun Batang", serif; font-size:22px; margin:0; font-weight:700;}
+  .result-for{font-size:12px; letter-spacing:.06em; color:var(--ink-faint); border-left:1px solid var(--rule); padding-left:12px; flex:1 1 200px;}
+  .result-actions{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap;}
+
+  .note{background:var(--card); border:1px solid var(--rule); border-left:3px solid var(--accent); border-radius:6px; padding:14px 16px; margin-bottom:16px; font-family:"Gowun Batang", serif; font-size:16px; line-height:1.75;}
+  .who{display:block; font-family:"IBM Plex Sans KR",sans-serif; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px; font-weight:500;}
+
+  .cards{display:flex; flex-direction:column; gap:14px;}
+  .rx{background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:18px 20px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .rx::before{content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--sp);}
+  .rx.new::before{background:repeating-linear-gradient(180deg, var(--sp) 0 6px, transparent 6px 10px);}
+  .rx-top{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .rx-title{font-family:"Gowun Batang", serif; font-size:21px; font-weight:700; margin:0; letter-spacing:-.01em;}
+  .rx-author{font-size:13px; color:var(--ink-faint); font-weight:300;}
+  .rx-why{margin:8px 0 0; font-size:14.5px; color:var(--ink-soft); font-weight:300; line-height:1.75; max-width:58ch;}
+  .rx-tip{margin:10px 0 0; padding:10px 12px; background:var(--card-2); border-radius:6px; font-size:13.5px; color:var(--ink-soft); line-height:1.65;}
+  .rx-tip b{font-weight:600; color:var(--ink); margin-right:6px;}
+  .rx-foot{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:14px; padding-top:12px; border-top:1px dashed var(--rule);}
+  .tag{font-size:11.5px; letter-spacing:.04em; color:var(--ink-soft); background:var(--card-2); border-radius:4px; padding:3px 8px;}
+  .tag.hit{background:var(--accent-soft); color:var(--accent); font-weight:500;}
+  .len{font-size:11.5px; letter-spacing:.04em; color:var(--sp); font-weight:600; margin-left:auto;}
+  .badge{font-size:11px; letter-spacing:.08em; color:var(--accent); border:1px solid var(--accent); border-radius:4px; padding:1px 6px; font-weight:500;}
+
+  .fresh{margin-top:28px;}
+  .fresh-head{display:flex; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap;}
+  .fresh-t{font-family:"Gowun Batang", serif; font-size:17px; font-weight:700; margin:0;}
+  .fresh-s{font-size:12.5px; color:var(--ink-faint); font-weight:300;}
+
+  .empty{color:var(--ink-faint); font-size:14px; font-weight:300;}
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--rule); font-size:12.5px; color:var(--ink-faint); font-weight:300; line-height:1.8;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="eyebrow">독서 상담</p>
+  <h1>책 추천 상담원</h1>
+  <p class="lede">읽을 사람을 고르고, 다섯 가지 설문에 답하거나 사정을 직접 적어주세요. 서가의 책 90권에서 가장 잘 맞는 세 권을 골라 드립니다.</p>
+
+  <hr class="rule">
+
+  <section class="step" aria-labelledby="s1">
+    <div class="step-head"><span class="step-n" aria-hidden="true">1</span><h2 class="step-t" id="s1">누가 읽을 책인가요</h2></div>
+    <div class="shelf" id="shelf" role="group" aria-labelledby="s1"></div>
+    <div class="shelf-floor" aria-hidden="true"></div>
+  </section>
+
+  <section class="step" aria-labelledby="s2">
+    <div class="step-head"><span class="step-n" aria-hidden="true">2</span><h2 class="step-t" id="s2">어떻게 추천받을까요</h2></div>
+    <div class="modes" role="group" aria-labelledby="s2">
+      <button class="mode" type="button" id="mode-survey" data-mode="survey" aria-pressed="true">
+        <span class="mode-t"><span class="dot" aria-hidden="true"></span>설문으로 추천받기</span>
+        <span class="mode-d">마음·관심 주제·독서 습관·종류·작가, 다섯 가지를 골라 답하면 서가에서 바로 세 권을 꺼내 드려요.</span>
+      </button>
+      <button class="mode" type="button" id="mode-story" data-mode="story" aria-pressed="false">
+        <span class="mode-t"><span class="dot" aria-hidden="true"></span>직접 이야기하기</span>
+        <span class="mode-d" id="story-mode-desc">읽을 사람의 사정을 문장으로 적으면 상담원이 읽고 서가 안팎에서 골라, 이유와 함께 나눌 질문까지 적어 드려요.</span>
+      </button>
+    </div>
+
+    <div class="panel" id="panel-survey">
+      <div class="q"><p class="q-t">지금 어떤 책이 필요한가요 <small>하나</small></p><div class="chips" id="q-mood" role="group" aria-label="지금 필요한 책"></div></div>
+      <div class="q"><p class="q-t">관심 있는 주제 <small>여러 개 가능</small></p><div class="chips" id="q-topic" role="group" aria-label="관심 주제"></div></div>
+      <div class="q"><p class="q-t">평소 책을 얼마나 읽나요</p><div class="chips" id="q-habit" role="group" aria-label="독서 습관"></div></div>
+      <div class="q"><p class="q-t">어떤 종류가 좋아요</p><div class="chips" id="q-kind" role="group" aria-label="책의 종류"></div></div>
+      <div class="q"><p class="q-t">작가는</p><div class="chips" id="q-origin" role="group" aria-label="작가"></div></div>
+      <div class="row">
+        <button class="btn" id="survey-go" type="button">추천 받기</button>
+        <button class="btn ghost" id="survey-reset" type="button">답 지우기</button>
+        <span class="hint">답하지 않은 질문은 골고루 반영해요.</span>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-story" hidden>
+      <p class="story-guide">나이와 성별, 평소 좋아하는 것, 최근에 재미있게 읽은 책, 요즘 겪는 일이나 마음을 적어주시면 더 정확해요. 설문에 답해두셨다면 그것도 함께 봅니다.</p>
+      <textarea id="story-text" rows="4" aria-label="상담 내용" placeholder="예) 3학년 남학생인데 책을 끝까지 읽은 적이 거의 없어요. 축구와 공룡을 좋아하고, 「전천당」은 재밌다며 읽었어요. 요즘 동생이 태어나 서운해하는 것 같습니다."></textarea>
+      <div class="row">
+        <button class="btn" id="story-go" type="button">상담 받기</button>
+        <span class="hint" id="story-hint">사연을 읽고 서가 안팎에서 세 권을 고릅니다.</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="result-head">
+    <h2 class="result-title">오늘의 추천</h2>
+    <span class="result-for" id="result-for"></span>
+    <div class="result-actions">
+      <button class="btn ghost" id="fresh-go" type="button" hidden>새로 나온 책도 살펴보기</button>
+      <button class="btn ghost" id="reroll" type="button">다시 뽑기</button>
+    </div>
+  </div>
+  <div id="note-slot"></div>
+  <div class="cards" id="cards"></div>
+
+  <section class="fresh" id="fresh" hidden>
+    <div class="fresh-head">
+      <h3 class="fresh-t">새로 나온 책도 살펴보았어요</h3>
+      <span class="fresh-s" id="fresh-s">상담원이 최근 출간 도서에서 덧붙인 추천 · 서점에서 서지를 한 번 확인해 주세요</span>
+    </div>
+    <div class="cards" id="fresh-cards"></div>
+  </section>
+
+  <footer>
+    서가의 책은 학교 도서관과 학급 문고에 두루 있는 도서로 골랐고, 학년 구분은 읽기 수준의 기준일 뿐 절대적인 선은 아닙니다.<br>
+    「새로 나온 책」은 상담원이 기억하는 범위 안에서 고르므로, 서지 정보는 구입 전에 확인하시는 편이 안전합니다.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var MOODS=[{k:"위로",label:"마음이 헛헛할 때"},{k:"유쾌",label:"웃고 싶을 때"},{k:"관계",label:"사람 사이가 어려울 때"},{k:"용기",label:"용기가 필요할 때"},{k:"호기심",label:"세상이 궁금할 때"},{k:"상상",label:"여기가 아닌 곳으로"}];
+  var TOPICS=["동물·자연","과학·우주","역사","친구·학교","가족","모험·판타지","스포츠·게임","예술·음악","사회·세상","마음·성장"].map(function(k){return {k:k,label:k};});
+  var HABITS=[{k:"짧아요",label:"거의 안 읽어요"},{k:"보통",label:"가끔 읽어요"},{k:"두툼",label:"즐겨 읽어요"}];
+  var KINDS=[{k:"이야기",label:"이야기책"},{k:"지식",label:"지식·생각하는 책"},{k:"무관",label:"상관없어요"}];
+  var ORIGINS=[{k:"국내",label:"우리나라 작가"},{k:"해외",label:"다른 나라 작가"},{k:"무관",label:"상관없어요"}];
+
+  var TIERS=[
+    {id:"e12",spine:"초등 1·2학년",color:"#DFA23C",desc:"초등학교 1~2학년 (7~8세)"},
+    {id:"e34",spine:"초등 3·4학년",color:"#C6603D",desc:"초등학교 3~4학년 (9~10세)"},
+    {id:"e56",spine:"초등 5·6학년",color:"#498A6B",desc:"초등학교 5~6학년 (11~12세)"},
+    {id:"mid",spine:"중학생",color:"#3D6DA4",desc:"중학생 (13~15세)"},
+    {id:"high",spine:"고등학생",color:"#6A5A97",desc:"고등학생 (16~18세)"},
+    {id:"adult",spine:"성인",color:"#34434E",desc:"성인 (학교 교직원 포함)"}
+  ];
+
+  /* t 제목, a 저자, g 마음, tp 주제, len 분량, kr 국내작가, nf 지식책, w 한 줄 소개 */
+  var BOOKS={
+    e12:[
+      {t:"구름빵",a:"백희나",g:["상상","위로"],tp:["가족","모험·판타지"],len:"짧아요",kr:1,w:"비 오는 아침, 빵 하나로 하늘을 나는 이야기. 글이 적고 그림이 커서 혼자 읽는 첫 책으로 좋습니다."},
+      {t:"알사탕",a:"백희나",g:["관계","위로"],tp:["가족","친구·학교","마음·성장"],len:"짧아요",kr:1,w:"사탕을 물면 말하지 않은 마음이 들립니다. 아빠에게, 친구에게 하고 싶던 말이 떠오르는 책."},
+      {t:"강아지똥",a:"권정생",g:["위로","용기"],tp:["동물·자연","마음·성장"],len:"짧아요",kr:1,w:"쓸모없다고 여기던 것이 민들레를 피웁니다. 스스로 작게 느껴지는 아이에게."},
+      {t:"지각대장 존",a:"존 버닝햄",g:["유쾌","상상"],tp:["친구·학교","모험·판타지"],len:"짧아요",w:"어른이 믿어주지 않는 진짜 이야기. 읽고 나면 억울했던 일을 한 번쯤 말하고 싶어집니다."},
+      {t:"도서관에 간 사자",a:"미셸 누드슨",g:["용기","유쾌"],tp:["동물·자연","사회·세상"],len:"짧아요",w:"규칙은 왜 있을까요. 사자 한 마리가 조용하던 도서관을 바꿉니다."},
+      {t:"100층짜리 집",a:"이와이 도시오",g:["호기심","유쾌"],tp:["동물·자연","과학·우주"],len:"짧아요",nf:1,w:"한 층씩 올라가며 숫자와 동물을 만납니다. 위로 넘기는 책장이 신이 나요."},
+      {t:"겁쟁이 빌리",a:"앤서니 브라운",g:["위로"],tp:["마음·성장","가족"],len:"짧아요",w:"걱정이 많아 잠들지 못하는 아이에게. 걱정을 맡길 곳이 생깁니다."},
+      {t:"무지개 물고기",a:"마르쿠스 피스터",g:["관계"],tp:["동물·자연","친구·학교"],len:"짧아요",w:"가장 예쁜 비늘을 나눠주고서야 친구가 생깁니다. 나눔을 처음 이야기할 때."},
+      {t:"야, 우리 기차에서 내려!",a:"존 버닝햄",g:["상상","호기심"],tp:["동물·자연","모험·판타지"],len:"보통",w:"꿈속 기차에 동물들이 하나씩 올라탑니다. 사라지는 동물 이야기를 처음 만나는 자리."},
+      {t:"사과가 쿵!",a:"다다 히로시",g:["유쾌","관계"],tp:["동물·자연"],len:"짧아요",w:"커다란 사과 하나에 동물들이 모여듭니다. 소리 내어 읽어주기 좋아요."},
+      {t:"누가 내 머리에 똥 쌌어?",a:"베르너 홀츠바르트",g:["유쾌","호기심"],tp:["동물·자연"],len:"짧아요",w:"두더지가 범인을 찾아 나섭니다. 깔깔 웃다가 동물마다 다른 똥을 알게 돼요."},
+      {t:"돼지책",a:"앤서니 브라운",g:["관계","유쾌"],tp:["가족"],len:"짧아요",w:"엄마가 집을 나가자 아빠와 아들들이 돼지가 됩니다. 집안일 이야기를 꺼내기 좋은 그림책."},
+      {t:"이슬이의 첫 심부름",a:"쓰쓰이 요리코",g:["용기"],tp:["마음·성장","가족"],len:"짧아요",w:"다섯 살 이슬이가 처음 혼자 우유를 사러 갑니다. 작은 용기가 얼마나 큰 일인지."},
+      {t:"고구마구마",a:"사이다",g:["유쾌"],tp:["마음·성장"],len:"짧아요",kr:1,w:"모양도 성격도 다른 고구마들이 등장합니다. 말놀이가 재미있어 따라 읽게 돼요."},
+      {t:"엄마 마중",a:"이태준 글·김동성 그림",g:["위로"],tp:["가족"],len:"짧아요",kr:1,w:"전차 정거장에서 엄마를 기다리는 아이. 짧은 글과 눈 내리는 그림이 오래 남습니다."}
+    ],
+    e34:[
+      {t:"만복이네 떡집",a:"김리리",g:["관계","유쾌"],tp:["친구·학교","마음·성장"],len:"보통",kr:1,w:"입만 열면 나쁜 말이 튀어나오던 만복이가 떡을 먹고 달라집니다. 말버릇 이야기를 꺼내기 좋아요."},
+      {t:"마당을 나온 암탉",a:"황선미",g:["용기"],tp:["동물·자연","마음·성장"],len:"보통",kr:1,w:"알을 품고 싶었던 암탉 잎싹. 하고 싶은 일을 처음 소리 내어 말해보는 아이에게."},
+      {t:"나쁜 어린이 표",a:"황선미",g:["관계","위로"],tp:["친구·학교"],len:"보통",kr:1,w:"억울한데 어떻게 말해야 할지 모를 때. 교실 안의 마음을 정확히 짚어줍니다."},
+      {t:"화요일의 두꺼비",a:"러셀 에릭슨",g:["관계","위로"],tp:["동물·자연","친구·학교"],len:"보통",w:"잡아먹으려던 올빼미와 친구가 됩니다. 우정이 어떻게 시작되는지 보여주는 책."},
+      {t:"프린들 주세요",a:"앤드루 클레먼츠",g:["유쾌","호기심"],tp:["친구·학교","사회·세상"],len:"보통",w:"볼펜을 '프린들'이라 부르기 시작한 아이. 말은 대체 누가 정하는 걸까요."},
+      {t:"샬롯의 거미줄",a:"E. B. 화이트",g:["관계"],tp:["동물·자연","친구·학교"],len:"두툼",w:"돼지 윌버를 살리려는 거미의 글씨. 헤어짐을 처음 배우는 책이기도 합니다."},
+      {t:"잘못 뽑은 반장",a:"이은재",g:["유쾌","용기"],tp:["친구·학교"],len:"보통",kr:1,w:"장난처럼 반장이 된 아이가 진짜 반장이 되어갑니다. 학급 임원 선거 무렵에."},
+      {t:"마법의 설탕 두 조각",a:"미하엘 엔데",g:["상상"],tp:["가족","모험·판타지"],len:"보통",w:"부모님이 반대할 때마다 작아진다면 어떨까요. 소원의 뒷면을 보여줍니다."},
+      {t:"이상한 과자 가게 전천당",a:"히로시마 레이코",g:["상상","유쾌"],tp:["모험·판타지"],len:"보통",w:"원하는 걸 이뤄주는 과자, 대신 설명서를 꼭 읽어야 합니다. 책을 멀리하던 아이도 시리즈로 읽어요."},
+      {t:"푸른 사자 와니니",a:"이현",g:["용기","관계"],tp:["동물·자연","모험·판타지"],len:"두툼",kr:1,w:"무리에서 쫓겨난 어린 사자가 자기 무리를 만듭니다. 첫 장편으로 권할 만해요."},
+      {t:"건방이의 건방진 수련기",a:"천효정",g:["유쾌","용기"],tp:["모험·판타지"],len:"보통",kr:1,w:"도술을 배우는 건방이의 좌충우돌. 만화처럼 술술 넘어가는 첫 장편 시리즈."},
+      {t:"내 이름은 삐삐 롱스타킹",a:"아스트리드 린드그렌",g:["유쾌","용기"],tp:["모험·판타지","친구·학교"],len:"두툼",w:"어른 없이 혼자 사는 힘센 아이 삐삐. 하고 싶은 대로 사는 게 어떤 건지 보여줍니다."},
+      {t:"찰리와 초콜릿 공장",a:"로알드 달",g:["유쾌","상상"],tp:["모험·판타지","가족"],len:"보통",w:"황금 티켓을 얻은 다섯 아이가 공장에 들어갑니다. 달콤하고 통쾌한 모험."},
+      {t:"축구왕 이채연",a:"유우석",g:["용기"],tp:["스포츠·게임","친구·학교"],len:"보통",kr:1,w:"축구를 하고 싶은 여자아이 채연. 운동 좋아하는 아이가 자기 이야기처럼 읽습니다."},
+      {t:"신기한 스쿨버스",a:"조애너 콜",g:["호기심"],tp:["과학·우주","친구·학교"],len:"보통",nf:1,w:"프리즐 선생님의 버스가 몸속으로, 우주로 갑니다. 과학을 이야기로 만나는 시리즈."}
+    ],
+    e56:[
+      {t:"몽실 언니",a:"권정생",g:["위로","용기"],tp:["역사","가족"],len:"두툼",kr:1,w:"전쟁과 가난을 건너온 아이. 우리 역사를 사람의 얼굴로 처음 만납니다."},
+      {t:"아름다운 아이",a:"R. J. 팔라시오",g:["관계","위로"],tp:["친구·학교","마음·성장"],len:"두툼",w:"남다른 얼굴의 어기가 5학년이 되어 학교에 갑니다. 여러 사람의 시선으로 번갈아 읽는 구성."},
+      {t:"5번 레인",a:"은소홀",g:["관계","용기"],tp:["스포츠·게임","친구·학교"],len:"보통",kr:1,w:"1등을 놓친 수영선수 강나루. 지고 싶지 않은 마음과 친구 사이에서 흔들립니다."},
+      {t:"초정리 편지",a:"배유안",g:["호기심"],tp:["역사"],len:"보통",kr:1,w:"훈민정음을 처음 배운 아이들 이야기. 한글이 왜 대단한지 몸으로 알게 됩니다."},
+      {t:"담을 넘은 아이",a:"김정민",g:["용기"],tp:["역사","사회·세상"],len:"보통",kr:1,w:"조선 시대, 담 밖으로 나간 여자아이. 정해진 자리를 의심하는 힘에 대하여."},
+      {t:"세계를 건너 너에게 갈게",a:"이꽃님",g:["상상","위로"],tp:["가족","모험·판타지"],len:"보통",kr:1,w:"1982년의 은유와 지금의 은유가 편지를 주고받습니다. 마지막에 한 번 놀라요."},
+      {t:"어린 왕자",a:"앙투안 드 생텍쥐페리",g:["위로","상상"],tp:["마음·성장","모험·판타지"],len:"보통",w:"'길들인다'는 말의 뜻을 배우는 책. 어른이 되어 다시 읽으면 또 달라집니다."},
+      {t:"봉주르, 뚜르",a:"한윤섭",g:["호기심","관계"],tp:["역사","친구·학교"],len:"보통",kr:1,w:"프랑스 시골 마을에서 발견한 낯선 한국어 낙서. 추리처럼 읽히는 역사 이야기."},
+      {t:"마지막 레벨 업",a:"윤영주",g:["관계","상상"],tp:["스포츠·게임","친구·학교"],len:"보통",kr:1,w:"게임 속에서 다시 만난 친구. 게임을 좋아하는 아이가 끝까지 읽어냅니다."},
+      {t:"안네의 일기",a:"안네 프랑크",g:["호기심","위로"],tp:["역사"],len:"두툼",nf:1,w:"숨어 지낸 2년의 기록. 또래가 쓴 글이라 더 가깝게 다가옵니다."},
+      {t:"나의 라임 오렌지나무",a:"J. M. 바스콘셀로스",g:["위로"],tp:["가족","마음·성장"],len:"두툼",w:"장난꾸러기 제제와 뽀르뚜가 아저씨. 어린 마음이 어떻게 자라는지, 눈물이 나는 성장 소설."},
+      {t:"소리 질러, 운동장",a:"진형민",g:["유쾌","용기"],tp:["스포츠·게임","친구·학교"],len:"보통",kr:1,w:"야구부에서 밀려난 아이들이 '막야구부'를 만듭니다. 못해도 즐거운 운동장."},
+      {t:"열두 살에 부자가 된 키라",a:"보도 셰퍼",g:["호기심"],tp:["사회·세상"],len:"두툼",nf:1,w:"말하는 개가 돈을 가르쳐줍니다. 용돈과 저축을 처음 생각하는 아이에게."},
+      {t:"해리 포터와 마법사의 돌",a:"J. K. 롤링",g:["상상","관계"],tp:["모험·판타지","친구·학교"],len:"두툼",w:"호그와트 첫해. 두꺼운 책을 처음 끝까지 읽어내는 경험을 선물합니다."},
+      {t:"긴긴밤",a:"루리",g:["위로","관계"],tp:["동물·자연","마음·성장"],len:"보통",kr:1,w:"마지막 흰바위코뿔소와 버려진 알에서 태어난 펭귄. 짧지만 오래 남는 이야기."}
+    ],
+    mid:[
+      {t:"아몬드",a:"손원평",g:["위로","관계"],tp:["마음·성장","친구·학교"],len:"보통",kr:1,w:"감정을 느끼지 못하는 소년이 감정을 배웁니다. 요즘 중학생이 가장 많이 읽는 소설."},
+      {t:"나미야 잡화점의 기적",a:"히가시노 게이고",g:["위로","상상"],tp:["마음·성장","사회·세상"],len:"두툼",w:"고민 편지를 넣으면 답장이 오는 가게. 상담이라는 게 무엇인지 보여주는 이야기."},
+      {t:"페인트",a:"이희영",g:["관계","용기"],tp:["가족","사회·세상"],len:"보통",kr:1,w:"아이가 부모를 면접 봅니다. 가족이 무엇인지 뒤집어 생각하게 하는 설정."},
+      {t:"체리새우: 비밀글입니다",a:"황영미",g:["관계"],tp:["친구·학교"],len:"보통",kr:1,w:"무리에서 밀려나지 않으려 애쓰는 마음. 교실 인간관계를 정면으로 다룹니다."},
+      {t:"유원",a:"백온유",g:["위로"],tp:["마음·성장","가족"],len:"보통",kr:1,w:"살아남은 사람의 미안함에 대하여. 조용하지만 오래 남는 소설."},
+      {t:"시간을 파는 상점",a:"김선영",g:["상상","용기"],tp:["모험·판타지","친구·학교"],len:"보통",kr:1,w:"시간을 사고파는 가게를 연 고등학생. 가볍게 시작해 묵직하게 끝납니다."},
+      {t:"모모",a:"미하엘 엔데",g:["상상","호기심"],tp:["모험·판타지","사회·세상"],len:"두툼",w:"시간을 훔치는 회색 신사들. 바쁜 사람이 읽으면 더 아픈 이야기."},
+      {t:"우리가 빛의 속도로 갈 수 없다면",a:"김초엽",g:["상상","위로"],tp:["과학·우주","마음·성장"],len:"보통",kr:1,w:"다정한 SF 단편집. 과학을 좋아하는 학생에게도, 아닌 학생에게도 통합니다."},
+      {t:"열일곱 살의 털",a:"김해원",g:["용기","유쾌"],tp:["친구·학교","사회·세상"],len:"보통",kr:1,w:"두발 규정에 맞선 아이. 규칙과 자유를 두고 토론하기 좋습니다."},
+      {t:"동물농장",a:"조지 오웰",g:["호기심"],tp:["사회·세상","역사"],len:"보통",w:"동물들이 세운 나라가 어떻게 변해가는지. 짧아서 첫 고전으로 알맞아요."},
+      {t:"완득이",a:"김려령",g:["유쾌","용기"],tp:["가족","스포츠·게임","친구·학교"],len:"보통",kr:1,w:"옥탑방 완득이와 '똥주' 선생. 욕설 섞인 대화가 살아 있고, 킥복싱으로 자기 길을 찾습니다."},
+      {t:"위저드 베이커리",a:"구병모",g:["상상"],tp:["모험·판타지","가족"],len:"보통",kr:1,w:"마법사가 운영하는 빵집으로 도망친 소년. 어둡고 매혹적인 첫 한국 판타지."},
+      {t:"하리하라의 생물학 카페",a:"이은희",g:["호기심"],tp:["과학·우주"],len:"두툼",kr:1,nf:1,w:"신화와 영화로 풀어주는 생물학. 교과서보다 먼저 읽으면 수업이 쉬워집니다."},
+      {t:"파랑 치타가 달려간다",a:"박선희",g:["용기"],tp:["예술·음악","친구·학교"],len:"보통",kr:1,w:"학교를 그만둔 아이와 남은 아이가 밴드로 만납니다. 음악 하고 싶은 학생에게."},
+      {t:"순례 주택",a:"유은실",g:["유쾌","위로"],tp:["가족","사회·세상"],len:"보통",kr:1,w:"세신사 할머니가 지은 빌라에 사는 사람들. 어른보다 어른스러운 열여섯 살 수림."}
+    ],
+    high:[
+      {t:"데미안",a:"헤르만 헤세",g:["위로","용기"],tp:["마음·성장"],len:"보통",w:"알을 깨고 나오는 새. 자기 자신이 되는 일에 대하여."},
+      {t:"소년이 온다",a:"한강",g:["위로"],tp:["역사","사회·세상"],len:"보통",kr:1,w:"1980년 광주. 읽기 쉽지 않지만 읽고 나면 무언가 달라져 있습니다."},
+      {t:"아픔이 길이 되려면",a:"김승섭",g:["호기심"],tp:["사회·세상","과학·우주"],len:"보통",kr:1,nf:1,w:"질병은 왜 공평하지 않은가. 사회를 데이터로 읽는 법을 배웁니다."},
+      {t:"물고기는 존재하지 않는다",a:"룰루 밀러",g:["호기심","용기"],tp:["과학·우주","마음·성장"],len:"보통",nf:1,w:"한 과학자의 삶을 따라가다 '분류'라는 믿음이 무너집니다."},
+      {t:"코스모스",a:"칼 세이건",g:["호기심","상상"],tp:["과학·우주"],len:"두툼",nf:1,w:"우주를 다룬 책 중 가장 아름다운 문장. 계열을 가리지 않습니다."},
+      {t:"앵무새 죽이기",a:"하퍼 리",g:["관계","용기"],tp:["사회·세상","가족"],len:"두툼",w:"아이의 눈으로 본 편견과 용기. 아버지 애티커스를 만나러 가는 책."},
+      {t:"프로젝트 헤일메리",a:"앤디 위어",g:["상상","유쾌"],tp:["과학·우주","모험·판타지"],len:"두툼",w:"혼자 깨어난 우주선에서 문제를 하나씩 풉니다. 과학으로 웃기는 소설."},
+      {t:"정의란 무엇인가",a:"마이클 샌델",g:["호기심"],tp:["사회·세상"],len:"두툼",nf:1,w:"답이 없는 질문을 견디는 훈련. 토론 수업 전에 읽히기 좋습니다."},
+      {t:"하늘과 바람과 별과 시",a:"윤동주",g:["위로"],tp:["역사","마음·성장"],len:"짧아요",kr:1,w:"짧은 시 몇 편이 긴 소설보다 오래 남을 때가 있습니다."},
+      {t:"파친코",a:"이민진",g:["관계","위로"],tp:["역사","가족"],len:"두툼",w:"네 세대에 걸친 재일 한국인 가족. 역사를 사람의 이야기로 읽습니다."},
+      {t:"사피엔스",a:"유발 하라리",g:["호기심"],tp:["역사","사회·세상"],len:"두툼",nf:1,w:"인류 전체의 역사를 한 권으로. 세계사 수업이 하나로 이어지는 경험."},
+      {t:"달러구트 꿈 백화점",a:"이미예",g:["상상","유쾌"],tp:["모험·판타지","마음·성장"],len:"보통",kr:1,w:"잠든 사람에게 꿈을 파는 백화점. 시험 기간에 가볍게 쉬어가기 좋은 판타지."},
+      {t:"이기적 유전자",a:"리처드 도킨스",g:["호기심"],tp:["과학·우주"],len:"두툼",nf:1,w:"우리는 유전자의 생존 기계인가. 생명과학 좋아하는 학생의 필독서."},
+      {t:"죽은 시인의 사회",a:"N. H. 클라인바움",g:["용기","관계"],tp:["친구·학교","예술·음악"],len:"보통",w:"키팅 선생과 학생들의 비밀 모임. '카르페 디엠'이 어디서 왔는지."},
+      {t:"나의 아름다운 정원",a:"심윤경",g:["위로"],tp:["가족","역사"],len:"보통",kr:1,w:"1980년 서울, 동구와 여동생 영주. 가족의 슬픔을 아이의 눈으로 견디는 소설."}
+    ],
+    adult:[
+      {t:"어린이라는 세계",a:"김소영",g:["위로","관계"],tp:["친구·학교","마음·성장"],len:"보통",kr:1,nf:1,w:"어린이를 한 사람으로 대하는 문장들. 교실로 돌아가는 마음이 조금 달라집니다."},
+      {t:"가르칠 수 있는 용기",a:"파커 J. 파머",g:["위로","용기"],tp:["친구·학교","마음·성장"],len:"두툼",nf:1,w:"잘 가르치는 기술이 아니라 가르치는 사람에 대한 책. 소진된 학기 말에."},
+      {t:"불편한 편의점",a:"김호연",g:["유쾌","위로"],tp:["사회·세상","마음·성장"],len:"보통",kr:1,w:"부담 없이 하루 만에 읽힙니다. 읽고 나면 사람이 조금 좋아져요."},
+      {t:"미드나잇 라이브러리",a:"매트 헤이그",g:["상상","위로"],tp:["모험·판타지","마음·성장"],len:"보통",w:"살지 않은 삶들이 꽂혀 있는 도서관. 후회가 잦아지는 시기에."},
+      {t:"나는 메트로폴리탄 미술관의 경비원입니다",a:"패트릭 브링리",g:["위로"],tp:["예술·음악","마음·성장"],len:"보통",nf:1,w:"형을 잃고 미술관 경비원이 된 사람의 기록. 조용히 오래 서 있는 책."},
+      {t:"아주 희미한 빛으로도",a:"최은영",g:["위로","관계"],tp:["친구·학교","마음·성장"],len:"보통",kr:1,w:"가르치고 배우는 사이의 미묘한 마음들. 단편이라 짬짬이 읽기 좋습니다."},
+      {t:"다정한 것이 살아남는다",a:"브라이언 헤어·버네사 우즈",g:["호기심"],tp:["과학·우주","사회·세상"],len:"보통",nf:1,w:"왜 인간이 살아남았을까. 친화력이 답이라는 진화 이야기."},
+      {t:"죽음의 수용소에서",a:"빅터 프랭클",g:["용기","위로"],tp:["역사","마음·성장"],len:"보통",nf:1,w:"왜 살아야 하는지 아는 사람은 어떻게든 견딘다는 문장이 남습니다."},
+      {t:"소크라테스 익스프레스",a:"에릭 와이너",g:["호기심","유쾌"],tp:["마음·성장","사회·세상"],len:"두툼",nf:1,w:"기차를 타고 철학자를 만나러 갑니다. 어렵지 않게 읽히는 철학."},
+      {t:"하얼빈",a:"김훈",g:["호기심","용기"],tp:["역사"],len:"보통",kr:1,w:"안중근의 며칠을 따라갑니다. 짧고 단단한 문장."},
+      {t:"밝은 밤",a:"최은영",g:["위로"],tp:["가족","역사"],len:"두툼",kr:1,w:"증조모부터 나까지, 네 여성의 백 년. 할머니 이야기를 듣고 싶어지는 소설."},
+      {t:"시선으로부터,",a:"정세랑",g:["유쾌","관계"],tp:["가족","예술·음악"],len:"두툼",kr:1,w:"돌아가신 심시선 여사를 기리는 하와이 제사. 유쾌하고 씩씩한 가족 소설."},
+      {t:"교사와 학생 사이",a:"하임 G. 기너트",g:["관계"],tp:["친구·학교"],len:"보통",nf:1,w:"아이에게 하는 말을 어떻게 바꿀지, 상황별로 보여주는 오래된 교사 교과서."},
+      {t:"도둑맞은 집중력",a:"요한 하리",g:["호기심"],tp:["사회·세상","과학·우주"],len:"두툼",nf:1,w:"집중력이 사라진 건 개인 탓이 아니라는 이야기. 스마트폰 교실을 고민하는 분께."},
+      {t:"역사의 쓸모",a:"최태성",g:["호기심"],tp:["역사"],len:"보통",kr:1,nf:1,w:"역사가 오늘 나에게 무슨 쓸모인지. 강의처럼 술술 읽힙니다."}
+    ]
+  };
+
+  var state={tier:"e34",mode:"survey",mood:null,topics:[],habit:null,kind:null,origin:null,picks:[],note:"",fresh:[]};
+  var sample=null, freshSeq=0;
+  var $=function(id){return document.getElementById(id);};
+
+  function tierOf(id){for(var i=0;i<TIERS.length;i++){if(TIERS[i].id===id)return TIERS[i];}return TIERS[0];}
+  function labelOf(arr,k){for(var i=0;i<arr.length;i++){if(arr[i].k===k)return arr[i].label;}return "";}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];});}
+  function shuffle(a){var r=a.slice();for(var i=r.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var x=r[i];r[i]=r[j];r[j]=x;}return r;}
+
+  /* shelf */
+  var $shelf=$("shelf");
+  TIERS.forEach(function(t){
+    var b=document.createElement("button");
+    b.type="button";b.className="spine";b.style.setProperty("--sp",t.color);b.dataset.tier=t.id;
+    b.setAttribute("aria-pressed",String(t.id===state.tier));
+    b.innerHTML='<span class="band"></span><span class="txt">'+t.spine+'</span><span class="band"></span>';
+    b.addEventListener("click",function(){state.tier=t.id;syncShelf();if(state.mode==="survey")runSurvey();else clearForStory();});
+    $shelf.appendChild(b);
+  });
+  function syncShelf(){Array.prototype.forEach.call($shelf.children,function(el){el.setAttribute("aria-pressed",String(el.dataset.tier===state.tier));});}
+
+  /* chips */
+  function buildChips(el,items,key,multi){
+    items.forEach(function(m){
+      var b=document.createElement("button");
+      b.type="button";b.className="chip";b.textContent=m.label;b.dataset.k=m.k;b.setAttribute("aria-pressed","false");
+      b.addEventListener("click",function(){
+        if(multi){var i=state[key].indexOf(m.k); if(i>-1)state[key].splice(i,1); else state[key].push(m.k);}
+        else state[key]=(state[key]===m.k)?null:m.k;
+        syncChips(el,key,multi);
+      });
+      el.appendChild(b);
+    });
+  }
+  function syncChips(el,key,multi){Array.prototype.forEach.call(el.children,function(c){var on=multi?state[key].indexOf(c.dataset.k)>-1:c.dataset.k===state[key];c.setAttribute("aria-pressed",String(on));});}
+  function syncAllChips(){syncChips($("q-mood"),"mood");syncChips($("q-topic"),"topics",true);syncChips($("q-habit"),"habit");syncChips($("q-kind"),"kind");syncChips($("q-origin"),"origin");}
+  buildChips($("q-mood"),MOODS,"mood");
+  buildChips($("q-topic"),TOPICS,"topics",true);
+  buildChips($("q-habit"),HABITS,"habit");
+  buildChips($("q-kind"),KINDS,"kind");
+  buildChips($("q-origin"),ORIGINS,"origin");
+
+  /* mode */
+  ["mode-survey","mode-story"].forEach(function(id){
+    $(id).addEventListener("click",function(){state.mode=$(id).dataset.mode;syncMode();if(state.mode==="survey")runSurvey();else clearForStory();});
+  });
+  function syncMode(){
+    $("mode-survey").setAttribute("aria-pressed",String(state.mode==="survey"));
+    $("mode-story").setAttribute("aria-pressed",String(state.mode==="story"));
+    $("panel-survey").hidden=state.mode!=="survey";
+    $("panel-story").hidden=state.mode!=="story";
+    $("reroll").hidden=state.mode!=="survey";
+    $("fresh-go").hidden=!(sample&&state.mode==="survey");
+  }
+
+  /* scoring */
+  function hitsOf(b){
+    var h=[];
+    if(state.mood&&b.g.indexOf(state.mood)>-1)h.push(labelOf(MOODS,state.mood));
+    state.topics.forEach(function(tp){if(b.tp.indexOf(tp)>-1)h.push(tp);});
+    if(state.habit&&b.len===state.habit)h.push(labelOf(HABITS,state.habit));
+    if(state.kind&&state.kind!=="무관"&&((state.kind==="지식")===!!b.nf))h.push(labelOf(KINDS,state.kind));
+    if(state.origin&&state.origin!=="무관"&&((state.origin==="국내")===!!b.kr))h.push(labelOf(ORIGINS,state.origin));
+    return h;
+  }
+  function scoreOf(b){
+    var s=0;
+    if(state.mood&&b.g.indexOf(state.mood)>-1)s+=3;
+    state.topics.forEach(function(tp){if(b.tp.indexOf(tp)>-1)s+=2;});
+    if(state.habit&&b.len===state.habit)s+=2;
+    if(state.kind&&state.kind!=="무관"&&((state.kind==="지식")===!!b.nf))s+=2;
+    if(state.origin&&state.origin!=="무관"&&((state.origin==="국내")===!!b.kr))s+=1;
+    return s;
+  }
+  function surveyPick(){
+    var list=BOOKS[state.tier]||[];
+    return shuffle(list).map(function(b){return {b:b,s:scoreOf(b)};}).sort(function(x,y){return y.s-x.s;}).slice(0,3)
+      .map(function(x){var c=Object.assign({},x.b);c.hits=hitsOf(x.b);return c;});
+  }
+  function runSurvey(){state.picks=surveyPick();state.note="";state.fresh=[];freshSeq++;render();}
+  function clearForStory(){state.picks=[];state.note="";state.fresh=[];freshSeq++;render();}
+  $("survey-go").addEventListener("click",runSurvey);
+  $("reroll").addEventListener("click",runSurvey);
+  $("survey-reset").addEventListener("click",function(){state.mood=null;state.topics=[];state.habit=null;state.kind=null;state.origin=null;syncAllChips();runSurvey();});
+
+  /* render */
+  function cardHTML(b,color,isNew){
+    var hits=b.hits||[];
+    var tags=(b.tp||[]).concat(b.g||[]).filter(function(x,i,arr){return arr.indexOf(x)===i;}).map(function(x){return '<span class="tag'+(hits.indexOf(x)>-1?' hit':'')+'">'+esc(x)+'</span>';}).join("");
+    var extra=hits.filter(function(h){return (b.tp||[]).indexOf(h)===-1&&(b.g||[]).indexOf(h)===-1;}).map(function(h){return '<span class="tag hit">'+esc(h)+'</span>';}).join("");
+    var meta=b.y?'<span class="tag">'+esc(b.y)+'년</span>':'';
+    var badge=isNew?'<span class="badge">서가 밖</span>':'';
+    var tip=b.tip?'<p class="rx-tip"><b>함께 나눌 질문</b>'+esc(b.tip)+'</p>':'';
+    return '<article class="rx'+(isNew?' new':'')+'" style="--sp:'+color+'">'+
+      '<div class="rx-top"><h3 class="rx-title">'+esc(b.t)+'</h3><span class="rx-author">'+esc(b.a)+'</span>'+badge+'</div>'+
+      '<p class="rx-why">'+esc(b.w)+'</p>'+tip+
+      '<div class="rx-foot">'+tags+extra+meta+'<span class="len">'+esc(b.len||"")+'</span></div></article>';
+  }
+  function render(){
+    var t=tierOf(state.tier);
+    var bits=[t.spine];
+    if(state.mode==="survey"){
+      if(state.mood)bits.push(labelOf(MOODS,state.mood));
+      if(state.topics.length)bits.push(state.topics.join("·"));
+      if(state.habit)bits.push(labelOf(HABITS,state.habit));
+      if(state.kind&&state.kind!=="무관")bits.push(labelOf(KINDS,state.kind));
+      if(state.origin&&state.origin!=="무관")bits.push(labelOf(ORIGINS,state.origin));
+    } else bits.push("직접 이야기");
+    $("result-for").textContent=bits.join(" · ");
+
+    var ns=$("note-slot");ns.innerHTML="";
+    if(state.note){var n=document.createElement("div");n.className="note";n.innerHTML='<span class="who">상담원의 말</span>';n.appendChild(document.createTextNode(state.note));ns.appendChild(n);}
+
+    var $cards=$("cards");
+    if(!state.picks.length){
+      $cards.innerHTML='<p class="empty">'+(state.mode==="story"?"위에 사정을 적고 「상담 받기」를 누르면 여기에 세 권이 놓입니다.":"조건에 맞는 책이 없어요. 답을 바꿔보시겠어요?")+'</p>';
+    } else $cards.innerHTML=state.picks.map(function(b){return cardHTML(b,t.color,!!b.fresh);}).join("");
+
+    var $fresh=$("fresh");
+    if(state.fresh.length){$fresh.hidden=false;$("fresh-cards").innerHTML=state.fresh.map(function(b){return cardHTML(b,t.color,true);}).join("");}
+    else{$fresh.hidden=true;$("fresh-cards").innerHTML="";}
+  }
+
+  function surveySummary(){
+    var w=[];
+    if(state.mood)w.push("지금 필요한 것: "+labelOf(MOODS,state.mood));
+    if(state.topics.length)w.push("관심 주제: "+state.topics.join(", "));
+    if(state.habit)w.push("독서 습관: "+labelOf(HABITS,state.habit));
+    if(state.kind&&state.kind!=="무관")w.push("종류: "+labelOf(KINDS,state.kind));
+    if(state.origin&&state.origin!=="무관")w.push("작가: "+labelOf(ORIGINS,state.origin));
+    return w;
+  }
+
+  /* fresh books (button) */
+  $("fresh-go").addEventListener("click",function(){
+    if(!sample)return;
+    var seq=++freshSeq, t=tierOf(state.tier), btn=$("fresh-go");
+    btn.disabled=true; $("fresh").hidden=false; $("fresh-cards").innerHTML='<p class="empty">상담원이 신간 서가를 살피는 중…</p>';
+    var have=(BOOKS[state.tier]||[]).map(function(b){return b.t;}).join(", ");
+    var wants=surveySummary();
+    var prompt="당신은 한국 학교 도서관의 독서 상담원입니다. 아래 독자에게 권할, 우리 서가에 없는 책 2권을 고르세요. 최근 3년 안에 한국에서 출간된 책을 우선하되, 확신이 없으면 검증된 책을 고르세요.\n\n[독자] "+t.desc+"\n"+(wants.length?"[조건]\n"+wants.join("\n")+"\n":"")+"[이미 서가에 있어 제외할 책] "+have+"\n\n규칙:\n- 실제로 존재한다고 확신하는 책만, 정확한 한국어 제목·저자·출간 연도로.\n- 독자 연령에 맞는 책만.\n- reason은 한두 문장, 존댓말, 담백하게. 이모지 금지.\n\nJSON만 출력: {\"picks\":[{\"title\":\"...\",\"author\":\"...\",\"year\":2024,\"reason\":\"...\"}]}";
+    sample.json(prompt,{modelTier:"quick"}).then(function(res){
+      if(seq!==freshSeq)return;
+      var arr=(res&&res.picks)||[];
+      state.fresh=arr.filter(function(p){return p&&p.title;}).slice(0,2).map(function(p){return {t:p.title,a:p.author||"",y:p.year||"",g:[],tp:[],len:"",w:p.reason||"",fresh:true};});
+      if(!state.fresh.length){$("fresh-cards").innerHTML='<p class="empty">이번엔 확신할 만한 새 책을 찾지 못했어요.</p>';}else render();
+    }).catch(function(err){
+      if(seq!==freshSeq)return;
+      if(err&&err.code==="not_granted"){sample=null;syncMode();$("fresh").hidden=true;}
+      else $("fresh-cards").innerHTML='<p class="empty">'+(err&&err.code==="rate_limited"?"요청이 몰렸어요. 잠시 뒤에 다시 눌러주세요.":"새 책을 살피지 못했어요. 다시 한 번 눌러주세요.")+'</p>';
+    }).then(function(){btn.disabled=false;});
+  });
+
+  /* story mode */
+  $("story-go").addEventListener("click",async function(){
+    var text=$("story-text").value.trim();
+    if(!text){$("story-text").focus();return;}
+    var btn=$("story-go"),hint=$("story-hint"),t=tierOf(state.tier),list=BOOKS[state.tier]||[];
+
+    if(!sample){
+      var kw={위로:/힘들|슬프|외로|지치|우울|허전|헛헛|불안|걱정|무섭|서운|눈물/,유쾌:/웃|재미|유머|신나|즐거|장난/,관계:/친구|가족|엄마|아빠|동생|형|누나|언니|오빠|선생|싸|외톨|따돌|왕따|사람|관계/,용기:/용기|자신감|도전|겁|소심|포기|실패|시험|경쟁|주눅/,호기심:/과학|역사|우주|공룡|동물|지식|궁금|왜|사회|철학|수학|실험/,상상:/판타지|마법|모험|SF|게임|상상|마법사/};
+      var tk={"동물·자연":/동물|강아지|고양이|공룡|곤충|바다|숲|자연|식물/,"과학·우주":/과학|우주|실험|로봇|별|행성|생물/,"역사":/역사|조선|전쟁|옛날|위인|독립/,"친구·학교":/친구|학교|교실|반|선생/,"가족":/가족|엄마|아빠|동생|형|누나|언니|오빠|할머니|할아버지|부모/,"모험·판타지":/판타지|마법|모험|마법사|용|괴물/,"스포츠·게임":/축구|야구|수영|운동|게임|농구|태권도|달리기/,"예술·음악":/음악|그림|미술|노래|악기|춤|피아노|밴드/,"사회·세상":/사회|세상|돈|정치|환경|뉴스|정의/,"마음·성장":/마음|성장|자신|고민|사춘기|꿈/};
+      var hits={};Object.keys(kw).forEach(function(k){if(kw[k].test(text))hits[k]=1;});
+      var thits={};Object.keys(tk).forEach(function(k){if(tk[k].test(text))thits[k]=1;});
+      var scored=shuffle(list).map(function(b){var s=0;b.g.forEach(function(g){if(hits[g])s+=2;});b.tp.forEach(function(p){if(thits[p])s+=2;});return {b:b,s:s};}).sort(function(x,y){return y.s-x.s;});
+      state.picks=scored.slice(0,3).map(function(x){var c=Object.assign({},x.b);c.hits=x.b.g.filter(function(g){return hits[g];}).map(function(g){return labelOf(MOODS,g);}).concat(x.b.tp.filter(function(p){return thits[p];}));return c;});
+      state.note="";state.fresh=[];render();
+      hint.textContent="상담 기능이 없는 화면이어서 사연의 낱말을 읽어 서가에서 골랐어요.";
+      return;
+    }
+
+    btn.disabled=true;hint.textContent="상담원이 사연을 읽고 서가를 살피는 중…";
+    var shelf=list.map(function(b,i){return (i+1)+". "+b.t+" / "+b.a+" / "+b.g.join("·")+" / "+b.tp.join("·")+" / "+b.len+" / "+b.w;}).join("\n");
+    var wants=surveySummary();
+    var prompt="당신은 한국 학교 도서관의 다정하고 노련한 독서 상담원입니다. 아래 사연을 꼼꼼히 읽고 책 세 권을 고르세요.\n\n[읽을 사람] "+t.desc+"\n\n[사연]\n"+text+"\n\n"+(wants.length?"[설문에서 고른 조건]\n"+wants.join("\n")+"\n\n":"")+"[우리 서가에 있는 책]\n"+shelf+"\n\n규칙:\n- 사연 속 나이·성별·취향·최근 읽은 책·지금 겪는 일을 모두 고려하고, 세 권이 서로 다른 결(가볍게 시작할 책 / 마음에 닿는 책 / 한 걸음 더 나아갈 책)이 되게 고르세요.\n- 세 권 중 두 권은 서가 목록에서, 한 권은 목록 밖에서 고르되 목록 밖 책은 최근 3년 안에 한국에서 출간된 책을 우선하세요. 목록 밖 책은 실제로 존재한다고 확신하는 책만, 정확한 한국어 제목·저자·출간 연도로. 확신이 없으면 세 권 모두 서가에서 고르세요.\n- 서가의 책은 제목을 목록과 똑같이 쓰고 fromShelf를 true로.\n- message: 사연에 대한 상담 한마디. 두세 문장, 존댓말, 담백하고 따뜻하게. 과장된 위로나 이모지는 쓰지 말 것.\n- 각 reason: 이 사연에 왜 이 책인지 두 문장. 서가 설명을 베끼지 말고 사연의 구체적인 부분을 짚을 것.\n- 각 tip: 읽고 나서 어른이 아이에게(또는 스스로에게) 건넬 질문 한 가지. 한 문장.\n- 사연에서 정말로 힘든 상황이 느껴지면, message에서 곁의 어른이나 상담 선생님과 이야기해보길 한 문장으로 조심스럽게 권하세요.\n\nJSON만 출력: {\"message\":\"...\",\"picks\":[{\"title\":\"...\",\"author\":\"...\",\"year\":2020,\"fromShelf\":true,\"reason\":\"...\",\"tip\":\"...\"}, ...]}";
+
+    try{
+      var res=await sample.json(prompt,{modelTier:"default"});
+      var chosen=[];
+      (res.picks||[]).forEach(function(p){
+        if(!p||!p.title)return;
+        var found=null;
+        for(var i=0;i<list.length;i++){if(list[i].t===p.title){found=list[i];break;}}
+        if(!found){for(var j=0;j<list.length;j++){var tt=String(p.title);if(tt.indexOf(list[j].t)>-1||list[j].t.indexOf(tt)>-1){found=list[j];break;}}}
+        if(found){
+          if(chosen.some(function(c){return c.t===found.t;}))return;
+          chosen.push({t:found.t,a:found.a,g:found.g,tp:found.tp,len:found.len,w:p.reason||found.w,tip:p.tip||""});
+        } else chosen.push({t:p.title,a:p.author||"",y:p.year||"",g:[],tp:[],len:"",w:p.reason||"",tip:p.tip||"",fresh:true});
+      });
+      if(chosen.length){
+        state.picks=chosen.slice(0,3);state.note=res.message||"";state.fresh=[];render();
+        hint.textContent="사연에 맞춰 골랐습니다. 점선 띠가 있는 카드는 서가 밖에서 가져온 책이에요.";
+      } else hint.textContent="책을 고르지 못했어요. 조금 더 자세히 적어주시겠어요?";
+    }catch(err){
+      var code=err&&err.code;
+      if(code==="not_granted"){sample=null;syncMode();hint.textContent="상담 기능 사용이 허용되지 않았어요. 다시 누르면 서가에서만 골라 드립니다.";}
+      else if(code==="rate_limited")hint.textContent="요청이 몰렸어요. 잠시 뒤에 다시 눌러주세요.";
+      else hint.textContent="상담을 마치지 못했어요. 다시 한 번 눌러주세요.";
+    }finally{btn.disabled=false;}
+  });
+
+  /* boot */
+  function start(saved){
+    if(saved&&saved.tier&&BOOKS[saved.tier]){
+      state.tier=saved.tier;state.mode=saved.mode||"survey";state.mood=saved.mood||null;
+      state.topics=Array.isArray(saved.topics)?saved.topics:[];state.habit=saved.habit||null;state.kind=saved.kind||null;state.origin=saved.origin||null;
+    }
+    syncShelf();syncMode();syncAllChips();
+    if(state.mode==="survey")state.picks=surveyPick();
+    render();
+    (async function(){
+      try{sample=(window.claude&&window.claude.use)?await window.claude.use("sample"):null;}catch(e){sample=null;}
+      if(!sample){
+        $("story-mode-desc").textContent="사정을 적으면 낱말을 읽어 서가에서 골라요. (이 화면에서는 상담원 대화 기능을 쓸 수 없어요)";
+        $("story-hint").textContent="사연의 낱말을 읽어 서가에서 세 권을 고릅니다.";
+      }
+      syncMode();
+    })();
+  }
+  try{
+    if(window.claude&&window.claude.hot){
+      window.claude.hot.snapshot(function(){return {tier:state.tier,mode:state.mode,mood:state.mood,topics:state.topics,habit:state.habit,kind:state.kind,origin:state.origin};});
+      if(window.claude.hot.ready)window.claude.hot.ready(start);else start(window.claude.hot.data||{});
+    } else start({});
+  }catch(e){start({});}
+})();
+</script>
+
+</body>
+</html>
