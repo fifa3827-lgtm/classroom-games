@@ -231,6 +231,26 @@
     {id:"adult",spine:"성인",color:"#34434E",desc:"성인",group:"adult",from:20,to:59,age:null,add:"",q:["한국 소설","에세이","소설"],know:["인문 교양","과학 교양"]}
   ];
 
+  /* 학년 단서: 소개글·제목에서 찾음 */
+  var SIG={
+    e12:/그림책|저학년|1학년|2학년|읽기 독립|첫 읽기|7세|8세|6~8세|7~9세|유치|초등 입학/,
+    e34:/3학년|4학년|중학년|9세|10세|8~10세|9~11세|초등 동화|3~4학년/,
+    e56:/고학년|5학년|6학년|11세|12세|10~12세|11~13세|어린이 소설|장편 동화|5~6학년/,
+    kids:/그림책|동화|어린이|초등|학년|아동|주니어|아이들|읽기 독립|동시|유아/,
+    teen:/청소년|중학생|고등학생|십 대|10대|소설Y|YA|틴|사춘기|열네 살|열다섯|열여섯|열일곱|중학교|고등학교/,
+    adult:/시집|산문집|장편소설|에세이|인문|경제|경영|자기계발|철학|평전|비평|사회과학|인류학|심리학|역사학/
+  };
+  /* 신뢰할 만한 출판사: 최신순 조회의 뼈대 (매번 12곳을 무작위로 뽑음) */
+  var PUBS={
+    kids:["문학동네","창비","비룡소","사계절","시공주니어","웅진주니어","길벗어린이","보림","국민서관","책읽는곰","우리학교","바람의아이들","푸른숲주니어","주니어김영사","논장","한울림어린이","이야기꽃","봄볕","사파리","그림책공작소","한솔수북","다림","별숲","개암나무","뜨인돌어린이","노란상상","스콜라","천개의바람","킨더랜드","상상의집","라임","낮은산","북극곰","고래뱃속","반달","소원나무","씨드북","밝은미래","현암주니어","살림어린이","풀빛","보물창고","청어람주니어","해와나무","잇츠북","크레용하우스","위즈덤하우스","문학과지성사","창비교육","주니어RHK","파랑새","마음이음","웃는돌고래","머스트비","단비어린이","글로연","향","봄개울"],
+    teen:["창비","문학동네","사계절","자음과모음","우리학교","특별한서재","돌베개","서해문집","다른","라임","북멘토","비룡소","푸른숲","낮은산","별숲","뜨인돌","바람의아이들","다산책방","위즈덤하우스","창비교육","해냄","마음이음","한겨레출판","휴머니스트","문학과지성사","놀","단비","책폴","사계절","현북스","탐","꿈결","크레용하우스","자음과모음"],
+    adult:["문학동네","창비","민음사","은행나무","다산책방","위즈덤하우스","김영사","어크로스","웅진지식하우스","열린책들","한겨레출판","휴머니스트","문학과지성사","마음산책","알에이치코리아","북하우스","현대문학","자음과모음","사계절","돌베개","글항아리","유유","난다","시공사","을유문화사","안온북스","클레이하우스","위고","민음사","문학사상","작가정신","래빗홀","허블","아작","다산초당","김영사","흐름출판","부키","생각의힘","오월의봄","반비","교유서가","한길사","그린비","세미콜론","인플루엔셜","웨일북","수오서재","밀리의서재","북스톤"]
+  };
+  /* 자가출판·POD 플랫폼: 신간 목록의 잡음 */
+  var SELFPUB=/퍼플|부크크|Bookk|유페이퍼|엠\(M\)페이퍼|엠페이퍼|인디펍|북랩|하움출판사|좋은땅|바른북스|지식과감성|렛츠북|이담북스|프로방스|글로벌콘텐츠|북포스|SANCTUM|이페이지|올스토리|시와에세이|한국문화사|연변대학|칼로스|답게|해피북미디어|넥스트북|안녕로빈|크다북스|퍼플카우|e퍼플|디자인이음|담아|모모북스|씽크스마트|북스고|생각나눔|밥북|지식공감|미다스북스|메이킹북스|더로드|열린인공지능|교보문고 퍼플|하움|도서출판 행복에너지|행복에너지|BOOKK/i;
+  var TODAY=fmtDateNow();
+  function fmtDateNow(){var d=new Date();d.setDate(d.getDate()+3);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+
   var MOODS=[
     {k:"위로",label:"마음이 헛헛할 때",kw:["위로","마음","괜찮아","치유","슬픔"]},
     {k:"유쾌",label:"웃고 싶을 때",kw:["웃음","유머","엉뚱","코믹","재미"]},
@@ -279,6 +299,7 @@
   function labelOf(arr,k){for(var i=0;i<arr.length;i++)if(arr[i].k===k)return arr[i].label;return "";}
   function byKey(arr,k){for(var i=0;i<arr.length;i++)if(arr[i].k===k)return arr[i];return null;}
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];});}
+  function shuffle(a){var r=a.slice();for(var i=r.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var x=r[i];r[i]=r[j];r[j]=x;}return r;}
   function daysAgo(dateStr){var d=new Date(dateStr);if(isNaN(d))return 9999;return (Date.now()-d.getTime())/86400000;}
   function fmtDate(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 
@@ -297,13 +318,13 @@
   }
 
   /* 카카오 책 검색 → 공통 형식 */
-  function kakao(query,sort,size){
+  function kakao(query,sort,size,target){
     if(!kakaoKey)return Promise.resolve([]);
-    var url="https://dapi.kakao.com/v3/search/book?query="+encodeURIComponent(query)+"&sort="+(sort||"accuracy")+"&size="+(size||50)+"&page=1";
+    var url="https://dapi.kakao.com/v3/search/book?query="+encodeURIComponent(query)+"&sort="+(sort||"accuracy")+"&size="+(size||50)+"&page=1"+(target?"&target="+target:"");
     return getJSON(url,{Authorization:"KakaoAK "+kakaoKey}).then(function(d){
       return (d.documents||[]).map(function(x){
         var isbn13=(x.isbn||"").split(" ").filter(function(s){return s.length===13;})[0]||(x.isbn||"").replace(/\s/g,"");
-        return {isbn:isbn13,title:x.title,authors:(x.authors||[]).join(", "),translators:(x.translators||[]).join(", "),publisher:x.publisher,date:(x.datetime||"").slice(0,10),year:parseInt((x.datetime||"").slice(0,4),10)||0,desc:x.contents||"",cover:x.thumbnail||"",link:x.url||"",src:["카카오:"+query+(sort==="latest"?"(최신)":"")],srcCount:1,classNo:"",loanRank:0};
+        return {isbn:isbn13,title:x.title,authors:(x.authors||[]).join(", "),translators:(x.translators||[]).join(", "),publisher:x.publisher,date:(x.datetime||"").slice(0,10),year:parseInt((x.datetime||"").slice(0,4),10)||0,desc:x.contents||"",cover:x.thumbnail||"",link:x.url||"",src:[target==="publisher"?"출판사 신간:"+query:"카카오:"+query+(sort==="latest"?"(최신)":"")],srcCount:1,classNo:"",loanRank:0,pubNew:target==="publisher"};
       });
     }).catch(function(e){if(e.message==="auth"){kakaoKey="";try{localStorage.removeItem("kakaokey");}catch(x){}authFail.kakao=true;}return [];});
   }
@@ -340,6 +361,16 @@
     if(EXCLUDE_TITLE.test(it.title))return false;
     if(EXCLUDE_PUB.test(it.publisher||""))return false;
     if(EXCLUDE_DESC.test(it.desc||""))return false;
+    if(SELFPUB.test(it.publisher||""))return false;
+    if(/^\s*[\[［]/.test(it.title))return false;                 // [어린이 책Dream] 같은 예약·행사 표기
+    if(it.date&&it.date>TODAY)return false;                      // 아직 안 나온 책·잘못된 날짜
+    var sigText=it.title+" "+(it.desc||"");
+    var generalPub=!it.pubNew||/^(문학동네|창비|사계절|비룡소|위즈덤하우스|문학과지성사|돌베개|서해문집|다산책방|한겨레출판|휴머니스트|자음과모음|푸른숲|뜨인돌|낮은산|김영사|민음사|은행나무)$/.test(it.publisher||"");
+    if(t.group==="kids"&&generalPub&&!SIG.kids.test(sigText)&&!it.classNo)return false;
+    if(t.group==="kids"&&SIG.adult.test(it.title)&&!SIG.kids.test(sigText))return false;
+    if(t.group==="teen"&&/그림책|저학년|초등|\d학년|유아|아동|읽기 독립/.test(sigText))return false;
+    if(t.group==="teen"&&generalPub&&!SIG.teen.test(sigText)&&!it.classNo)return false;
+    if(t.group==="adult"&&(SIG.kids.test(it.title)||SIG.teen.test(it.title)||/그림책|동화|어린이|청소년/.test(it.desc||"")))return false;
     var txt=(it.title+" "+it.desc);
     if(t.group!=="kids"&&/유아|어린이|초등|저학년|고학년|그림책|동화|\d학년/.test(it.title)&&!/청소년|성인/.test(it.title))return false;
     if(t.group==="kids"&&/유아|0~3세|0-3세|돌잡이|아기/.test(txt))return false;
@@ -359,10 +390,10 @@
     // 뼈대: 이 나이대 인기대출 (최근 12개월, 최근 3개월)
     qs.push(d4lLoan(t,{months:12},100));
     qs.push(d4lLoan(t,{months:3},60));
-    // 카카오: 이 나이대 이야기책 (최신순 + 관련순) · 지식책
-    t.q.forEach(function(w){qs.push(kakao(w,"latest",50));});
-    t.q.slice(0,2).forEach(function(w){qs.push(kakao(w,"accuracy",50));});
-    (t.know||[]).forEach(function(w){qs.push(kakao(w,state.kind==="지식"?"latest":"accuracy",40));});
+    // 카카오: 믿을 만한 출판사들의 최신 도서 (뼈대) + 이 나이대 이야기책·지식책
+    shuffle(PUBS[t.group]).slice(0,12).forEach(function(pub){qs.push(kakao(pub,"latest",50,"publisher"));});
+    t.q.slice(0,2).forEach(function(w){qs.push(kakao(w,"accuracy",40));});
+    (t.know||[]).forEach(function(w){qs.push(kakao(w,"accuracy",30));});
     // 관심 주제
     state.topics.forEach(function(tk){
       var tp=byKey(TOPICS,tk); if(!tp)return;
@@ -401,6 +432,10 @@
     if(it.srcCount>1)s+=Math.min(it.srcCount-1,3)*0.8;
     if(!it.cover)s-=0.5;
     if(/동화|그림책|소설|이야기|시집|문학상|수상/.test(text))s+=1;
+    if(it.pubNew)s+=1.5;
+    if(PUBS[t.group].indexOf(it.publisher)>-1)s+=1;
+    if(t.group==="kids"){["e12","e34","e56"].forEach(function(id){var m=SIG[id].test(text);if(id===t.id&&m){s+=2.5;hits.push(t.spine+" 맞춤");}else if(m)s-=1.5;});}
+    if(t.group==="teen"&&SIG.teen.test(text))s+=1.5;
     if(/학습|교과|공부|문제|연습|익히|배우는|실력|점수/.test(it.title))s-=3;
     if(/개정|리커버|한정판|양장|합본|\d+권 세트|시리즈 \d+|\d+\s*$/.test(it.title))s-=0.7;
     return {s:s,hits:hits.filter(function(x,i,a){return a.indexOf(x)===i;})};
@@ -554,7 +589,7 @@
     var hits=it.hits||[];
     var isNew=(it.date&&daysAgo(it.date)<=NEW_DAYS)||(!it.date&&it.year>=THIS_YEAR);
     var tags=hits.map(function(h){return '<span class="tag hit">'+esc(h)+'</span>';}).join("");
-    var srcTag=it.loanRank?'<span class="tag">'+t.spine+' 인기대출 '+it.loanRank+'위</span>':(it.src.some(function(s){return /최신/.test(s);})?'<span class="tag">최신 도서</span>':'');
+    var srcTag=it.loanRank?'<span class="tag">'+t.spine+' 인기대출 '+it.loanRank+'위</span>':(it.pubNew?'<span class="tag">출판사 신간</span>':(it.src.some(function(s){return /최신/.test(s);})?'<span class="tag">최신 도서</span>':''));
     var when=it.date?it.date.slice(0,7).replace("-","년 ")+"월":(it.year?it.year+"년":"");
     var author=shortAuthor(it.authors)||"";
     var link=it.link||("https://search.daum.net/search?w=bookpage&q="+encodeURIComponent(it.title));
