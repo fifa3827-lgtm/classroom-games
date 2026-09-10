@@ -4,55 +4,74 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>책 추천 상담원</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap">
 <style>
   :root{
-    --paper:#eceee9; --card:#fbfbf9; --card-2:#f3f4f0;
-    --ink:#1d2622; --ink-soft:#4b5851; --ink-faint:#8b968f; --rule:#d5d9d2;
+    --paper:#f1efe9; --card:#ffffff; --card-2:#f5f3ee;
+    --ink:#22282b; --ink-soft:#4f585d; --ink-faint:#8a9297; --rule:#dcd8cf;
     --accent:#2f6f5e; --accent-ink:#ffffff; --accent-soft:#e3efea;
     --warn:#a8632a; --warn-soft:#f5e9dc;
+    --shelf-fade:rgba(241,239,233,.62);
     --shadow:0 1px 2px rgba(29,38,34,.06), 0 8px 24px -12px rgba(29,38,34,.18);
-    --radius:10px;
+    --radius:12px;
+    --font:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR","Segoe UI",system-ui,sans-serif;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --paper:#151a18; --card:#1e2523; --card-2:#242c29;
-      --ink:#e7ece9; --ink-soft:#a9b5af; --ink-faint:#76837c; --rule:#333c38;
+      --paper:#161a19; --card:#1f2523; --card-2:#262d2a;
+      --ink:#e8ece9; --ink-soft:#aab4ae; --ink-faint:#77837d; --rule:#343c39;
       --accent:#6bbfa4; --accent-ink:#10201b; --accent-soft:#1f3a32;
       --warn:#e0a56a; --warn-soft:#3a2e22;
+      --shelf-fade:rgba(22,26,25,.78);
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
     }
   }
   :root[data-theme="dark"]{
-    --paper:#151a18; --card:#1e2523; --card-2:#242c29;
-    --ink:#e7ece9; --ink-soft:#a9b5af; --ink-faint:#76837c; --rule:#333c38;
+    --paper:#161a19; --card:#1f2523; --card-2:#262d2a;
+    --ink:#e8ece9; --ink-soft:#aab4ae; --ink-faint:#77837d; --rule:#343c39;
     --accent:#6bbfa4; --accent-ink:#10201b; --accent-soft:#1f3a32;
     --warn:#e0a56a; --warn-soft:#3a2e22;
+    --shelf-fade:rgba(22,26,25,.78);
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
   }
 
   *{box-sizing:border-box}
-  body{margin:0; background:var(--paper); color:var(--ink); font-family:"IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif; font-weight:400; line-height:1.7; -webkit-font-smoothing:antialiased;}
-  .wrap{max-width:780px; margin:0 auto; padding-inline:20px; padding-block:40px 64px;}
+  body{
+    margin:0; color:var(--ink); font-family:var(--font); font-weight:400; line-height:1.7; -webkit-font-smoothing:antialiased;
+    background-color:var(--paper);
+    background-image:linear-gradient(to bottom, var(--shelf-fade) 0, var(--shelf-fade) 120px, var(--paper) 560px), url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22800%22%20height%3D%22560%22%20viewBox%3D%220%200%20800%20560%22%3E%3Crect%20x%3D%2220%22%20y%3D%2238%22%20width%3D%2232%22%20height%3D%22128%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%2236%22%20width%3D%2234%22%20height%3D%22130%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20x%3D%2296%22%20y%3D%2241%22%20width%3D%2243%22%20height%3D%22125%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22155%22%20y%3D%2262%22%20width%3D%2243%22%20height%3D%22104%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22206%22%20y%3D%2264%22%20width%3D%2227%22%20height%3D%22102%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22249%22%20y%3D%2229%22%20width%3D%2243%22%20height%3D%22137%22%20rx%3D%222%22%20fill%3D%22%23b9a08a%22%2F%3E%3Crect%20x%3D%22308%22%20y%3D%2245%22%20width%3D%2230%22%20height%3D%22121%22%20rx%3D%222%22%20fill%3D%22%23b39c96%22%2F%3E%3Crect%20x%3D%22340%22%20y%3D%2273%22%20width%3D%2237%22%20height%3D%2293%22%20rx%3D%222%22%20fill%3D%22%238b8f96%22%2F%3E%3Crect%20x%3D%22379%22%20y%3D%2271%22%20width%3D%2219%22%20height%3D%2295%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20x%3D%22400%22%20y%3D%2272%22%20width%3D%2237%22%20height%3D%2294%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22440%22%20y%3D%2236%22%20width%3D%2232%22%20height%3D%22130%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20x%3D%22488%22%20y%3D%2233%22%20width%3D%2225%22%20height%3D%22133%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22521%22%20y%3D%2231%22%20width%3D%2218%22%20height%3D%22135%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22547%22%20y%3D%2256%22%20width%3D%2238%22%20height%3D%22110%22%20rx%3D%222%22%20fill%3D%22%23a6a48c%22%2F%3E%3Crect%20x%3D%22601%22%20y%3D%2268%22%20width%3D%2244%22%20height%3D%2298%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22648%22%20y%3D%2259%22%20width%3D%2242%22%20height%3D%22107%22%20rx%3D%222%22%20fill%3D%22%238b8f96%22%2F%3E%3Crect%20x%3D%22693%22%20y%3D%2269%22%20width%3D%2218%22%20height%3D%2297%22%20rx%3D%222%22%20fill%3D%22%23b39c96%22%2F%3E%3Crect%20x%3D%22713%22%20y%3D%2267%22%20width%3D%2230%22%20height%3D%2299%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22751%22%20y%3D%2272%22%20width%3D%2220%22%20height%3D%2294%22%20rx%3D%222%22%20fill%3D%22%23b9a08a%22%2F%3E%3Crect%20x%3D%22773%22%20y%3D%2270%22%20width%3D%2224%22%20height%3D%2296%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20y%3D%22166%22%20width%3D%22800%22%20height%3D%2210%22%20fill%3D%22%238c7a66%22%2F%3E%3Crect%20y%3D%22176%22%20width%3D%22800%22%20height%3D%224%22%20fill%3D%22%230003%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%22228%22%20width%3D%2240%22%20height%3D%22118%22%20rx%3D%222%22%20fill%3D%22%23a6a48c%22%2F%3E%3Crect%20x%3D%2262%22%20y%3D%22213%22%20width%3D%2236%22%20height%3D%22133%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20x%3D%22101%22%20y%3D%22248%22%20width%3D%2228%22%20height%3D%2298%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22132%22%20y%3D%22227%22%20width%3D%2218%22%20height%3D%22119%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22152%22%20y%3D%22208%22%20width%3D%2225%22%20height%3D%22138%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22179%22%20y%3D%22224%22%20width%3D%2219%22%20height%3D%22122%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22200%22%20y%3D%22218%22%20width%3D%2239%22%20height%3D%22128%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20x%3D%22247%22%20y%3D%22241%22%20width%3D%2234%22%20height%3D%22105%22%20rx%3D%222%22%20fill%3D%22%23c4b39d%22%2F%3E%3Crect%20x%3D%22289%22%20y%3D%22229%22%20width%3D%2238%22%20height%3D%22117%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22335%22%20y%3D%22240%22%20width%3D%2231%22%20height%3D%22106%22%20rx%3D%222%22%20fill%3D%22%23b9a08a%22%2F%3E%3Crect%20x%3D%22369%22%20y%3D%22216%22%20width%3D%2243%22%20height%3D%22130%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22414%22%20y%3D%22242%22%20width%3D%2224%22%20height%3D%22104%22%20rx%3D%222%22%20fill%3D%22%23a6a48c%22%2F%3E%3Crect%20x%3D%22454%22%20y%3D%22217%22%20width%3D%2238%22%20height%3D%22129%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22494%22%20y%3D%22240%22%20width%3D%2222%22%20height%3D%22106%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22519%22%20y%3D%22214%22%20width%3D%2218%22%20height%3D%22132%22%20rx%3D%222%22%20fill%3D%22%23b7aab9%22%2F%3E%3Crect%20x%3D%22540%22%20y%3D%22249%22%20width%3D%2230%22%20height%3D%2297%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22572%22%20y%3D%22216%22%20width%3D%2224%22%20height%3D%22130%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20x%3D%22598%22%20y%3D%22230%22%20width%3D%2237%22%20height%3D%22116%22%20rx%3D%222%22%20fill%3D%22%23b7aab9%22%2F%3E%3Crect%20x%3D%22651%22%20y%3D%22245%22%20width%3D%2232%22%20height%3D%22101%22%20rx%3D%222%22%20fill%3D%22%23b39c96%22%2F%3E%3Crect%20x%3D%22691%22%20y%3D%22217%22%20width%3D%2244%22%20height%3D%22129%22%20rx%3D%222%22%20fill%3D%22%23c4b39d%22%2F%3E%3Crect%20x%3D%22743%22%20y%3D%22213%22%20width%3D%2223%22%20height%3D%22133%22%20rx%3D%222%22%20fill%3D%22%23c4b39d%22%2F%3E%3Crect%20x%3D%22769%22%20y%3D%22214%22%20width%3D%2225%22%20height%3D%22132%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20y%3D%22346%22%20width%3D%22800%22%20height%3D%2210%22%20fill%3D%22%238c7a66%22%2F%3E%3Crect%20y%3D%22356%22%20width%3D%22800%22%20height%3D%224%22%20fill%3D%22%230003%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%22393%22%20width%3D%2223%22%20height%3D%22133%22%20rx%3D%222%22%20fill%3D%22%238b8f96%22%2F%3E%3Crect%20x%3D%2245%22%20y%3D%22409%22%20width%3D%2239%22%20height%3D%22117%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22100%22%20y%3D%22407%22%20width%3D%2220%22%20height%3D%22119%22%20rx%3D%222%22%20fill%3D%22%23b9a08a%22%2F%3E%3Crect%20x%3D%22122%22%20y%3D%22431%22%20width%3D%2221%22%20height%3D%2295%22%20rx%3D%222%22%20fill%3D%22%238b8f96%22%2F%3E%3Crect%20x%3D%22146%22%20y%3D%22388%22%20width%3D%2225%22%20height%3D%22138%22%20rx%3D%222%22%20fill%3D%22%23a6a48c%22%2F%3E%3Crect%20x%3D%22174%22%20y%3D%22395%22%20width%3D%2231%22%20height%3D%22131%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22208%22%20y%3D%22422%22%20width%3D%2234%22%20height%3D%22104%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22244%22%20y%3D%22403%22%20width%3D%2225%22%20height%3D%22123%22%20rx%3D%222%22%20fill%3D%22%238b8f96%22%2F%3E%3Crect%20x%3D%22285%22%20y%3D%22429%22%20width%3D%2237%22%20height%3D%2297%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22324%22%20y%3D%22432%22%20width%3D%2224%22%20height%3D%2294%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22351%22%20y%3D%22405%22%20width%3D%2231%22%20height%3D%22121%22%20rx%3D%222%22%20fill%3D%22%239aa38f%22%2F%3E%3Crect%20x%3D%22384%22%20y%3D%22422%22%20width%3D%2219%22%20height%3D%22104%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22406%22%20y%3D%22397%22%20width%3D%2234%22%20height%3D%22129%22%20rx%3D%222%22%20fill%3D%22%23c4b39d%22%2F%3E%3Crect%20x%3D%22442%22%20y%3D%22425%22%20width%3D%2229%22%20height%3D%22101%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22474%22%20y%3D%22389%22%20width%3D%2239%22%20height%3D%22137%22%20rx%3D%222%22%20fill%3D%22%238b8f96%22%2F%3E%3Crect%20x%3D%22529%22%20y%3D%22396%22%20width%3D%2222%22%20height%3D%22130%22%20rx%3D%222%22%20fill%3D%22%23b9a08a%22%2F%3E%3Crect%20x%3D%22553%22%20y%3D%22411%22%20width%3D%2233%22%20height%3D%22115%22%20rx%3D%222%22%20fill%3D%22%238f9aa6%22%2F%3E%3Crect%20x%3D%22588%22%20y%3D%22395%22%20width%3D%2218%22%20height%3D%22131%22%20rx%3D%222%22%20fill%3D%22%23a89083%22%2F%3E%3Crect%20x%3D%22614%22%20y%3D%22414%22%20width%3D%2220%22%20height%3D%22112%22%20rx%3D%222%22%20fill%3D%22%23b7aab9%22%2F%3E%3Crect%20x%3D%22636%22%20y%3D%22429%22%20width%3D%2220%22%20height%3D%2297%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22672%22%20y%3D%22431%22%20width%3D%2229%22%20height%3D%2295%22%20rx%3D%222%22%20fill%3D%22%23c4b39d%22%2F%3E%3Crect%20x%3D%22704%22%20y%3D%22428%22%20width%3D%2229%22%20height%3D%2298%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20x%3D%22735%22%20y%3D%22432%22%20width%3D%2231%22%20height%3D%2294%22%20rx%3D%222%22%20fill%3D%22%23c9b8a2%22%2F%3E%3Crect%20y%3D%22526%22%20width%3D%22800%22%20height%3D%2210%22%20fill%3D%22%238c7a66%22%2F%3E%3Crect%20y%3D%22536%22%20width%3D%22800%22%20height%3D%224%22%20fill%3D%22%230003%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat:no-repeat, repeat-x; background-position:top center, top center; background-size:auto, 800px 560px;
+  }
+  .wrap{max-width:800px; margin:0 auto; padding-inline:20px; padding-block:36px 64px;}
 
-  .eyebrow{font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-faint); font-weight:500; margin:0 0 10px;}
-  h1{font-family:"Gowun Batang", Georgia, serif; font-weight:700; font-size:clamp(34px, 7vw, 50px); line-height:1.15; letter-spacing:-.01em; margin:0 0 12px; text-wrap:balance;}
-  .lede{margin:0; max-width:48ch; color:var(--ink-soft); font-size:15.5px; font-weight:300;}
-  .rule{height:1px; background:var(--rule); border:0; margin:32px 0;}
+  .hero{background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:28px 30px 26px; box-shadow:var(--shadow);}
+  @media (max-width:520px){ .hero{padding:22px 20px} }
+  .eyebrow{font-size:11.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--accent); font-weight:700; margin:0 0 8px;}
+  h1{font-weight:700; font-size:clamp(30px, 6vw, 42px); line-height:1.2; letter-spacing:-.02em; margin:0 0 10px; text-wrap:balance;}
+  .lede{margin:0; max-width:52ch; color:var(--ink-soft); font-size:15px; font-weight:400;}
+  .rule{height:1px; background:var(--rule); border:0; margin:28px 0;}
 
-  .step{margin-top:36px;}
+  .step{margin-top:32px;}
   .step-head{display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
-  .step-n{font-family:"Gowun Batang", serif; font-size:13px; color:var(--accent); border:1px solid currentColor; border-radius:50%; width:22px; height:22px; display:grid; place-items:center; flex:none;}
-  .step-t{font-size:15px; font-weight:600; margin:0;}
+  .step-n{font-size:12px; font-weight:700; color:var(--accent-ink); background:var(--accent); border-radius:50%; width:22px; height:22px; display:grid; place-items:center; flex:none;}
+  .step-t{font-size:16px; font-weight:700; margin:0;}
 
-  .shelf{display:grid; grid-template-columns:repeat(auto-fit, minmax(92px,1fr)); gap:10px; align-items:end;}
-  .spine{appearance:none; border:0; cursor:pointer; padding:16px 0 14px; height:158px; border-radius:3px 3px 5px 5px; background:var(--sp); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:space-between; font-family:"Gowun Batang", serif; font-size:16px; letter-spacing:.06em; box-shadow:inset -6px 0 12px -8px rgba(0,0,0,.55), inset 3px 0 0 rgba(255,255,255,.14), var(--shadow); transition:transform .18s ease, box-shadow .18s ease, height .18s ease;}
-  .spine .txt{writing-mode:vertical-rl; text-orientation:upright; line-height:1.35;}
-  .spine .band{width:calc(100% - 16px); height:1px; background:rgba(255,255,255,.45); flex:none;}
-  .spine:hover{transform:translateY(-6px)}
+  /* 책등 메뉴: 가로 글자, 같은 높이, 6열(모바일 3열) */
+  .shelf{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; align-items:stretch; padding:14px 12px 0; background:linear-gradient(to bottom, transparent 0, transparent calc(100% - 14px), #8c7a66 calc(100% - 14px), #8c7a66 calc(100% - 4px), rgba(0,0,0,.18) 100%); border-radius:0 0 6px 6px;}
+  @media (max-width:640px){ .shelf{grid-template-columns:repeat(3,1fr)} }
+  .spine{
+    appearance:none; border:0; cursor:pointer; padding:0; height:112px; border-radius:4px 6px 6px 4px; position:relative;
+    background:linear-gradient(90deg, rgba(0,0,0,.22) 0 5px, rgba(255,255,255,.16) 5px 7px, transparent 7px), var(--sp);
+    color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font);
+    box-shadow:var(--shadow); transition:transform .18s ease, box-shadow .18s ease; margin-bottom:14px;
+  }
+  .spine .band{display:none}
+  .spine .txt{writing-mode:horizontal-tb; text-orientation:mixed; text-align:center; font-weight:700; font-size:15px; line-height:1.35; letter-spacing:.01em; white-space:pre-line; text-shadow:0 1px 1px rgba(0,0,0,.25); padding:0 8px;}
+  .spine::after{content:""; position:absolute; left:14px; right:10px; top:14px; height:1px; background:rgba(255,255,255,.45); box-shadow:0 83px 0 rgba(255,255,255,.45);}
+  .spine:hover{transform:translateY(-5px)}
   .spine:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
-  .spine[aria-pressed="true"]{height:176px; box-shadow:inset -6px 0 12px -8px rgba(0,0,0,.55), inset 3px 0 0 rgba(255,255,255,.3), 0 0 0 2px var(--paper), 0 0 0 4px var(--sp), 0 14px 26px -14px rgba(0,0,0,.6);}
-  .shelf-floor{height:6px; background:var(--rule); border-radius:2px;}
+  .spine[aria-pressed="true"]{transform:translateY(-8px); box-shadow:0 0 0 2px var(--paper), 0 0 0 4px var(--sp), 0 14px 26px -14px rgba(0,0,0,.6);}
+  .shelf-floor{display:none}
 
   .modes{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   @media (max-width:520px){ .modes{grid-template-columns:1fr} }
@@ -60,75 +79,75 @@
   .mode:hover{border-color:var(--ink-soft)}
   .mode:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
   .mode[aria-pressed="true"]{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), var(--shadow);}
-  .mode-t{font-family:"Gowun Batang", serif; font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .mode-t{font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px;}
   .mode-t .dot{width:10px; height:10px; border-radius:50%; border:2px solid var(--rule); flex:none; transition:background .15s, border-color .15s;}
   .mode[aria-pressed="true"] .mode-t .dot{background:var(--accent); border-color:var(--accent);}
-  .mode-d{font-size:13px; color:var(--ink-soft); font-weight:300; line-height:1.6;}
+  .mode-d{font-size:13px; color:var(--ink-soft); line-height:1.6;}
 
-  .panel{margin-top:14px; background:var(--card-2); border:1px solid var(--rule); border-radius:var(--radius); padding:18px;}
+  .panel{margin-top:14px; background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow);}
   .q{margin-top:18px;} .q:first-child{margin-top:0}
-  .q-t{font-size:13.5px; font-weight:600; margin:0 0 8px; color:var(--ink);}
-  .q-t small{font-weight:300; color:var(--ink-faint); margin-left:6px;}
+  .q-t{font-size:13.5px; font-weight:700; margin:0 0 8px; color:var(--ink);}
+  .q-t small{font-weight:400; color:var(--ink-faint); margin-left:6px;}
   .chips{display:flex; flex-wrap:wrap; gap:8px;}
-  .chip{appearance:none; cursor:pointer; font:inherit; font-size:13.5px; padding:8px 14px; border-radius:999px; border:1px solid var(--rule); background:var(--card); color:var(--ink-soft); transition:background .15s, color .15s, border-color .15s;}
+  .chip{appearance:none; cursor:pointer; font:inherit; font-size:13.5px; padding:8px 14px; border-radius:999px; border:1px solid var(--rule); background:var(--card-2); color:var(--ink-soft); transition:background .15s, color .15s, border-color .15s;}
   .chip:hover{border-color:var(--accent); color:var(--ink)}
   .chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-  .chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:500;}
+  .chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:700;}
 
-  textarea{width:100%; min-height:110px; resize:vertical; font:inherit; font-size:15px; color:var(--ink); background:var(--card); border:1px solid var(--rule); border-radius:8px; padding:12px 14px; line-height:1.6;}
+  textarea{width:100%; min-height:110px; resize:vertical; font:inherit; font-size:15px; color:var(--ink); background:var(--card-2); border:1px solid var(--rule); border-radius:8px; padding:12px 14px; line-height:1.6;}
   textarea::placeholder{color:var(--ink-faint)}
   textarea:focus-visible{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
   .row{display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap;}
-  .hint{font-size:12.5px; color:var(--ink-faint); font-weight:300;}
-  .story-guide{font-size:13px; color:var(--ink-soft); font-weight:300; margin:0 0 10px; line-height:1.7;}
+  .hint{font-size:12.5px; color:var(--ink-faint);}
+  .story-guide{font-size:13px; color:var(--ink-soft); margin:0 0 10px; line-height:1.7;}
 
-  .btn{appearance:none; cursor:pointer; font:inherit; font-size:14px; font-weight:500; padding:10px 18px; border-radius:999px; border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink); transition:opacity .15s, transform .15s;}
+  .btn{appearance:none; cursor:pointer; font:inherit; font-size:14px; font-weight:700; padding:10px 18px; border-radius:999px; border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink); transition:opacity .15s, transform .15s;}
   .btn:hover{opacity:.88} .btn:active{transform:translateY(1px)}
   .btn:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
   .btn[disabled]{opacity:.5; cursor:default}
-  .btn.ghost{background:transparent; color:var(--ink-soft); border-color:var(--rule)}
+  .btn.ghost{background:transparent; color:var(--ink-soft); border-color:var(--rule); font-weight:500}
   .btn.ghost:hover{color:var(--ink); border-color:var(--ink-soft)}
   .toggle{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); cursor:pointer; user-select:none;}
   .toggle input{accent-color:var(--accent); width:16px; height:16px;}
 
-  .result-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:40px 0 6px;}
-  .result-title{font-family:"Gowun Batang", serif; font-size:22px; margin:0; font-weight:700;}
-  .result-for{font-size:12px; letter-spacing:.06em; color:var(--ink-faint); border-left:1px solid var(--rule); padding-left:12px; flex:1 1 200px;}
+  .result-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:36px 0 6px;}
+  .result-title{font-size:20px; margin:0; font-weight:700;}
+  .result-for{font-size:12px; letter-spacing:.02em; color:var(--ink-faint); border-left:1px solid var(--rule); padding-left:12px; flex:1 1 200px;}
   .result-actions{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; align-items:center;}
-  .status{font-size:12.5px; color:var(--ink-faint); font-weight:300; margin:0 0 16px; min-height:1.4em;}
+  .status{font-size:12.5px; color:var(--ink-faint); margin:0 0 16px; min-height:1.4em;}
   .status.err{color:var(--warn)}
 
   .cards{display:flex; flex-direction:column; gap:14px;}
   .rx{background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:18px 20px 16px 20px; box-shadow:var(--shadow); position:relative; overflow:hidden; display:grid; grid-template-columns:84px 1fr; gap:18px;}
-  .rx::before{content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--sp);}
+  .rx::before{content:""; position:absolute; inset:0 auto 0 0; width:5px; background:var(--sp);}
   @media (max-width:440px){ .rx{grid-template-columns:64px 1fr; gap:12px; padding:14px 14px 12px 16px} }
   .cover{width:84px; aspect-ratio:7/10; object-fit:cover; border-radius:3px; background:var(--card-2); box-shadow:0 4px 14px -6px rgba(0,0,0,.4); display:block; max-width:100%;}
   @media (max-width:440px){ .cover{width:64px} }
   .rx-body{min-width:0}
   .rx-top{display:flex; align-items:baseline; gap:8px 10px; flex-wrap:wrap;}
-  .rx-title{font-family:"Gowun Batang", serif; font-size:20px; font-weight:700; margin:0; letter-spacing:-.01em; line-height:1.3;}
+  .rx-title{font-size:19px; font-weight:700; margin:0; letter-spacing:-.01em; line-height:1.35;}
   .rx-title a{color:inherit; text-decoration:none; border-bottom:1px solid transparent;}
   .rx-title a:hover{border-bottom-color:var(--ink-soft)}
-  .rx-meta{font-size:12.5px; color:var(--ink-faint); font-weight:300; margin-top:2px;}
-  .rx-why{margin:8px 0 0; font-size:14px; color:var(--ink-soft); font-weight:300; line-height:1.7; max-width:60ch; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;}
+  .rx-meta{font-size:12.5px; color:var(--ink-faint); margin-top:2px;}
+  .rx-why{margin:8px 0 0; font-size:14px; color:var(--ink-soft); line-height:1.7; max-width:60ch; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;}
   .rx-foot{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:12px; padding-top:10px; border-top:1px dashed var(--rule);}
-  .tag{font-size:11.5px; letter-spacing:.04em; color:var(--ink-soft); background:var(--card-2); border-radius:4px; padding:3px 8px;}
-  .tag.hit{background:var(--accent-soft); color:var(--accent); font-weight:500;}
-  .tag.new{background:var(--warn-soft); color:var(--warn); font-weight:500;}
-  .pages{font-size:11.5px; letter-spacing:.04em; color:var(--sp); font-weight:600; margin-left:auto;}
-  .more{font-size:12.5px; margin-left:auto; color:var(--accent); text-decoration:none; font-weight:500;}
+  .tag{font-size:11.5px; letter-spacing:.02em; color:var(--ink-soft); background:var(--card-2); border-radius:4px; padding:3px 8px;}
+  .tag.hit{background:var(--accent-soft); color:var(--accent); font-weight:700;}
+  .tag.new{background:var(--warn-soft); color:var(--warn); font-weight:700;}
+  .pages{font-size:11.5px; color:var(--sp); font-weight:700; margin-left:auto;}
+  .more{font-size:12.5px; margin-left:auto; color:var(--accent); text-decoration:none; font-weight:700;}
   .more:hover{text-decoration:underline}
 
   .setup{background:var(--warn-soft); border:1px solid var(--warn); border-radius:var(--radius); padding:16px 18px; margin-top:24px; font-size:14px; line-height:1.7;}
-  .setup h2{font-family:"Gowun Batang", serif; font-size:17px; margin:0 0 6px;}
+  .setup h2{font-size:16px; margin:0 0 6px; font-weight:700;}
   .setup code{background:var(--card); padding:1px 6px; border-radius:4px; font-size:12.5px;}
   .setup input{font:inherit; font-size:14px; padding:8px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--card); color:var(--ink); flex:1 1 240px; min-width:0;}
-  .setup label{display:block; font-weight:600; font-size:13px; margin-top:10px;}
-  .setup small{font-weight:300; color:var(--ink-soft);}
-  .empty{color:var(--ink-faint); font-size:14px; font-weight:300;}
+  .setup label{display:block; font-weight:700; font-size:13px; margin-top:10px;}
+  .setup small{font-weight:400; color:var(--ink-soft);}
+  .empty{color:var(--ink-faint); font-size:14px;}
   .skel{height:132px; border-radius:var(--radius); background:linear-gradient(90deg, var(--card) 25%, var(--card-2) 50%, var(--card) 75%); background-size:200% 100%; animation:sh 1.2s infinite;}
   @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--rule); font-size:12.5px; color:var(--ink-faint); font-weight:300; line-height:1.8;}
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--rule); font-size:12.5px; color:var(--ink-faint); line-height:1.8;}
   footer a{color:inherit}
   @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
 </style>
@@ -136,9 +155,11 @@
 <body>
 
 <div class="wrap">
+  <header class="hero">
   <p class="eyebrow">독서 상담 · 실시간 서점·도서관 데이터</p>
   <h1>책 추천 상담원</h1>
   <p class="lede">읽을 사람을 고르고 설문에 답하거나 사정을 적어주세요. 전국 공공도서관에서 그 나이대가 실제로 많이 빌린 책과 카카오 책 검색의 최신 도서를 모아, 가장 잘 맞는 세 권을 골라 드립니다. 「다시 뽑기」를 누를 때마다 다른 책이 나와요.</p>
+  </header>
 
   <div class="setup" id="setup" hidden>
     <h2>데이터 열쇠가 필요해요</h2>
@@ -223,9 +244,9 @@
   /* ───────── 대상 ─────────
      age/from/to: 정보나루 대출 연령, add: 부가기호 첫 자리(7 아동, 4 청소년), q: 카카오 검색에 덧붙이는 말 */
   var TIERS=[
-    {id:"e12",spine:"초등 1·2학년",color:"#DFA23C",desc:"초등학교 1~2학년",group:"kids",from:7,to:8,age:8,add:"7",q:["저학년 동화","그림책","1학년 동화","2학년 동화"],know:["어린이 과학 그림책","어린이 지식 그림책"]},
-    {id:"e34",spine:"초등 3·4학년",color:"#C6603D",desc:"초등학교 3~4학년",group:"kids",from:9,to:10,age:8,add:"7",q:["3학년 동화","4학년 동화","중학년 동화","어린이 창작동화"],know:["어린이 과학","어린이 역사"]},
-    {id:"e56",spine:"초등 5·6학년",color:"#498A6B",desc:"초등학교 5~6학년",group:"kids",from:11,to:12,age:8,add:"7",q:["고학년 동화","5학년 동화","6학년 동화","어린이 소설"],know:["어린이 교양","어린이 인문"]},
+    {id:"e12",spine:"초등\n1·2학년",color:"#DFA23C",desc:"초등학교 1~2학년",group:"kids",from:7,to:8,age:8,add:"7",q:["저학년 동화","그림책","1학년 동화","2학년 동화"],know:["어린이 과학 그림책","어린이 지식 그림책"]},
+    {id:"e34",spine:"초등\n3·4학년",color:"#C6603D",desc:"초등학교 3~4학년",group:"kids",from:9,to:10,age:8,add:"7",q:["3학년 동화","4학년 동화","중학년 동화","어린이 창작동화"],know:["어린이 과학","어린이 역사"]},
+    {id:"e56",spine:"초등\n5·6학년",color:"#498A6B",desc:"초등학교 5~6학년",group:"kids",from:11,to:12,age:8,add:"7",q:["고학년 동화","5학년 동화","6학년 동화","어린이 소설"],know:["어린이 교양","어린이 인문"]},
     {id:"mid",spine:"중학생",color:"#3D6DA4",desc:"중학생",group:"teen",from:13,to:15,age:14,add:"4",q:["청소년 소설","중학생 소설","청소년 문학"],know:["청소년 교양","청소년 과학"]},
     {id:"high",spine:"고등학생",color:"#6A5A97",desc:"고등학생",group:"teen",from:16,to:18,age:14,add:"4",q:["청소년 소설","고등학생 소설","청소년 문학"],know:["청소년 인문","청소년 과학 교양"]},
     {id:"adult",spine:"성인",color:"#34434E",desc:"성인",group:"adult",from:20,to:59,age:null,add:"",q:["한국 소설","에세이","소설"],know:["인문 교양","과학 교양"]}
@@ -295,6 +316,7 @@
   }catch(e){}
   try{ if(!kakaoKey)kakaoKey=localStorage.getItem("kakaokey")||""; if(!d4lKey)d4lKey=localStorage.getItem("d4lkey")||""; }catch(e){}
 
+  function spineLabel(t){return t.spine.replace(/\n/g," ");}
   function tierOf(id){for(var i=0;i<TIERS.length;i++)if(TIERS[i].id===id)return TIERS[i];return TIERS[1];}
   function labelOf(arr,k){for(var i=0;i<arr.length;i++)if(arr[i].k===k)return arr[i].label;return "";}
   function byKey(arr,k){for(var i=0;i<arr.length;i++)if(arr[i].k===k)return arr[i];return null;}
@@ -434,7 +456,7 @@
     if(/동화|그림책|소설|이야기|시집|문학상|수상/.test(text))s+=1;
     if(it.pubNew)s+=1.5;
     if(PUBS[t.group].indexOf(it.publisher)>-1)s+=1;
-    if(t.group==="kids"){["e12","e34","e56"].forEach(function(id){var m=SIG[id].test(text);if(id===t.id&&m){s+=2.5;hits.push(t.spine+" 맞춤");}else if(m)s-=1.5;});}
+    if(t.group==="kids"){["e12","e34","e56"].forEach(function(id){var m=SIG[id].test(text);if(id===t.id&&m){s+=2.5;hits.push(spineLabel(t)+" 맞춤");}else if(m)s-=1.5;});}
     if(t.group==="teen"&&SIG.teen.test(text))s+=1.5;
     if(/학습|교과|공부|문제|연습|익히|배우는|실력|점수/.test(it.title))s-=3;
     if(/개정|리커버|한정판|양장|합본|\d+권 세트|시리즈 \d+|\d+\s*$/.test(it.title))s-=0.7;
@@ -593,7 +615,7 @@
     var hits=it.hits||[];
     var isNew=(it.date&&daysAgo(it.date)<=NEW_DAYS)||(!it.date&&it.year>=THIS_YEAR);
     var tags=hits.map(function(h){return '<span class="tag hit">'+esc(h)+'</span>';}).join("");
-    var srcTag=it.loanRank?'<span class="tag">'+t.spine+' 인기대출 '+it.loanRank+'위</span>':(it.pubNew?'<span class="tag">출판사 신간</span>':(it.src.some(function(s){return /최신/.test(s);})?'<span class="tag">최신 도서</span>':''));
+    var srcTag=it.loanRank?'<span class="tag">'+spineLabel(t)+' 인기대출 '+it.loanRank+'위</span>':(it.pubNew?'<span class="tag">출판사 신간</span>':(it.src.some(function(s){return /최신/.test(s);})?'<span class="tag">최신 도서</span>':''));
     var when=it.date?it.date.slice(0,7).replace("-","년 ")+"월":(it.year?it.year+"년":"");
     var author=shortAuthor(it.authors)||"";
     var link=it.link||("https://search.daum.net/search?w=bookpage&q="+encodeURIComponent(it.title));
@@ -607,7 +629,7 @@
       '<a class="more" href="'+esc(link)+'" target="_blank" rel="noopener">자세히 보기 →</a></div></div></article>';
   }
   function render(){
-    var t=tierOf(state.tier),bits=[t.spine];
+    var t=tierOf(state.tier),bits=[spineLabel(t)];
     if(state.mode==="survey"){
       if(state.mood)bits.push(labelOf(MOODS,state.mood));
       if(state.topics.length)bits.push(state.topics.join("·"));
