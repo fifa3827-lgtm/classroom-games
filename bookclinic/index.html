@@ -145,6 +145,16 @@
   .setup label{display:block; font-weight:700; font-size:13px; margin-top:10px;}
   .setup small{font-weight:400; color:var(--ink-soft);}
   .empty{color:var(--ink-faint); font-size:14px;}
+  .sound{position:fixed; right:16px; top:14px; z-index:20; appearance:none; cursor:pointer; font:inherit; font-size:13px; font-weight:700; padding:8px 14px 8px 12px; border-radius:999px; border:1px solid var(--rule); background:var(--card); color:var(--ink-soft); box-shadow:var(--shadow); display:inline-flex; align-items:center; gap:7px;}
+  .sound:hover{color:var(--ink); border-color:var(--ink-soft)}
+  .sound:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .sound[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .sound .bars{display:inline-flex; align-items:flex-end; gap:2px; height:12px;}
+  .sound .bars i{display:block; width:3px; height:4px; background:currentColor; border-radius:1px;}
+  .sound[aria-pressed="true"] .bars i{animation:eq 1s ease-in-out infinite;}
+  .sound[aria-pressed="true"] .bars i:nth-child(2){animation-delay:.2s} .sound[aria-pressed="true"] .bars i:nth-child(3){animation-delay:.4s}
+  @keyframes eq{0%,100%{height:4px}50%{height:12px}}
+  @media (prefers-reduced-motion: reduce){ .sound .bars i{animation:none !important} }
   .skel{height:132px; border-radius:var(--radius); background:linear-gradient(90deg, var(--card) 25%, var(--card-2) 50%, var(--card) 75%); background-size:200% 100%; animation:sh 1.2s infinite;}
   @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
   footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--rule); font-size:12.5px; color:var(--ink-faint); line-height:1.8;}
@@ -154,6 +164,7 @@
 </head>
 <body>
 
+<button class="sound" id="sound" type="button" aria-pressed="false" title="배경음악"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span id="sound-label">소리 켜기</span></button>
 <div class="wrap">
   <header class="hero">
   <p class="eyebrow">독서 상담 · 실시간 서점·도서관 데이터</p>
@@ -226,7 +237,8 @@
   <div class="cards" id="cards"></div>
 
   <footer>
-    데이터 제공: <a href="https://www.data4library.kr" target="_blank" rel="noopener">도서관 정보나루</a>(문화체육관광부·국립중앙도서관, 전국 공공도서관 대출 데이터) · <a href="https://developers.kakao.com" target="_blank" rel="noopener">카카오 책 검색</a>. 학년 구분은 도서관 대출 연령과 도서 부가기호를 기준으로 하며 절대적인 선은 아닙니다.
+    데이터 제공: <a href="https://www.data4library.kr" target="_blank" rel="noopener">도서관 정보나루</a>(문화체육관광부·국립중앙도서관, 전국 공공도서관 대출 데이터) · <a href="https://developers.kakao.com" target="_blank" rel="noopener">카카오 책 검색</a>. 학년 구분은 도서관 대출 연령과 도서 부가기호를 기준으로 하며 절대적인 선은 아닙니다.<br>
+    배경음악은 오른쪽 위 버튼으로 켜고 끕니다 (<span id="bgm-credit">이 폴더의 bgm.mp3 — 없으면 페이지가 직접 연주하는 서가 앰비언트</span>).
   </footer>
 </div>
 
@@ -643,6 +655,62 @@
     if(!state.picks.length){$cards.innerHTML='<p class="empty">'+(state.mode==="story"?"위에 사정을 적고 「상담 받기」를 누르면 여기에 세 권이 놓입니다.":"「추천 받기」를 누르면 여기에 세 권이 놓입니다.")+'</p>';return;}
     $cards.innerHTML=state.picks.map(function(it){return cardHTML(it,t);}).join("");
   }
+
+  /* ───────── 배경음악: bgm.mp3가 있으면 재생, 없으면 즉석 앰비언트 ───────── */
+  var snd={on:false,audio:null,ctx:null,nodes:null,timer:null,mode:""};
+  function soundLabel(){$("sound").setAttribute("aria-pressed",String(snd.on));$("sound-label").textContent=snd.on?"소리 끄기":"소리 켜기";}
+  function startFile(){
+    return new Promise(function(res){
+      var a=new Audio("bgm.mp3");a.loop=true;a.volume=0;a.preload="auto";
+      var done=false;
+      a.addEventListener("canplay",function(){if(done)return;done=true;a.play().then(function(){snd.audio=a;fadeTo(a,0.35);res(true);}).catch(function(){res(false);});});
+      a.addEventListener("error",function(){if(done)return;done=true;res(false);});
+      setTimeout(function(){if(!done){done=true;res(false);}},4000);
+      a.load();
+    });
+  }
+  function fadeTo(a,v){var step=function(){if(!snd.audio)return;a.volume=Math.min(v,a.volume+0.03);if(a.volume<v)setTimeout(step,80);};step();}
+  function startSynth(){
+    var C=window.AudioContext||window.webkitAudioContext; if(!C)return false;
+    var ctx=new C(); var master=ctx.createGain(); master.gain.value=0; master.connect(ctx.destination);
+    var lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1400; lp.connect(master);
+    var delay=ctx.createDelay(1.5); delay.delayTime.value=0.42; var fb=ctx.createGain(); fb.gain.value=0.32; var wet=ctx.createGain(); wet.gain.value=0.35;
+    delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(lp);
+    // 패드: 살짝 어긋난 두 음이 천천히 숨 쉬듯
+    var padG=ctx.createGain(); padG.gain.value=0.05; padG.connect(lp);
+    [130.81,196.0,261.63].forEach(function(f,i){var o=ctx.createOscillator();o.type=i===2?"sine":"triangle";o.frequency.value=f;o.detune.value=(i-1)*4;var g=ctx.createGain();g.gain.value=i===0?0.6:0.35;var lfo=ctx.createOscillator();lfo.frequency.value=0.05+i*0.02;var lg=ctx.createGain();lg.gain.value=0.15;lfo.connect(lg);lg.connect(g.gain);o.connect(g);g.connect(padG);o.start();lfo.start();});
+    // 멜로디: 오음음계에서 느긋하게 한 음씩
+    var scale=[261.63,293.66,329.63,392.0,440.0,523.25,587.33,659.25];
+    var last=-1;
+    function pluck(){
+      if(!snd.ctx)return;
+      var idx; do{idx=Math.floor(Math.random()*scale.length);}while(idx===last); last=idx;
+      var f=scale[idx]; var t=ctx.currentTime;
+      var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f;
+      var o2=ctx.createOscillator(); o2.type="triangle"; o2.frequency.value=f*2; 
+      var g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.16,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+2.6);
+      var g2=ctx.createGain(); g2.gain.setValueAtTime(0.0001,t); g2.gain.exponentialRampToValueAtTime(0.03,t+0.01); g2.gain.exponentialRampToValueAtTime(0.0001,t+0.9);
+      o.connect(g); o2.connect(g2); g.connect(lp); g.connect(delay); g2.connect(lp); o.start(t); o2.start(t); o.stop(t+2.8); o2.stop(t+1);
+      snd.timer=setTimeout(pluck, 1400+Math.random()*2600);
+    }
+    snd.ctx=ctx; snd.nodes={master:master}; pluck();
+    master.gain.linearRampToValueAtTime(0.9, ctx.currentTime+2.5);
+    return true;
+  }
+  async function soundOn(){
+    var ok=await startFile();
+    if(ok){snd.mode="file";$("bgm-credit").textContent="bgm.mp3 재생 중";}
+    else{ if(!startSynth()){setStatus("이 브라우저에서는 소리를 낼 수 없어요.",true);return;} snd.mode="synth";$("bgm-credit").textContent="페이지가 직접 연주하는 서가 앰비언트";}
+    snd.on=true; soundLabel(); try{localStorage.setItem("bgm","on");}catch(e){}
+  }
+  function soundOff(){
+    if(snd.audio){var a=snd.audio;snd.audio=null;var f=function(){a.volume=Math.max(0,a.volume-0.05);if(a.volume>0)setTimeout(f,60);else a.pause();};f();}
+    if(snd.ctx){var c=snd.ctx;snd.ctx=null;clearTimeout(snd.timer);snd.nodes.master.gain.linearRampToValueAtTime(0,c.currentTime+1.2);setTimeout(function(){c.close();},1400);}
+    snd.on=false; soundLabel(); try{localStorage.setItem("bgm","off");}catch(e){}
+  }
+  $("sound").addEventListener("click",function(){if(snd.on)soundOff();else soundOn();});
+  /* 브라우저 정책상 소리는 사용자가 한 번 눌러야 시작됨. 예전에 켰던 사람은 첫 터치/클릭 때 자동으로 다시 켜줌 */
+  try{if(localStorage.getItem("bgm")==="on"){var once=function(){document.removeEventListener("pointerdown",once);if(!snd.on)soundOn();};document.addEventListener("pointerdown",once);$("sound-label").textContent="소리 켜기 (터치하면 이어서)";}}catch(e){}
 
   /* ───────── 시작 ───────── */
   (function start(){
