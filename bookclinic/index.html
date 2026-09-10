@@ -73,8 +73,20 @@
   .spine[aria-pressed="true"]{transform:translateY(-8px); box-shadow:0 0 0 2px var(--paper), 0 0 0 4px var(--sp), 0 14px 26px -14px rgba(0,0,0,.6);}
   .shelf-floor{display:none}
 
-  .modes{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
-  @media (max-width:520px){ .modes{grid-template-columns:1fr} }
+  .modes{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  @media (max-width:720px){ .modes{grid-template-columns:1fr} }
+  .kdc-main{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+  @media (max-width:560px){ .kdc-main{grid-template-columns:repeat(2,1fr)} }
+  .kdc-btn{appearance:none; cursor:pointer; font:inherit; text-align:left; border:1px solid var(--rule); background:var(--card-2); color:var(--ink); border-radius:8px; padding:9px 10px 8px; display:flex; flex-direction:column; gap:1px; transition:border-color .15s, box-shadow .15s;}
+  .kdc-btn .code{font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--kc);}
+  .kdc-btn .name{font-size:13.5px; font-weight:700;}
+  .kdc-btn:hover{border-color:var(--kc)}
+  .kdc-btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .kdc-btn[aria-pressed="true"]{border-color:var(--kc); box-shadow:inset 0 0 0 1px var(--kc), 0 0 0 3px color-mix(in srgb, var(--kc) 18%, transparent);}
+  .kdc-sub .chip[aria-pressed="true"]{background:var(--kc); border-color:var(--kc);}
+  .kdc-sub .chip b{font-weight:700; opacity:.7; margin-right:5px; font-size:12px;}
+  .kdc-path{font-size:13px; color:var(--ink-soft); margin:0;}
+  .kdc-path b{color:var(--ink); font-weight:700;}
   .mode{appearance:none; cursor:pointer; text-align:left; font:inherit; background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:16px 18px; color:var(--ink); transition:border-color .15s, box-shadow .15s; display:flex; flex-direction:column; gap:4px;}
   .mode:hover{border-color:var(--ink-soft)}
   .mode:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -200,6 +212,10 @@
         <span class="mode-t"><span class="dot" aria-hidden="true"></span>직접 이야기하기</span>
         <span class="mode-d">읽을 사람의 사정을 문장으로 적으면 낱말을 뽑아 검색하고, 사연과 맞는 점을 표시해 드려요.</span>
       </button>
+      <button class="mode" type="button" id="mode-kdc" data-mode="kdc" aria-pressed="false">
+        <span class="mode-t"><span class="dot" aria-hidden="true"></span>십진분류로 찾기</span>
+        <span class="mode-d">도서관 서가 번호(한국십진분류 KDC)로 고릅니다. 000 총류부터 900 역사까지, 문학은 시·소설·수필까지 갈래를 나눠요.</span>
+      </button>
     </div>
 
     <div class="panel" id="panel-survey">
@@ -222,6 +238,17 @@
         <button class="btn" id="story-go" type="button">상담 받기</button>
         <span class="hint" id="story-hint">사연에서 낱말을 뽑아 검색합니다.</span>
       </div>
+    </div>
+
+    <div class="panel" id="panel-kdc" hidden>
+      <div class="q"><p class="q-t">대분류 <small>서가의 첫 숫자</small></p><div class="kdc-main" id="kdc-main" role="group" aria-label="KDC 대분류"></div></div>
+      <div class="q" id="kdc-sub-wrap" hidden><p class="q-t">중분류 <small>하나</small></p><div class="chips kdc-sub" id="kdc-sub" role="group" aria-label="KDC 중분류"></div></div>
+      <div class="q" id="kdc-form-wrap" hidden><p class="q-t">문학 갈래 <small>선택</small></p><div class="chips kdc-sub" id="kdc-form" role="group" aria-label="문학 갈래"></div></div>
+      <div class="row">
+        <button class="btn" id="kdc-go" type="button">이 분류에서 추천 받기</button>
+        <p class="kdc-path" id="kdc-path">대분류를 고르세요.</p>
+      </div>
+      <p class="hint" style="margin-top:8px" id="kdc-hint">도서관 정보나루 키가 있으면 이 분류 번호의 실제 대출 데이터에서, 없으면 분류에 해당하는 낱말로 카카오 책 검색을 해서 고릅니다.</p>
     </div>
   </section>
 
@@ -309,6 +336,21 @@
   var KINDS=[{k:"이야기",label:"이야기책"},{k:"지식",label:"지식·생각하는 책"},{k:"무관",label:"상관없어요"}];
   var ORIGINS=[{k:"국내",label:"우리나라 작가"},{k:"해외",label:"다른 나라 작가"},{k:"무관",label:"상관없어요"}];
 
+  /* 한국십진분류(KDC) 대분류·중분류와 검색 낱말 */
+  var KDC=[
+    {c:"000",n:"총류",col:"#6b7280",sub:[["000","총류",["교양","상식"]],["010","도서학·서지학",["책","독서"]],["020","문헌정보학",["도서관","정보"]],["030","백과사전",["백과사전","백과"]],["040","강연집·수필집",["강연","강의"]],["050","연속간행물",["잡지","연간"]],["060","학회·단체·기관",["학회","단체"]],["070","신문·저널리즘",["신문","기자"]],["080","전집·총서",["전집","시리즈"]],["090","향토자료",["향토","고장"]]]},
+    {c:"100",n:"철학",col:"#7c5cbf",sub:[["100","철학",["철학","생각"]],["110","형이상학",["존재","형이상학"]],["120","인식론·인간학",["인간","인식"]],["130","철학의 체계",["사상","체계"]],["140","경학",["논어","경전"]],["150","동양철학·사상",["동양철학","노자"]],["160","서양철학",["서양철학","소크라테스"]],["170","논리학",["논리","추론"]],["180","심리학",["심리","마음"]],["190","윤리학·도덕",["윤리","도덕"]]]},
+    {c:"200",n:"종교",col:"#b45309",sub:[["200","종교",["종교","신앙"]],["210","비교종교",["세계 종교","비교종교"]],["220","불교",["불교","부처"]],["230","기독교",["기독교","성경"]],["240","도교",["도교","노장"]],["250","천도교",["천도교","동학"]],["270","힌두교·브라만교",["힌두교","인도 신화"]],["280","이슬람교",["이슬람","무슬림"]],["290","기타 종교",["신화","민간신앙"]]]},
+    {c:"300",n:"사회과학",col:"#0e7490",sub:[["300","사회과학",["사회","세상"]],["310","통계학",["통계","데이터"]],["320","경제학",["경제","돈"]],["330","사회학·사회문제",["사회문제","공동체"]],["340","정치학",["정치","민주주의"]],["350","행정학",["행정","공공"]],["360","법학",["법","권리"]],["370","교육학",["교육","학교"]],["380","풍습·민속학",["민속","전통"]],["390","국방·군사학",["군사","전쟁"]]]},
+    {c:"400",n:"자연과학",col:"#15803d",sub:[["400","자연과학",["과학","실험"]],["410","수학",["수학","숫자"]],["420","물리학",["물리","에너지"]],["430","화학",["화학","물질"]],["440","천문학",["우주","별"]],["450","지학",["지구","날씨"]],["460","광물학",["광물","암석"]],["470","생명과학",["생명","생물"]],["480","식물학",["식물","꽃"]],["490","동물학",["동물","곤충"]]]},
+    {c:"500",n:"기술과학",col:"#4d7c0f",sub:[["500","기술과학",["기술","발명"]],["510","의학",["의학","몸"]],["520","농업",["농업","농사"]],["530","공학·환경공학",["공학","환경"]],["540","건축",["건축","집"]],["550","기계공학",["기계","자동차"]],["560","전기·전자·통신",["전자","로봇"]],["570","화학공학",["화학공학","에너지"]],["580","제조업",["제조","공장"]],["590","생활과학",["요리","살림"]]]},
+    {c:"600",n:"예술",col:"#be185d",sub:[["600","예술",["예술","미술"]],["620","조각·조형미술",["조각","조형"]],["630","공예",["공예","만들기"]],["640","서예",["서예","글씨"]],["650","회화·디자인",["그림","디자인"]],["660","사진예술",["사진","카메라"]],["670","음악",["음악","노래"]],["680","공연·매체예술",["영화","연극"]],["690","오락·스포츠",["스포츠","운동"]]]},
+    {c:"700",n:"언어",col:"#a16207",sub:[["700","언어",["언어","말"]],["710","한국어",["한글","우리말"]],["720","중국어",["중국어","한자"]],["730","일본어·아시아어",["일본어","아시아 언어"]],["740","영어",["영어","English"]],["750","독일어",["독일어","독어"]],["760","프랑스어",["프랑스어","불어"]],["770","스페인어·포르투갈어",["스페인어","포르투갈어"]],["780","이탈리아어",["이탈리아어","라틴어"]],["790","기타 언어",["언어 문화","세계 언어"]]]},
+    {c:"800",n:"문학",col:"#c2410c",sub:[["800","문학",["문학","이야기"]],["810","한국문학",["한국 소설","한국 동화"]],["820","중국문학",["중국 소설","중국 문학"]],["830","일본문학·아시아문학",["일본 소설","일본 문학"]],["840","영미문학",["영미 소설","영국 미국 문학"]],["850","독일문학",["독일 소설","독일 문학"]],["860","프랑스문학",["프랑스 소설","프랑스 문학"]],["870","스페인·포르투갈문학",["스페인 소설","남미 문학"]],["880","이탈리아문학",["이탈리아 소설","이탈리아 문학"]],["890","기타 문학",["세계 문학","북유럽 소설"]]]},
+    {c:"900",n:"역사",col:"#1d4ed8",sub:[["900","역사",["역사","옛날"]],["910","아시아 역사",["한국사","아시아 역사"]],["920","유럽 역사",["유럽 역사","세계사"]],["930","아프리카 역사",["아프리카","이집트"]],["940","북아메리카 역사",["미국 역사","아메리카"]],["950","남아메리카 역사",["남아메리카","잉카"]],["960","오세아니아·극지",["오세아니아","남극"]],["980","지리",["지리","지도"]],["990","전기",["인물","위인"]]]}
+  ];
+  var KDC_FORMS=[["1","시",["시","동시"]],["2","희곡",["희곡","연극"]],["3","소설",["소설","동화"]],["4","수필",["에세이","수필"]],["6","일기·기행",["기행","여행기"]],["7","풍자·유머",["유머","풍자"]]];
+
   var EXCLUDE_TITLE=/세트|전집|문제집|워크북|참고서|교과서|기출|수능|모의고사|단어장|일기장|만점왕|연산|받아쓰기|급수|한자|영어|English|중국어|일본어|필사|스티커|색칠|컬러링|다이어리|달력|캘린더|굿즈|퍼즐북|낱말|어휘력|문해력 \d|기적의|하루 \d|\d+일 완성|초등 (국어|수학|사회|과학) \d|학년 (국어|수학)|교과 연계|매일 \d|따라 쓰기|쓰기 노트|리딩|Reading|파닉스|Phonics|합본|합권|박스|학습|문제|월호|월간|정기구독|필독서 세트|추천도서 세트|전자책|e북|eBook|오디오북|큰글자|점자|학기|방학|독해|요약|한글 떼기|글쓰기 훈련|어휘|사고력|창의력|논술|서술형|교과|필수 \d|기초|완성|훈련|전략|비법|공식|계산|구구단|수학|국어 \d|사회 \d|과학 \d|영단어|스펠링|속담 \d|맞춤법|띄어쓰기|한국사능력|검정|자격|급|워크시트|활동지|만들기 북|스크래치|코딩 교재|공부법|시험|토익|토플|자격증|기본서|개념|유형|실전|평가|기출|정답|해설|워크|drill|만화로 보는 .*(교과|수학|영어)/i;
   var EXCLUDE_PUB=/EBS|한국교육방송|천재교육|천재교과서|미래엔|비상교육|금성출판사|디딤돌|좋은책신사고|에듀윌|시대고시|해커스|메가스터디|이투스|능률|NE능률|YBM|다락원|쎈|개념원리|수경출판|동아출판|지학사|아이스크림|밀크티|키출판사|길벗스쿨|성안당|넥서스|웅진씽크빅 학습|교원|대교|눈높이|재능교육|시사영어사|마더텅|꿈을담는틀|이룸이앤비|한빛에듀|바른사|참교육|아울북 초등 교과/i;
   var EXCLUDE_DESC=/문제를 풀|학습지|교과서 내용|단원별|학년별 교과|연습 문제|성적|내신|선행 학습|공부 습관|학습 만화 시리즈|워크북|정답과 해설/;
@@ -316,7 +358,7 @@
   var STORY_WORDS=/동화|소설|이야기|그림책|장편|단편|판타지|추리|모험/;
 
   /* ───────── 상태 ───────── */
-  var state={tier:"e34",mode:"survey",mood:null,topics:[],habit:null,kind:null,origin:null,onlyNew:false,pool:[],picks:[],storyKW:null};
+  var state={tier:"e34",mode:"survey",mood:null,topics:[],habit:null,kind:null,origin:null,onlyNew:false,pool:[],picks:[],storyKW:null,kdc:{main:null,sub:null,form:null}};
   var $=function(id){return document.getElementById(id);};
   var kakaoKey=KAKAO_KEY_EMBEDDED||"", d4lKey=D4L_KEY_EMBEDDED||"";
   /* 링크에 실린 열쇠: …/bookclinic/#k=카카오키&d=정보나루키 → 이 브라우저에 저장하고 주소에서는 지움 */
@@ -371,6 +413,7 @@
     if(t.age!=null)p+="&age="+t.age;
     if(t.add)p+="&addCode="+t.add;
     if(extra&&extra.kdc)p+="&kdc="+extra.kdc;
+    if(extra&&extra.dtl)p+="&dtl_kdc="+extra.dtl;
     return getJSON("https://data4library.kr/api/loanItemSrch?"+p).then(function(d){
       var r=d&&d.response; if(!r||r.error)throw new Error(r&&r.errCode==="authErr"?"auth":"api");
       return (r.docs||[]).map(function(w){var x=w.doc||w;
@@ -400,10 +443,10 @@
     if(it.date&&it.date>TODAY)return false;                      // 아직 안 나온 책·잘못된 날짜
     var sigText=it.title+" "+(it.desc||"");
     var generalPub=!it.pubNew||/^(문학동네|창비|사계절|비룡소|위즈덤하우스|문학과지성사|돌베개|서해문집|다산책방|한겨레출판|휴머니스트|자음과모음|푸른숲|뜨인돌|낮은산|김영사|민음사|은행나무)$/.test(it.publisher||"");
-    if(t.group==="kids"&&generalPub&&!SIG.kids.test(sigText)&&!it.classNo)return false;
+    if(t.group==="kids"&&generalPub&&!SIG.kids.test(sigText)&&!it.classNo&&state.mode!=="kdc")return false;
     if(t.group==="kids"&&SIG.adult.test(it.title)&&!SIG.kids.test(sigText))return false;
     if(t.group==="teen"&&/그림책|저학년|초등|\d학년|유아|아동|읽기 독립/.test(sigText))return false;
-    if(t.group==="teen"&&generalPub&&!SIG.teen.test(sigText)&&!it.classNo)return false;
+    if(t.group==="teen"&&generalPub&&!SIG.teen.test(sigText)&&!it.classNo&&state.mode!=="kdc")return false;
     if(t.group==="adult"&&(SIG.kids.test(it.title)||SIG.teen.test(it.title)||/그림책|동화|어린이|청소년/.test(it.desc||"")))return false;
     var txt=(it.title+" "+it.desc);
     if(t.group!=="kids"&&/유아|어린이|초등|저학년|고학년|그림책|동화|\d학년/.test(it.title)&&!/청소년|성인/.test(it.title))return false;
@@ -418,8 +461,29 @@
   function cleanTitle(s){return String(s||"").replace(/\s*[:：]\s*.*$/,"").replace(/\s*[-–]\s.*$/,"").replace(/\s*[(\[].*?[)\]]\s*$/,"").trim()||s;}
   function shortAuthor(s){return String(s||"").replace(/\s*\((지은이|글|그림|옮긴이|편집|엮은이|감수|사진|원작|기획)\)/g,"").replace(/\s*(지음|글|그림|옮김)\s*;?/g," ").split(/,|;/).map(function(x){return x.trim();}).filter(Boolean).slice(0,3).join(", ");}
 
-  function buildQueries(t,storyKW){
+  function kdcSel(){
+    var k=state.kdc; if(!k.main)return null;
+    var main=KDC.filter(function(x){return x.c===k.main;})[0]; if(!main)return null;
+    var sub=k.sub?main.sub.filter(function(x){return x[0]===k.sub;})[0]:null;
+    var form=(k.form&&main.c==="800")?KDC_FORMS.filter(function(x){return x[0]===k.form;})[0]:null;
+    var code=sub?sub[0]:main.c;
+    var prefix=code.replace(/0+$/,"")||code.charAt(0);   // 810 → "81", 800 → "8"
+    var dtl=null;
+    if(form&&sub&&sub[0]!=="800"){dtl=sub[0].slice(0,2)+form[0];prefix=dtl;}
+    var kw=(sub?sub[2]:[main.n]).slice();
+    if(form){kw=form[2].map(function(w){return (sub&&sub[0]!=="800"?sub[2][0].split(" ")[0]+" ":"")+w;}).concat(kw);}
+    return {main:main,sub:sub,form:form,code:code,prefix:prefix,dtl:dtl,kw:kw,label:main.c+" "+main.n+(sub&&sub[0]!==main.c?" › "+sub[0]+" "+sub[1]:"")+(form?" › "+form[1]:""),col:main.col};
+  }
+  function buildQueries(t,storyKW,kd){
     var qs=[];
+    if(kd){
+      var tq2=" "+(t.group==="kids"?"어린이":(t.group==="teen"?"청소년":""));
+      qs.push(d4lLoan(t,{months:24,kdc:kd.main.c.charAt(0),dtl:kd.dtl||(kd.sub&&kd.sub[0]!==kd.main.c?kd.sub[0]:null)},100));
+      qs.push(d4lLoan(t,{months:6,kdc:kd.main.c.charAt(0),dtl:kd.dtl||(kd.sub&&kd.sub[0]!==kd.main.c?kd.sub[0]:null)},60));
+      kd.kw.slice(0,3).forEach(function(w){qs.push(kakao(w+tq2,"accuracy",50));qs.push(kakao(w+tq2,"latest",40));});
+      if(t.group!=="kids")kd.kw.slice(0,1).forEach(function(w){qs.push(kakao(w,"latest",30));});
+      return qs;
+    }
     var tq=" "+(t.group==="kids"?"어린이":(t.group==="teen"?"청소년":""));
     // 뼈대: 이 나이대 인기대출 (최근 12개월, 최근 3개월)
     qs.push(d4lLoan(t,{months:12},100));
@@ -450,9 +514,16 @@
     return qs;
   }
 
-  function scoreItem(it,t,storyKW){
+  function scoreItem(it,t,storyKW,kd){
     var s=0,hits=[];
     var text=it.title+" "+(it.desc||"");
+    if(kd){
+      var cm=it.classNo&&String(it.classNo).replace(/[^0-9]/g,"").indexOf(kd.prefix)===0;
+      var kh=kd.kw.some(function(w){return text.indexOf(w.split(" ").pop())>-1;});
+      if(cm){s+=4;hits.push("KDC "+(it.classNo||"").slice(0,3));}
+      else if(kh){s+=2.5;hits.push(kd.sub?kd.sub[1]:kd.main.n);}
+      else s-=6;
+    }
     if(state.mood){var m=byKey(MOODS,state.mood);if(m.kw.some(function(w){return text.indexOf(w)>-1;})){s+=2;hits.push(m.label);}}
     state.topics.forEach(function(tk){var tp=byKey(TOPICS,tk);if(!tp)return;var kh=tp.kw.some(function(w){return text.indexOf(w)>-1;});var ch=it.classNo&&it.classNo.charAt(0)===tp.kdc&&tp.kdc!=="8";if(kh||ch){s+=kh?3:1.5;hits.push(tk);}});
     if(state.kind&&state.kind!=="무관"){var st=isStory(it);if((state.kind==="이야기")===st){s+=2;hits.push(labelOf(KINDS,state.kind));}else s-=2.5;}
@@ -475,14 +546,16 @@
     return {s:s,hits:hits.filter(function(x,i,a){return a.indexOf(x)===i;})};
   }
 
-  async function recommend(storyKW){
+  async function recommend(storyKW,kd){
     var t=tierOf(state.tier);
+    if(state.mode==="kdc"&&!kd)kd=kdcSel();
+    if(state.mode==="kdc"&&!kd){setStatus("먼저 분류를 골라주세요.",true);return;}
     if(!kakaoKey&&!d4lKey){$("setup").hidden=false;setStatus("먼저 위에 데이터 열쇠를 저장해 주세요.",true);$("cards").innerHTML="";return;}
     setBusy(true);callCount=0;authFail={kakao:false,d4l:false};
     $("cards").innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
     setStatus("도서관과 서점 데이터를 살피는 중…");
     try{
-      var results=await Promise.all(buildQueries(t,storyKW));
+      var results=await Promise.all(buildQueries(t,storyKW,kd));
       var map={},byName={};
       results.forEach(function(arr){arr.forEach(function(it){
         if(!okItem(it,t))return;
@@ -499,7 +572,9 @@
         if(authFail.kakao||authFail.d4l)$("setup").hidden=false;
         setStatus("");return;
       }
-      pool.forEach(function(it){var r=scoreItem(it,t,storyKW);it.score=r.s;it.hits=r.hits;});
+      pool.forEach(function(it){var r=scoreItem(it,t,storyKW,kd);it.score=r.s;it.hits=r.hits;});
+      if(kd)pool=pool.filter(function(it){return it.score>-1;});
+      if(kd&&!pool.length){$("cards").innerHTML='<p class="empty">이 분류에서는 아직 맞는 책을 찾지 못했어요. 중분류를 바꾸거나 대분류만 골라보세요.</p>';setStatus("");return;}
       pool.sort(function(a,b){return b.score-a.score;});
       var top=pool.slice(0,16);
       // 소개글·표지가 없는 후보 보강 (카카오 ISBN 조회 → 없으면 정보나루 상세)
@@ -511,7 +586,7 @@
         if(d){it.desc=it.desc||d.description||"";it.cover=it.cover||d.bookImageURL||"";}
       }));
       // 보강 뒤 사연·주제 낱말 재채점
-      top.forEach(function(it){var r=scoreItem(it,t,storyKW);it.score=r.s;it.hits=r.hits;});
+      top.forEach(function(it){var r=scoreItem(it,t,storyKW,kd);it.score=r.s;it.hits=r.hits;});
       top.sort(function(a,b){return b.score-a.score;});
       state.pool=top;state.picks=drawPicks(top);render();
       var srcNote=(d4lKey?"도서관 대출 데이터":"")+(d4lKey&&kakaoKey?" + ":"")+(kakaoKey?"카카오 책 검색":"");
@@ -572,7 +647,7 @@
     b.type="button";b.className="spine";b.style.setProperty("--sp",t.color);b.dataset.tier=t.id;
     b.setAttribute("aria-pressed",String(t.id===state.tier));
     b.innerHTML='<span class="band"></span><span class="txt">'+t.spine+'</span><span class="band"></span>';
-    b.addEventListener("click",function(){state.tier=t.id;syncShelf();persist();if(state.mode==="survey")recommend();else{state.pool=[];state.picks=[];render();}});
+    b.addEventListener("click",function(){state.tier=t.id;syncShelf();persist();if(state.mode==="survey"||(state.mode==="kdc"&&kdcSel()))recommend();else{state.pool=[];state.picks=[];render();}});
     $shelf.appendChild(b);
   });
   function syncShelf(){Array.prototype.forEach.call($shelf.children,function(el){el.setAttribute("aria-pressed",String(el.dataset.tier===state.tier));});}
@@ -592,16 +667,38 @@
   function syncAllChips(){syncChips($("q-mood"),"mood");syncChips($("q-topic"),"topics",true);syncChips($("q-habit"),"habit");syncChips($("q-kind"),"kind");syncChips($("q-origin"),"origin");}
   buildChips($("q-mood"),MOODS,"mood");buildChips($("q-topic"),TOPICS,"topics",true);buildChips($("q-habit"),HABITS,"habit");buildChips($("q-kind"),KINDS,"kind");buildChips($("q-origin"),ORIGINS,"origin");
 
-  ["mode-survey","mode-story"].forEach(function(id){$(id).addEventListener("click",function(){state.mode=$(id).dataset.mode;syncMode();persist();if(state.mode==="survey")recommend();else{state.pool=[];state.picks=[];render();}});});
+  ["mode-survey","mode-story","mode-kdc"].forEach(function(id){$(id).addEventListener("click",function(){state.mode=$(id).dataset.mode;syncMode();persist();if(state.mode==="survey")recommend();else if(state.mode==="kdc"&&kdcSel())recommend();else{state.pool=[];state.picks=[];render();}});});
   function syncMode(){
-    $("mode-survey").setAttribute("aria-pressed",String(state.mode==="survey"));
-    $("mode-story").setAttribute("aria-pressed",String(state.mode==="story"));
-    $("panel-survey").hidden=state.mode!=="survey";$("panel-story").hidden=state.mode!=="story";
+    ["survey","story","kdc"].forEach(function(m){$("mode-"+m).setAttribute("aria-pressed",String(state.mode===m));$("panel-"+m).hidden=state.mode!==m;});
   }
+  /* KDC 패널 */
+  var $kmain=$("kdc-main");
+  KDC.forEach(function(k){
+    var b=document.createElement("button");b.type="button";b.className="kdc-btn";b.style.setProperty("--kc",k.col);b.dataset.c=k.c;b.setAttribute("aria-pressed","false");
+    b.innerHTML='<span class="code">'+k.c+'</span><span class="name">'+esc(k.n)+'</span>';
+    b.addEventListener("click",function(){state.kdc={main:k.c,sub:null,form:null};syncKdc();persist();});
+    $kmain.appendChild(b);
+  });
+  function syncKdc(){
+    var k=state.kdc; var main=KDC.filter(function(x){return x.c===k.main;})[0];
+    Array.prototype.forEach.call($kmain.children,function(el){el.setAttribute("aria-pressed",String(el.dataset.c===k.main));});
+    var $sub=$("kdc-sub"); $sub.innerHTML="";
+    $("kdc-sub-wrap").hidden=!main;
+    if(main){
+      $sub.style.setProperty("--kc",main.col);
+      main.sub.forEach(function(sd){var c=document.createElement("button");c.type="button";c.className="chip";c.innerHTML='<b>'+sd[0]+'</b>'+esc(sd[1]);c.setAttribute("aria-pressed",String(k.sub===sd[0]));c.addEventListener("click",function(){state.kdc.sub=(state.kdc.sub===sd[0])?null:sd[0];syncKdc();persist();});$sub.appendChild(c);});
+    }
+    var $form=$("kdc-form"); $form.innerHTML="";
+    var showForm=main&&main.c==="800"&&k.sub&&k.sub!=="800";
+    $("kdc-form-wrap").hidden=!showForm;
+    if(showForm){$form.style.setProperty("--kc",main.col);KDC_FORMS.forEach(function(f){var c=document.createElement("button");c.type="button";c.className="chip";c.innerHTML='<b>'+k.sub.slice(0,2)+f[0]+'</b>'+esc(f[1]);c.setAttribute("aria-pressed",String(k.form===f[0]));c.addEventListener("click",function(){state.kdc.form=(state.kdc.form===f[0])?null:f[0];syncKdc();persist();});$form.appendChild(c);});}
+    var sel=kdcSel(); $("kdc-path").innerHTML=sel?'서가 번호 <b>'+esc(sel.label)+'</b>':'대분류를 고르세요.';
+  }
+  $("kdc-go").addEventListener("click",function(){var sel=kdcSel();if(!sel){setStatus("먼저 분류를 골라주세요.",true);return;}recommend(null,sel);});
   $("survey-go").addEventListener("click",function(){recommend();});
   $("survey-reset").addEventListener("click",function(){state.mood=null;state.topics=[];state.habit=null;state.kind=null;state.origin=null;syncAllChips();persist();recommend();});
   $("reroll").addEventListener("click",reroll);
-  $("only-new").addEventListener("change",function(){state.onlyNew=this.checked;persist();recommend(state.mode==="story"?state.storyKW:null);});
+  $("only-new").addEventListener("change",function(){state.onlyNew=this.checked;persist();if(state.mode==="kdc"&&!kdcSel())return;recommend(state.mode==="story"?state.storyKW:null);});
   $("story-go").addEventListener("click",function(){
     var text=$("story-text").value.trim();if(!text){$("story-text").focus();return;}
     var ex=extractKW(text);state.storyKW=ex.kw;
@@ -621,7 +718,7 @@
 
   function setStatus(msg,err){var s=$("status");s.textContent=msg||"";s.className="status"+(err?" err":"");}
   function setBusy(b){["survey-go","story-go","reroll"].forEach(function(id){$(id).disabled=b;});}
-  function persist(){try{localStorage.setItem("bookclinic",JSON.stringify({tier:state.tier,mode:state.mode,mood:state.mood,topics:state.topics,habit:state.habit,kind:state.kind,origin:state.origin,onlyNew:state.onlyNew}));}catch(e){}}
+  function persist(){try{localStorage.setItem("bookclinic",JSON.stringify({tier:state.tier,mode:state.mode,mood:state.mood,topics:state.topics,habit:state.habit,kind:state.kind,origin:state.origin,onlyNew:state.onlyNew,kdc:state.kdc}));}catch(e){}}
 
   function cardHTML(it,t){
     var hits=it.hits||[];
@@ -648,11 +745,12 @@
       if(state.habit)bits.push(labelOf(HABITS,state.habit));
       if(state.kind&&state.kind!=="무관")bits.push(labelOf(KINDS,state.kind));
       if(state.origin&&state.origin!=="무관")bits.push(labelOf(ORIGINS,state.origin));
-    } else bits.push("직접 이야기");
+    } else if(state.mode==="kdc"){var sel=kdcSel();bits.push(sel?"KDC "+sel.label:"십진분류");}
+    else bits.push("직접 이야기");
     if(state.onlyNew)bits.push("올해 나온 책");
     $("result-for").textContent=bits.join(" · ");
     var $cards=$("cards");
-    if(!state.picks.length){$cards.innerHTML='<p class="empty">'+(state.mode==="story"?"위에 사정을 적고 「상담 받기」를 누르면 여기에 세 권이 놓입니다.":"「추천 받기」를 누르면 여기에 세 권이 놓입니다.")+'</p>';return;}
+    if(!state.picks.length){$cards.innerHTML='<p class="empty">'+(state.mode==="story"?"위에 사정을 적고 「상담 받기」를 누르면 여기에 세 권이 놓입니다.":state.mode==="kdc"?"분류를 고르고 「이 분류에서 추천 받기」를 누르면 여기에 세 권이 놓입니다.":"「추천 받기」를 누르면 여기에 세 권이 놓입니다.")+'</p>';return;}
     $cards.innerHTML=state.picks.map(function(it){return cardHTML(it,t);}).join("");
   }
 
@@ -736,11 +834,11 @@
 
   /* ───────── 시작 ───────── */
   (function start(){
-    try{var s=JSON.parse(localStorage.getItem("bookclinic")||"null");if(s&&s.tier){state.tier=s.tier;state.mode=s.mode||"survey";state.mood=s.mood||null;state.topics=Array.isArray(s.topics)?s.topics:[];state.habit=s.habit||null;state.kind=s.kind||null;state.origin=s.origin||null;state.onlyNew=!!s.onlyNew;}}catch(e){}
-    syncShelf();syncMode();syncAllChips();$("only-new").checked=state.onlyNew;
+    try{var s=JSON.parse(localStorage.getItem("bookclinic")||"null");if(s&&s.tier){state.tier=s.tier;state.mode=s.mode||"survey";state.mood=s.mood||null;state.topics=Array.isArray(s.topics)?s.topics:[];state.habit=s.habit||null;state.kind=s.kind||null;state.origin=s.origin||null;state.onlyNew=!!s.onlyNew;if(s.kdc&&typeof s.kdc==="object")state.kdc={main:s.kdc.main||null,sub:s.kdc.sub||null,form:s.kdc.form||null};}}catch(e){}
+    syncShelf();syncMode();syncAllChips();syncKdc();$("only-new").checked=state.onlyNew;
     if(!kakaoKey&&!d4lKey){$("setup").hidden=false;render();setStatus("데이터 열쇠를 저장하면 추천이 시작됩니다.");return;}
     render();
-    if(state.mode==="survey")recommend();
+    if(state.mode==="survey"||(state.mode==="kdc"&&kdcSel()))recommend();
   })();
 })();
 </script>
