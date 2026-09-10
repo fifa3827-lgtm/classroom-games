@@ -129,6 +129,21 @@
   .status{font-size:12.5px; color:var(--ink-faint); margin:0 0 16px; min-height:1.4em;}
   .status.err{color:var(--warn)}
 
+  .picks{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 0 18px;}
+  @media (max-width:720px){ .picks{grid-template-columns:1fr} }
+  .pick{background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:14px 16px 14px; box-shadow:var(--shadow); min-width:0;}
+  .pick-h{display:flex; align-items:baseline; gap:8px; margin:0 0 10px; font-size:15px; font-weight:700;}
+  .pick-h .pick-i{font-size:11px; letter-spacing:.06em; font-weight:700; color:#fff; background:var(--pk); border-radius:4px; padding:2px 7px; align-self:center;}
+  .pick-h small{font-size:12px; font-weight:400; color:var(--ink-faint);}
+  .pick-best{--pk:#b45309} .pick-new{--pk:#15803d}
+  .mini{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .mini a{display:flex; flex-direction:column; gap:6px; text-decoration:none; color:inherit; min-width:0; border-radius:8px; padding:6px; transition:background .15s;}
+  .mini a:hover{background:var(--card-2)}
+  .mini .rank{font-size:11px; font-weight:700; color:var(--pk); letter-spacing:.04em;}
+  .mini .cover{width:100%; aspect-ratio:7/10;}
+  .mini .mt{font-size:13px; font-weight:700; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .mini .mm{font-size:11.5px; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mini .empty{grid-column:1/-1; font-size:12.5px; margin:0; padding:10px 0;}
   .cards{display:flex; flex-direction:column; gap:14px;}
   .rx{background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); padding:18px 20px 16px 20px; box-shadow:var(--shadow); position:relative; overflow:hidden; display:grid; grid-template-columns:84px 1fr; gap:18px;}
   .rx::before{content:""; position:absolute; inset:0 auto 0 0; width:5px; background:var(--sp);}
@@ -261,6 +276,10 @@
     </div>
   </div>
   <p class="status" id="status"></p>
+  <section class="picks" id="picks" hidden aria-label="강추와 신간">
+    <div class="pick pick-best"><h3 class="pick-h"><span class="pick-i">강추</span>사서 강추 3권 <small>점수가 가장 높은 세 권</small></h3><div class="mini" id="mini-best"></div></div>
+    <div class="pick pick-new"><h3 class="pick-h"><span class="pick-i">신간</span>따끈한 신간 3권 <small id="mini-new-note">올해 나온 책</small></h3><div class="mini" id="mini-new"></div></div>
+  </section>
   <div class="cards" id="cards"></div>
 
   <footer>
@@ -358,7 +377,7 @@
   var STORY_WORDS=/동화|소설|이야기|그림책|장편|단편|판타지|추리|모험/;
 
   /* ───────── 상태 ───────── */
-  var state={tier:"e34",mode:"survey",mood:null,topics:[],habit:null,kind:null,origin:null,onlyNew:false,pool:[],picks:[],storyKW:null,kdc:{main:null,sub:null,form:null}};
+  var state={tier:"e34",mode:"survey",mood:null,topics:[],habit:null,kind:null,origin:null,onlyNew:false,pool:[],picks:[],best:[],fresh:[],freshNote:"",storyKW:null,kdc:{main:null,sub:null,form:null}};
   var $=function(id){return document.getElementById(id);};
   var kakaoKey=KAKAO_KEY_EMBEDDED||"", d4lKey=D4L_KEY_EMBEDDED||"";
   /* 링크에 실린 열쇠: …/bookclinic/#k=카카오키&d=정보나루키 → 이 브라우저에 저장하고 주소에서는 지움 */
@@ -588,7 +607,16 @@
       // 보강 뒤 사연·주제 낱말 재채점
       top.forEach(function(it){var r=scoreItem(it,t,storyKW,kd);it.score=r.s;it.hits=r.hits;});
       top.sort(function(a,b){return b.score-a.score;});
-      state.pool=top;state.picks=drawPicks(top);render();
+      state.pool=top;state.picks=drawPicks(top);
+      // 강추 3권: 점수 최상위. 신간 3권: 올해 나온 책 중 점수순(강추와 겹치지 않게), 모자라면 최근 12개월로 완화
+      state.best=top.slice(0,3);
+      var used=state.best.map(function(x){return x.isbn||x.title;});
+      var rest=pool.filter(function(x){return used.indexOf(x.isbn||x.title)===-1;});
+      var thisYear=rest.filter(function(x){return (x.year||0)>=THIS_YEAR||(x.date&&x.date.slice(0,4)==String(THIS_YEAR));});
+      state.fresh=thisYear.slice(0,3);state.freshNote=THIS_YEAR+"년에 나온 책";
+      if(state.fresh.length<3){var yr=rest.filter(function(x){return thisYear.indexOf(x)===-1&&((x.date&&daysAgo(x.date)<=365)||(!x.date&&x.year===THIS_YEAR-1));});if(yr.length){state.fresh=state.fresh.concat(yr).slice(0,3);state.freshNote="최근 12개월에 나온 책";}}
+      await Promise.all(state.fresh.filter(function(it){return top.indexOf(it)===-1&&(!it.desc||!it.cover);}).map(async function(it){var k=await kakaoByIsbn(it.isbn);if(k){it.cover=it.cover||k.thumbnail||"";it.date=it.date||(k.datetime||"").slice(0,10);it.link=k.url||it.link;}}));
+      render();
       var srcNote=(d4lKey?"도서관 대출 데이터":"")+(d4lKey&&kakaoKey?" + ":"")+(kakaoKey?"카카오 책 검색":"");
       setStatus(srcNote+"에서 "+pool.length+"권을 살펴 세 권을 골랐어요"+(storyKW?" · 찾은 낱말: "+storyKW.join(", "):"")+" · 조회 "+callCount+"회"+(authFail.kakao?" · 카카오 키가 거부됨":"")+(authFail.d4l?" · 정보나루 키가 거부됨":""),authFail.kakao||authFail.d4l);
       if(authFail.kakao||authFail.d4l)$("setup").hidden=false;
@@ -647,7 +675,7 @@
     b.type="button";b.className="spine";b.style.setProperty("--sp",t.color);b.dataset.tier=t.id;
     b.setAttribute("aria-pressed",String(t.id===state.tier));
     b.innerHTML='<span class="band"></span><span class="txt">'+t.spine+'</span><span class="band"></span>';
-    b.addEventListener("click",function(){state.tier=t.id;syncShelf();persist();if(state.mode==="survey"||(state.mode==="kdc"&&kdcSel()))recommend();else{state.pool=[];state.picks=[];render();}});
+    b.addEventListener("click",function(){state.tier=t.id;syncShelf();persist();if(state.mode==="survey"||(state.mode==="kdc"&&kdcSel()))recommend();else{state.pool=[];state.picks=[];state.best=[];state.fresh=[];render();}});
     $shelf.appendChild(b);
   });
   function syncShelf(){Array.prototype.forEach.call($shelf.children,function(el){el.setAttribute("aria-pressed",String(el.dataset.tier===state.tier));});}
@@ -667,7 +695,7 @@
   function syncAllChips(){syncChips($("q-mood"),"mood");syncChips($("q-topic"),"topics",true);syncChips($("q-habit"),"habit");syncChips($("q-kind"),"kind");syncChips($("q-origin"),"origin");}
   buildChips($("q-mood"),MOODS,"mood");buildChips($("q-topic"),TOPICS,"topics",true);buildChips($("q-habit"),HABITS,"habit");buildChips($("q-kind"),KINDS,"kind");buildChips($("q-origin"),ORIGINS,"origin");
 
-  ["mode-survey","mode-story","mode-kdc"].forEach(function(id){$(id).addEventListener("click",function(){state.mode=$(id).dataset.mode;syncMode();persist();if(state.mode==="survey")recommend();else if(state.mode==="kdc"&&kdcSel())recommend();else{state.pool=[];state.picks=[];render();}});});
+  ["mode-survey","mode-story","mode-kdc"].forEach(function(id){$(id).addEventListener("click",function(){state.mode=$(id).dataset.mode;syncMode();persist();if(state.mode==="survey")recommend();else if(state.mode==="kdc"&&kdcSel())recommend();else{state.pool=[];state.picks=[];state.best=[];state.fresh=[];render();}});});
   function syncMode(){
     ["survey","story","kdc"].forEach(function(m){$("mode-"+m).setAttribute("aria-pressed",String(state.mode===m));$("panel-"+m).hidden=state.mode!==m;});
   }
@@ -737,6 +765,20 @@
       '<div class="rx-foot">'+(isNew?'<span class="tag new">신간</span>':'')+srcTag+(it.classNo?'<span class="tag">'+esc(kdcName(it.classNo.charAt(0)))+'</span>':'')+tags+
       '<a class="more" href="'+esc(link)+'" target="_blank" rel="noopener">자세히 보기 →</a></div></div></article>';
   }
+  function miniHTML(it,i,t){
+    var link=it.link||("https://search.daum.net/search?w=bookpage&q="+encodeURIComponent(it.title));
+    var img=it.cover?'<img class="cover" src="'+esc(it.cover)+'" alt="" loading="lazy" referrerpolicy="no-referrer">':'<div class="cover" aria-hidden="true"></div>';
+    var when=it.date?it.date.slice(0,7).replace("-","."):(it.year?String(it.year):"");
+    var author=shortAuthor(it.authors)||it.publisher||"";
+    return '<a href="'+esc(link)+'" target="_blank" rel="noopener"><span class="rank">'+(i+1)+'</span>'+img+'<span class="mt">'+esc(cleanTitle(it.title))+'</span><span class="mm">'+esc(author)+(when?' · '+esc(when):'')+'</span></a>';
+  }
+  function renderPicks(t){
+    var show=state.best.length>0;
+    $("picks").hidden=!show; if(!show)return;
+    $("mini-best").innerHTML=state.best.map(function(it,i){return miniHTML(it,i,t);}).join("");
+    $("mini-new-note").textContent=state.freshNote||"올해 나온 책";
+    $("mini-new").innerHTML=state.fresh.length?state.fresh.map(function(it,i){return miniHTML(it,i,t);}).join(""):'<p class="empty">이 조건에서는 올해 나온 책을 찾지 못했어요. 「올해 나온 책만」을 켜고 다시 뽑아보세요.</p>';
+  }
   function render(){
     var t=tierOf(state.tier),bits=[spineLabel(t)];
     if(state.mode==="survey"){
@@ -750,6 +792,7 @@
     if(state.onlyNew)bits.push("올해 나온 책");
     $("result-for").textContent=bits.join(" · ");
     var $cards=$("cards");
+    renderPicks(t);
     if(!state.picks.length){$cards.innerHTML='<p class="empty">'+(state.mode==="story"?"위에 사정을 적고 「상담 받기」를 누르면 여기에 세 권이 놓입니다.":state.mode==="kdc"?"분류를 고르고 「이 분류에서 추천 받기」를 누르면 여기에 세 권이 놓입니다.":"「추천 받기」를 누르면 여기에 세 권이 놓입니다.")+'</p>';return;}
     $cards.innerHTML=state.picks.map(function(it){return cardHTML(it,t);}).join("");
   }
