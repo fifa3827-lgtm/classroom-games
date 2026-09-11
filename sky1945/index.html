@@ -736,29 +736,31 @@ function bombBeam(){
 /* ============================ 적 정의 ============================ */
 const TYPES = {
   scout: { hp:2, r:13, sc:120, draw:dScout, up(e,dt){
-      e.y += 130*dt; e.x = e.x0 + Math.sin(e.t*2.4 + e.ph)*68; e.rot = Math.cos(e.t*2.4 + e.ph)*0.35; }},
+      e.y += 130*dt; e.x = e.x0 + Math.sin(e.t*2.4 + e.ph)*68; e.rot = Math.cos(e.t*2.4 + e.ph)*0.35;
+      if(!e.shot && e.y > 80 && e.y < 420 && Math.random() < dt*(0.6 + stage*0.18)){ e.shot = true; aimed(e.x, e.y+8, 190, 0, 1); } }},
   dart: { hp:2, r:11, sc:140, draw:dDart, up(e,dt){
-      e.x += e.vx*dt; e.y += e.vy*dt; e.rot = Math.atan2(e.vy,e.vx) - Math.PI/2; }},
+      e.x += e.vx*dt; e.y += e.vy*dt; e.rot = Math.atan2(e.vy,e.vx) - Math.PI/2;
+      if(!e.shot && e.t > 0.5 && e.x > 30 && e.x < W-30){ e.shot = true; if(Math.random() < 0.35 + stage*0.1) aimed(e.x, e.y+6, 215, 0, 1); } }},
   gunner: { hp:6, r:16, sc:320, draw:dGunner, up(e,dt){
       if(e.t < 1.6){ e.y += 120*dt; e.x += Math.sin(e.t*3)*30*dt; }
       else if(e.t < 5.2){
         e.x += Math.sin(e.t*1.3)*70*dt; e.y += 12*dt; e.fire -= dt;
-        if(e.fire <= 0){ e.fire = 0.95; aimed(e.x, e.y+12, 210, 0.22, 3); Snd.miss(); }
+        if(e.fire <= 0){ e.fire = fr(0.9); aimed(e.x, e.y+12, 215, 0.2, stage >= 3 ? 5 : 3); Snd.miss(); }
       } else { e.y += 190*dt; } }},
   bomber: { hp:20, r:24, sc:900, draw:dBomber, up(e,dt){
       e.y += (e.y < 150 ? 90 : 26)*dt; e.x += Math.sin(e.t*0.8)*50*dt; e.fire -= dt;
-      if(e.y > 60 && e.fire <= 0){ e.fire = 1.4; for(let i=-2;i<=2;i++) eshot(e.x, e.y+16, i*46, 185, 5); Snd.miss(); }
+      if(e.y > 60 && e.fire <= 0){ e.fire = fr(1.3); const nb = stage >= 3 ? 3 : 2; for(let i=-nb;i<=nb;i++) eshot(e.x, e.y+16, i*44, 185, 5); if(stage >= 4) aimed(e.x, e.y+16, 230, 0, 1); Snd.miss(); }
       if(e.t > 11) e.y += 160*dt; }},
   bunker: { hp:10, r:18, sc:400, ground:true, draw:dBunker, up(e,dt){
       e.y += scrollSpeed()*dt; e.fire -= dt;
-      if(e.y > 40 && e.y < H-60 && e.fire <= 0){ e.fire = 1.5; aimed(e.x,e.y,165,0.38,3); } }},
+      if(e.y > 40 && e.y < H-60 && e.fire <= 0){ e.fire = fr(1.1); aimed(e.x,e.y,175,0.34, stage >= 3 ? 4 : 3); } }},
   ace: { hp:14, r:17, sc:700, draw:dAce, up(e,dt){
       if(e.t < 1.2) e.y += 150*dt;
       else if(e.t > 8.5) e.y += 220*dt;
       else {
         const d = P.x - e.x; e.x += clamp(d,-1,1)*95*dt;
         e.y += Math.sin(e.t*1.1)*60*dt; e.y = clamp(e.y, 70, 330); e.fire -= dt;
-        if(e.fire <= 0){ e.fire = 0.8; aimed(e.x,e.y+10,255,0,1); aimed(e.x-14,e.y+6,235,0,1); aimed(e.x+14,e.y+6,235,0,1); Snd.miss(); }
+        if(e.fire <= 0){ e.fire = fr(0.75); aimed(e.x,e.y+10,265,0,1); aimed(e.x-14,e.y+6,235,0,1); aimed(e.x+14,e.y+6,235,0,1); Snd.miss(); }
       }
       e.rot = Math.sin(e.t*1.1)*0.2; }},
   mine: { hp:5, r:14, sc:260, draw:dMine, up(e,dt){
@@ -780,23 +782,25 @@ function spawn(type, x, y, opt){
   e.max = e.hp; enemies.push(e); return e;
 }
 function scrollSpeed(){ return 110 + stage*18; }
-function formLine(type, n, y, gapX, delay, opt){
+// 적 연사 간격 — 스테이지가 오를수록 짧아진다 (5스테이지 약 30% 단축)
+function fr(t){ return t / (1 + (stage-1)*0.09); }
+function formLine(type, n, y, gapX, delay, opt, noDrop){
   for(let i=0;i<n;i++){
     const x = W/2 + (i-(n-1)/2)*gapX;
-    later(i*delay, ()=>{ const e = spawn(type,x,y,opt); if(i===n-1) e.drop = true; });
+    later(i*delay, ()=>{ const e = spawn(type,x,y,opt); if(i===n-1 && !noDrop) e.drop = true; });
   }
 }
-function formArc(type, n, fromLeft){
+function formArc(type, n, fromLeft, noDrop){
   for(let i=0;i<n;i++){
     later(i*0.22, ()=>{
       const e = spawn(type, fromLeft ? -30 : W+30, rnd(50,140));
       e.vx = (fromLeft?1:-1)*rnd(150,190); e.vy = rnd(120,170);
-      if(i===n-1) e.drop = true;
+      if(i===n-1 && !noDrop) e.drop = true;
     });
   }
 }
-function formColumn(type, n, x, delay){
-  for(let i=0;i<n;i++) later(i*delay, ()=>{ const e = spawn(type, x, -40); if(i===n-1) e.drop = true; });
+function formColumn(type, n, x, delay, noDrop){
+  for(let i=0;i<n;i++) later(i*delay, ()=>{ const e = spawn(type, x, -40); if(i===n-1 && !noDrop) e.drop = true; });
 }
 
 /* ============================ 스테이지 스크립트 ============================ */
@@ -887,13 +891,14 @@ function buildStage(n){
 // 스크립트 사이 빈틈을 메우는 필러 편대 — 화면의 적이 적을 때마다 하나씩 보낸다
 function fillerWave(){
   const s = stage, r = Math.random();
-  if(r < 0.26) formLine('scout', 4 + s, -40, Math.max(44, 66 - s*4), 0.11);
-  else if(r < 0.48) formArc('dart', 4 + s, Math.random() < 0.5);
-  else if(r < 0.62) formColumn(Math.random() < 0.5 ? 'scout' : 'dart', 5 + s, rnd(70, W-70), 0.14);
-  else if(r < 0.76){ spawn('gunner', rnd(80, W-80), -40); if(s >= 2) spawn('gunner', rnd(80, W-80), -40, {drop:true}); }
+  const nd = Math.random() > 0.18;   // 필러 편대는 18%만 아이템을 떨어뜨린다
+  if(r < 0.26) formLine('scout', 4 + s, -40, Math.max(44, 66 - s*4), 0.11, null, nd);
+  else if(r < 0.48) formArc('dart', 4 + s, Math.random() < 0.5, nd);
+  else if(r < 0.62) formColumn(Math.random() < 0.5 ? 'scout' : 'dart', 5 + s, rnd(70, W-70), 0.14, nd);
+  else if(r < 0.76){ spawn('gunner', rnd(80, W-80), -40); if(s >= 2) spawn('gunner', rnd(80, W-80), -40, {drop:!nd}); }
   else if(r < 0.86 && s >= 3){ for(let i=0;i<2+s;i++) spawn('mine', rnd(40, W-40), -40 - i*34); }
   else if(r < 0.94 && s >= 2){ spawn('hunter', rnd(80, W-80), -40, {side:-1}); spawn('hunter', rnd(80, W-80), -40, {side:1}); }
-  else formLine('scout', 5 + s, -40, 58, 0.12);
+  else formLine('scout', 5 + s, -40, 58, 0.12, null, nd);
 }
 
 /* ============================ 보스 ============================ */
@@ -959,14 +964,14 @@ function bossUpdate(b, dt){
 /* ============================ 아이템/점수 ============================ */
 function dropItem(x,y){
   const r = Math.random(); let k;
-  if(P.pow < 5 && r < 0.52) k = 'P'; else if(r < 0.72) k = 'B'; else if(r < 0.86) k = 'S'; else k = '*';
+  if(P.pow < 5 && r < 0.42) k = 'P'; else if(r < 0.56) k = 'B'; else if(r < 0.72) k = 'S'; else k = '*';
   items.push({x,y,vy:58,t:0,k});
 }
 function takeItem(it){
   Snd.power();
   if(it.k === 'P'){ if(P.pow < 5){ P.pow++; addScore(200); } else addScore(2000); }
   else if(it.k === 'B'){ if(P.bombs < 5) P.bombs++; else addScore(2000); }
-  else if(it.k === 'S'){ P.shield = 5; addScore(300); }
+  else if(it.k === 'S'){ P.shield = 5; addScore(300); parts.push({x:P.x,y:P.y,r:40,l:0.5,m:0.5,c:'ring',vx:0,vy:0,g:0}); parts.push({x:P.x,y:P.y,r:70,l:0.35,m:0.35,c:'flash',vx:0,vy:0,g:0}); }
   else addScore(2000);
 }
 function addScore(n){
@@ -1004,7 +1009,7 @@ function hitEnemy(e, dmg, fx){
     Snd.pop(); shake = Math.max(shake, e.r*0.18);
     addScore(TYPES[e.type].sc * loop);
     if(e.type === 'mine'){ for(let i=0;i<8;i++){ const a = i/8*TAU + e.rot; eshot(e.x, e.y, Math.cos(a)*150, Math.sin(a)*150, 4, 'r'); } }
-    if(e.drop) dropItem(e.x, e.y); else if(Math.random() < 0.06) dropItem(e.x, e.y);
+    if(e.drop) dropItem(e.x, e.y); else if(Math.random() < 0.02) dropItem(e.x, e.y);
   }
 }
 function hitBoss(dmg){
@@ -1266,12 +1271,25 @@ function drawPlayer(){
   ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(P.tilt*0.28);
   P.plane.draw();
   if(P.shield > 0){
+    // 실드: 크고 뚜렷하게 — 육각 보호막 + 회전 링 + 남은 시간 게이지 (마지막 1초는 깜빡임)
+    const rem = P.shield, blink = rem < 1 ? (Math.floor(rem*10) % 2 === 0 ? 0.4 : 1) : 1;
+    const R0 = 36 + Math.sin(gt*9)*2;
+    ctx.save();
+    ctx.rotate(-P.tilt*0.28);
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(147,224,92,'+(0.4+Math.sin(gt*10)*0.2)+')';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.arc(0,0,28,0,TAU); ctx.stroke();
-    glow(0,0,'rgba(147,224,92,1)',30,0.18);
+    glow(0,0,'rgba(120,255,140,1)',R0+8,0.42*blink);
+    ctx.fillStyle = 'rgba(120,255,140,'+(0.14*blink)+')';
+    ctx.beginPath(); for(let i=0;i<6;i++){ const an = i/6*TAU + gt*1.2; const px = Math.cos(an)*R0, py = Math.sin(an)*R0; if(i) ctx.lineTo(px,py); else ctx.moveTo(px,py); } ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,255,200,'+(0.95*blink)+')'; ctx.lineWidth = 3.2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(120,255,140,'+(0.8*blink)+')'; ctx.lineWidth = 2;
+    ctx.setLineDash([10, 9]); ctx.lineDashOffset = -gt*60;
+    ctx.beginPath(); ctx.arc(0,0,R0+7,0,TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    // 남은 시간 게이지 (5초 기준)
+    ctx.strokeStyle = 'rgba(255,255,255,'+(0.9*blink)+')'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0,0,R0+13,-Math.PI/2,-Math.PI/2 + TAU*clamp(rem/5,0,1)); ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
   }
   if(P.barrier > 0){
     ctx.globalCompositeOperation = 'lighter';
@@ -1459,7 +1477,7 @@ function update(dt){
     if(b.y < -40 || b.y > H+40 || b.x < -40 || b.x > W+40){ ebul.splice(i,1); continue; }
     if(P.alive && Math.hypot(b.x-P.x, b.y-P.y) < b.r + P.r){
       if(P.barrier > 0){ ebul.splice(i,1); continue; }
-      if(P.shield > 0){ P.shield = 0; ebul.splice(i,1); explode(P.x,P.y,12,'#93e05c'); Snd.pop(); shake = 10; continue; }
+      if(P.shield > 0){ P.shield = 0; ebul.splice(i,1); explode(P.x,P.y,22,'#93e05c'); parts.push({x:P.x,y:P.y,r:50,l:0.45,m:0.45,c:'ring',vx:0,vy:0,g:0}); Snd.pop(); shake = 14; flash = 0.15; continue; }
       if(P.inv <= 0){ ebul.splice(i,1); killPlayer(); continue; }
     }
   }
