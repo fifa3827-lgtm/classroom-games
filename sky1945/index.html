@@ -316,8 +316,8 @@ if(TOUCH){
   pad.hidden = false;
   document.querySelector('.deck').hidden = true;   // PAUSE/SOUND/FULL은 패드 가운데로 옮김
   const stick = document.getElementById('stick'), knob = document.getElementById('knob');
-  const RAD = 30;                                   // 이 거리(px)만 기울여도 최고 속도 — 짧게 밀어도 바로 반응
-  const GAIN = 1.4;                                 // 기울기 대비 속도 배율 (감도)
+  const RAD = 38;                                   // 이 거리(px)를 기울이면 최고 속도
+  const GAIN = 1.1;                                 // 기울기 대비 속도 배율 (감도) — 1.4는 너무 예민하다는 의견
   let cx = 0, cy = 0, selCool = 0;
   const setKnob = (dx,dy)=>{ knob.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)'; };
   function moveJoy(e){
