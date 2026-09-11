@@ -174,17 +174,25 @@
     position:absolute;left:0;right:0;bottom:0;z-index:3;
     padding:0 12px 12px;align-items:flex-end;pointer-events:none;
   }
-  .screen .pad .stick,.screen .pad .fire{pointer-events:auto}
+  .screen .pad .fire{pointer-events:auto}
   .screen .padmid{display:none}
+  /* 플로팅 스틱: 손가락이 닿은 자리에 연하게 나타나고, 떼면 사라진다 */
   .screen .stick{
-    width:118px;height:118px;
-    background:radial-gradient(circle at 50% 45%, rgba(27,38,52,.55) 0%, rgba(14,21,30,.35) 70%);
-    border-color:rgba(132,150,171,.55);box-shadow:inset 0 4px 14px rgba(0,0,0,.45);
+    position:absolute;left:0;top:0;transform:translate(-50%,-50%);z-index:4;pointer-events:none;
+    width:112px;height:112px;opacity:0;transition:opacity .12s;
+    background:radial-gradient(circle, rgba(200,220,240,.10) 0%, rgba(200,220,240,.04) 70%);
+    border:1.5px solid rgba(200,220,240,.35);box-shadow:none;
   }
+  .screen .stick.show{opacity:1}
+  .screen .stick::before{inset:12px;border-color:rgba(200,220,240,.22)}
   .screen .stick::after{
-    box-shadow:0 -42px 0 3px rgba(132,150,171,.5), 0 42px 0 3px rgba(132,150,171,.5), -42px 0 0 3px rgba(132,150,171,.5), 42px 0 0 3px rgba(132,150,171,.5);
+    box-shadow:0 -40px 0 2px rgba(200,220,240,.3), 0 40px 0 2px rgba(200,220,240,.3), -40px 0 0 2px rgba(200,220,240,.3), 40px 0 0 2px rgba(200,220,240,.3);
   }
-  .screen .knob{width:54px;height:54px;margin:-27px 0 0 -27px;opacity:.9}
+  .screen .knob{
+    width:50px;height:50px;margin:-25px 0 0 -25px;opacity:.55;
+    background:radial-gradient(circle at 40% 35%, rgba(255,230,170,.95), rgba(232,153,44,.9) 60%, rgba(168,112,28,.9));
+    box-shadow:0 2px 8px rgba(0,0,0,.35);
+  }
   .screen .fire{width:90px;height:90px;font-size:16px;opacity:.88}
   /* ---- 모바일: 화면을 최대한 게임에 ---- */
   @media (max-width:640px){
@@ -235,8 +243,8 @@
         <button id="padsound" type="button">SOUND</button>
         <button id="padfull" type="button">FULL</button>
       </div>
-      <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
     </div>
+    <div class="stick" id="stick" hidden><div class="knob" id="knob"></div></div>
   </div>
 
   <div class="hud" style="grid-template-columns:1fr 1fr">
@@ -261,7 +269,7 @@
     <summary>조작 방법</summary>
     <div class="legend">
       <div><b>기체 선택</b> — 시작 화면에서 좌우를 탭하거나 <span class="k">← →</span>, 숫자 <span class="k">1~5</span>. 가운데를 탭하면 출격.</div>
-      <div><b>이동</b> — 휴대폰·태블릿은 화면 오른쪽 아래 <b>조이스틱</b>을 기울이거나, 화면을 누른 채 끌어도 됩니다. PC는 <span class="k">← ↑ ↓ →</span> / <span class="k">WASD</span>. 사격은 자동.</div>
+      <div><b>이동</b> — 휴대폰·태블릿은 화면 아무 곳이나 누르면 그 자리에 <b>조이스틱</b>이 생기고, 기울인 만큼 움직입니다. PC는 <span class="k">← ↑ ↓ →</span> / <span class="k">WASD</span>. 사격은 자동.</div>
       <div><b>폭탄</b> — 화면 왼쪽 아래 <b>BOMB</b> 버튼, 이동 중 다른 손가락 탭, 또는 <span class="k">SPACE</span>. 기체마다 폭탄이 다릅니다.</div>
       <div class="p"><span class="pill" style="background:#ff6a3d">P</span> 주무장 강화 (최대 5단)</div>
       <div class="p"><span class="pill" style="background:#6ef0ff">B</span> 폭탄 보급</div>
@@ -325,26 +333,36 @@ if(document.fullscreenEnabled && cabinet.requestFullscreen){
   });
 }
 
-/* --- 가상 조이스틱 + 폭탄 버튼 (터치 기기) --- */
-const joy = { on:false, x:0, y:0, id:null };
+/* --- 가상 조이스틱(손가락이 닿는 곳에 생성) + 폭탄 버튼 (터치 기기) --- */
+const joy = { on:false, x:0, y:0, id:null, start:null, move:null, end:null };
 const pad = document.getElementById('pad');
 if(TOUCH){
   pad.hidden = false;
-  // 패드는 화면 위에 겹쳐 있으므로, 패드를 누른 포인터가 화면 드래그 조작으로 새지 않게 막는다
-  pad.addEventListener('pointerdown', e=> e.stopPropagation());
-  pad.addEventListener('pointermove', e=> e.stopPropagation());
-  pad.addEventListener('pointerup', e=> e.stopPropagation());
   document.getElementById('bomb').hidden = true;   // 아래쪽 BOMB 버튼은 화면 안 버튼과 중복이라 숨김
   const stick = document.getElementById('stick'), knob = document.getElementById('knob');
+  stick.hidden = false;
   const RAD = 38;                                   // 이 거리(px)를 기울이면 최고 속도
-  const GAIN = 1.1;                                 // 기울기 대비 속도 배율 (감도) — 1.4는 너무 예민하다는 의견
+  const GAIN = 1.1;                                 // 기울기 대비 속도 배율 (감도)
   let cx = 0, cy = 0, selCool = 0;
   const setKnob = (dx,dy)=>{ knob.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)'; };
-  function moveJoy(e){
+  // 손가락이 닿은 자리에 스틱을 띄운다 (플로팅 조이스틱)
+  joy.start = function(e){
+    const r = screen.getBoundingClientRect();
+    cx = e.clientX; cy = e.clientY;
+    stick.style.left = (cx - r.left) + 'px'; stick.style.top = (cy - r.top) + 'px';
+    stick.classList.add('show');
+    joy.on = true; joy.id = e.pointerId; joy.x = joy.y = 0; setKnob(0,0);
+  };
+  joy.move = function(e){
     if(!joy.on || e.pointerId !== joy.id) return;
     let dx = e.clientX - cx, dy = e.clientY - cy;
     const d = Math.hypot(dx,dy);
-    if(d > RAD){ dx *= RAD/d; dy *= RAD/d; }
+    if(d > RAD){                                     // 반경을 넘어가면 스틱 자체가 손가락을 따라온다
+      const r = screen.getBoundingClientRect();
+      cx += dx - dx*RAD/d; cy += dy - dy*RAD/d;
+      stick.style.left = (cx - r.left) + 'px'; stick.style.top = (cy - r.top) + 'px';
+      dx *= RAD/d; dy *= RAD/d;
+    }
     setKnob(dx,dy);
     const m = Math.min(1, d/RAD);
     joy.x = m < 0.1 ? 0 : clamp(dx/RAD*GAIN, -1, 1); joy.y = m < 0.1 ? 0 : clamp(dy/RAD*GAIN, -1, 1);
@@ -352,26 +370,20 @@ if(TOUCH){
       if(selCool <= 0 && Math.abs(joy.x) > 0.7){ changeSel(joy.x > 0 ? 1 : -1); selCool = 1; }
       if(Math.abs(joy.x) < 0.3) selCool = 0;
     }
-  }
-  stick.addEventListener('pointerdown', e=>{
-    e.preventDefault(); Snd.resume();
-    const r = stick.getBoundingClientRect(); cx = r.left + r.width/2; cy = r.top + r.height/2;
-    joy.on = true; joy.id = e.pointerId;
-    try{ stick.setPointerCapture(e.pointerId); }catch(err){}
-    moveJoy(e);
-  });
-  stick.addEventListener('pointermove', moveJoy);
-  const endJoy = e=>{ if(e.pointerId !== joy.id) return; joy.on = false; joy.x = joy.y = 0; setKnob(0,0); };
-  stick.addEventListener('pointerup', endJoy);
-  stick.addEventListener('pointercancel', endJoy);
-  stick.addEventListener('touchstart', e=> e.preventDefault(), { passive:false });
+  };
+  joy.end = function(e){
+    if(e.pointerId !== joy.id) return;
+    joy.on = false; joy.x = joy.y = 0; setKnob(0,0);
+    stick.classList.remove('show');
+  };
   const pb = document.getElementById('padbomb');
   pb.addEventListener('pointerdown', e=>{
-    e.preventDefault(); Snd.resume();
+    e.preventDefault(); e.stopPropagation(); Snd.resume();
     if(mode === 'title') startGame();
     else if(mode === 'over') mode = 'title';
     else useBomb();
   });
+  pb.addEventListener('pointerup', e=> e.stopPropagation());
   pb.addEventListener('touchstart', e=> e.preventDefault(), { passive:false });
   document.getElementById('padpause').addEventListener('click', ()=> el.pause.click());
   document.getElementById('padsound').addEventListener('click', ()=> el.sound.click());
@@ -671,6 +683,13 @@ screen.addEventListener('pointerdown', e=>{
   }
   if(mode === 'over'){ mode = 'title'; return; }
   if(mode !== 'play' && mode !== 'clear') return;
+  if(TOUCH){
+    // 터치 기기: 손가락이 닿은 곳에 조이스틱 생성. 이미 스틱을 잡고 있을 때 다른 손가락 탭 = 폭탄
+    if(joy.on && joy.id !== e.pointerId){ useBomb(); return; }
+    try{ screen.setPointerCapture(e.pointerId); }catch(err){}
+    joy.start(e);
+    return;
+  }
   if(pointer && pointer.id !== e.pointerId){
     // 이동 중 두 번째 손가락 탭 = 폭탄
     useBomb();
@@ -681,13 +700,14 @@ screen.addEventListener('pointerdown', e=>{
   pointer = { id:e.pointerId, lx:p.x, ly:p.y, tx:P.x, ty:P.y };
 });
 screen.addEventListener('pointermove', e=>{
+  if(TOUCH){ joy.move(e); return; }
   if(!pointer || pointer.id !== e.pointerId) return;
   const p = toLocal(e);
   pointer.tx = clamp(pointer.tx + (p.x - pointer.lx)*SENS, 16, W-16);
   pointer.ty = clamp(pointer.ty + (p.y - pointer.ly)*SENS, 26, H-22);
   pointer.lx = p.x; pointer.ly = p.y;
 });
-function endPtr(e){ if(pointer && pointer.id === e.pointerId) pointer = null; }
+function endPtr(e){ if(TOUCH && joy.end) joy.end(e); if(pointer && pointer.id === e.pointerId) pointer = null; }
 screen.addEventListener('pointerup', endPtr);
 screen.addEventListener('pointercancel', endPtr);
 
@@ -1839,7 +1859,7 @@ function drawSelect(){
   ctx.globalAlpha = 1;
   if(TOUCH){
     ctx.fillStyle = '#8496ab'; ctx.font = '13px "Gothic A1", sans-serif';
-    ctx.fillText('조이스틱 또는 화면 드래그로 이동 · BOMB 버튼 = 폭탄', W/2, 660);
+    ctx.fillText('화면을 누르면 그 자리에 조이스틱 · BOMB 버튼 = 폭탄', W/2, 660);
   }
   ctx.fillStyle = '#8496ab'; ctx.font = '14px "Gothic A1", sans-serif';
   ctx.fillText('HI-SCORE  ' + hi.toLocaleString('en-US'), W/2, TOUCH ? 690 : 676);
