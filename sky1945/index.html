@@ -232,21 +232,21 @@
   </div>
 
   <div class="pad" id="pad" hidden>
-    <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
+    <button class="fire" id="padbomb" type="button">BOMB</button>
     <div class="padmid">
       <button id="padpause" type="button">PAUSE</button>
       <button id="padsound" type="button">SOUND</button>
       <button id="padfull" type="button">FULL</button>
     </div>
-    <button class="fire" id="padbomb" type="button">BOMB</button>
+    <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
   </div>
 
   <details class="legend-wrap" id="legendwrap">
     <summary>조작 방법</summary>
     <div class="legend">
       <div><b>기체 선택</b> — 시작 화면에서 좌우를 탭하거나 <span class="k">← →</span>, 숫자 <span class="k">1~5</span>. 가운데를 탭하면 출격.</div>
-      <div><b>이동</b> — 휴대폰·태블릿은 아래 <b>조이스틱</b>을 기울이거나, 화면을 누른 채 끌어도 됩니다. PC는 <span class="k">← ↑ ↓ →</span> / <span class="k">WASD</span>. 사격은 자동.</div>
-      <div><b>폭탄</b> — 오른쪽 <b>BOMB</b> 버튼, 이동 중 다른 손가락 탭, 또는 <span class="k">SPACE</span>. 기체마다 폭탄이 다릅니다.</div>
+      <div><b>이동</b> — 휴대폰·태블릿은 오른쪽 아래 <b>조이스틱</b>을 기울이거나, 화면을 누른 채 끌어도 됩니다. PC는 <span class="k">← ↑ ↓ →</span> / <span class="k">WASD</span>. 사격은 자동.</div>
+      <div><b>폭탄</b> — 왼쪽 아래 <b>BOMB</b> 버튼, 이동 중 다른 손가락 탭, 또는 <span class="k">SPACE</span>. 기체마다 폭탄이 다릅니다.</div>
       <div class="p"><span class="pill" style="background:#ff6a3d">P</span> 주무장 강화 (최대 5단)</div>
       <div class="p"><span class="pill" style="background:#6ef0ff">B</span> 폭탄 보급</div>
       <div class="p"><span class="pill" style="background:#93e05c">S</span> 실드 · <span class="pill" style="background:#ffd35c;margin-left:4px">★</span> 보너스</div>
@@ -316,7 +316,8 @@ if(TOUCH){
   pad.hidden = false;
   document.querySelector('.deck').hidden = true;   // PAUSE/SOUND/FULL은 패드 가운데로 옮김
   const stick = document.getElementById('stick'), knob = document.getElementById('knob');
-  const RAD = 44;                                   // 노브 최대 이동 반경(px)
+  const RAD = 30;                                   // 이 거리(px)만 기울여도 최고 속도 — 짧게 밀어도 바로 반응
+  const GAIN = 1.4;                                 // 기울기 대비 속도 배율 (감도)
   let cx = 0, cy = 0, selCool = 0;
   const setKnob = (dx,dy)=>{ knob.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)'; };
   function moveJoy(e){
@@ -326,7 +327,7 @@ if(TOUCH){
     if(d > RAD){ dx *= RAD/d; dy *= RAD/d; }
     setKnob(dx,dy);
     const m = Math.min(1, d/RAD);
-    joy.x = m < 0.12 ? 0 : dx/RAD; joy.y = m < 0.12 ? 0 : dy/RAD;
+    joy.x = m < 0.1 ? 0 : clamp(dx/RAD*GAIN, -1, 1); joy.y = m < 0.1 ? 0 : clamp(dy/RAD*GAIN, -1, 1);
     if(mode === 'title'){                           // 기체 선택 화면에서는 좌우로 기체 전환
       if(selCool <= 0 && Math.abs(joy.x) > 0.7){ changeSel(joy.x > 0 ? 1 : -1); selCool = 1; }
       if(Math.abs(joy.x) < 0.3) selCool = 0;
