@@ -169,6 +169,23 @@
   }
   .fire:active{transform:translateY(2px)}
   .fire.off{color:#43505f;background:radial-gradient(circle,#1a232f,#121a24);border-color:var(--rivet)}
+  /* 패드는 게임 화면 하단에 반투명으로 겹쳐 놓는다 (모바일 게임 관례) */
+  .screen .pad{
+    position:absolute;left:0;right:0;bottom:0;z-index:3;
+    padding:0 12px 12px;align-items:flex-end;pointer-events:none;
+  }
+  .screen .pad .stick,.screen .pad .fire{pointer-events:auto}
+  .screen .padmid{display:none}
+  .screen .stick{
+    width:118px;height:118px;
+    background:radial-gradient(circle at 50% 45%, rgba(27,38,52,.55) 0%, rgba(14,21,30,.35) 70%);
+    border-color:rgba(132,150,171,.55);box-shadow:inset 0 4px 14px rgba(0,0,0,.45);
+  }
+  .screen .stick::after{
+    box-shadow:0 -42px 0 3px rgba(132,150,171,.5), 0 42px 0 3px rgba(132,150,171,.5), -42px 0 0 3px rgba(132,150,171,.5), 42px 0 0 3px rgba(132,150,171,.5);
+  }
+  .screen .knob{width:54px;height:54px;margin:-27px 0 0 -27px;opacity:.9}
+  .screen .fire{width:90px;height:90px;font-size:16px;opacity:.88}
   /* ---- 모바일: 화면을 최대한 게임에 ---- */
   @media (max-width:640px){
     .cabinet{padding-inline:10px;padding-block:8px 10px;gap:6px}
@@ -211,16 +228,15 @@
   <div class="screen" id="screen">
     <canvas id="game" aria-label="비행기 슈팅 게임 화면"></canvas>
     <div class="vign"></div>
-  </div>
-
-  <div class="pad" id="pad" hidden>
-    <button class="fire" id="padbomb" type="button">BOMB</button>
-    <div class="padmid">
-      <button id="padpause" type="button">PAUSE</button>
-      <button id="padsound" type="button">SOUND</button>
-      <button id="padfull" type="button">FULL</button>
+    <div class="pad" id="pad" hidden>
+      <button class="fire" id="padbomb" type="button">BOMB</button>
+      <div class="padmid">
+        <button id="padpause" type="button">PAUSE</button>
+        <button id="padsound" type="button">SOUND</button>
+        <button id="padfull" type="button">FULL</button>
+      </div>
+      <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
     </div>
-    <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
   </div>
 
   <div class="hud" style="grid-template-columns:1fr 1fr">
@@ -245,8 +261,8 @@
     <summary>조작 방법</summary>
     <div class="legend">
       <div><b>기체 선택</b> — 시작 화면에서 좌우를 탭하거나 <span class="k">← →</span>, 숫자 <span class="k">1~5</span>. 가운데를 탭하면 출격.</div>
-      <div><b>이동</b> — 휴대폰·태블릿은 오른쪽 아래 <b>조이스틱</b>을 기울이거나, 화면을 누른 채 끌어도 됩니다. PC는 <span class="k">← ↑ ↓ →</span> / <span class="k">WASD</span>. 사격은 자동.</div>
-      <div><b>폭탄</b> — 왼쪽 아래 <b>BOMB</b> 버튼, 이동 중 다른 손가락 탭, 또는 <span class="k">SPACE</span>. 기체마다 폭탄이 다릅니다.</div>
+      <div><b>이동</b> — 휴대폰·태블릿은 화면 오른쪽 아래 <b>조이스틱</b>을 기울이거나, 화면을 누른 채 끌어도 됩니다. PC는 <span class="k">← ↑ ↓ →</span> / <span class="k">WASD</span>. 사격은 자동.</div>
+      <div><b>폭탄</b> — 화면 왼쪽 아래 <b>BOMB</b> 버튼, 이동 중 다른 손가락 탭, 또는 <span class="k">SPACE</span>. 기체마다 폭탄이 다릅니다.</div>
       <div class="p"><span class="pill" style="background:#ff6a3d">P</span> 주무장 강화 (최대 5단)</div>
       <div class="p"><span class="pill" style="background:#6ef0ff">B</span> 폭탄 보급</div>
       <div class="p"><span class="pill" style="background:#93e05c">S</span> 실드 · <span class="pill" style="background:#ffd35c;margin-left:4px">★</span> 보너스</div>
@@ -314,7 +330,11 @@ const joy = { on:false, x:0, y:0, id:null };
 const pad = document.getElementById('pad');
 if(TOUCH){
   pad.hidden = false;
-  document.querySelector('.deck').hidden = true;   // PAUSE/SOUND/FULL은 패드 가운데로 옮김
+  // 패드는 화면 위에 겹쳐 있으므로, 패드를 누른 포인터가 화면 드래그 조작으로 새지 않게 막는다
+  pad.addEventListener('pointerdown', e=> e.stopPropagation());
+  pad.addEventListener('pointermove', e=> e.stopPropagation());
+  pad.addEventListener('pointerup', e=> e.stopPropagation());
+  document.getElementById('bomb').hidden = true;   // 아래쪽 BOMB 버튼은 화면 안 버튼과 중복이라 숨김
   const stick = document.getElementById('stick'), knob = document.getElementById('knob');
   const RAD = 38;                                   // 이 거리(px)를 기울이면 최고 속도
   const GAIN = 1.1;                                 // 기울기 대비 속도 배율 (감도) — 1.4는 너무 예민하다는 의견
