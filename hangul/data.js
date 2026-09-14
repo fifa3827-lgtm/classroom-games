@@ -141,9 +141,9 @@ window.HANGUL_DATA = {
        word   = 그림 보고 빠진 글자 채우기
   */
   lessons: [
+    { id: "bd",  stage: 1, title: "글자판",      icon: "🧱", kind: "board", free: true },
     { id: "v0",  stage: 1, title: "모음 여섯",   icon: "🌱", kind: "vowel",
       items: ["ㅏ","ㅓ","ㅗ","ㅜ","ㅡ","ㅣ"] },
-    { id: "bd",  stage: 1, title: "글자판",      icon: "🧱", kind: "board", free: true },
     { id: "bu",  stage: 1, title: "글자 만들기", icon: "🔨", kind: "build" },
     { id: "rd",  stage: 1, title: "읽어 보기",   icon: "🗣️", kind: "read" },
     { id: "wd",  stage: 1, title: "낱말 채우기", icon: "🖼️", kind: "word" }
