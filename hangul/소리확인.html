@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쵸코와 한글 · 소리 확인</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=Noto+Sans+KR:wght@700&display=swap">
+<style>
+:root{--bg:#FFF9F1;--card:#fff;--ink:#3A3130;--muted:#857B76;--line:#EFE4D6;--mint:#CDEBE1;--mint-deep:#7FC4AF;--brown:#8B5A3C;--brown-deep:#6B4229;--peach-deep:#F3A07F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Gowun Dodum","Apple SD Gothic Neo",sans-serif;padding-inline:16px;padding-block:24px 60px}
+.wrap{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-family:"Jua",sans-serif;font-weight:400;font-size:28px;margin:0}
+p{margin:0;color:var(--muted);line-height:1.65}
+button{font:inherit;color:inherit;border:none;cursor:pointer}
+.btn{background:var(--brown);color:#fff;font-family:"Jua",sans-serif;font-size:16px;padding:11px 16px;border-radius:12px;box-shadow:0 4px 0 var(--brown-deep)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--brown-deep)}
+.btn.soft{background:var(--card);color:var(--brown);box-shadow:0 4px 0 var(--line)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:sticky;top:0;background:var(--bg);padding-block:10px;z-index:5;border-bottom:1px solid var(--line)}
+#status{font-size:14px;color:var(--muted)}
+h2{font-family:"Jua",sans-serif;font-weight:400;font-size:19px;margin:16px 0 0;color:var(--brown)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.item{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;transition:transform .08s}
+.item:active{transform:scale(.95)}
+.item .lab{font-family:"Noto Sans KR",sans-serif;font-weight:700;font-size:26px;line-height:1.15;word-break:keep-all}
+.item.wide .lab{font-size:16px}
+.item .n{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.item.playing{background:var(--mint);border-color:var(--mint-deep)}
+.item.marked{background:#FFF1EA;border-color:var(--peach-deep)}
+.note{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px 16px;line-height:1.65}
+.note strong{color:var(--brown)}
+#marks{background:#FFF5EF;border:2px solid var(--peach-deep);border-radius:14px;padding:14px 16px;display:none}
+#marks .list{font-family:"Noto Sans KR",sans-serif;font-weight:700;font-size:20px;margin-top:6px;word-break:keep-all}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>쵸코와 한글 · 소리 확인</h1>
+  <p>글자와 소리의 짝이 맞는지 귀로 확인하는 페이지입니다. 칸을 누르면 그 소리가 납니다.</p>
+  <div class="note">
+    <strong>1분이면 끝나는 확인법</strong><br>
+    「줄마다 하나씩 듣기」를 누르면 가·나·다·라·마·바·사·아·자·차·카·타·파·하 열넷만 차례로 들려줍니다. 이것만 맞으면 나머지도 맞습니다.<br><br>
+    소리와 글자가 다른 칸이 있으면 그 칸을 <strong>길게 눌러</strong> 표시해 두세요. 아래에 목록이 모입니다.
+  </div>
+  <div class="bar">
+    <button class="btn" id="rowTest">▶ 줄마다 하나씩 듣기</button>
+    <button class="btn soft" id="allTest">▶ 전부 듣기</button>
+    <button class="btn soft" id="stopBtn">■ 멈춤</button>
+    <span id="status">준비 중…</span>
+  </div>
+  <div id="marks"><strong>이상한 칸</strong><div class="list" id="markList"></div></div>
+  <div id="body"></div>
+</div>
+
+<audio id="au" preload="auto"></audio>
+
+<script src="data.js"></script>
+<script>
+(function(){
+const D=window.HANGUL_DATA;
+const MAP=(D.audio&&D.audio.map)||{};
+const CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+const JUNG=["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
+const compose=(c,v)=>String.fromCharCode(0xAC00+(CHO.indexOf(c)*21+JUNG.indexOf(v))*28);
+const cons=["ㄱ","ㄴ","ㄷ","ㄹ","ㅁ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+const vows=["ㅏ","ㅑ","ㅓ","ㅕ","ㅗ","ㅛ","ㅜ","ㅠ","ㅡ","ㅣ","ㅐ","ㅔ"];
+const $=s=>document.querySelector(s);
+const au=$('#au');
+au.src=(D.audio&&D.audio.file)||'audio/voice.mp3';
+let timer=null, stopAll=false;
+au.addEventListener('loadedmetadata',()=>{ $('#status').textContent=Object.keys(MAP).length+'개 · '+au.duration.toFixed(0)+'초'; });
+au.addEventListener('error',()=>{ $('#status').textContent='소리 파일을 못 읽었어요 ('+au.getAttribute('src')+')'; });
+function play(key){
+  return new Promise(res=>{
+    const seg=MAP[key];
+    if(!seg){ res(); return; }
+    clearInterval(timer);
+    const s=seg[0], d=seg[1], end=s+d;
+    try{ au.currentTime=s; }catch(e){}
+    const p=au.play(); if(p&&p.catch) p.catch(function(){});
+    timer=setInterval(function(){ if(au.currentTime>=end||au.paused){ clearInterval(timer); au.pause(); res(); } },25);
+    setTimeout(function(){ clearInterval(timer); au.pause(); res(); }, d*1000+900);
+  });
+}
+let n=0;
+function cell(key,wide){
+  const b=document.createElement('button');
+  b.className='item'+(wide?' wide':''); b.dataset.key=key; n++;
+  b.innerHTML='<span class="lab"></span><span class="n">'+n+'</span>';
+  b.querySelector('.lab').textContent=key;
+  b.onclick=function(){ highlight(b); play(key); };
+  let t=null;
+  b.addEventListener('pointerdown',function(){ t=setTimeout(function(){ b.classList.toggle('marked'); sync(); },600); });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(e){ b.addEventListener(e,function(){ clearTimeout(t); }); });
+  return b;
+}
+function sync(){
+  const ms=[].slice.call(document.querySelectorAll('.item.marked')).map(function(x){ return x.dataset.key; });
+  $('#marks').style.display=ms.length?'block':'none';
+  $('#markList').textContent=ms.join('  ·  ');
+}
+function highlight(b){
+  document.querySelectorAll('.item.playing').forEach(function(x){ x.classList.remove('playing'); });
+  b.classList.add('playing'); b.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function build(){
+  const body=$('#body');
+  cons.forEach(function(c){
+    const h=document.createElement('h2'); h.textContent=c+' 줄'; body.appendChild(h);
+    const g=document.createElement('div'); g.className='grid';
+    vows.forEach(function(v){ g.appendChild(cell(compose(c,v))); });
+    body.appendChild(g);
+  });
+  let h=document.createElement('h2'); h.textContent='낱말'; body.appendChild(h);
+  let g=document.createElement('div'); g.className='grid';
+  D.words.forEach(function(w){ g.appendChild(cell(w.w)); }); body.appendChild(g);
+  h=document.createElement('h2'); h.textContent='쵸코가 하는 말'; body.appendChild(h);
+  g=document.createElement('div'); g.className='grid wide';
+  const talk=[];
+  Object.keys(D.choco).forEach(function(k){ D.choco[k].forEach(function(t){ if(talk.indexOf(t)<0) talk.push(t); }); });
+  talk.forEach(function(t){ g.appendChild(cell(t,true)); }); body.appendChild(g);
+}
+async function run(keys){
+  stopAll=false;
+  for(const k of keys){
+    if(stopAll) break;
+    const b=document.querySelector('.item[data-key="'+CSS.escape(k)+'"]');
+    if(b) highlight(b);
+    await play(k);
+    await new Promise(function(r){ setTimeout(r,200); });
+  }
+}
+$('#rowTest').onclick=function(){ run(cons.map(function(c){ return compose(c,'ㅏ'); })); };
+$('#allTest').onclick=function(){
+  const ks=[];
+  cons.forEach(function(c){ vows.forEach(function(v){ ks.push(compose(c,v)); }); });
+  D.words.forEach(function(w){ ks.push(w.w); });
+  Object.keys(D.choco).forEach(function(k){ D.choco[k].forEach(function(t){ if(ks.indexOf(t)<0) ks.push(t); }); });
+  run(ks);
+};
+$('#stopBtn').onclick=function(){ stopAll=true; clearInterval(timer); au.pause(); };
+build();
+})();
+</script>
+</body>
+</html>
