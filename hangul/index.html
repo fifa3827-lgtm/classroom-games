@@ -423,8 +423,11 @@ function starsHTML(n){ let h=''; for(let i=1;i<=3;i++) h += '<span class="'+(i<=
 /* ---------- 홈 ---------- */
 function nextLesson(){
   const c = cfg();
+  const board = D.lessons.find(l=>l.free && c.unlockedStages.includes(l.stage));
+  // 처음 두 번은 글자판부터. 규칙을 스스로 찾는 활동이 먼저다.
+  if(board && (store.boardRuns||0) < 2) return board;
   const scored = D.lessons.filter(l=>!l.free && c.unlockedStages.includes(l.stage));
-  return scored.find(l=>(store.stars[l.id]||0) < 3) || D.lessons.find(l=>l.free) || D.lessons[0];
+  return scored.find(l=>(store.stars[l.id]||0) < 3) || board || D.lessons[0];
 }
 function renderHome(){
   const c = cfg();
@@ -822,7 +825,10 @@ $('#tClose').onclick = ()=>{
 
 /* 버튼 */
 $('#backBtn').onclick = ()=>{ sfx.tap(); Voice.stop(); stopRec(); if(cur && cur.lesson.kind==='board' && cur.taps>0){ finishBoard(); } else { renderHome(); show('home'); } };
-function finishBoard(){ renderHome(); show('home'); }
+function finishBoard(){
+  if(cur && cur.taps >= 5){ store.boardRuns = (store.boardRuns||0) + 1; save(); }
+  renderHome(); show('home');
+}
 $('#homeBtn').onclick = ()=>{ sfx.tap(); renderHome(); show('home'); };
 $('#againBtn').onclick = ()=>{ sfx.tap(); startLesson(cur.lesson); };
 $('#startBtn').onclick = async ()=>{
