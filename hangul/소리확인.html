@@ -28,6 +28,9 @@ h2{font-family:"Jua",sans-serif;font-weight:400;font-size:19px;margin:16px 0 0;c
 .item .n{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .item.playing{background:var(--mint);border-color:var(--mint-deep)}
 .item.marked{background:#FFF1EA;border-color:var(--peach-deep)}
+.item.tts{border-style:dashed;opacity:.72}
+.item.tts .n::after{content:" · 녹음 전";color:var(--peach-deep)}
+h2 small{font-family:"Gowun Dodum",sans-serif;font-size:13px;color:var(--muted);margin-left:8px}
 .note{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px 16px;line-height:1.65}
 .note strong{color:var(--brown)}
 #marks{background:#FFF5EF;border:2px solid var(--peach-deep);border-radius:14px;padding:14px 16px;display:none}
@@ -41,11 +44,12 @@ h2{font-family:"Jua",sans-serif;font-weight:400;font-size:19px;margin:16px 0 0;c
   <div class="note">
     <strong>1분이면 끝나는 확인법</strong><br>
     「줄마다 하나씩 듣기」를 누르면 가·나·다·라·마·바·사·아·자·차·카·타·파·하 열넷만 차례로 들려줍니다. 이것만 맞으면 나머지도 맞습니다.<br><br>
-    소리와 글자가 다른 칸이 있으면 그 칸을 <strong>길게 눌러</strong> 표시해 두세요. 아래에 목록이 모입니다.
+    소리와 글자가 다른 칸이 있으면 그 칸을 <strong>길게 눌러</strong> 표시해 두세요. 아래에 목록이 모입니다.<br><br>아래쪽 <strong>2·3단계</strong>(받침·교과서 낱말·문장)는 아직 녹음 전이라 점선 칸으로 나오고, 누르면 기기의 기계 음성으로 읽어 줍니다. 녹음대본2.txt를 녹음해 넣으면 실선으로 바뀝니다.
   </div>
   <div class="bar">
     <button class="btn" id="rowTest">▶ 줄마다 하나씩 듣기</button>
-    <button class="btn soft" id="allTest">▶ 전부 듣기</button>
+    <button class="btn soft" id="allTest">▶ 1단계 전부 듣기</button>
+    <button class="btn soft" id="s23Test">▶ 2·3단계 듣기</button>
     <button class="btn soft" id="stopBtn">■ 멈춤</button>
     <span id="status">준비 중…</span>
   </div>
@@ -63,6 +67,8 @@ const MAP=(D.audio&&D.audio.map)||{};
 const CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 const JUNG=["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
 const compose=(c,v)=>String.fromCharCode(0xAC00+(CHO.indexOf(c)*21+JUNG.indexOf(v))*28);
+const JONG=["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+const composeJ=(base,j)=>String.fromCharCode(base.charCodeAt(0)+JONG.indexOf(j));
 const cons=["ㄱ","ㄴ","ㄷ","ㄹ","ㅁ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 const vows=["ㅏ","ㅑ","ㅓ","ㅕ","ㅗ","ㅛ","ㅜ","ㅠ","ㅡ","ㅣ","ㅐ","ㅔ"];
 const $=s=>document.querySelector(s);
@@ -74,7 +80,7 @@ au.addEventListener('error',()=>{ $('#status').textContent='소리 파일을 못
 function play(key){
   return new Promise(res=>{
     const seg=MAP[key];
-    if(!seg){ res(); return; }
+    if(!seg){ tts(key).then(res); return; }
     clearInterval(timer);
     const s=seg[0], d=seg[1], end=s+d;
     try{ au.currentTime=s; }catch(e){}
@@ -83,10 +89,19 @@ function play(key){
     setTimeout(function(){ clearInterval(timer); au.pause(); res(); }, d*1000+900);
   });
 }
+function tts(text){
+  return new Promise(function(res){
+    if(!('speechSynthesis' in window)){ res(); return; }
+    try{ speechSynthesis.cancel(); }catch(e){}
+    const u=new SpeechSynthesisUtterance(text); u.lang='ko-KR'; u.rate=0.85;
+    u.onend=res; u.onerror=res; speechSynthesis.speak(u);
+    setTimeout(res, 800+text.length*350);
+  });
+}
 let n=0;
 function cell(key,wide){
   const b=document.createElement('button');
-  b.className='item'+(wide?' wide':''); b.dataset.key=key; n++;
+  b.className='item'+(wide?' wide':'')+(MAP[key]?'':' tts'); b.dataset.key=key; n++;
   b.innerHTML='<span class="lab"></span><span class="n">'+n+'</span>';
   b.querySelector('.lab').textContent=key;
   b.onclick=function(){ highlight(b); play(key); };
@@ -120,6 +135,35 @@ function build(){
   const talk=[];
   Object.keys(D.choco).forEach(function(k){ D.choco[k].forEach(function(t){ if(talk.indexOf(t)<0) talk.push(t); }); });
   talk.forEach(function(t){ g.appendChild(cell(t,true)); }); body.appendChild(g);
+
+  // ── 2·3단계 (녹음대본2.txt 순서)
+  const S23=stage23Keys();
+  const rec=S23.filter(function(k){ return !!MAP[k]; }).length;
+  h=document.createElement('h2'); h.innerHTML='2·3단계 <small>'+rec+' / '+S23.length+' 녹음됨 · 나머지는 기계 음성</small>'; body.appendChild(h);
+  h=document.createElement('h2'); h.textContent='2단계 · 받침 글자'; h.style.marginTop='6px'; body.appendChild(h);
+  (D.jongBases||[]).forEach(function(base){
+    const g2=document.createElement('div'); g2.className='grid';
+    (D.jong||[]).forEach(function(j){ g2.appendChild(cell(composeJ(base,j))); });
+    body.appendChild(g2); g2.style.marginBottom='6px';
+  });
+  function wordSec(title,list,wide){
+    const hh=document.createElement('h2'); hh.textContent=title; body.appendChild(hh);
+    const gg=document.createElement('div'); gg.className='grid'+(wide?' wide':'');
+    list.forEach(function(t){ gg.appendChild(cell(t,wide)); }); body.appendChild(gg);
+  }
+  wordSec('2단계 · 받침 낱말', (D.words2||[]).map(function(w){ return w.w; }).filter(function(w){ return !document.querySelector('.item[data-key="'+CSS.escape(w)+'"]'); }));
+  wordSec('3단계 · 교과서 낱말', (D.words3||[]).map(function(w){ return w.w; }));
+  wordSec('3단계 · 문장', (D.sentences||[]).map(function(x){ return x.s; }), true);
+  const extra=[]; Object.keys(D.chocoText||{}).forEach(function(k){ D.chocoText[k].forEach(function(t){ if(extra.indexOf(t)<0&&talk.indexOf(t)<0) extra.push(t); }); });
+  if(extra.length) wordSec('쵸코가 하는 말 (추가)', extra, true);
+}
+function stage23Keys(){
+  const ks=[];
+  (D.jongBases||[]).forEach(function(base){ (D.jong||[]).forEach(function(j){ ks.push(composeJ(base,j)); }); });
+  (D.words2||[]).forEach(function(w){ if(ks.indexOf(w.w)<0) ks.push(w.w); });
+  (D.words3||[]).forEach(function(w){ ks.push(w.w); });
+  (D.sentences||[]).forEach(function(x){ ks.push(x.s); });
+  return ks;
 }
 async function run(keys){
   stopAll=false;
@@ -139,7 +183,8 @@ $('#allTest').onclick=function(){
   Object.keys(D.choco).forEach(function(k){ D.choco[k].forEach(function(t){ if(ks.indexOf(t)<0) ks.push(t); }); });
   run(ks);
 };
-$('#stopBtn').onclick=function(){ stopAll=true; clearInterval(timer); au.pause(); };
+$('#s23Test').onclick=function(){ run(stage23Keys()); };
+$('#stopBtn').onclick=function(){ stopAll=true; clearInterval(timer); au.pause(); try{ speechSynthesis.cancel(); }catch(e){} };
 build();
 })();
 </script>
