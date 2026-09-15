@@ -1,0 +1,290 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>쵸코와 한글 · 가정 과제</title><style>
+@page { size: A4; margin: 12mm 12mm 10mm; }
+*{ box-sizing:border-box; }
+body{ margin:0; font-family:"Noto Sans CJK KR",sans-serif; color:#242424; font-size:10pt;
+  -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.sheet{ page-break-after:always; height:265mm; display:flex; flex-direction:column; }
+.sheet:last-child{ page-break-after:auto; }
+
+.top{ display:flex; align-items:center; gap:4mm; border-bottom:2.4pt solid #8B5A3C;
+  padding-bottom:2.6mm; margin-bottom:4mm; }
+.top .cat{ width:18mm; height:18mm; flex:none; }
+.top .cat svg{ width:100%; height:100%; display:block; }
+.top h1{ font-size:16pt; margin:0; }
+.top .sub{ font-size:9.6pt; color:#6b6b6b; margin-top:1mm; }
+.top .wk{ margin-left:auto; text-align:right; font-size:9pt; color:#8B5A3C; white-space:nowrap; }
+.top .wk b{ display:block; font-size:13pt; }
+
+h2{ font-size:11pt; margin:0 0 2.4mm; color:#8B5A3C; }
+h2 span{ font-weight:400; color:#999; font-size:8.8pt; }
+h2.mt{ margin-top:3.6mm; }
+
+.grid-row{ display:flex; gap:2.4mm; margin-bottom:2.4mm; flex-wrap:wrap; }
+.cell{ width:19.5mm; height:19.5mm; flex:none; border:1pt solid #c9c2b6; border-radius:1.5mm; position:relative;
+  background-image:
+    repeating-linear-gradient(to bottom, #ddd5c7 0 1.6mm, transparent 1.6mm 3.2mm),
+    repeating-linear-gradient(to right, #ddd5c7 0 1.6mm, transparent 1.6mm 3.2mm);
+  background-size: .45mm 100%, 100% .45mm;
+  background-position:center center, center center; background-repeat:no-repeat, no-repeat; }
+.cell .ch{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:33pt; font-weight:700; line-height:1; }
+.cell .ch.light{ color:#ddd6ca; }
+
+.readbar{ display:flex; gap:2.2mm; flex-wrap:wrap; }
+.readbar .c{ min-width:17mm; height:15mm; padding:0 2mm; border:1pt solid #c9c2b6; border-radius:1.6mm;
+  display:flex; align-items:center; justify-content:center; font-size:19pt; font-weight:700; color:#8a8378; }
+
+.words{ display:flex; gap:5mm; flex-wrap:wrap; }
+.wordbox{ border:1pt solid #c9c2b6; border-radius:2mm; padding:3mm 4mm; display:flex; align-items:center; gap:3mm; }
+.wordbox .pic{ font-size:24pt; }
+.wordbox .w{ font-size:21pt; font-weight:700; }
+.wordbox .en{ font-size:8pt; color:#999; }
+
+.days{ display:flex; gap:2.4mm; }
+.day{ flex:1; border:1pt solid #c9c2b6; border-radius:2mm; padding:2.6mm 2mm; text-align:center; }
+.day .d{ font-size:9pt; color:#8B5A3C; font-weight:700; }
+.day .t{ font-size:8.2pt; color:#777; line-height:1.4; margin-top:1mm; min-height:9mm; }
+.day .box{ width:9mm; height:9mm; border:1.4pt solid #c9c2b6; border-radius:1.4mm; margin:1.6mm auto 0; }
+
+.qrrow{ display:flex; gap:5mm; align-items:center; border:1pt solid #d8cdbe; background:#FFFBF4;
+  border-radius:2.5mm; padding:4mm 5mm; }
+.qrrow .qr{ width:27mm; height:27mm; flex:none; }
+.qrrow .qr svg{ width:100%; height:100%; display:block; shape-rendering:crispEdges; }
+.qrrow .txt{ font-size:9.4pt; line-height:1.65; }
+.qrrow .txt b{ color:#8B5A3C; }
+.qrrow .txt .url{ font-size:8.4pt; color:#888; word-break:break-all; }
+
+.parent{ margin-top:auto; border-top:1.2pt solid #8B5A3C; padding-top:3mm; font-size:9.2pt; line-height:1.7; }
+.parent .h{ color:#8B5A3C; font-weight:700; margin-bottom:1.2mm; }
+.sign{ display:flex; gap:6mm; margin-top:3mm; font-size:9pt; color:#666; }
+.sign span{ border-bottom:.8pt solid #bbb; min-width:34mm; display:inline-block; }
+
+.banner{max-width:186mm;margin:6mm auto 10mm;border:1.4pt solid #8B5A3C;border-radius:3mm;background:#FFFBF4;padding:6mm 7mm;font-size:10.5pt;line-height:1.8}.banner b{color:#8B5A3C}.banner ol{margin:2mm 0 0;padding-left:6mm}@media print{.banner{display:none !important}}</style></head><body><div class="banner"><b>가정 학습 과제 · 주 1회 A4 1장 · 6주분</b><br>이 페이지를 그대로 인쇄하면 과제지가 됩니다. 이 안내는 인쇄되지 않습니다.<ol><li>Ctrl + P (맥은 ⌘ + P)</li><li>용지 <b>A4</b>, 배율 <b>100%</b> — 「용지에 맞춤」은 끕니다.</li><li>머리글·바닥글 <b>끄기</b>, 배경 그래픽 <b>켜기</b></li><li>한 주에 한 장씩, 금요일에 보냅니다.</li></ol></div><div class="sheet">
+  <div class="top">
+    <div class="cat"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M92 100q24-6 16-30" stroke="#D6A44A" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="#B9873A" stroke-width="3.5" stroke-linecap="round"/><path d="M28 42 L22 10 L50 26Z" fill="#D6A44A" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M92 42 L98 10 L70 26Z" fill="#9B958E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M31 37 L28 19 L43 28Z" fill="#F4A9A9"/><path d="M89 37 L92 19 L77 28Z" fill="#F4A9A9"/><ellipse cx="60" cy="88" rx="34" ry="29" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="44" cy="97" rx="13" ry="10" fill="#9B958E" opacity=".85" transform="rotate(-15 44 97)"/><path d="M72 94q3-4 6 0q3-3 5 1q1 5-5 9q-7-4-6-10z" fill="#D6A44A"/><ellipse cx="47" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><ellipse cx="73" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><circle cx="60" cy="54" r="33" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="45" cy="54" rx="16" ry="12" fill="#A4502A" transform="rotate(-18 45 54)"/><circle cx="46" cy="55" r="8" fill="#2B2724"/><circle cx="74" cy="55" r="8" fill="#2B2724"/><circle cx="49" cy="52" r="2.6" fill="#fff"/><circle cx="77" cy="52" r="2.6" fill="#fff"/><path d="M56 63 l4 4 l4-4z" fill="#F4A9A9" stroke="#2E2A28" stroke-width="1.4" stroke-linejoin="round"/><path d="M52 68q4 4 8 0q4 4 8 0" stroke="#2E2A28" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="#2E2A28" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg></div>
+    <div><h1>쵸코와 한글 · 집에서 하는 3분</h1>
+      <div class="sub">모음 다섯과 ㄱ 줄</div></div>
+    <div class="wk">1주차<b>이름 ______</b></div>
+  </div>
+
+  <h2>이번 주 낱자 <span>흐린 글자를 덧쓰고 빈칸에 혼자 써요</span></h2>
+  <div class="grid-row"><div class="cell"><div class="ch light">ㅏ</div></div><div class="cell"><div class="ch light">ㅓ</div></div><div class="cell"><div class="ch light">ㅗ</div></div><div class="cell"><div class="ch light">ㅜ</div></div><div class="cell"><div class="ch light">ㅣ</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">소리 내어 읽기 <span>읽은 글자에 색칠해요</span></h2>
+  <div class="readbar"><div class="c">가</div><div class="c">거</div><div class="c">고</div><div class="c">구</div><div class="c">기</div></div>
+
+  <h2 class="mt">이번 주 낱말</h2>
+  <div class="words"><div class="wordbox"><span class="pic">🥩</span><span><span class="w">고기</span><br><span class="en">meat</span></span></div></div>
+  <div style="height:2.5mm"></div>
+  <div class="grid-row"><div class="cell"><div class="ch light">고</div></div><div class="cell"><div class="ch light">기</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">하루 3분 <span>한 칸씩 색칠하거나 스티커를 붙여요</span></h2>
+  <div class="days"><div class="day"><div class="d">월</div><div class="t">쵸코와 3분<br>글자판 누르기</div><div class="box"></div></div><div class="day"><div class="d">화</div><div class="t">이번 주 글자<br>소리 내어 읽기</div><div class="box"></div></div><div class="day"><div class="d">수</div><div class="t">쓰기 칸 채우기</div><div class="box"></div></div><div class="day"><div class="d">목</div><div class="t">낱말 읽고 쓰기</div><div class="box"></div></div><div class="day"><div class="d">금</div><div class="t">쵸코와 3분<br>별 모으기</div><div class="box"></div></div></div>
+
+  <div style="height:4mm"></div>
+  <div class="qrrow">
+    <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" class="segno"><path class="qrline" stroke="#000" d="M2 2.5h7m2 0h2m3 0h1m2 0h2m1 0h1m3 0h1m1 0h7m-33 1h1m5 0h1m1 0h1m2 0h1m1 0h2m5 0h1m1 0h1m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h6m2 0h1m3 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m4 0h3m1 0h1m1 0h4m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m3 0h3m3 0h2m2 0h1m5 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h4m2 0h1m3 0h3m3 0h1m-25 1h1m5 0h1m1 0h1m2 0h5m1 0h1m7 0h2m2 0h3m-29 1h2m2 0h1m1 0h1m2 0h1m1 0h6m3 0h2m3 0h3m-31 1h2m4 0h4m1 0h2m2 0h1m5 0h2m2 0h2m1 0h1m1 0h2m-32 1h5m2 0h1m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m1 0h9m-30 1h1m2 0h4m1 0h1m1 0h4m1 0h3m2 0h2m1 0h2m3 0h2m-31 1h4m1 0h1m2 0h2m1 0h2m1 0h1m1 0h3m1 0h2m2 0h2m1 0h1m1 0h2m-31 1h1m1 0h1m1 0h4m1 0h1m1 0h1m3 0h1m7 0h4m1 0h2m-32 1h1m2 0h1m4 0h5m2 0h1m3 0h1m2 0h2m1 0h1m2 0h3m1 0h1m-33 1h2m1 0h2m1 0h3m1 0h1m1 0h1m4 0h1m1 0h2m3 0h2m1 0h2m3 0h1m-33 1h2m1 0h1m1 0h1m1 0h1m3 0h1m1 0h8m1 0h2m2 0h1m2 0h2m1 0h1m-33 1h1m4 0h5m2 0h4m3 0h1m2 0h3m2 0h1m1 0h2m1 0h1m-33 1h1m1 0h1m1 0h1m2 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h2m1 0h2m1 0h5m-33 1h1m2 0h1m1 0h5m2 0h5m1 0h1m5 0h2m2 0h2m1 0h2m-33 1h1m1 0h4m1 0h1m2 0h2m1 0h2m1 0h4m2 0h2m3 0h2m1 0h1m-31 1h1m1 0h1m1 0h1m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m-32 1h1m1 0h4m1 0h2m13 0h1m3 0h1m2 0h4m-33 1h2m1 0h4m1 0h3m2 0h3m3 0h2m1 0h1m1 0h5m3 0h1m-25 1h1m6 0h2m2 0h3m2 0h1m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h2m3 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m3 0h2m4 0h1m1 0h1m4 0h2m3 0h4m-32 1h1m1 0h3m1 0h1m2 0h2m1 0h2m4 0h2m2 0h1m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h4m1 0h3m1 0h2m1 0h3m-33 1h1m1 0h3m1 0h1m3 0h1m3 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h2m-33 1h1m5 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h6m-31 1h7m1 0h1m1 0h1m2 0h1m3 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1"/></svg>
+</div>
+    <div class="txt">
+      <b>휴대폰으로 찍으면 쵸코가 나와요.</b><br>
+      이번 주에 할 것 — 글자판 · 모음 여섯<br>
+      <span class="url">https://fifa3827-lgtm.github.io/classroom-games/hangul/</span>
+    </div>
+  </div>
+
+  <div class="parent">
+    <div class="h">부모님께</div>
+    이번 주는 모음 다섯과 ㄱ 줄입니다. 아이에게 글자를 가르치실 필요는 없습니다. 하루 3분, 아이가 소리 내어 읽는 것을 들어 주시고 한 번 따라 읽어 주시면 됩니다.
+    <div class="sign">확인 <span></span> &nbsp; 날짜 <span></span></div>
+  </div>
+</div><div class="sheet">
+  <div class="top">
+    <div class="cat"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M92 100q24-6 16-30" stroke="#D6A44A" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="#B9873A" stroke-width="3.5" stroke-linecap="round"/><path d="M28 42 L22 10 L50 26Z" fill="#D6A44A" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M92 42 L98 10 L70 26Z" fill="#9B958E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M31 37 L28 19 L43 28Z" fill="#F4A9A9"/><path d="M89 37 L92 19 L77 28Z" fill="#F4A9A9"/><ellipse cx="60" cy="88" rx="34" ry="29" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="44" cy="97" rx="13" ry="10" fill="#9B958E" opacity=".85" transform="rotate(-15 44 97)"/><path d="M72 94q3-4 6 0q3-3 5 1q1 5-5 9q-7-4-6-10z" fill="#D6A44A"/><ellipse cx="47" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><ellipse cx="73" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><circle cx="60" cy="54" r="33" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="45" cy="54" rx="16" ry="12" fill="#A4502A" transform="rotate(-18 45 54)"/><circle cx="46" cy="55" r="8" fill="#2B2724"/><circle cx="74" cy="55" r="8" fill="#2B2724"/><circle cx="49" cy="52" r="2.6" fill="#fff"/><circle cx="77" cy="52" r="2.6" fill="#fff"/><path d="M56 63 l4 4 l4-4z" fill="#F4A9A9" stroke="#2E2A28" stroke-width="1.4" stroke-linejoin="round"/><path d="M52 68q4 4 8 0q4 4 8 0" stroke="#2E2A28" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="#2E2A28" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg></div>
+    <div><h1>쵸코와 한글 · 집에서 하는 3분</h1>
+      <div class="sub">ㄴ 줄과 ㄷ 줄</div></div>
+    <div class="wk">2주차<b>이름 ______</b></div>
+  </div>
+
+  <h2>이번 주 낱자 <span>흐린 글자를 덧쓰고 빈칸에 혼자 써요</span></h2>
+  <div class="grid-row"><div class="cell"><div class="ch light">ㄱ</div></div><div class="cell"><div class="ch light">ㄴ</div></div><div class="cell"><div class="ch light">ㄷ</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">소리 내어 읽기 <span>읽은 글자에 색칠해요</span></h2>
+  <div class="readbar"><div class="c">나</div><div class="c">너</div><div class="c">노</div><div class="c">누</div><div class="c">니</div><div class="c">다</div><div class="c">도</div><div class="c">두</div></div>
+
+  <h2 class="mt">이번 주 낱말</h2>
+  <div class="words"><div class="wordbox"><span class="pic">🌳</span><span><span class="w">나무</span><br><span class="en">tree</span></span></div><div class="wordbox"><span class="pic">👞</span><span><span class="w">구두</span><br><span class="en">shoes</span></span></div></div>
+  <div style="height:2.5mm"></div>
+  <div class="grid-row"><div class="cell"><div class="ch light">나</div></div><div class="cell"><div class="ch light">무</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div><div class="grid-row"><div class="cell"><div class="ch light">구</div></div><div class="cell"><div class="ch light">두</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">하루 3분 <span>한 칸씩 색칠하거나 스티커를 붙여요</span></h2>
+  <div class="days"><div class="day"><div class="d">월</div><div class="t">쵸코와 3분<br>글자판 누르기</div><div class="box"></div></div><div class="day"><div class="d">화</div><div class="t">이번 주 글자<br>소리 내어 읽기</div><div class="box"></div></div><div class="day"><div class="d">수</div><div class="t">쓰기 칸 채우기</div><div class="box"></div></div><div class="day"><div class="d">목</div><div class="t">낱말 읽고 쓰기</div><div class="box"></div></div><div class="day"><div class="d">금</div><div class="t">쵸코와 3분<br>별 모으기</div><div class="box"></div></div></div>
+
+  <div style="height:4mm"></div>
+  <div class="qrrow">
+    <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" class="segno"><path class="qrline" stroke="#000" d="M2 2.5h7m2 0h2m3 0h1m2 0h2m1 0h1m3 0h1m1 0h7m-33 1h1m5 0h1m1 0h1m2 0h1m1 0h2m5 0h1m1 0h1m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h6m2 0h1m3 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m4 0h3m1 0h1m1 0h4m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m3 0h3m3 0h2m2 0h1m5 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h4m2 0h1m3 0h3m3 0h1m-25 1h1m5 0h1m1 0h1m2 0h5m1 0h1m7 0h2m2 0h3m-29 1h2m2 0h1m1 0h1m2 0h1m1 0h6m3 0h2m3 0h3m-31 1h2m4 0h4m1 0h2m2 0h1m5 0h2m2 0h2m1 0h1m1 0h2m-32 1h5m2 0h1m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m1 0h9m-30 1h1m2 0h4m1 0h1m1 0h4m1 0h3m2 0h2m1 0h2m3 0h2m-31 1h4m1 0h1m2 0h2m1 0h2m1 0h1m1 0h3m1 0h2m2 0h2m1 0h1m1 0h2m-31 1h1m1 0h1m1 0h4m1 0h1m1 0h1m3 0h1m7 0h4m1 0h2m-32 1h1m2 0h1m4 0h5m2 0h1m3 0h1m2 0h2m1 0h1m2 0h3m1 0h1m-33 1h2m1 0h2m1 0h3m1 0h1m1 0h1m4 0h1m1 0h2m3 0h2m1 0h2m3 0h1m-33 1h2m1 0h1m1 0h1m1 0h1m3 0h1m1 0h8m1 0h2m2 0h1m2 0h2m1 0h1m-33 1h1m4 0h5m2 0h4m3 0h1m2 0h3m2 0h1m1 0h2m1 0h1m-33 1h1m1 0h1m1 0h1m2 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h2m1 0h2m1 0h5m-33 1h1m2 0h1m1 0h5m2 0h5m1 0h1m5 0h2m2 0h2m1 0h2m-33 1h1m1 0h4m1 0h1m2 0h2m1 0h2m1 0h4m2 0h2m3 0h2m1 0h1m-31 1h1m1 0h1m1 0h1m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m-32 1h1m1 0h4m1 0h2m13 0h1m3 0h1m2 0h4m-33 1h2m1 0h4m1 0h3m2 0h3m3 0h2m1 0h1m1 0h5m3 0h1m-25 1h1m6 0h2m2 0h3m2 0h1m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h2m3 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m3 0h2m4 0h1m1 0h1m4 0h2m3 0h4m-32 1h1m1 0h3m1 0h1m2 0h2m1 0h2m4 0h2m2 0h1m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h4m1 0h3m1 0h2m1 0h3m-33 1h1m1 0h3m1 0h1m3 0h1m3 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h2m-33 1h1m5 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h6m-31 1h7m1 0h1m1 0h1m2 0h1m3 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1"/></svg>
+</div>
+    <div class="txt">
+      <b>휴대폰으로 찍으면 쵸코가 나와요.</b><br>
+      이번 주에 할 것 — 글자판 · 글자 만들기<br>
+      <span class="url">https://fifa3827-lgtm.github.io/classroom-games/hangul/</span>
+    </div>
+  </div>
+
+  <div class="parent">
+    <div class="h">부모님께</div>
+    글자가 두 조각(자음+모음)으로 만들어진다는 것을 아이가 알아 가는 중입니다. 「나」가 왜 ㄴ과 ㅏ인지 아이에게 물어봐 주세요. 아이가 설명하면 그 주는 성공입니다.
+    <div class="sign">확인 <span></span> &nbsp; 날짜 <span></span></div>
+  </div>
+</div><div class="sheet">
+  <div class="top">
+    <div class="cat"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M92 100q24-6 16-30" stroke="#D6A44A" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="#B9873A" stroke-width="3.5" stroke-linecap="round"/><path d="M28 42 L22 10 L50 26Z" fill="#D6A44A" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M92 42 L98 10 L70 26Z" fill="#9B958E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M31 37 L28 19 L43 28Z" fill="#F4A9A9"/><path d="M89 37 L92 19 L77 28Z" fill="#F4A9A9"/><ellipse cx="60" cy="88" rx="34" ry="29" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="44" cy="97" rx="13" ry="10" fill="#9B958E" opacity=".85" transform="rotate(-15 44 97)"/><path d="M72 94q3-4 6 0q3-3 5 1q1 5-5 9q-7-4-6-10z" fill="#D6A44A"/><ellipse cx="47" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><ellipse cx="73" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><circle cx="60" cy="54" r="33" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="45" cy="54" rx="16" ry="12" fill="#A4502A" transform="rotate(-18 45 54)"/><circle cx="46" cy="55" r="8" fill="#2B2724"/><circle cx="74" cy="55" r="8" fill="#2B2724"/><circle cx="49" cy="52" r="2.6" fill="#fff"/><circle cx="77" cy="52" r="2.6" fill="#fff"/><path d="M56 63 l4 4 l4-4z" fill="#F4A9A9" stroke="#2E2A28" stroke-width="1.4" stroke-linejoin="round"/><path d="M52 68q4 4 8 0q4 4 8 0" stroke="#2E2A28" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="#2E2A28" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg></div>
+    <div><h1>쵸코와 한글 · 집에서 하는 3분</h1>
+      <div class="sub">ㅁ 줄과 ㅅ 줄</div></div>
+    <div class="wk">3주차<b>이름 ______</b></div>
+  </div>
+
+  <h2>이번 주 낱자 <span>흐린 글자를 덧쓰고 빈칸에 혼자 써요</span></h2>
+  <div class="grid-row"><div class="cell"><div class="ch light">ㅁ</div></div><div class="cell"><div class="ch light">ㅅ</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">소리 내어 읽기 <span>읽은 글자에 색칠해요</span></h2>
+  <div class="readbar"><div class="c">마</div><div class="c">머</div><div class="c">모</div><div class="c">무</div><div class="c">미</div><div class="c">사</div><div class="c">소</div><div class="c">시</div></div>
+
+  <h2 class="mt">이번 주 낱말</h2>
+  <div class="words"><div class="wordbox"><span class="pic">🧢</span><span><span class="w">모자</span><br><span class="en">hat</span></span></div><div class="wordbox"><span class="pic">🍠</span><span><span class="w">고구마</span><br><span class="en">sweet potato</span></span></div></div>
+  <div style="height:2.5mm"></div>
+  <div class="grid-row"><div class="cell"><div class="ch light">모</div></div><div class="cell"><div class="ch light">자</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div><div class="grid-row"><div class="cell"><div class="ch light">고</div></div><div class="cell"><div class="ch light">구</div></div><div class="cell"><div class="ch light">마</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">하루 3분 <span>한 칸씩 색칠하거나 스티커를 붙여요</span></h2>
+  <div class="days"><div class="day"><div class="d">월</div><div class="t">쵸코와 3분<br>글자판 누르기</div><div class="box"></div></div><div class="day"><div class="d">화</div><div class="t">이번 주 글자<br>소리 내어 읽기</div><div class="box"></div></div><div class="day"><div class="d">수</div><div class="t">쓰기 칸 채우기</div><div class="box"></div></div><div class="day"><div class="d">목</div><div class="t">낱말 읽고 쓰기</div><div class="box"></div></div><div class="day"><div class="d">금</div><div class="t">쵸코와 3분<br>별 모으기</div><div class="box"></div></div></div>
+
+  <div style="height:4mm"></div>
+  <div class="qrrow">
+    <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" class="segno"><path class="qrline" stroke="#000" d="M2 2.5h7m2 0h2m3 0h1m2 0h2m1 0h1m3 0h1m1 0h7m-33 1h1m5 0h1m1 0h1m2 0h1m1 0h2m5 0h1m1 0h1m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h6m2 0h1m3 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m4 0h3m1 0h1m1 0h4m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m3 0h3m3 0h2m2 0h1m5 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h4m2 0h1m3 0h3m3 0h1m-25 1h1m5 0h1m1 0h1m2 0h5m1 0h1m7 0h2m2 0h3m-29 1h2m2 0h1m1 0h1m2 0h1m1 0h6m3 0h2m3 0h3m-31 1h2m4 0h4m1 0h2m2 0h1m5 0h2m2 0h2m1 0h1m1 0h2m-32 1h5m2 0h1m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m1 0h9m-30 1h1m2 0h4m1 0h1m1 0h4m1 0h3m2 0h2m1 0h2m3 0h2m-31 1h4m1 0h1m2 0h2m1 0h2m1 0h1m1 0h3m1 0h2m2 0h2m1 0h1m1 0h2m-31 1h1m1 0h1m1 0h4m1 0h1m1 0h1m3 0h1m7 0h4m1 0h2m-32 1h1m2 0h1m4 0h5m2 0h1m3 0h1m2 0h2m1 0h1m2 0h3m1 0h1m-33 1h2m1 0h2m1 0h3m1 0h1m1 0h1m4 0h1m1 0h2m3 0h2m1 0h2m3 0h1m-33 1h2m1 0h1m1 0h1m1 0h1m3 0h1m1 0h8m1 0h2m2 0h1m2 0h2m1 0h1m-33 1h1m4 0h5m2 0h4m3 0h1m2 0h3m2 0h1m1 0h2m1 0h1m-33 1h1m1 0h1m1 0h1m2 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h2m1 0h2m1 0h5m-33 1h1m2 0h1m1 0h5m2 0h5m1 0h1m5 0h2m2 0h2m1 0h2m-33 1h1m1 0h4m1 0h1m2 0h2m1 0h2m1 0h4m2 0h2m3 0h2m1 0h1m-31 1h1m1 0h1m1 0h1m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m-32 1h1m1 0h4m1 0h2m13 0h1m3 0h1m2 0h4m-33 1h2m1 0h4m1 0h3m2 0h3m3 0h2m1 0h1m1 0h5m3 0h1m-25 1h1m6 0h2m2 0h3m2 0h1m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h2m3 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m3 0h2m4 0h1m1 0h1m4 0h2m3 0h4m-32 1h1m1 0h3m1 0h1m2 0h2m1 0h2m4 0h2m2 0h1m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h4m1 0h3m1 0h2m1 0h3m-33 1h1m1 0h3m1 0h1m3 0h1m3 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h2m-33 1h1m5 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h6m-31 1h7m1 0h1m1 0h1m2 0h1m3 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1"/></svg>
+</div>
+    <div class="txt">
+      <b>휴대폰으로 찍으면 쵸코가 나와요.</b><br>
+      이번 주에 할 것 — 낱말 채우기 · 읽어 보기<br>
+      <span class="url">https://fifa3827-lgtm.github.io/classroom-games/hangul/</span>
+    </div>
+  </div>
+
+  <div class="parent">
+    <div class="h">부모님께</div>
+    이번 주에 스물다섯 글자가 모두 나옵니다. 다 못 읽어도 괜찮습니다. 읽은 글자에 아이가 직접 색칠하게 해 주세요. 칠한 칸이 늘어나는 것이 목표입니다.
+    <div class="sign">확인 <span></span> &nbsp; 날짜 <span></span></div>
+  </div>
+</div><div class="sheet">
+  <div class="top">
+    <div class="cat"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M92 100q24-6 16-30" stroke="#D6A44A" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="#B9873A" stroke-width="3.5" stroke-linecap="round"/><path d="M28 42 L22 10 L50 26Z" fill="#D6A44A" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M92 42 L98 10 L70 26Z" fill="#9B958E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M31 37 L28 19 L43 28Z" fill="#F4A9A9"/><path d="M89 37 L92 19 L77 28Z" fill="#F4A9A9"/><ellipse cx="60" cy="88" rx="34" ry="29" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="44" cy="97" rx="13" ry="10" fill="#9B958E" opacity=".85" transform="rotate(-15 44 97)"/><path d="M72 94q3-4 6 0q3-3 5 1q1 5-5 9q-7-4-6-10z" fill="#D6A44A"/><ellipse cx="47" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><ellipse cx="73" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><circle cx="60" cy="54" r="33" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="45" cy="54" rx="16" ry="12" fill="#A4502A" transform="rotate(-18 45 54)"/><circle cx="46" cy="55" r="8" fill="#2B2724"/><circle cx="74" cy="55" r="8" fill="#2B2724"/><circle cx="49" cy="52" r="2.6" fill="#fff"/><circle cx="77" cy="52" r="2.6" fill="#fff"/><path d="M56 63 l4 4 l4-4z" fill="#F4A9A9" stroke="#2E2A28" stroke-width="1.4" stroke-linejoin="round"/><path d="M52 68q4 4 8 0q4 4 8 0" stroke="#2E2A28" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="#2E2A28" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg></div>
+    <div><h1>쵸코와 한글 · 집에서 하는 3분</h1>
+      <div class="sub">ㅂ ㅈ ㅎ 과 모음 ㅡ</div></div>
+    <div class="wk">4주차<b>이름 ______</b></div>
+  </div>
+
+  <h2>이번 주 낱자 <span>흐린 글자를 덧쓰고 빈칸에 혼자 써요</span></h2>
+  <div class="grid-row"><div class="cell"><div class="ch light">ㅂ</div></div><div class="cell"><div class="ch light">ㅈ</div></div><div class="cell"><div class="ch light">ㅎ</div></div><div class="cell"><div class="ch light">ㅡ</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">소리 내어 읽기 <span>읽은 글자에 색칠해요</span></h2>
+  <div class="readbar"><div class="c">바</div><div class="c">부</div><div class="c">자</div><div class="c">지</div><div class="c">하</div><div class="c">호</div><div class="c">그</div><div class="c">느</div></div>
+
+  <h2 class="mt">이번 주 낱말</h2>
+  <div class="words"><div class="wordbox"><span class="pic">🌊</span><span><span class="w">바다</span><br><span class="en">sea</span></span></div><div class="wordbox"><span class="pic">🦛</span><span><span class="w">하마</span><br><span class="en">hippo</span></span></div></div>
+  <div style="height:2.5mm"></div>
+  <div class="grid-row"><div class="cell"><div class="ch light">바</div></div><div class="cell"><div class="ch light">다</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div><div class="grid-row"><div class="cell"><div class="ch light">하</div></div><div class="cell"><div class="ch light">마</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">하루 3분 <span>한 칸씩 색칠하거나 스티커를 붙여요</span></h2>
+  <div class="days"><div class="day"><div class="d">월</div><div class="t">쵸코와 3분<br>글자판 누르기</div><div class="box"></div></div><div class="day"><div class="d">화</div><div class="t">이번 주 글자<br>소리 내어 읽기</div><div class="box"></div></div><div class="day"><div class="d">수</div><div class="t">쓰기 칸 채우기</div><div class="box"></div></div><div class="day"><div class="d">목</div><div class="t">낱말 읽고 쓰기</div><div class="box"></div></div><div class="day"><div class="d">금</div><div class="t">쵸코와 3분<br>별 모으기</div><div class="box"></div></div></div>
+
+  <div style="height:4mm"></div>
+  <div class="qrrow">
+    <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" class="segno"><path class="qrline" stroke="#000" d="M2 2.5h7m2 0h2m3 0h1m2 0h2m1 0h1m3 0h1m1 0h7m-33 1h1m5 0h1m1 0h1m2 0h1m1 0h2m5 0h1m1 0h1m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h6m2 0h1m3 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m4 0h3m1 0h1m1 0h4m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m3 0h3m3 0h2m2 0h1m5 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h4m2 0h1m3 0h3m3 0h1m-25 1h1m5 0h1m1 0h1m2 0h5m1 0h1m7 0h2m2 0h3m-29 1h2m2 0h1m1 0h1m2 0h1m1 0h6m3 0h2m3 0h3m-31 1h2m4 0h4m1 0h2m2 0h1m5 0h2m2 0h2m1 0h1m1 0h2m-32 1h5m2 0h1m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m1 0h9m-30 1h1m2 0h4m1 0h1m1 0h4m1 0h3m2 0h2m1 0h2m3 0h2m-31 1h4m1 0h1m2 0h2m1 0h2m1 0h1m1 0h3m1 0h2m2 0h2m1 0h1m1 0h2m-31 1h1m1 0h1m1 0h4m1 0h1m1 0h1m3 0h1m7 0h4m1 0h2m-32 1h1m2 0h1m4 0h5m2 0h1m3 0h1m2 0h2m1 0h1m2 0h3m1 0h1m-33 1h2m1 0h2m1 0h3m1 0h1m1 0h1m4 0h1m1 0h2m3 0h2m1 0h2m3 0h1m-33 1h2m1 0h1m1 0h1m1 0h1m3 0h1m1 0h8m1 0h2m2 0h1m2 0h2m1 0h1m-33 1h1m4 0h5m2 0h4m3 0h1m2 0h3m2 0h1m1 0h2m1 0h1m-33 1h1m1 0h1m1 0h1m2 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h2m1 0h2m1 0h5m-33 1h1m2 0h1m1 0h5m2 0h5m1 0h1m5 0h2m2 0h2m1 0h2m-33 1h1m1 0h4m1 0h1m2 0h2m1 0h2m1 0h4m2 0h2m3 0h2m1 0h1m-31 1h1m1 0h1m1 0h1m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m-32 1h1m1 0h4m1 0h2m13 0h1m3 0h1m2 0h4m-33 1h2m1 0h4m1 0h3m2 0h3m3 0h2m1 0h1m1 0h5m3 0h1m-25 1h1m6 0h2m2 0h3m2 0h1m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h2m3 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m3 0h2m4 0h1m1 0h1m4 0h2m3 0h4m-32 1h1m1 0h3m1 0h1m2 0h2m1 0h2m4 0h2m2 0h1m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h4m1 0h3m1 0h2m1 0h3m-33 1h1m1 0h3m1 0h1m3 0h1m3 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h2m-33 1h1m5 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h6m-31 1h7m1 0h1m1 0h1m2 0h1m3 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1"/></svg>
+</div>
+    <div class="txt">
+      <b>휴대폰으로 찍으면 쵸코가 나와요.</b><br>
+      이번 주에 할 것 — 글자 만들기 · 읽어 보기<br>
+      <span class="url">https://fifa3827-lgtm.github.io/classroom-games/hangul/</span>
+    </div>
+  </div>
+
+  <div class="parent">
+    <div class="h">부모님께</div>
+    「ㅡ」 소리는 영어에 없어 아이가 가장 어려워합니다. 「그」와 「구」를 번갈아 읽어 주시고 아이가 따라 하게 해 주세요. 정확하지 않아도 넘어갑니다.
+    <div class="sign">확인 <span></span> &nbsp; 날짜 <span></span></div>
+  </div>
+</div><div class="sheet">
+  <div class="top">
+    <div class="cat"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M92 100q24-6 16-30" stroke="#D6A44A" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="#B9873A" stroke-width="3.5" stroke-linecap="round"/><path d="M28 42 L22 10 L50 26Z" fill="#D6A44A" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M92 42 L98 10 L70 26Z" fill="#9B958E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M31 37 L28 19 L43 28Z" fill="#F4A9A9"/><path d="M89 37 L92 19 L77 28Z" fill="#F4A9A9"/><ellipse cx="60" cy="88" rx="34" ry="29" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="44" cy="97" rx="13" ry="10" fill="#9B958E" opacity=".85" transform="rotate(-15 44 97)"/><path d="M72 94q3-4 6 0q3-3 5 1q1 5-5 9q-7-4-6-10z" fill="#D6A44A"/><ellipse cx="47" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><ellipse cx="73" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><circle cx="60" cy="54" r="33" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="45" cy="54" rx="16" ry="12" fill="#A4502A" transform="rotate(-18 45 54)"/><circle cx="46" cy="55" r="8" fill="#2B2724"/><circle cx="74" cy="55" r="8" fill="#2B2724"/><circle cx="49" cy="52" r="2.6" fill="#fff"/><circle cx="77" cy="52" r="2.6" fill="#fff"/><path d="M56 63 l4 4 l4-4z" fill="#F4A9A9" stroke="#2E2A28" stroke-width="1.4" stroke-linejoin="round"/><path d="M52 68q4 4 8 0q4 4 8 0" stroke="#2E2A28" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="#2E2A28" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg></div>
+    <div><h1>쵸코와 한글 · 집에서 하는 3분</h1>
+      <div class="sub">ㄹ ㅇ ㅊ ㅋ ㅌ ㅍ</div></div>
+    <div class="wk">5주차<b>이름 ______</b></div>
+  </div>
+
+  <h2>이번 주 낱자 <span>흐린 글자를 덧쓰고 빈칸에 혼자 써요</span></h2>
+  <div class="grid-row"><div class="cell"><div class="ch light">ㄹ</div></div><div class="cell"><div class="ch light">ㅇ</div></div><div class="cell"><div class="ch light">ㅊ</div></div><div class="cell"><div class="ch light">ㅋ</div></div><div class="cell"><div class="ch light">ㅌ</div></div><div class="cell"><div class="ch light">ㅍ</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">소리 내어 읽기 <span>읽은 글자에 색칠해요</span></h2>
+  <div class="readbar"><div class="c">라</div><div class="c">리</div><div class="c">아</div><div class="c">오</div><div class="c">차</div><div class="c">코</div><div class="c">토</div><div class="c">포</div></div>
+
+  <h2 class="mt">이번 주 낱말</h2>
+  <div class="words"><div class="wordbox"><span class="pic">🦆</span><span><span class="w">오리</span><br><span class="en">duck</span></span></div><div class="wordbox"><span class="pic">🚂</span><span><span class="w">기차</span><br><span class="en">train</span></span></div></div>
+  <div style="height:2.5mm"></div>
+  <div class="grid-row"><div class="cell"><div class="ch light">오</div></div><div class="cell"><div class="ch light">리</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div><div class="grid-row"><div class="cell"><div class="ch light">기</div></div><div class="cell"><div class="ch light">차</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">하루 3분 <span>한 칸씩 색칠하거나 스티커를 붙여요</span></h2>
+  <div class="days"><div class="day"><div class="d">월</div><div class="t">쵸코와 3분<br>글자판 누르기</div><div class="box"></div></div><div class="day"><div class="d">화</div><div class="t">이번 주 글자<br>소리 내어 읽기</div><div class="box"></div></div><div class="day"><div class="d">수</div><div class="t">쓰기 칸 채우기</div><div class="box"></div></div><div class="day"><div class="d">목</div><div class="t">낱말 읽고 쓰기</div><div class="box"></div></div><div class="day"><div class="d">금</div><div class="t">쵸코와 3분<br>별 모으기</div><div class="box"></div></div></div>
+
+  <div style="height:4mm"></div>
+  <div class="qrrow">
+    <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" class="segno"><path class="qrline" stroke="#000" d="M2 2.5h7m2 0h2m3 0h1m2 0h2m1 0h1m3 0h1m1 0h7m-33 1h1m5 0h1m1 0h1m2 0h1m1 0h2m5 0h1m1 0h1m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h6m2 0h1m3 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m4 0h3m1 0h1m1 0h4m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m3 0h3m3 0h2m2 0h1m5 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h4m2 0h1m3 0h3m3 0h1m-25 1h1m5 0h1m1 0h1m2 0h5m1 0h1m7 0h2m2 0h3m-29 1h2m2 0h1m1 0h1m2 0h1m1 0h6m3 0h2m3 0h3m-31 1h2m4 0h4m1 0h2m2 0h1m5 0h2m2 0h2m1 0h1m1 0h2m-32 1h5m2 0h1m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m1 0h9m-30 1h1m2 0h4m1 0h1m1 0h4m1 0h3m2 0h2m1 0h2m3 0h2m-31 1h4m1 0h1m2 0h2m1 0h2m1 0h1m1 0h3m1 0h2m2 0h2m1 0h1m1 0h2m-31 1h1m1 0h1m1 0h4m1 0h1m1 0h1m3 0h1m7 0h4m1 0h2m-32 1h1m2 0h1m4 0h5m2 0h1m3 0h1m2 0h2m1 0h1m2 0h3m1 0h1m-33 1h2m1 0h2m1 0h3m1 0h1m1 0h1m4 0h1m1 0h2m3 0h2m1 0h2m3 0h1m-33 1h2m1 0h1m1 0h1m1 0h1m3 0h1m1 0h8m1 0h2m2 0h1m2 0h2m1 0h1m-33 1h1m4 0h5m2 0h4m3 0h1m2 0h3m2 0h1m1 0h2m1 0h1m-33 1h1m1 0h1m1 0h1m2 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h2m1 0h2m1 0h5m-33 1h1m2 0h1m1 0h5m2 0h5m1 0h1m5 0h2m2 0h2m1 0h2m-33 1h1m1 0h4m1 0h1m2 0h2m1 0h2m1 0h4m2 0h2m3 0h2m1 0h1m-31 1h1m1 0h1m1 0h1m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m-32 1h1m1 0h4m1 0h2m13 0h1m3 0h1m2 0h4m-33 1h2m1 0h4m1 0h3m2 0h3m3 0h2m1 0h1m1 0h5m3 0h1m-25 1h1m6 0h2m2 0h3m2 0h1m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h2m3 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m3 0h2m4 0h1m1 0h1m4 0h2m3 0h4m-32 1h1m1 0h3m1 0h1m2 0h2m1 0h2m4 0h2m2 0h1m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h4m1 0h3m1 0h2m1 0h3m-33 1h1m1 0h3m1 0h1m3 0h1m3 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h2m-33 1h1m5 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h6m-31 1h7m1 0h1m1 0h1m2 0h1m3 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1"/></svg>
+</div>
+    <div class="txt">
+      <b>휴대폰으로 찍으면 쵸코가 나와요.</b><br>
+      이번 주에 할 것 — 글자판(범위 3) · 낱말 채우기<br>
+      <span class="url">https://fifa3827-lgtm.github.io/classroom-games/hangul/</span>
+    </div>
+  </div>
+
+  <div class="parent">
+    <div class="h">부모님께</div>
+    ㄹ은 영어의 l 소리와 비슷해서 아이가 오히려 쉬워합니다. ㅇ은 소리가 나지 않고 자리만 지킨다는 것을 「아·오」로 보여 주세요.
+    <div class="sign">확인 <span></span> &nbsp; 날짜 <span></span></div>
+  </div>
+</div><div class="sheet">
+  <div class="top">
+    <div class="cat"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M92 100q24-6 16-30" stroke="#D6A44A" stroke-width="11" fill="none" stroke-linecap="round"/><path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="#B9873A" stroke-width="3.5" stroke-linecap="round"/><path d="M28 42 L22 10 L50 26Z" fill="#D6A44A" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M92 42 L98 10 L70 26Z" fill="#9B958E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/><path d="M31 37 L28 19 L43 28Z" fill="#F4A9A9"/><path d="M89 37 L92 19 L77 28Z" fill="#F4A9A9"/><ellipse cx="60" cy="88" rx="34" ry="29" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="44" cy="97" rx="13" ry="10" fill="#9B958E" opacity=".85" transform="rotate(-15 44 97)"/><path d="M72 94q3-4 6 0q3-3 5 1q1 5-5 9q-7-4-6-10z" fill="#D6A44A"/><ellipse cx="47" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><ellipse cx="73" cy="110" rx="10" ry="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/><circle cx="60" cy="54" r="33" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2.4"/><ellipse cx="45" cy="54" rx="16" ry="12" fill="#A4502A" transform="rotate(-18 45 54)"/><circle cx="46" cy="55" r="8" fill="#2B2724"/><circle cx="74" cy="55" r="8" fill="#2B2724"/><circle cx="49" cy="52" r="2.6" fill="#fff"/><circle cx="77" cy="52" r="2.6" fill="#fff"/><path d="M56 63 l4 4 l4-4z" fill="#F4A9A9" stroke="#2E2A28" stroke-width="1.4" stroke-linejoin="round"/><path d="M52 68q4 4 8 0q4 4 8 0" stroke="#2E2A28" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="#2E2A28" stroke-width="1.6" stroke-linecap="round" opacity=".75"/></svg></div>
+    <div><h1>쵸코와 한글 · 집에서 하는 3분</h1>
+      <div class="sub">남은 모음 ㅑ ㅕ ㅛ ㅠ ㅐ ㅔ</div></div>
+    <div class="wk">6주차<b>이름 ______</b></div>
+  </div>
+
+  <h2>이번 주 낱자 <span>흐린 글자를 덧쓰고 빈칸에 혼자 써요</span></h2>
+  <div class="grid-row"><div class="cell"><div class="ch light">ㅑ</div></div><div class="cell"><div class="ch light">ㅕ</div></div><div class="cell"><div class="ch light">ㅛ</div></div><div class="cell"><div class="ch light">ㅠ</div></div><div class="cell"><div class="ch light">ㅐ</div></div><div class="cell"><div class="ch light">ㅔ</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">소리 내어 읽기 <span>읽은 글자에 색칠해요</span></h2>
+  <div class="readbar"><div class="c">갸</div><div class="c">녀</div><div class="c">됴</div><div class="c">뮤</div><div class="c">새</div><div class="c">제</div></div>
+
+  <h2 class="mt">이번 주 낱말</h2>
+  <div class="words"><div class="wordbox"><span class="pic">👩</span><span><span class="w">어머니</span><br><span class="en">mother</span></span></div><div class="wordbox"><span class="pic">👨</span><span><span class="w">아버지</span><br><span class="en">father</span></span></div></div>
+  <div style="height:2.5mm"></div>
+  <div class="grid-row"><div class="cell"><div class="ch light">어</div></div><div class="cell"><div class="ch light">머</div></div><div class="cell"><div class="ch light">니</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div><div class="grid-row"><div class="cell"><div class="ch light">아</div></div><div class="cell"><div class="ch light">버</div></div><div class="cell"><div class="ch light">지</div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div><div class="cell"><div class="ch"></div></div></div>
+
+  <h2 class="mt">하루 3분 <span>한 칸씩 색칠하거나 스티커를 붙여요</span></h2>
+  <div class="days"><div class="day"><div class="d">월</div><div class="t">쵸코와 3분<br>글자판 누르기</div><div class="box"></div></div><div class="day"><div class="d">화</div><div class="t">이번 주 글자<br>소리 내어 읽기</div><div class="box"></div></div><div class="day"><div class="d">수</div><div class="t">쓰기 칸 채우기</div><div class="box"></div></div><div class="day"><div class="d">목</div><div class="t">낱말 읽고 쓰기</div><div class="box"></div></div><div class="day"><div class="d">금</div><div class="t">쵸코와 3분<br>별 모으기</div><div class="box"></div></div></div>
+
+  <div style="height:4mm"></div>
+  <div class="qrrow">
+    <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" class="segno"><path class="qrline" stroke="#000" d="M2 2.5h7m2 0h2m3 0h1m2 0h2m1 0h1m3 0h1m1 0h7m-33 1h1m5 0h1m1 0h1m2 0h1m1 0h2m5 0h1m1 0h1m3 0h1m5 0h1m-33 1h1m1 0h3m1 0h1m1 0h6m2 0h1m3 0h5m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m1 0h2m1 0h2m2 0h1m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-33 1h1m1 0h3m1 0h1m4 0h3m1 0h1m1 0h4m2 0h1m2 0h1m1 0h3m1 0h1m-33 1h1m5 0h1m3 0h3m3 0h2m2 0h1m5 0h1m5 0h1m-33 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-25 1h4m2 0h1m3 0h3m3 0h1m-25 1h1m5 0h1m1 0h1m2 0h5m1 0h1m7 0h2m2 0h3m-29 1h2m2 0h1m1 0h1m2 0h1m1 0h6m3 0h2m3 0h3m-31 1h2m4 0h4m1 0h2m2 0h1m5 0h2m2 0h2m1 0h1m1 0h2m-32 1h5m2 0h1m3 0h1m2 0h2m2 0h1m1 0h1m1 0h1m1 0h9m-30 1h1m2 0h4m1 0h1m1 0h4m1 0h3m2 0h2m1 0h2m3 0h2m-31 1h4m1 0h1m2 0h2m1 0h2m1 0h1m1 0h3m1 0h2m2 0h2m1 0h1m1 0h2m-31 1h1m1 0h1m1 0h4m1 0h1m1 0h1m3 0h1m7 0h4m1 0h2m-32 1h1m2 0h1m4 0h5m2 0h1m3 0h1m2 0h2m1 0h1m2 0h3m1 0h1m-33 1h2m1 0h2m1 0h3m1 0h1m1 0h1m4 0h1m1 0h2m3 0h2m1 0h2m3 0h1m-33 1h2m1 0h1m1 0h1m1 0h1m3 0h1m1 0h8m1 0h2m2 0h1m2 0h2m1 0h1m-33 1h1m4 0h5m2 0h4m3 0h1m2 0h3m2 0h1m1 0h2m1 0h1m-33 1h1m1 0h1m1 0h1m2 0h1m3 0h1m2 0h1m1 0h1m2 0h2m1 0h2m1 0h2m1 0h5m-33 1h1m2 0h1m1 0h5m2 0h5m1 0h1m5 0h2m2 0h2m1 0h2m-33 1h1m1 0h4m1 0h1m2 0h2m1 0h2m1 0h4m2 0h2m3 0h2m1 0h1m-31 1h1m1 0h1m1 0h1m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m2 0h1m2 0h4m-32 1h1m1 0h4m1 0h2m13 0h1m3 0h1m2 0h4m-33 1h2m1 0h4m1 0h3m2 0h3m3 0h2m1 0h1m1 0h5m3 0h1m-25 1h1m6 0h2m2 0h3m2 0h1m3 0h1m1 0h1m1 0h1m-33 1h7m2 0h2m3 0h2m2 0h1m3 0h3m1 0h1m1 0h1m1 0h1m-31 1h1m5 0h1m3 0h2m4 0h1m1 0h1m4 0h2m3 0h4m-32 1h1m1 0h3m1 0h1m2 0h2m1 0h2m4 0h2m2 0h1m1 0h6m1 0h2m-33 1h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h4m1 0h3m1 0h2m1 0h3m-33 1h1m1 0h3m1 0h1m3 0h1m3 0h1m1 0h2m1 0h3m1 0h1m1 0h1m1 0h2m2 0h2m-33 1h1m5 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h6m-31 1h7m1 0h1m1 0h1m2 0h1m3 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1"/></svg>
+</div>
+    <div class="txt">
+      <b>휴대폰으로 찍으면 쵸코가 나와요.</b><br>
+      이번 주에 할 것 — 모든 활동 · 별 모으기<br>
+      <span class="url">https://fifa3827-lgtm.github.io/classroom-games/hangul/</span>
+    </div>
+  </div>
+
+  <div class="parent">
+    <div class="h">부모님께</div>
+    1단계 마지막 주입니다. 받침 없는 글자는 이제 대체로 읽습니다. 다음 주부터 받침(산·달·밤)으로 들어갑니다. 이번 주말에 한 번 칭찬해 주세요.
+    <div class="sign">확인 <span></span> &nbsp; 날짜 <span></span></div>
+  </div>
+</div></body></html>
