@@ -73,6 +73,9 @@ button:focus-visible{outline:3px solid var(--brown);outline-offset:3px}
 .lesson.done{outline:3px solid var(--yellow-deep)}
 .setline{font-size:14px;color:var(--brown);background:rgba(255,255,255,.7);border-radius:999px;padding:3px 12px;display:inline-block;margin-bottom:10px}
 .soon{background:rgba(255,255,255,.6);border-radius:16px;padding:18px;text-align:center;font-family:"Jua",sans-serif;color:var(--muted)}
+.teachfoot{display:flex;gap:14px;justify-content:flex-end;flex-wrap:wrap;margin-top:2px}
+.teachfoot a{font-size:13px;color:var(--muted);text-decoration:none;background:rgba(255,255,255,.75);border-radius:999px;padding:5px 12px;box-shadow:0 2px 0 var(--line)}
+.teachfoot a:active{transform:translateY(2px);box-shadow:none}
 
 /* 놀이 공통 */
 .topbar{display:flex;align-items:center;gap:12px}
@@ -82,6 +85,7 @@ button:focus-visible{outline:3px solid var(--brown);outline-offset:3px}
 .topbar .count{font-family:"Jua",sans-serif;color:var(--muted);font-variant-numeric:tabular-nums;min-width:42px;text-align:right}
 .stagecard{background:var(--card);border-radius:var(--r);padding:18px 14px 22px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:var(--shadow);flex:1}
 .prompt{display:flex;align-items:center;gap:12px;width:100%}
+.area{width:100%;display:flex;flex-direction:column;align-items:center;gap:16px}
 
 /* 글자 블록 */
 .block{display:inline-flex;align-items:center;justify-content:center;background:var(--cream);border-radius:18px;box-shadow:0 6px 0 rgba(139,90,60,.18);min-width:132px;min-height:132px;font-size:88px;line-height:1;padding:8px 14px}
@@ -169,6 +173,29 @@ table.log td,table.log th{padding:6px 4px;border-bottom:1px solid var(--line);te
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:15px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:60;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
 
+/* 태블릿 가로 — 좌우 2단 */
+@media (orientation:landscape) and (min-width:820px) and (min-height:470px){
+  .app{max-width:1040px;padding:18px 26px calc(20px + env(safe-area-inset-bottom))}
+  .updown{flex-direction:column;text-align:center;gap:10px}
+  .updown .bubble{flex:none;width:100%;justify-content:center;text-align:center}
+  .updown .bubble::before{left:50%;top:-8px;transform:translateX(-50%) rotate(45deg)}
+
+  #home.on{display:grid;grid-template-columns:290px 1fr;gap:14px 24px;align-items:start}
+  #home .hero{grid-column:1;grid-row:1 / span 3;position:sticky;top:18px;padding-top:0}
+  #home .hero .choco{width:172px;height:172px}
+  #home .today,#home #stages,#home .teachfoot{grid-column:2}
+  #home .lessons{grid-template-columns:repeat(3,1fr)}
+
+  .stagecard{flex-direction:row;align-items:stretch;gap:24px;padding:20px 20px 24px}
+  .stagecard .prompt{flex:0 0 232px;align-self:center}
+  .stagecard .prompt .choco.sm{width:134px;height:134px}
+  .area{flex:1 1 auto;min-width:0;width:auto;justify-content:center}
+  .screen.result{justify-content:center}
+  .options.n4{grid-template-columns:repeat(4,1fr)}
+  .options.n2,.options.n3{grid-template-columns:repeat(3,1fr)}
+  .block{min-width:150px;min-height:150px;font-size:100px}
+}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -186,7 +213,7 @@ table.log td,table.log th{padding:6px 4px;border-bottom:1px solid var(--line);te
 
   <!-- 홈 -->
   <section class="screen" id="home">
-    <div class="hero">
+    <div class="hero updown">
       <button class="choco bob" id="homeChoco" aria-label="쵸코"></button>
       <div class="bubble" id="homeBubble">안녕! 나는 쵸코야.</div>
     </div>
@@ -199,6 +226,10 @@ table.log td,table.log th{padding:6px 4px;border-bottom:1px solid var(--line);te
       <span class="go btn small">가자</span>
     </button>
     <div id="stages"></div>
+    <div class="teachfoot">
+      <a href="worksheets/1단계학습지.pdf" target="_blank" rel="noopener">🖨️ 1단계 학습지</a>
+      <a href="worksheets/읽기확인표.pdf" target="_blank" rel="noopener">📋 읽기 확인표</a>
+    </div>
   </section>
 
   <!-- 놀이 -->
@@ -209,11 +240,11 @@ table.log td,table.log th{padding:6px 4px;border-bottom:1px solid var(--line);te
       <span class="count" id="count"></span>
     </div>
     <div class="stagecard">
-      <div class="prompt">
-        <div class="choco sm" id="playChoco"></div>
+      <div class="prompt updown">
+        <button class="choco sm" id="playChoco" aria-label="쵸코 — 다시 들려줘"></button>
         <div class="bubble" id="playBubble"></div>
       </div>
-      <div id="stage-area" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:16px"></div>
+      <div id="stage-area" class="area"></div>
     </div>
   </section>
 
@@ -293,22 +324,49 @@ const probe = new Image();
 probe.onload = ()=>{ useImages = true; document.querySelectorAll('.choco').forEach(el=>renderChoco(el, el.dataset.mood||'idle')); };
 probe.src = 'choco/idle.png';
 function chocoSVG(mood){
-  const eyes = mood==='happy' ? '<path d="M38 52q6-7 12 0" stroke="#3A3130" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M70 52q6-7 12 0" stroke="#3A3130" stroke-width="4" fill="none" stroke-linecap="round"/>'
-            : mood==='retry' ? '<circle cx="44" cy="54" r="4.5" fill="#3A3130"/><circle cx="76" cy="54" r="4.5" fill="#3A3130"/><path d="M36 44l14 4M84 44l-14 4" stroke="#3A3130" stroke-width="3" stroke-linecap="round"/>'
-            : '<circle cx="44" cy="54" r="5" fill="#3A3130"/><circle cx="76" cy="54" r="5" fill="#3A3130"/><circle cx="46" cy="52" r="1.6" fill="#fff"/><circle cx="78" cy="52" r="1.6" fill="#fff"/>';
-  const mouth = (mood==='happy'||mood==='cheer') ? '<path d="M50 66q10 10 20 0" stroke="#3A3130" stroke-width="3.5" fill="#F3A07F" stroke-linecap="round"/>'
-            : mood==='retry' ? '<path d="M54 68q6-4 12 0" stroke="#3A3130" stroke-width="3" fill="none" stroke-linecap="round"/>'
-            : '<path d="M54 64q6 5 12 0" stroke="#3A3130" stroke-width="3" fill="none" stroke-linecap="round"/>';
-  const paws = mood==='cheer' ? '<ellipse cx="22" cy="58" rx="9" ry="11" fill="#8B5A3C"/><ellipse cx="98" cy="58" rx="9" ry="11" fill="#8B5A3C"/>'
-            : '<ellipse cx="44" cy="106" rx="11" ry="8" fill="#8B5A3C"/><ellipse cx="76" cy="106" rx="11" ry="8" fill="#8B5A3C"/>';
+  /* 학생이 그린 쵸코를 그대로 옮긴 그림.
+     흰 몸, 등에 회색 얼룩, 금색 줄무늬 꼬리,
+     한쪽은 금색 한쪽은 회색 귀, 한쪽 눈을 덮은 갈색 무늬, 옆구리에 금색 하트 */
+  const LINE='#2E2A28', WHITE='#FFFDF9', GOLD='#D6A44A', GOLD_D='#B9873A',
+        GRAY='#9B958E', PINK='#F4A9A9', BROWN='#A4502A', EYE='#2B2724';
+  const eyes = mood==='happy'
+      ? '<path d="M38 55q8-9 16 0" stroke="'+EYE+'" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+      + '<path d="M66 55q8-9 16 0" stroke="'+EYE+'" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+      : '<circle cx="46" cy="55" r="8" fill="'+EYE+'"/><circle cx="74" cy="55" r="8" fill="'+EYE+'"/>'
+      + '<circle cx="49" cy="52" r="2.6" fill="#fff"/><circle cx="77" cy="52" r="2.6" fill="#fff"/>'
+      + (mood==='retry' ? '<path d="M34 46l12-5M86 46l-12-5" stroke="'+EYE+'" stroke-width="2.6" stroke-linecap="round"/>' : '');
+  const mouth = (mood==='happy'||mood==='cheer')
+      ? '<path d="M50 69q10 9 20 0" stroke="'+LINE+'" stroke-width="2.6" fill="'+PINK+'" stroke-linejoin="round"/>'
+      : mood==='retry'
+      ? '<path d="M54 71q6-4 12 0" stroke="'+LINE+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+      : '<path d="M52 68q4 4 8 0q4 4 8 0" stroke="'+LINE+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>';
+  const paws = mood==='cheer'
+      ? '<ellipse cx="20" cy="36" rx="8" ry="10" fill="'+WHITE+'" stroke="'+LINE+'" stroke-width="2" transform="rotate(-25 20 36)"/>'
+      + '<ellipse cx="100" cy="36" rx="8" ry="10" fill="'+WHITE+'" stroke="'+LINE+'" stroke-width="2" transform="rotate(25 100 36)"/>'
+      : '<ellipse cx="47" cy="110" rx="10" ry="7" fill="'+WHITE+'" stroke="'+LINE+'" stroke-width="2"/>'
+      + '<ellipse cx="73" cy="110" rx="10" ry="7" fill="'+WHITE+'" stroke="'+LINE+'" stroke-width="2"/>';
   return '<svg viewBox="0 0 120 120" aria-hidden="true">'
-    + '<path d="M28 40 L20 12 L48 28Z" fill="#8B5A3C"/><path d="M92 40 L100 12 L72 28Z" fill="#8B5A3C"/>'
-    + '<path d="M30 36 L26 20 L42 30Z" fill="#F3A07F"/><path d="M90 36 L94 20 L78 30Z" fill="#F3A07F"/>'
-    + '<ellipse cx="60" cy="98" rx="30" ry="18" fill="#8B5A3C"/><circle cx="60" cy="58" r="36" fill="#8B5A3C"/>'
-    + '<ellipse cx="60" cy="70" rx="20" ry="13" fill="#F6E7D3"/>' + paws + eyes
-    + '<path d="M56 60 l4 4 l4-4z" fill="#F3A07F"/>' + mouth
-    + '<path d="M30 62h14M30 68h14M76 62h14M76 68h14" stroke="#F6E7D3" stroke-width="2" stroke-linecap="round" opacity=".9"/>'
-    + '<path d="M90 100q22-4 14-22" stroke="#8B5A3C" stroke-width="9" fill="none" stroke-linecap="round"/></svg>';
+    /* 금색 줄무늬 꼬리 */
+    + '<path d="M92 100q24-6 16-30" stroke="'+GOLD+'" stroke-width="11" fill="none" stroke-linecap="round"/>'
+    + '<path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="'+GOLD_D+'" stroke-width="3.5" stroke-linecap="round"/>'
+    /* 귀 — 왼쪽 금색, 오른쪽 회색 */
+    + '<path d="M28 42 L22 10 L50 26Z" fill="'+GOLD+'" stroke="'+LINE+'" stroke-width="2" stroke-linejoin="round"/>'
+    + '<path d="M92 42 L98 10 L70 26Z" fill="'+GRAY+'" stroke="'+LINE+'" stroke-width="2" stroke-linejoin="round"/>'
+    + '<path d="M31 37 L28 19 L43 28Z" fill="'+PINK+'"/><path d="M89 37 L92 19 L77 28Z" fill="'+PINK+'"/>'
+    /* 몸 */
+    + '<ellipse cx="60" cy="88" rx="34" ry="29" fill="'+WHITE+'" stroke="'+LINE+'" stroke-width="2.4"/>'
+    + '<ellipse cx="44" cy="97" rx="13" ry="10" fill="'+GRAY+'" opacity=".85" transform="rotate(-15 44 97)"/>'
+    + '<path d="M72 94q3-4 6 0q3-3 5 1q1 5-5 9q-7-4-6-10z" fill="'+GOLD+'"/>'
+    + paws
+    /* 머리 */
+    + '<circle cx="60" cy="54" r="33" fill="'+WHITE+'" stroke="'+LINE+'" stroke-width="2.4"/>'
+    /* 한쪽 눈을 덮은 갈색 무늬 */
+    + '<ellipse cx="45" cy="54" rx="16" ry="12" fill="'+BROWN+'" transform="rotate(-18 45 54)"/>'
+    + eyes
+    + '<path d="M56 63 l4 4 l4-4z" fill="'+PINK+'" stroke="'+LINE+'" stroke-width="1.4" stroke-linejoin="round"/>'
+    + mouth
+    + '<path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="'+LINE+'" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>'
+    + '</svg>';
 }
 function renderChoco(el, mood){
   el.dataset.mood = mood;
@@ -360,6 +418,7 @@ const Voice = {
   },
   has(key){ return !!(this.ready && this.map && this.map[key]); },
   say(key){
+    this.last = key;
     this.stop();
     if(!this.has(key)) return tts(key);
     const [start, dur] = this.map[key];
@@ -603,6 +662,7 @@ async function finishBuild(ok, made, target){
   sfx.ok();
   renderChoco($('#playChoco'),'happy'); animate($('#playChoco'),'jump');
   $('#playBubble').textContent = pick(D.choco.correct);
+  streak(true);
   await wait(300); await playKey(made);
   await wait(400);
   cur.i++; renderChoco($('#playChoco'),'idle'); nextQuestion();
@@ -694,6 +754,7 @@ async function answer(btn, ok, saidKey, targetKey, onRight){
     document.querySelectorAll('.opt').forEach(o=>{ if(o!==btn) o.classList.add('dim'); });
     renderChoco($('#playChoco'),'happy'); animate($('#playChoco'),'jump');
     $('#playBubble').textContent = pick(D.choco.correct);
+    streak(true);
     if(onRight) onRight();
     await wait(250);
     await playKey(targetKey);
@@ -701,6 +762,7 @@ async function answer(btn, ok, saidKey, targetKey, onRight){
     cur.i++; renderChoco($('#playChoco'),'idle'); nextQuestion();
   } else {
     miss(targetKey);
+    streak(false);
     btn.classList.add('wrong'); sfx.no();
     renderChoco($('#playChoco'),'retry'); animate($('#playChoco'),'wiggle');
     $('#playBubble').textContent = pick(D.choco.retry);
@@ -713,6 +775,54 @@ async function playKey(key){
   await Voice.say(key);
   if(s) s.classList.remove('playing');
 }
+
+/* ---------- 쵸코와 주고받기 ---------- */
+function chocoLine(kind){
+  const t = (D.chocoText||{})[kind];
+  return (t && t.length) ? pick(t) : '';
+}
+/* 연속 정답 — 세 개마다 신나 한다 */
+function streak(ok){
+  if(!cur) return;
+  if(!ok){ cur.streak = 0; return; }
+  cur.streak = (cur.streak||0) + 1;
+  if(cur.streak >= 3 && cur.streak % 3 === 0){
+    renderChoco($('#playChoco'),'cheer'); animate($('#playChoco'),'jump');
+    $('#playBubble').textContent = cur.streak + '개 연속! ' + chocoLine('streak');
+    sfx.fanfare();
+  }
+}
+/* 쵸코를 누르면 방금 소리를 다시 들려준다 */
+$('#playChoco').addEventListener('click', ()=>{
+  sfx.tap(); animate($('#playChoco'),'wiggle');
+  if(Voice.last){ $('#playBubble').textContent = chocoLine('again'); Voice.say(Voice.last); }
+  else { $('#playBubble').textContent = chocoLine('nudge'); }
+  resetIdle();
+});
+/* 한참 가만히 있으면 쵸코가 먼저 말을 건다 */
+let idleTimer = null;
+function resetIdle(){
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(nudge, 20000);
+}
+function nudge(){
+  resetIdle();
+  if(!$('#play').classList.contains('on')) return;
+  if(document.querySelector('dialog[open]')) return;
+  const el = $('#playChoco');
+  renderChoco(el,'idle'); animate(el,'wiggle');
+  const board = cur && cur.lesson && cur.lesson.kind === 'board';
+  if(board){
+    const line = pick(D.choco.board);
+    $('#playBubble').textContent = line;
+    if(Voice.has(line)) Voice.say(line);
+  }else{
+    $('#playBubble').textContent = chocoLine('nudge');
+    if(Voice.last) Voice.say(Voice.last);
+  }
+}
+document.addEventListener('pointerdown', resetIdle, true);
+resetIdle();
 
 /* 글자판 (자유 탐험) */
 function startBoard(l){
@@ -779,8 +889,14 @@ async function flushQueue(){
 
 /* 선생님 모드 */
 let taps=[];
+let homeMood = 0;
 $('#homeChoco').addEventListener('click', ()=>{
   sfx.tap(); animate($('#homeChoco'),'wiggle');
+  const moods = ['happy','cheer','idle'];
+  renderChoco($('#homeChoco'), moods[homeMood++ % moods.length]);
+  const line = pick(D.choco.hello);
+  $('#homeBubble').textContent = line;
+  if(Voice.has(line)) Voice.say(line);
   const now=Date.now(); taps = taps.filter(t=>now-t<3000); taps.push(now);
   if(taps.length>=5){ taps=[]; $('#pin').value=''; $('#pinDlg').showModal(); }
 });
