@@ -147,19 +147,75 @@ window.HANGUL_DATA = {
       items: ["ㅏ","ㅓ","ㅗ","ㅜ","ㅡ","ㅣ"] },
     { id: "bu",  stage: 1, title: "글자 만들기", icon: "🔨", kind: "build" },
     { id: "rd",  stage: 1, title: "읽어 보기",   icon: "🗣️", kind: "read" },
-    { id: "wd",  stage: 1, title: "낱말 채우기", icon: "🖼️", kind: "word" }
+    { id: "wd",  stage: 1, title: "낱말 채우기", icon: "🖼️", kind: "word" },
+
+    { id: "jb",  stage: 2, title: "받침판",      icon: "🌲", kind: "jboard", free: true },
+    { id: "jg",  stage: 2, title: "받침 고르기", icon: "🎯", kind: "jong" },
+    { id: "rd2", stage: 2, title: "받침 읽어 보기", icon: "🗣️", kind: "read", pool: "words2" },
+    { id: "wd2", stage: 2, title: "받침 낱말",   icon: "🖼️", kind: "word", pool: "words2" },
+
+    { id: "wd3", stage: 3, title: "교과서 낱말", icon: "📖", kind: "word", pool: "words3" },
+    { id: "rd3", stage: 3, title: "낱말 읽어 보기", icon: "🗣️", kind: "read", pool: "words3" },
+    { id: "st",  stage: 3, title: "문장 따라 읽기", icon: "💬", kind: "sent" },
+    { id: "od",  stage: 3, title: "문장 만들기", icon: "🧩", kind: "order" }
   ],
 
   stages: [
     { id: 1, name: "글자 공방", sub: "자음 + 모음 = 글자", color: "mint" },
-    { id: 2, name: "받침 숲",   sub: "받침이 있는 글자",   color: "lavender", soon: true },
-    { id: 3, name: "이야기 언덕", sub: "낱말과 문장 읽기", color: "yellow", soon: true }
+    { id: 2, name: "받침 숲",   sub: "받침이 있는 글자",   color: "lavender" },
+    { id: 3, name: "이야기 언덕", sub: "낱말과 문장 읽기", color: "yellow" }
+  ],
+
+  /* ---------- 2단계 받침 숲 ----------
+     받침 일곱 소리. ㅅ 받침은 ㄷ 소리로 난다.
+     jongBases: 받침판의 세로줄 — 받침을 붙여 볼 받침 없는 글자들 */
+  jong: ["ㄱ","ㄴ","ㄹ","ㅁ","ㅂ","ㅇ","ㅅ"],
+  jongBases: ["가","나","다","마","바","사","고","도","모","소","구","누","무","수"],
+  words2: [
+    { w: "산", pic: "⛰️", en: "mountain" }, { w: "눈", pic: "👁️", en: "eye" },   { w: "손", pic: "✋", en: "hand" },
+    { w: "달", pic: "🌙", en: "moon" },      { w: "물", pic: "💧", en: "water" }, { w: "발", pic: "🦶", en: "foot" },
+    { w: "밤", pic: "🌰", en: "chestnut" },  { w: "감", pic: "🍊", en: "persimmon" }, { w: "곰", pic: "🐻", en: "bear" },
+    { w: "강", pic: "🏞️", en: "river" },     { w: "방", pic: "🚪", en: "room" },   { w: "공", pic: "⚽", en: "ball" },
+    { w: "약", pic: "💊", en: "medicine" },  { w: "책", pic: "📕", en: "book" },   { w: "목", pic: "🧣", en: "neck" },
+    { w: "밥", pic: "🍚", en: "rice" },      { w: "컵", pic: "🥤", en: "cup" },    { w: "입", pic: "👄", en: "mouth" },
+    { w: "옷", pic: "👕", en: "clothes" },   { w: "집", pic: "🏠", en: "house" },  { w: "길", pic: "🛣️", en: "road" },
+    { w: "손님", pic: "🙋", en: "guest" },   { w: "빈집", pic: "🏚️", en: "empty house" }, { w: "시간", pic: "⏰", en: "time" }
+  ],
+
+  /* ---------- 3단계 이야기 언덕 ----------
+     교과서 단원 이름과 작품 제목에서 뽑은 낱말. 작품 본문은 저작물이라 옮기지 않았고,
+     문장은 이 낱말들로 새로 지은 것이다. 선생님이 교과서에서 고른 문장으로 바꿔 넣으면 된다. */
+  words3: [
+    { w: "친구", pic: "🧒", en: "friend" },   { w: "마음", pic: "❤️", en: "heart" },  { w: "생각", pic: "💭", en: "thought" },
+    { w: "서로", pic: "🤝", en: "each other" }, { w: "사과", pic: "🍎", en: "apple / sorry" }, { w: "글자", pic: "🔤", en: "letter" },
+    { w: "할머니", pic: "👵", en: "grandma" }, { w: "택배", pic: "📦", en: "parcel" }, { w: "우리", pic: "👫", en: "we" },
+    { w: "학교", pic: "🏫", en: "school" },   { w: "선생님", pic: "👩‍🏫", en: "teacher" }, { w: "연필", pic: "✏️", en: "pencil" },
+    { w: "가방", pic: "🎒", en: "bag" },      { w: "작가", pic: "✍️", en: "writer" },  { w: "이야기", pic: "📖", en: "story" },
+    { w: "장면", pic: "🎬", en: "scene" },    { w: "내용", pic: "📝", en: "content" }, { w: "교실", pic: "🪑", en: "classroom" }
+  ],
+  sentences: [
+    { s: "나무가 커요.", pic: "🌳" },
+    { s: "친구가 왔어요.", pic: "🧒" },
+    { s: "우리 서로 도와요.", pic: "🤝" },
+    { s: "할머니가 웃어요.", pic: "👵" },
+    { s: "눈이 내려요.", pic: "❄️" },
+    { s: "책을 읽어요.", pic: "📕" },
+    { s: "마음을 전해요.", pic: "💌" },
+    { s: "내 생각은 이래요.", pic: "💭" },
+    { s: "택배가 왔어요.", pic: "📦" },
+    { s: "고기가 맛있어요.", pic: "🥩" },
+    { s: "손님이 오셨어요.", pic: "🙋" },
+    { s: "나도 작가예요.", pic: "✍️" }
   ],
 
   /* ---------- 쵸코가 하는 말 ---------- */
   choco: {
     hello:   ["안녕! 나는 쵸코야.", "오늘도 같이 놀자!", "어디부터 해 볼까?"],
     board:   ["아무거나 눌러 봐!", "무슨 소리가 날까?"],
+    jboard:  ["아무거나 눌러 봐!"],
+    jong:    ["무슨 글자였지?"],
+    sent:    ["네 소리로 읽어 봐!"],
+    order:   ["무슨 글자였지?"],
     build:   ["무슨 글자였지?", "자음이랑 모음을 골라 봐!"],
     read:    ["네 소리로 읽어 봐!", "크게 말해 줘!"],
     word:    ["빠진 글자는 뭘까?"],
