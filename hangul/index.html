@@ -1139,7 +1139,7 @@ $('#tClose').onclick = ()=>{
   store.settings.sheetUrl = $('#tSheet').value.trim();
   store.settings.englishHint = $('#tEn').checked;
   store.settings.micEnabled = $('#tMic').checked;
-  store.settings.focus = $('#tFocus').value.trim();
+  { const fv = $('#tFocus').value.trim(); if(fv) store.settings.focus = fv; else delete store.settings.focus; }  // 비우면 data.js 기본값으로
   store.settings.unlockedStages = [...$('#tStages').querySelectorAll('input:checked')].map(i=>+i.value);
   if(!store.settings.unlockedStages.length) store.settings.unlockedStages=[1];
   save(); $('#teacherDlg').close(); renderHome(); toast('저장했어요');
