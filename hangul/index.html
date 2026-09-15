@@ -306,6 +306,15 @@ const wait = ms => new Promise(r=>setTimeout(r,ms));
 /* ---------- 한글 조합 ---------- */
 const CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 const JUNG=["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
+const JONG=["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+/* 받침 없는 글자에 받침을 붙인다: composeJ("사","ㄴ") → "산" */
+const composeJ = (base, j) => String.fromCharCode(base.charCodeAt(0) - (base.charCodeAt(0)-0xAC00)%28 + JONG.indexOf(j));
+/* 마지막 글자의 받침을 뗀다: stripJ("산") → { base:"사", jong:"ㄴ" } */
+function stripJ(word){
+  const ch = word[word.length-1], c = ch.charCodeAt(0)-0xAC00;
+  const jong = c%28; const base = String.fromCharCode(0xAC00 + c - jong);
+  return { base: word.slice(0,-1)+base, jong: JONG[jong] };
+}
 const compose = (c,v) => String.fromCharCode(0xAC00 + (CHO.indexOf(c)*21 + JUNG.indexOf(v))*28);
 function split(ch){
   const c = ch.charCodeAt(0)-0xAC00;
@@ -541,6 +550,12 @@ function openWords(){
   const id = cfg().openSet;
   return D.words.filter(w=>w.set <= id);
 }
+/* 활동에 달린 낱말 풀. pool이 있으면 그 목록(2·3단계), 없으면 열린 범위의 1단계 낱말 */
+function lessonWords(l){ return (l && l.pool && D[l.pool]) ? D[l.pool] : openWords(); }
+function poolSyllables(l){
+  const set = new Set(); lessonWords(l).forEach(w=>[...w.w.replace(/\s/g,'')].forEach(ch=>set.add(ch)));
+  return [...set];
+}
 /* 집중 글자 — 읽기 확인표에서 ×였던 글자. 채점 활동이 이 글자를 더 자주 낸다 */
 function focusList(){
   const raw = String(cfg().focus||'').replace(/[,、·]/g,' ').split(/\s+/).filter(Boolean);
@@ -579,23 +594,44 @@ function buildQuestions(l){
     });
   }
   if(l.kind==='read'){
+    if(l.pool){ return shuffle(lessonWords(l)).slice(0,n).map(w=>({ target:w.w, pic:w.pic })); }
     const syl = pickSyllables(Math.max(0, n-2));
     const ws = shuffle(openWords()).slice(0,2).map(w=>w.w);
     return shuffle([...syl, ...ws]).map(t=>({ target:t }));
   }
+  if(l.kind==='jong'){
+    const ws = shuffle(D.words2.filter(w=>w.w.length===1)).slice(0,n);
+    return ws.map(w=>{
+      const {base, jong} = stripJ(w.w);
+      const others = shuffle(D.jong.filter(j=>j!==jong)).slice(0,3);
+      return { word:w, target:w.w, base, answer:jong, options:shuffle([jong, ...others]) };
+    });
+  }
+  if(l.kind==='sent'){
+    return shuffle(D.sentences).slice(0, Math.min(n, 4)).map(x=>({ target:x.s, pic:x.pic }));
+  }
+  if(l.kind==='order'){
+    return shuffle(D.sentences).slice(0, Math.min(n, 4)).map(x=>{
+      const parts = x.s.split(' ');
+      let mixed = shuffle(parts); if(mixed.join(' ')===x.s && parts.length>1) mixed = [...parts.slice(1), parts[0]];
+      return { target:x.s, pic:x.pic, parts, mixed };
+    });
+  }
   if(l.kind==='word'){
-    const f = focusList();
-    const hit = openWords().filter(w=>[...w.w].some(ch=>f.includes(ch)));
-    const others = shuffle(openWords().filter(w=>!hit.includes(w)));
+    const all = lessonWords(l);
+    const f = l.pool ? [] : focusList();
+    const hit = all.filter(w=>[...w.w].some(ch=>f.includes(ch)));
+    const others = shuffle(all.filter(w=>!hit.includes(w)));
     // 집중 글자가 든 낱말을 앞에, 그리고 한 번 더 — 6문제 중 절반 넘게 나오게
-    const ws = f.length && hit.length ? [...shuffle(hit), ...others.slice(0,2), ...shuffle(hit), ...others.slice(2)] : shuffle(openWords());
+    const ws = f.length && hit.length ? [...shuffle(hit), ...others.slice(0,2), ...shuffle(hit), ...others.slice(2)] : shuffle(all);
     const pool=[]; while(pool.length<n && ws.length) pool.push(...ws);
     return pool.slice(0,n).map(w=>{
       const idx = [...w.w].map((ch,i)=>f.includes(ch)?i:-1).filter(i=>i>=0);
       const i = idx.length ? idx[Math.floor(Math.random()*idx.length)] : Math.floor(Math.random()*w.w.length);
       const answer = w.w[i];
-      const all = shuffle(setSyllables().filter(x=>x!==answer)).slice(0,2);
-      return { word:w, blank:i, answer, options:shuffle([answer, ...all]) };
+      const bank = l.pool ? poolSyllables(l) : setSyllables();
+      const distract = shuffle(bank.filter(x=>x!==answer && x!==' ')).slice(0,2);
+      return { word:w, blank:i, answer, options:shuffle([answer, ...distract]) };
     });
   }
   return [];
@@ -605,6 +641,7 @@ function buildQuestions(l){
 let cur = null;
 function startLesson(l){
   if(l.kind==='board'){ startBoard(l); return; }
+  if(l.kind==='jboard'){ startJBoard(l); return; }
   const qs = buildQuestions(l);
   if(!qs.length){ toast('아직 열린 글자가 적어요. 선생님 모드에서 범위를 넓혀 주세요.'); return; }
   cur = { lesson:l, qs, i:0, firstTry:0, misses:[], locked:false, attempted:false, done:0 };
@@ -624,6 +661,9 @@ function nextQuestion(){
   else if(k==='build') renderBuild();
   else if(k==='read') renderRead();
   else if(k==='word') renderWord();
+  else if(k==='jong') renderJong();
+  else if(k==='sent') renderSent();
+  else if(k==='order') renderOrder();
 }
 
 /* 모음 듣고 고르기 */
@@ -702,7 +742,8 @@ function renderRead(){
   head(pick(D.choco.read));
   const a = $('#stage-area');
   a.innerHTML =
-    '<div class="block jamo pop" id="big">'+q.target+'</div>'
+    (q.pic ? '<div style="font-size:48px;line-height:1">'+q.pic+'</div>' : '')
+    + '<div class="block jamo pop" id="big"'+(q.target.length>1?' style="min-width:0;font-size:'+(q.target.length>3?40:56)+'px;padding:10px 20px"':'')+'>'+q.target+'</div>'
     + '<div class="readrow">'
     + '<button class="speaker" id="spk" aria-label="쵸코 소리 듣기">🔊</button>'
     + (cfg().micEnabled ? '<button class="mic" id="micBtn" aria-label="내 소리 녹음">🎤</button>' : '')
@@ -752,6 +793,7 @@ function renderWord(){
   const q = cur.qs[cur.i];
   head(pick(D.choco.word));
   const shown = [...q.word.w].map((ch,i)=> i===q.blank ? '□' : ch).join('');
+  if(q.word.w[q.blank]===' '){ q.blank = q.word.w.indexOf(q.answer); }
   const a = $('#stage-area');
   a.innerHTML =
     '<div style="font-size:56px;line-height:1">'+q.word.pic+'</div>'
@@ -885,6 +927,139 @@ function startBoard(l){
   });
 }
 
+/* ---------- 2단계 받침 숲 ---------- */
+/* 받침판 — 받침 없는 글자 줄 × 받침 칸. 누르면 사+ㄴ=산 으로 조립되고 소리가 난다 */
+function startJBoard(l){
+  cur = { lesson:l, qs:[], i:0, firstTry:0, misses:[], locked:false, taps:0 };
+  show('play'); renderChoco($('#playChoco'),'idle');
+  $('#playBubble').textContent = pick(D.choco.jboard||D.choco.board);
+  $('#bar').style.width='0%'; $('#count').textContent='';
+  let html = '<div class="boardview"><div class="parts"><span id="pC">?</span><span id="pV">?</span></div>'
+    + '<span class="eq">=</span><div class="block jamo" id="big">?</div></div>'
+    + '<div class="boardwrap"><table class="board"><tr><th class="corner"></th>';
+  D.jong.forEach(j=>{ html += '<th class="jamo">'+j+'</th>'; });
+  html += '</tr>';
+  D.jongBases.forEach(b=>{
+    html += '<tr><th class="jamo">'+b+'</th>';
+    D.jong.forEach(j=>{ html += '<td><button class="cell" data-b="'+b+'" data-j="'+j+'">'+composeJ(b,j)+'</button></td>'; });
+    html += '</tr>';
+  });
+  html += '</table></div><p class="tapcount" id="tapCount">누른 글자 0개</p>';
+  $('#stage-area').innerHTML = html;
+  $('#stage-area').querySelectorAll('.cell').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const b=btn.dataset.b, j=btn.dataset.j, ch=composeJ(b,j);
+      document.querySelectorAll('.cell.hit').forEach(x=>x.classList.remove('hit'));
+      btn.classList.add('hit');
+      $('#pC').textContent=b; $('#pV').textContent=j;
+      const big=$('#big'); big.textContent=ch; big.classList.remove('pop'); void big.offsetWidth; big.classList.add('pop');
+      cur.taps++; $('#tapCount').textContent = '누른 글자 '+cur.taps+'개';
+      sfx.click();
+      await Voice.say(ch);
+    };
+  });
+}
+/* 받침 고르기 — 낱말을 듣고, 어떤 받침을 붙여야 그 소리가 되는지 고른다 */
+function renderJong(){
+  const q = cur.qs[cur.i];
+  head(pick(D.choco.jong||D.choco.build));
+  const a = $('#stage-area');
+  a.innerHTML =
+    '<div style="font-size:48px;line-height:1">'+q.word.pic+'</div>'
+    + '<div class="slots"><div class="block jamo">'+q.base+'</div><span class="plus">+</span>'
+    + '<div class="slot" id="jSlot">?</div><span class="eq">=</span><div class="block jamo" id="big">?</div></div>'
+    + '<button class="speaker" id="spk" style="width:78px;height:78px;font-size:34px" aria-label="낱말 듣기">🔊</button>'
+    + '<div class="chips" id="jChips"></div>';
+  $('#spk').onclick = ()=>playKey(q.target);
+  q.options.forEach(j=>{
+    const b=document.createElement('button'); b.className='chip jamo'; b.textContent=j;
+    b.onclick=()=>{
+      if(cur.locked) return;
+      const made = composeJ(q.base[q.base.length-1], j);
+      $('#jSlot').textContent = j; $('#jSlot').classList.add('filled');
+      $('#big').textContent = q.base.slice(0,-1) + made;
+      if(j===q.answer){
+        b.classList.add('picked');
+        document.querySelectorAll('.chip').forEach(o=>{ if(o!==b) o.classList.add('dim'); });
+        cur.locked = true; if(!cur.attempted) cur.firstTry++;
+        sfx.ok(); renderChoco($('#playChoco'),'happy'); animate($('#playChoco'),'jump');
+        $('#playBubble').textContent = pick(D.choco.correct); streak(true);
+        (async()=>{ await wait(250); await playKey(q.target); await wait(400); cur.i++; renderChoco($('#playChoco'),'idle'); nextQuestion(); })();
+      } else {
+        miss(q.target); streak(false); sfx.no();
+        b.classList.add('wrong'); setTimeout(()=>b.classList.remove('wrong'),400);
+        renderChoco($('#playChoco'),'retry'); animate($('#playChoco'),'wiggle');
+        $('#playBubble').textContent = pick(D.choco.retry);
+        (async()=>{ await playKey(q.base.slice(0,-1)+made); await wait(250); playKey(q.target); })();
+      }
+    };
+    $('#jChips').appendChild(b);
+  });
+  setTimeout(()=>playKey(q.target), 300);
+}
+
+/* ---------- 3단계 이야기 언덕 ---------- */
+/* 문장 따라 읽기 — 읽어 보기와 같지만 문장을 보여 준다 */
+function renderSent(){
+  const q = cur.qs[cur.i];
+  head(pick(D.choco.sent||D.choco.read));
+  const a = $('#stage-area');
+  a.innerHTML =
+    '<div style="font-size:48px;line-height:1">'+q.pic+'</div>'
+    + '<div class="block jamo pop" id="big" style="min-width:0;font-size:38px;padding:14px 22px;line-height:1.3;text-align:center">'+q.target+'</div>'
+    + '<div class="readrow">'
+    + '<button class="speaker" id="spk" aria-label="쵸코 소리 듣기">🔊</button>'
+    + (cfg().micEnabled ? '<button class="mic" id="micBtn" aria-label="내 소리 녹음">🎤</button>' : '')
+    + '</div>'
+    + '<p class="hintline" id="readHint">🔊 듣고 → 🎤 누르고 천천히 읽어 봐</p>'
+    + '<div class="row"><button class="btn soft small" id="cmpBtn" disabled>▶ 이어서 듣기</button><button class="btn small" id="nextBtn">다음 →</button></div>';
+  $('#spk').onclick = ()=>playKey(q.target);
+  $('#nextBtn').onclick = ()=>{ sfx.tap(); cur.firstTry++; cur.i++; stopRec(); nextQuestion(); };
+  $('#cmpBtn').onclick = async ()=>{ await playKey(q.target); await wait(250); playMine(); };
+  if(cfg().micEnabled) setupMic(q);
+  setTimeout(()=>playKey(q.target), 300);
+}
+/* 문장 만들기 — 흩어진 어절을 순서대로 눌러 문장을 만든다 */
+function renderOrder(){
+  const q = cur.qs[cur.i];
+  head(pick(D.choco.order||D.choco.build));
+  const a = $('#stage-area');
+  a.innerHTML =
+    '<div style="font-size:48px;line-height:1">'+q.pic+'</div>'
+    + '<button class="speaker" id="spk" style="width:78px;height:78px;font-size:34px" aria-label="문장 듣기">🔊</button>'
+    + '<div class="chips" id="ansRow" style="min-height:70px;border:3px dashed var(--line);border-radius:16px;padding:8px;align-items:center"></div>'
+    + '<div class="chips" id="bank"></div>';
+  $('#spk').onclick = ()=>playKey(q.target);
+  let placed = 0;
+  q.mixed.forEach(p=>{
+    const b=document.createElement('button'); b.className='chip jamo'; b.textContent=p;
+    b.style.cssText='min-width:auto;padding:0 14px;font-size:26px';
+    b.onclick=()=>{
+      if(cur.locked || b.disabled) return;
+      if(p===q.parts[placed]){
+        sfx.click(); b.disabled=true; b.classList.add('dim');
+        const c=document.createElement('span'); c.className='chip picked jamo'; c.textContent=p;
+        c.style.cssText='min-width:auto;padding:0 14px;font-size:26px';
+        $('#ansRow').appendChild(c); placed++;
+        if(placed===q.parts.length){
+          cur.locked=true; if(!cur.attempted) cur.firstTry++;
+          sfx.ok(); renderChoco($('#playChoco'),'happy'); animate($('#playChoco'),'jump');
+          $('#playBubble').textContent = pick(D.choco.correct); streak(true);
+          (async()=>{ await wait(250); await playKey(q.target); await wait(500); cur.i++; renderChoco($('#playChoco'),'idle'); nextQuestion(); })();
+        }
+      } else {
+        miss(q.target); streak(false); sfx.no();
+        b.classList.add('wrong'); setTimeout(()=>b.classList.remove('wrong'),400);
+        renderChoco($('#playChoco'),'retry'); animate($('#playChoco'),'wiggle');
+        $('#playBubble').textContent = pick(D.choco.retry);
+        playKey(q.target);
+      }
+    };
+    $('#bank').appendChild(b);
+  });
+  setTimeout(()=>playKey(q.target), 300);
+}
+
 /* 끝내기 */
 function finish(){
   const l = cur.lesson;
@@ -899,7 +1074,7 @@ function finish(){
   renderChoco($('#resultChoco'),'cheer'); animate($('#resultChoco'),'jump');
   $('#resultTitle').textContent = pick(D.choco.clear);
   $('#resultStars').innerHTML = starsHTML(stars);
-  $('#resultText').textContent = l.kind==='read'
+  $('#resultText').textContent = (l.kind==='read'||l.kind==='sent')
     ? total + '개를 소리 내어 읽었어요'
     : total + '개 중 ' + ft + '개를 한 번에 맞혔어요';
   sfx.fanfare();
@@ -971,7 +1146,7 @@ $('#tClose').onclick = ()=>{
 };
 
 /* 버튼 */
-$('#backBtn').onclick = ()=>{ sfx.tap(); Voice.stop(); stopRec(); if(cur && cur.lesson.kind==='board' && cur.taps>0){ finishBoard(); } else { renderHome(); show('home'); } };
+$('#backBtn').onclick = ()=>{ sfx.tap(); Voice.stop(); stopRec(); if(cur && (cur.lesson.kind==='board'||cur.lesson.kind==='jboard') && cur.taps>0){ finishBoard(); } else { renderHome(); show('home'); } };
 function finishBoard(){
   if(cur && cur.taps >= 5){ store.boardRuns = (store.boardRuns||0) + 1; save(); }
   renderHome(); show('home');
