@@ -133,6 +133,8 @@ table.board td{padding:0}
 .cell{width:52px;height:52px;border-radius:12px;background:var(--card);border:2px solid var(--line);font-family:"Noto Sans KR",sans-serif;font-weight:700;font-size:28px;display:grid;place-items:center;transition:transform .08s,background .15s}
 .cell:active{transform:scale(.9)}
 .cell.hit{background:var(--mint);border-color:var(--mint-deep)}
+.cell.focus{position:relative}
+.cell.focus::after{content:"";position:absolute;right:4px;top:4px;width:7px;height:7px;border-radius:50%;background:var(--peach-deep)}
 .boardview{display:flex;align-items:center;gap:12px;justify-content:center;min-height:150px;width:100%}
 .boardview .parts{display:flex;flex-direction:column;gap:6px;font-family:"Noto Sans KR",sans-serif;font-weight:700;font-size:34px;color:var(--brown)}
 .tapcount{font-size:14px;color:var(--muted)}
@@ -275,6 +277,9 @@ table.log td,table.log th{padding:6px 4px;border-bottom:1px solid var(--line);te
   <div class="field"><label>열린 단계</label><div class="checks" id="tStages"></div></div>
   <div class="field"><label><input type="checkbox" id="tEn"> 낱말에 영어 뜻 보이기</label></div>
   <div class="field"><label><input type="checkbox" id="tMic"> 「읽어 보기」에서 아이 목소리 녹음</label></div>
+  <div class="field"><label for="tFocus">집중 글자 <span class="hint" id="tFocusNote"></span></label>
+    <input type="text" id="tFocus" placeholder="읽기 확인표에서 ×였던 글자를 띄어 적어요. 예: 수 더 미 머" autocomplete="off">
+    <span class="hint">「글자 만들기」「읽어 보기」「낱말 채우기」가 이 글자를 더 자주 냅니다. 글자판에는 점이 찍힙니다.</span></div>
   <div class="field"><label>소리 <span class="hint" id="tAudio"></span></label></div>
   <div class="field"><label>최근 기록 <span class="hint" id="tQueue"></span></label><div style="max-height:170px;overflow:auto"><table class="log" id="tLog"></table></div></div>
   <div class="row">
@@ -536,11 +541,28 @@ function openWords(){
   const id = cfg().openSet;
   return D.words.filter(w=>w.set <= id);
 }
+/* 집중 글자 — 읽기 확인표에서 ×였던 글자. 채점 활동이 이 글자를 더 자주 낸다 */
+function focusList(){
+  const raw = String(cfg().focus||'').replace(/[,、·]/g,' ').split(/\s+/).filter(Boolean);
+  const open = new Set(setSyllables());
+  return [...new Set(raw.filter(ch=>open.has(ch)))];
+}
+function focusVowels(){ return [...new Set(focusList().map(ch=>split(ch)).filter(Boolean).map(d=>d.jung))]; }
+/* n개 고르기: 집중 글자가 있으면 약 2/3를 거기서, 나머지는 열린 글자 전체에서 */
+function pickSyllables(n){
+  const f = focusList();
+  if(!f.length) return shuffle(setSyllables()).slice(0,n);
+  const k = Math.min(n, Math.max(1, Math.round(n*2/3)));
+  const pool=[]; while(pool.length<k) pool.push(...shuffle(f));
+  const rest = shuffle(setSyllables().filter(x=>!f.includes(x))).slice(0, n-k);
+  return shuffle([...pool.slice(0,k), ...rest]);
+}
 function buildQuestions(l){
   const n = cfg().questionsPerActivity;
   const s = curSet();
   if(l.kind==='vowel'){
-    const pool=[]; let items=shuffle(l.items);
+    const fv = focusVowels().filter(v=>l.items.includes(v));
+    const pool=[]; let items=shuffle([...l.items, ...fv, ...fv]);
     while(pool.length<n) pool.push(...shuffle(items));
     return pool.slice(0,n).map(t=>{
       const others = shuffle(l.items.filter(x=>x!==t)).slice(0,3);
@@ -548,7 +570,7 @@ function buildQuestions(l){
     });
   }
   if(l.kind==='build'){
-    const syl = shuffle(setSyllables()).slice(0,n);
+    const syl = pickSyllables(n);
     return syl.map(t=>{
       const d = split(t);
       const cOpts = shuffle([d.cho, ...shuffle(s.consonants.filter(x=>x!==d.cho)).slice(0,Math.min(3,s.consonants.length-1))]);
@@ -557,15 +579,20 @@ function buildQuestions(l){
     });
   }
   if(l.kind==='read'){
-    const syl = shuffle(setSyllables()).slice(0, Math.max(0, n-2));
+    const syl = pickSyllables(Math.max(0, n-2));
     const ws = shuffle(openWords()).slice(0,2).map(w=>w.w);
     return shuffle([...syl, ...ws]).map(t=>({ target:t }));
   }
   if(l.kind==='word'){
-    const ws = shuffle(openWords());
-    const pool=[]; while(pool.length<n && ws.length) pool.push(...shuffle(ws));
+    const f = focusList();
+    const hit = openWords().filter(w=>[...w.w].some(ch=>f.includes(ch)));
+    const others = shuffle(openWords().filter(w=>!hit.includes(w)));
+    // 집중 글자가 든 낱말을 앞에, 그리고 한 번 더 — 6문제 중 절반 넘게 나오게
+    const ws = f.length && hit.length ? [...shuffle(hit), ...others.slice(0,2), ...shuffle(hit), ...others.slice(2)] : shuffle(openWords());
+    const pool=[]; while(pool.length<n && ws.length) pool.push(...ws);
     return pool.slice(0,n).map(w=>{
-      const i = Math.floor(Math.random()*w.w.length);
+      const idx = [...w.w].map((ch,i)=>f.includes(ch)?i:-1).filter(i=>i>=0);
+      const i = idx.length ? idx[Math.floor(Math.random()*idx.length)] : Math.floor(Math.random()*w.w.length);
       const answer = w.w[i];
       const all = shuffle(setSyllables().filter(x=>x!==answer)).slice(0,2);
       return { word:w, blank:i, answer, options:shuffle([answer, ...all]) };
@@ -831,6 +858,7 @@ function startBoard(l){
   $('#playBubble').textContent = pick(D.choco.board);
   $('#bar').style.width='0%'; $('#count').textContent='';
   const s = curSet();
+  const fset = new Set(focusList());
   let html = '<div class="boardview"><div class="parts"><span id="pC">?</span><span id="pV">?</span></div>'
     + '<span class="eq">=</span><div class="block jamo" id="big">?</div></div>'
     + '<div class="boardwrap"><table class="board"><tr><th class="corner"></th>';
@@ -838,7 +866,7 @@ function startBoard(l){
   html += '</tr>';
   s.consonants.forEach(c=>{
     html += '<tr><th class="jamo">'+c+'</th>';
-    s.vowels.forEach(v=>{ html += '<td><button class="cell" data-c="'+c+'" data-v="'+v+'">'+compose(c,v)+'</button></td>'; });
+    s.vowels.forEach(v=>{ const ch=compose(c,v); html += '<td><button class="cell'+(fset.has(ch)?' focus':'')+'" data-c="'+c+'" data-v="'+v+'">'+ch+'</button></td>'; });
     html += '</tr>';
   });
   html += '</table></div><p class="tapcount" id="tapCount">누른 글자 0개</p>';
@@ -910,6 +938,8 @@ function openTeacher(){
   $('#tSet').innerHTML = D.sets.map(s=>'<option value="'+s.id+'"'+(s.id===c.openSet?' selected':'')+'>'+s.id+'. '+s.name+' ('+(s.consonants.length*s.vowels.length)+'글자)</option>').join('');
   $('#tStudent').value=c.studentCode; $('#tSheet').value=c.sheetUrl;
   $('#tEn').checked=!!c.englishHint; $('#tMic').checked=!!c.micEnabled;
+  $('#tFocus').value = c.focus || '';
+  const fl = focusList(); $('#tFocusNote').textContent = fl.length ? '(' + fl.length + '자 적용 중: ' + fl.join(' ') + ')' : '';
   $('#tStages').innerHTML = D.stages.map(s=>'<label><input type="checkbox" value="'+s.id+'" '+(c.unlockedStages.includes(s.id)?'checked':'')+'> '+s.id+'. '+s.name+'</label>').join('');
   $('#tAudio').textContent = Voice.ready
     ? '녹음 파일 사용 중 (' + Object.keys(Voice.map).length + '개, ' + (Voice.mode==='buffer'?'통째로 읽음':'파일 재생') + ')'
@@ -934,6 +964,7 @@ $('#tClose').onclick = ()=>{
   store.settings.sheetUrl = $('#tSheet').value.trim();
   store.settings.englishHint = $('#tEn').checked;
   store.settings.micEnabled = $('#tMic').checked;
+  store.settings.focus = $('#tFocus').value.trim();
   store.settings.unlockedStages = [...$('#tStages').querySelectorAll('input:checked')].map(i=>+i.value);
   if(!store.settings.unlockedStages.length) store.settings.unlockedStages=[1];
   save(); $('#teacherDlg').close(); renderHome(); toast('저장했어요');
