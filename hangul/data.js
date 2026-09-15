@@ -16,7 +16,8 @@ window.HANGUL_DATA = {
     openSet: 1,                  // 글자판에 열린 범위 (1~4). 선생님 모드에서 조절
     unlockedStages: [1],
     speechRate: 0.85,            // 음성 파일이 없을 때 쓰는 기계 음성 속도
-    micEnabled: true             // 「읽어 보기」에서 아이 목소리 녹음
+    micEnabled: true,            // 「읽어 보기」에서 아이 목소리 녹음
+    focus: ""                    // 집중 글자. 읽기 확인표에서 ×였던 글자를 띄어 적는다. 예: "수 더 미 머"
   },
 
   /* ---------- 소리 ----------
