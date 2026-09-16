@@ -654,9 +654,10 @@ function head(txt){
   $('#count').textContent = cur ? (cur.i+1)+'/'+cur.qs.length : '';
 }
 function nextQuestion(){
-  if(cur.i >= cur.qs.length){ finish(); return; }
+  if(cur.i >= cur.qs.length){ releaseMic(); stopMine(); finish(); return; }
   cur.locked=false; cur.attempted=false;
   const k = cur.lesson.kind;
+  if(k!=='read' && k!=='sent') releaseMic();
   if(k==='vowel') renderVowel();
   else if(k==='build') renderBuild();
   else if(k==='read') renderRead();
@@ -751,42 +752,70 @@ function renderRead(){
     + '<p class="hintline" id="readHint">🔊 듣고 → 🎤 누르고 크게 읽어 봐</p>'
     + '<div class="row"><button class="btn soft small" id="cmpBtn" disabled>▶ 이어서 듣기</button><button class="btn small" id="nextBtn">다음 →</button></div>';
   $('#spk').onclick = ()=>playKey(q.target);
-  $('#nextBtn').onclick = ()=>{ sfx.tap(); cur.firstTry++; cur.i++; stopRec(); nextQuestion(); };
+  $('#nextBtn').onclick = ()=>{ sfx.tap(); cur.firstTry++; cur.i++; stopRec(false); stopMine(); nextQuestion(); };
   const cmp = $('#cmpBtn');
-  cmp.onclick = async ()=>{ await playKey(q.target); await wait(250); playMine(); };
+  cmp.onclick = async ()=>{ stopMine(); await playKey(q.target); await wait(250); playMine(); };
   if(cfg().micEnabled) setupMic(q);
   setTimeout(()=>playKey(q.target), 300);
+}
+/* 마이크는 한 번만 얻어 두고 계속 쓴다 — 누를 때마다 새로 얻으면 태블릿이 권한을 다시 묻는다 */
+async function getMic(){
+  if(micStream && micStream.getTracks().some(t=>t.readyState==='live')) return micStream;
+  micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  return micStream;
+}
+function releaseMic(){
+  stopRec(false);
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream = null; }
 }
 function setupMic(q){
   const btn = $('#micBtn'); if(!btn) return;
   btn.onclick = async ()=>{
-    if(mediaRec && mediaRec.state === 'recording'){ stopRec(); return; }
+    if(mediaRec && mediaRec.state === 'recording'){ stopRec(true); return; }
     try{
-      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      const stream = await getMic();
       chunks = [];
       mediaRec = new MediaRecorder(stream);
-      mediaRec.ondataavailable = e=>chunks.push(e.data);
+      mediaRec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
       mediaRec.onstop = ()=>{
-        stream.getTracks().forEach(t=>t.stop());
+        const play = recPlay;
+        mediaRec = null;
+        if(recTimer){ clearTimeout(recTimer); recTimer = null; }
+        btn.classList.remove('rec'); btn.textContent='\u{1F3A4}';
+        if(!chunks.length) return;
         if(myUrl) URL.revokeObjectURL(myUrl);
         myUrl = URL.createObjectURL(new Blob(chunks, {type:'audio/webm'}));
-        btn.classList.remove('rec'); btn.textContent='🎤';
         const c=$('#cmpBtn'); if(c) c.disabled=false;
-        const h=$('#readHint'); if(h) h.textContent='▶ 이어서 듣기로 쵸코 소리와 견주어 봐';
-        playMine();
+        const h=$('#readHint'); if(h) h.textContent='\u25B6 이어서 듣기로 쵸코 소리와 견주어 봐';
+        if(play) playMine();
       };
+      recPlay = true;
       mediaRec.start();
-      btn.classList.add('rec'); btn.textContent='⏹';
+      btn.classList.add('rec'); btn.textContent='\u23F9';
       const h=$('#readHint'); if(h) h.textContent='지금 읽어 봐! 다 하면 다시 눌러';
-      setTimeout(()=>{ if(mediaRec && mediaRec.state==='recording') stopRec(); }, 5000);
+      if(recTimer) clearTimeout(recTimer);
+      recTimer = setTimeout(()=>{ recTimer = null; stopRec(true); }, 5000);
     }catch(e){
-      const h=$('#readHint'); if(h) h.textContent='마이크를 쓸 수 없어요. 🔊를 듣고 소리 내어 읽어 봐';
+      const h=$('#readHint'); if(h) h.textContent='마이크를 쓸 수 없어요. \u{1F50A}를 듣고 소리 내어 읽어 봐';
       btn.style.display='none';
     }
   };
 }
-function stopRec(){ if(mediaRec && mediaRec.state==='recording'){ try{ mediaRec.stop(); }catch(e){} } }
-function playMine(){ if(!myUrl) return; const a=new Audio(myUrl); a.play().catch(()=>{}); }
+function stopRec(play){
+  if(recTimer){ clearTimeout(recTimer); recTimer = null; }
+  if(mediaRec && mediaRec.state==='recording'){
+    recPlay = (play !== false);
+    try{ mediaRec.stop(); }catch(e){}
+  }
+}
+function stopMine(){ if(myAudio){ try{ myAudio.pause(); myAudio.currentTime = 0; }catch(e){} } }
+function playMine(){
+  if(!myUrl) return;
+  Voice.stop(); stopMine();
+  if(!myAudio) myAudio = new Audio();
+  myAudio.src = myUrl;
+  myAudio.play().catch(()=>{});
+}
 
 /* 낱말 채우기 */
 function renderWord(){
@@ -1014,8 +1043,8 @@ function renderSent(){
     + '<p class="hintline" id="readHint">🔊 듣고 → 🎤 누르고 천천히 읽어 봐</p>'
     + '<div class="row"><button class="btn soft small" id="cmpBtn" disabled>▶ 이어서 듣기</button><button class="btn small" id="nextBtn">다음 →</button></div>';
   $('#spk').onclick = ()=>playKey(q.target);
-  $('#nextBtn').onclick = ()=>{ sfx.tap(); cur.firstTry++; cur.i++; stopRec(); nextQuestion(); };
-  $('#cmpBtn').onclick = async ()=>{ await playKey(q.target); await wait(250); playMine(); };
+  $('#nextBtn').onclick = ()=>{ sfx.tap(); cur.firstTry++; cur.i++; stopRec(false); stopMine(); nextQuestion(); };
+  $('#cmpBtn').onclick = async ()=>{ stopMine(); await playKey(q.target); await wait(250); playMine(); };
   if(cfg().micEnabled) setupMic(q);
   setTimeout(()=>playKey(q.target), 300);
 }
@@ -1151,7 +1180,7 @@ function finishBoard(){
   if(cur && cur.taps >= 5){ store.boardRuns = (store.boardRuns||0) + 1; save(); }
   renderHome(); show('home');
 }
-$('#homeBtn').onclick = ()=>{ sfx.tap(); renderHome(); show('home'); };
+$('#homeBtn').onclick = ()=>{ sfx.tap(); releaseMic(); stopMine(); Voice.stop(); renderHome(); show('home'); };
 $('#againBtn').onclick = ()=>{ sfx.tap(); startLesson(cur.lesson); };
 $('#startBtn').onclick = async ()=>{
   sfx.tap();
