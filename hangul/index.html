@@ -737,7 +737,7 @@ async function finishBuild(ok, made, target){
 }
 
 /* 읽어 보기 */
-let mediaRec = null, chunks = [], myUrl = null;
+let mediaRec = null, chunks = [], myUrl = null, micStream = null, recTimer = null, myAudio = null, recPlay = true;
 function renderRead(){
   const q = cur.qs[cur.i];
   head(pick(D.choco.read));
@@ -1175,7 +1175,7 @@ $('#tClose').onclick = ()=>{
 };
 
 /* 버튼 */
-$('#backBtn').onclick = ()=>{ sfx.tap(); Voice.stop(); stopRec(); if(cur && (cur.lesson.kind==='board'||cur.lesson.kind==='jboard') && cur.taps>0){ finishBoard(); } else { renderHome(); show('home'); } };
+$('#backBtn').onclick = ()=>{ sfx.tap(); Voice.stop(); stopRec(false); stopMine(); if(cur && (cur.lesson.kind==='board'||cur.lesson.kind==='jboard') && cur.taps>0){ finishBoard(); } else { renderHome(); show('home'); } };
 function finishBoard(){
   if(cur && cur.taps >= 5){ store.boardRuns = (store.boardRuns||0) + 1; save(); }
   renderHome(); show('home');
