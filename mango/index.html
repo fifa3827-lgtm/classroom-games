@@ -114,7 +114,8 @@
     padding-left:calc(18px + env(safe-area-inset-left,0px));padding-right:calc(18px + env(safe-area-inset-right,0px))}
   .full .art{display:flex;align-items:center;justify-content:center;min-height:0}
   .full .art svg{height:100%;max-height:100%;width:auto;max-width:100%}
-  .full .txt{overflow-y:auto;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px}
+  .full .txt{overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin}
+  .full .txt>:first-child{margin-top:auto} .full .txt>:last-child{margin-bottom:auto}
   .eyebrow{font-size:11px;letter-spacing:.22em;color:var(--brick);font-weight:700}
   .title h1{font-size:30px;line-height:1.2}
   .title h1 em{font-style:normal;color:var(--brick)}
@@ -138,6 +139,27 @@
   #rotate h2{font-size:26px}
   #rotate .ph{width:54px;height:96px;border:4px solid var(--line);border-radius:10px;animation:rot 1.6s ease-in-out infinite}
   @keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+  /* ---------- 다듬기: 말하기·도장·배지 ---------- */
+  .portrait.talking svg{animation:talk .22s ease-in-out infinite alternate;transform-origin:50% 90%}
+  @keyframes talk{from{transform:translateY(0) scaleY(1)}to{transform:translateY(-3px) scaleY(1.015)}}
+  .blank.stamp{animation:stamp .32s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes stamp{0%{transform:scale(1.35) rotate(-4deg)}100%{transform:none}}
+  .new{display:inline-block;background:var(--brick);color:#fff;border-radius:999px;font-size:9.5px;padding:0 6px;margin-left:4px;vertical-align:middle;font-family:"Gowun Dodum",sans-serif;font-weight:700;animation:blink 1s 3}
+  @keyframes blink{50%{opacity:.35}}
+  .sheet{animation:slideup .22s cubic-bezier(.2,.9,.3,1)}
+  @keyframes slideup{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+  .sheet .ctx{padding:8px 12px 0;font-size:12.5px;color:var(--soft);line-height:1.6}
+  .sheet .ctx b{color:var(--ink)}
+  .stars span{display:inline-block;opacity:0;transform:scale(2.2)}
+  .stars span.on{animation:starin .45s cubic-bezier(.2,1.3,.4,1) forwards}
+  @keyframes starin{to{opacity:1;transform:none}}
+  .cursor{display:inline-block;width:8px;height:14px;background:var(--brick);vertical-align:-2px;margin-left:2px;animation:blink .7s infinite}
+  .tap.typing{pointer-events:none}
+  .snd{display:flex;gap:6px;justify-content:flex-end}
+  .snd button{border:2px solid var(--line);border-radius:999px;background:var(--panel);padding:2px 10px;font-size:12px;font-weight:700}
+  .snd button[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+  .lenslabel.new-hot{animation:pop .18s}
+  @keyframes pop{from{transform:translateX(-50%) scale(.85)}to{transform:translateX(-50%) scale(1)}}
   @media (orientation:portrait){#rotate{display:flex}}
   @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
@@ -244,13 +266,15 @@
   <section class="full title" id="s-title">
     <div class="art"><svg viewBox="0 0 150 130"><use href="#mango"/></svg></div>
     <div class="txt">
-      <div class="eyebrow">시험판 2 · 첫 사건</div>
+      <div class="eyebrow">시험판 3 · 첫 사건</div>
       <h1>탐정 망고의<br><em>춤추는 대수사선</em></h1>
       <p class="muted" style="margin:0">단서를 모으고, 진술을 무너뜨리고,<br>추리 사슬을 완성해 범인을 밝히세요.</p>
       <div class="modepick">
         <button id="m-easy"><b>처음이에요</b><span>수상한 말에 밑줄이 그어집니다</span></button>
         <button id="m-hard"><b>추리게임 해봤어요</b><span>수상한 말을 직접 찾습니다</span></button>
       </div>
+      <div class="snd"><button id="tg-sfx" aria-pressed="true">🔔 효과음</button><button id="tg-bgm" aria-pressed="true">🎵 음악</button></div>
+      <p class="muted" style="margin:0;font-size:11px">소리를 켜고 하시면 더 재미있어요 · 가로 화면 전용</p>
     </div>
   </section>
 
@@ -259,9 +283,9 @@
     <div class="txt">
       <div class="card">
         <div class="who">양 아주머니 <small>급식실장</small></div>
-        <p style="margin:0;font-size:13.5px">"탐정님! 올해 <b>첫 도토리로 만든 시식회용 묵</b>이 통째로 사라졌어요. 11시 30분에 배식대에 두고 <b>앞문을 잠그고</b> 창고에 갔는데 — 열쇠는 나만 있어요 — 11시 50분에 돌아오니 통이 없고 <b>뒷문이 열려</b> 있었어요. 도우미 둘은 그때 <b>설거지실에</b> 있었고요. 그 통은 무거워서 <b>둘이 양쪽 손잡이를 잡아야</b> 들어요."</p>
+        <p style="margin:0;font-size:13.5px" id="brief-say"></p>
       </div>
-      <div class="say"><b>망고</b> "…축제 첫 묵이라. 그럼 사건이네요."</div>
+      <div class="say" id="brief-mango" style="visibility:hidden"><b>망고</b> <span id="brief-mango-t"></span></div>
       <p class="muted" style="margin:0">아주머니의 말은 <b>수첩</b>에 증언 카드로 기록됩니다.</p>
       <button class="btn" id="btn-accept">🔍 사건을 맡는다</button>
     </div>
@@ -270,11 +294,11 @@
   <section class="full" id="s-solve" hidden>
     <div class="art"><svg viewBox="0 0 150 180"><use href="#rc-head"/><use href="#rc-eye-sp"/><use href="#rc-ribbon"/><use href="#rc-apron"/></svg></div>
     <div class="txt">
-      <div class="stars" id="stars">★★★</div>
+      <div class="stars" id="stars"><span>★</span><span>★</span><span>★</span></div>
       <div class="card">
         <div class="who">사건 해결</div>
-        <p style="margin:0;font-size:13px">설거지를 하던 콩이와 콩순이는 묵 냄새에 못 이겨 「한 입만」 먹다 반 통을 비웠습니다. 겁이 난 둘은 통을 <b>둘이 들고</b> 뒷문 밖 화단에 숨기고, 운동장으로 뛰어가 「원래 밖에 있었다」고 하기로 했죠. 콩이는 급히 나가다 앞치마 끈이 손잡이에 걸려 앞치마를 벗어 던졌고, 콩순이는 묵을 묻힌 채였습니다.</p>
-        <p style="margin:6px 0 0;font-size:13px"><b>양 아주머니:</b> "벌은 축제 날 묵 통 나르기. <b>둘이서.</b>"</p>
+        <p style="margin:0;font-size:13px" id="solve-t"></p>
+        <p style="margin:6px 0 0;font-size:13px" id="solve-sheep"></p>
       </div>
       <div class="reward" id="reward"></div>
       <div class="note"><b>…그런데, 설명이 안 되는 게 하나 있어요.</b>창턱 <b>바깥</b>의 작은 붉은 흙 발자국. 너구리 발이 아니고, 흙은 뒷마당 것도 아니에요. 어젯밤 이후, 누가 광장 쪽에서 와서 급식실 안을 들여다봤어요. 누가, 왜?</div>
@@ -298,7 +322,7 @@
   <!-- ===== 조사 모드 골격 ===== -->
   <div class="bar" id="bar" hidden>
     <span class="chip" id="t-left">사건 1 · 현장</span>
-    <span style="display:flex;gap:5px"><span class="chip" id="t-lamp">💡 3</span><button class="chip" id="t-sound">🔔</button></span>
+    <span style="display:flex;gap:5px"><span class="chip" id="t-clue">🗒 0</span><span class="chip" id="t-lamp">💡 3</span><button class="chip" id="t-sound" title="효과음">🔔</button><button class="chip" id="t-music" title="음악">🎵</button></span>
   </div>
   <div class="body" id="bodyx" hidden>
     <div class="left" id="left"></div>
@@ -396,18 +420,146 @@ var PROOFS=['c_strap','c_stain'];
 
 /* ================= 상태 ================= */
 var S;
-function fresh(){S={screen:'title',mode:'scene',easy:null,sound:true,lamps:3,found:{},flags:{},tab:'kongi',sel:null,
-  lens:{x:360,y:180},hot:null,chain:[null,null,null,null,null],proofs:[],active:null,chainErr:0,rebutErr:0,newNotes:0};
+function fresh(){var snd=S?S.sound:true,mus=S?S.music:true;
+  S={screen:'title',mode:'scene',easy:null,sound:snd,music:mus,lamps:3,found:{},flags:{},tab:'kongi',sel:null,
+  lens:{x:360,y:180},hot:null,chain:[null,null,null,null,null],proofs:[],active:null,chainErr:0,rebutErr:0,newNotes:0,idle:null};
   SUS.kongi.eyes='def';SUS.kongsun.eyes='def';}
 fresh();
 
-/* ================= 소리 ================= */
-var ac=null;
-function beep(fs,dur,type,vol){if(!S.sound)return;try{if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();
+/* ================= 소리 엔진 (합성, 외부 파일 없음) ================= */
+var ac=null,sfxG=null,musG=null,voxG=null,noiseBuf=null;
+function initAC(){
+  if(ac)return true;
+  try{ac=new (window.AudioContext||window.webkitAudioContext)();
+    sfxG=ac.createGain();sfxG.gain.value=1;sfxG.connect(ac.destination);
+    voxG=ac.createGain();voxG.gain.value=1;voxG.connect(ac.destination);
+    musG=ac.createGain();musG.gain.value=S.music?1:0;
+    var comp=ac.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=4;musG.connect(comp);comp.connect(ac.destination);
+    var n=ac.createBuffer(1,ac.sampleRate*.25,ac.sampleRate),d=n.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;noiseBuf=n;
+    return true}catch(e){ac=null;return false}
+}
+function wake(){if(!initAC())return false;if(ac.state==='suspended')ac.resume();return true}
+function beep(fs,dur,type,vol){if(!S.sound||!wake())return;try{
   fs.forEach(function(f,i){var o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+i*dur*.62;o.type=type||'sine';o.frequency.setValueAtTime(f,t);
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||.12,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+.02)});}catch(e){}}
-var sTap=function(){beep([620],.07,'sine',.07)},sFind=function(){beep([740,988],.13,'triangle',.11)},sGood=function(){beep([659,880],.16,'triangle',.12)},
-    sBad=function(){beep([300,220],.16,'sine',.1)},sFan=function(){beep([523,659,784,1047],.2,'triangle',.12)},sNo=function(){beep([440],.09,'sine',.06)};
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||.12,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(sfxG);o.start(t);o.stop(t+dur+.02)});}catch(e){}}
+var sTap=function(){beep([620],.07,'sine',.07)},sFind=function(){beep([740,988],.13,'triangle',.11);buzz(12)},sGood=function(){beep([659,880],.16,'triangle',.12);buzz(18)},
+    sBad=function(){beep([300,220],.16,'sine',.1)},sFan=function(){beep([523,659,784,1047],.2,'triangle',.12);buzz([20,40,20])},sNo=function(){beep([440],.09,'sine',.06)},
+    sHot=function(){beep([1180],.045,'sine',.028)},sPage=function(){if(!S.sound||!wake())return;noise(.06,1800,.05)},sStamp=function(){beep([180],.09,'square',.06);noise(.04,900,.06)};
+function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function noise(dur,hz,vol,dest){try{var s=ac.createBufferSource();s.buffer=noiseBuf;var f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=hz;f.Q.value=.8;
+  var g=ac.createGain(),t=ac.currentTime;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(f);f.connect(g);g.connect(dest||sfxG);s.start(t);s.stop(t+dur+.02)}catch(e){}}
+
+/* ---- 말소리(인물별 목소리 톤) ---- */
+var VOICE={
+  mango:{f:300,type:'triangle',w:.07,v:.05},   // 차분한 중음
+  sheep:{f:230,type:'sine',w:.09,v:.06},       // 아주머니, 낮고 둥글게
+  kongi:{f:430,type:'square',w:.05,v:.028},    // 콩이, 높고 재빠르게
+  kongsun:{f:500,type:'square',w:.05,v:.026},  // 콩순이, 더 높게
+  doto:{f:640,type:'triangle',w:.04,v:.05},    // 다람쥐, 아주 높고 짧게
+  mori:{f:190,type:'sine',w:.1,v:.06},         // 두더지, 낮고 느리게
+  narr:{f:260,type:'triangle',w:.06,v:.03}     // 해설
+};
+function blip(vc,ch){
+  if(!S.sound||!wake())return;
+  try{var v=VOICE[vc]||VOICE.narr,code=ch.charCodeAt(0),k=(code%7)/7; // 글자마다 음높이 살짝 다르게
+    var f=v.f*(0.92+k*.2),o=ac.createOscillator(),g=ac.createGain(),lp=ac.createBiquadFilter(),t=ac.currentTime;
+    o.type=v.type;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.08,t+v.w*.6);
+    lp.type='lowpass';lp.frequency.value=v.type==='square'?1600:3000;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v.v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+v.w);
+    o.connect(lp);lp.connect(g);g.connect(voxG);o.start(t);o.stop(t+v.w+.02)}catch(e){}
+}
+
+/* ---- 타자기 연출: 글자가 한 자씩 나타나며 말소리 ---- */
+var typers=[];
+function typeHTML(el,html,voice,done,speed){
+  if(!el)return;cancelTyper(el);
+  var i=0,out='',n=0,live=true,t={el:el};
+  var talker=voice&&voice!=='narr'?el.closest('.right, .full')&&document.querySelector('.portrait'):null;
+  if(talker&&S.mode==='talk')talker.classList.add('talking');
+  function finish(instant){if(!live)return;live=false;clearTimeout(t.timer);el.innerHTML=html;typers=typers.filter(function(x){return x!==t});
+    if(talker)talker.classList.remove('talking');if(done)done(instant)}
+  t.finish=finish;typers.push(t);
+  var ms=speed||(voice?26:12);
+  function step(){
+    if(!live)return;
+    var budget=1;
+    while(budget>0&&i<html.length){
+      var ch=html[i];
+      if(ch==='<'){var j=html.indexOf('>',i);out+=html.slice(i,j+1);i=j+1;continue}
+      if(ch==='&'){var k=html.indexOf(';',i);out+=html.slice(i,k+1);i=k+1;budget--;continue}
+      out+=ch;i++;budget--;n++;
+      if(voice&&/[가-힣a-zA-Z0-9]/.test(ch)&&n%2===0)blip(voice,ch);
+    }
+    el.innerHTML=out+(i<html.length?'<span class="cursor"></span>':'');
+    if(voice){var sc=el.closest('#rscroll,.txt');if(sc)sc.scrollTop=sc.scrollHeight}
+    var pause=/[.!?…,」"]/.test(html[i-1])?ms*6:ms;
+    if(i<html.length)t.timer=setTimeout(step,pause);else finish(false);
+  }
+  step();return t;
+}
+function cancelTyper(el){typers.slice().forEach(function(t){if(!el||t.el===el)t.finish(true)})}
+function skipTypers(){if(typers.length){typers.slice().forEach(function(t){t.finish(true)});return true}return false}
+document.addEventListener('pointerdown',function(e){ // 아무 곳이나 누르면 대사가 바로 끝까지 나옴
+  if(typers.length&&!e.target.closest('.tab,.act,.snd,#t-sound,#t-music'))skipTypers();
+},true);
+
+/* ---- BGM: 미스터리풍, 화면 분위기별로 변주 ---- */
+var BPM=82,M={timer:null,next:0,step:0,mood:'calm',lastMel:null,padUntil:0};
+function mtof(m){return 440*Math.pow(2,(m-69)/12)}
+var CH={Dm:[62,65,69],Gm:[67,70,74],A:[69,73,76],Bb:[70,74,77],D:[62,66,69],G:[67,71,74],Em:[64,67,71]};
+var SCALE_MIN=[62,64,65,67,69,70,72,74,76,77,79],SCALE_MAJ=[62,64,66,67,69,71,73,74,76,78,81];
+var MOODS={
+  calm:  {prog:['Dm','Gm','A','Dm'],bass:[0,8],bassPat:['r','r'],tick:[4,12],mel:.16,melLo:66,melHi:79,hat:false,pad:true,arp:false},
+  invest:{prog:['Dm','Dm','Bb','A'],bass:[0,6,8,14],bassPat:['r','5','r','5'],tick:[4,12],mel:.11,melLo:69,melHi:81,hat:false,pad:true,arp:false},
+  tense: {prog:['Dm','Bb','A','A'],bass:[0,4,8,12],bassPat:['r','5','b6','5'],tick:[4,12],mel:.22,melLo:74,melHi:86,hat:true,pad:true,arp:false},
+  build: {prog:['Dm','Gm','Bb','A'],bass:[0,8],bassPat:['r','r'],tick:[4,12],mel:0,melLo:0,melHi:0,hat:false,pad:true,arp:true},
+  resolve:{prog:['D','G','A','D'],bass:[0,8],bassPat:['r','5'],tick:[],mel:.2,melLo:69,melHi:83,hat:false,pad:true,arp:false,major:true},
+  off:null
+};
+function pluck(midi,t,vol,dur){var o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();o.type='triangle';o.frequency.value=mtof(midi);f.type='lowpass';f.frequency.setValueAtTime(1400,t);f.frequency.exponentialRampToValueAtTime(300,t+(dur||.5));
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+(dur||.5));o.connect(f);f.connect(g);g.connect(musG);o.start(t);o.stop(t+(dur||.5)+.05)}
+function vibe(midi,t,vol){var f=mtof(midi);[1,4].forEach(function(h,i){var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f*h;var v=vol*(i?.12:1);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+1.4);o.connect(g);g.connect(musG);o.start(t);o.stop(t+1.5)});
+  // 살짝 떨림
+}
+function pad(chord,t,dur,major){chord.forEach(function(m,i){[-5,5].forEach(function(det){var o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();o.type='sawtooth';o.frequency.value=mtof(m-12);o.detune.value=det;
+  f.type='lowpass';f.frequency.value=major?720:520;f.Q.value=.6;var v=.016;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.7);g.gain.setValueAtTime(v,t+dur-.6);g.gain.linearRampToValueAtTime(0,t+dur);o.connect(f);f.connect(g);g.connect(musG);o.start(t);o.stop(t+dur+.05)})})}
+function tick(t,vol){var s=ac.createBufferSource();s.buffer=noiseBuf;var f=ac.createBiquadFilter();f.type='highpass';f.frequency.value=3200;var g=ac.createGain();
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+.035);s.connect(f);f.connect(g);g.connect(musG);s.start(t);s.stop(t+.06);
+  var o=ac.createOscillator(),g2=ac.createGain();o.type='square';o.frequency.value=2100;g2.gain.setValueAtTime(vol*.5,t);g2.gain.exponentialRampToValueAtTime(.0001,t+.02);o.connect(g2);g2.connect(musG);o.start(t);o.stop(t+.03)}
+function hat(t){var s=ac.createBufferSource();s.buffer=noiseBuf;var f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=7500;var g=ac.createGain();
+  g.gain.setValueAtTime(.014,t);g.gain.exponentialRampToValueAtTime(.0001,t+.03);s.connect(f);f.connect(g);g.connect(musG);s.start(t);s.stop(t+.05)}
+function playStep(step,t){
+  var mo=MOODS[M.mood];if(!mo)return;
+  var bar=Math.floor(step/16),pos=step%16,chord=CH[mo.prog[bar]],scale=mo.major?SCALE_MAJ:SCALE_MIN,root=chord[0];
+  if(pos===0&&mo.pad)pad(chord,t,60/BPM*4+.3,mo.major);
+  var bi=mo.bass.indexOf(pos);
+  if(bi>=0){var p=mo.bassPat[bi],n=root-24;if(p==='5')n=root-24+7;if(p==='b6')n=root-24+8;pluck(n,t,.11,.55)}
+  if(mo.tick.indexOf(pos)>=0)tick(t,.05);
+  if(mo.hat&&pos%2===0)hat(t);
+  if(mo.arp&&pos%2===0){var seq=[chord[0],chord[1],chord[2],chord[1]+12,chord[0]+12,chord[2],chord[1],chord[0]];pluck(seq[(pos/2)%8],t,.06,.4)}
+  if(mo.mel&&pos%2===0&&Math.random()<mo.mel){
+    var cands=scale.filter(function(m){return m>=mo.melLo&&m<=mo.melHi});
+    var ct=cands.filter(function(m){return chord.some(function(c){return (m-c)%12===0})});
+    var pool=Math.random()<.6?ct:cands,n2=pool[Math.floor(Math.random()*pool.length)];
+    if(n2===M.lastMel)n2=pool[Math.floor(Math.random()*pool.length)];
+    M.lastMel=n2;vibe(n2,t,.045);
+  }
+}
+function schedule(){if(!ac)return;while(M.next<ac.currentTime+.3){playStep(M.step,M.next);M.next+=60/BPM/4;M.step=(M.step+1)%64}}
+function startMusic(){if(!S.music||!wake())return;if(M.timer)return;M.next=ac.currentTime+.08;M.step=0;M.timer=setInterval(schedule,70)}
+function stopMusic(){if(M.timer){clearInterval(M.timer);M.timer=null}}
+function setMood(m){if(M.mood===m)return;M.mood=m;if(m==='resolve'&&M.timer){M.step=0}}
+function setMusic(on){S.music=on;savePrefs();if(musG)musG.gain.setTargetAtTime(on?1:0,ac.currentTime,.15);if(on)startMusic();else stopMusic();syncSoundUI()}
+function setSfx(on){S.sound=on;savePrefs();syncSoundUI()}
+function syncSoundUI(){
+  var a=$('#t-sound'),b=$('#t-music');if(a)a.textContent=S.sound?'🔔':'🔕';if(b)b.textContent=S.music?'🎵':'🔇';
+  var c=$('#tg-sfx'),d=$('#tg-bgm');if(c)c.setAttribute('aria-pressed',String(S.sound));if(d)d.setAttribute('aria-pressed',String(S.music));
+}
+function savePrefs(){try{localStorage.setItem('mango.snd',JSON.stringify({s:S.sound,m:S.music}))}catch(e){}}
+function loadPrefs(){try{var p=JSON.parse(localStorage.getItem('mango.snd')||'null');if(p){S.sound=!!p.s;S.music=!!p.m}}catch(e){}}
+document.addEventListener('visibilitychange',function(){if(!ac)return;if(document.hidden){ac.suspend()}else if(S.music||S.sound){ac.resume()}});
 
 var toastT;function toast(m){var el=$('#toast');el.textContent=m;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove('on')},2000)}
 
@@ -417,6 +569,9 @@ function show(id){
   var inv=(id==='invest');
   $('#bar').hidden=!inv;$('#bodyx').hidden=!inv;$('#foot').hidden=!inv;
   S.screen=id;
+  cancelTyper();
+  if(id==='s-title'||id==='s-brief')setMood('calm');
+  else if(id==='s-solve'||id==='s-board')setMood('resolve');
 }
 function lockLandscape(){
   try{var el=document.documentElement;
@@ -432,7 +587,7 @@ function addClue(id,quiet){
   if(!quiet)sFind();
   return true;
 }
-function updateDot(){var d=$('#notes-dot');d.hidden=S.newNotes===0;d.textContent=S.newNotes}
+function updateDot(){var d=$('#notes-dot');d.hidden=S.newNotes===0;d.textContent=S.newNotes;var c=$('#t-clue');if(c)c.textContent='🗒 '+count()}
 function count(){return ORDER.filter(function(id){return S.found[id]&&!CLUES[id].locked}).length}
 function lamps(){$('#t-lamp').textContent='💡 '+S.lamps}
 function burn(){S.lamps=Math.max(0,S.lamps-1);lamps()}
@@ -443,10 +598,22 @@ function setMode(m){
   document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.mode===m))});
   $('#t-left').textContent={scene:'사건 1 · 현장',talk:'사건 1 · 심문',notes:'사건 1 · 수첩',logic:'사건 1 · 추리'}[m];
   if(m==='notes'){S.newNotes=0;updateDot()}
-  closeSheet();
+  closeSheet();cancelTyper();
+  setMood({scene:'invest',talk:'tense',notes:'invest',logic:'build'}[m]);
   ({scene:renderScene,talk:renderTalk,notes:renderNotes,logic:renderLogic})[m]();
-  updateAct();
+  updateAct();idleReset();
 }
+/* 쉬움 모드: 60초 동안 진전이 없으면 힌트 제안 */
+function idleReset(){clearTimeout(S.idle);if(!S.easy||S.screen!=='invest')return;S.idle=setTimeout(idleHint,60000)}
+function idleHint(){
+  if(S.screen!=='invest')return;var m='';
+  if(S.mode==='scene'){var left=SPOTS.filter(function(sp){return !sp.decoy&&!S.found[sp.id]&&!CLUES[sp.id].locked}).length;m=left?'아직 조사하지 않은 곳이 '+left+'곳 있어요. 확대경을 천천히 끌어 보세요':'현장은 다 봤어요. 심문 탭으로 가 보세요'}
+  else if(S.mode==='talk')m=S.sel?'수첩의 증언 카드도 들이댈 수 있어요':'용의자의 말 중 수첩의 증언과 어긋나는 말을 찾아보세요';
+  else if(S.mode==='logic'){var i=S.chain.indexOf(null);m=i>=0?hintFor(i).replace(/<[^>]+>/g,''):'지목 버튼을 누르세요!'}
+  else m='물증은 흰 카드, 증언은 이중선 카드예요';
+  if(m)toast('💡 '+m);idleReset();
+}
+document.addEventListener('pointerdown',function(){if(S.screen==='invest')idleReset()});
 document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){sTap();setMode(b.dataset.mode)})});
 
 function updateAct(){
@@ -541,9 +708,11 @@ function setLens(x,y){
   $('#mag').setAttribute('transform','translate('+x+','+y+') scale(1.8) translate('+(-x)+','+(-y)+')');
   var best=null,bd=1e9;
   SPOTS.forEach(function(sp){var d=Math.hypot(sp.x-x,sp.y-y);if(d<Math.max(sp.r,26)&&d<bd){bd=d;best=sp}});
-  S.hot=best;
+  var changed=(best&&best!==S.hot);S.hot=best;
   var lab=$('#lenslabel');
-  if(best){var nm=best.decoy?best.label:CLUES[best.id].n;lab.textContent=(S.found[best.id]?'✓ ':'')+nm;lab.classList.add('on')}else lab.classList.remove('on');
+  if(best){var nm=best.decoy?best.label:CLUES[best.id].n;lab.textContent=(S.found[best.id]?'✓ ':'')+nm;lab.classList.add('on');
+    if(changed){sHot();lab.classList.remove('new-hot');void lab.offsetWidth;lab.classList.add('new-hot')}}
+  else lab.classList.remove('on');
   updateAct();
 }
 function drawFound(){
@@ -558,18 +727,21 @@ function inspect(){
   if(c.locked){sBad();rightScene('<div class="card"><div class="who">🔒 '+esc(c.n)+'</div><p style="margin:0">'+c.t+'</p></div>');return}
   var isNew=addClue(sp.id);
   drawFound();setLens(S.lens.x,S.lens.y);
-  var extra='';
+  var extra='',after=null;
   if(sp.id==='c_print'){
-    if(addClue('t_wiped',true)){extra+='<div class="say"><b>양 아주머니</b> "창턱요? 어제 저녁에 닦았는데요?"<br><span class="muted">→ 증언 카드가 수첩에 추가됐어요.</span></div>'}
+    if(addClue('t_wiped',true)){extra+='<div class="say" id="sc-sheep"><b>양 아주머니</b> <span></span><br><span class="muted">→ 증언 카드가 수첩에 추가됐어요.</span></div>';
+      after=function(){typeHTML(document.querySelector('#sc-sheep span'),'"창턱요? 어제 저녁에 닦았는데요?"','sheep')}}
     extra+='<div class="say"><b>발자국 감정</b> 길이 3cm · 발가락 5개. 너구리(6cm)도, 다람쥐(발가락 4개)도 아니에요. …이 크기라면 두더지? <span class="muted">— 두더지는 용의자 목록에 없어요.</span></div>';
   }
   if(sp.id==='c_tub')extra+='<div class="muted" style="margin-top:6px">수첩의 증언 「통은 둘이 든다」와 같은 뜻이에요.</div>';
-  rightScene('<div class="card"><div class="who">'+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div><p style="margin:0">'+c.t+'</p></div>'+extra);
+  rightScene('<div class="card"><div class="who">'+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div><p style="margin:0" id="sc-desc"></p></div>'+extra);
+  typeHTML($('#sc-desc'),c.t,isNew?'mango':null,after);
   if(count()>=8&&!S.flags.hint8){S.flags.hint8=true;toast('단서가 많이 모였어요. 심문과 추리 탭도 써 보세요')}
 }
 function rightScene(html){
   var base='<p class="muted" style="margin:0 0 8px">확대경을 끌어 살펴보고, 이름표가 뜨면 <b>조사하기</b>를 누르세요. 조사한 곳은 ✓로 표시돼요.</p>';
-  $('#rscroll').innerHTML=base+(html||'<div class="card" style="background:#fff8e7"><div class="who">망고의 메모</div><p style="margin:0;font-size:13px">앞문은 잠겨 있었고, 뒷문은 열려 있었다. 묵은 어디로, 누가, 몇 명이서 가져갔을까. 하나씩 확인하자.</p></div>');
+  $('#rscroll').innerHTML=base+(html||'<div class="card" style="background:#fff8e7"><div class="who">망고의 메모</div><p style="margin:0;font-size:13px" id="sc-memo"></p></div>');
+  if(!html)typeHTML($('#sc-memo'),'앞문은 잠겨 있었고, 뒷문은 열려 있었다. 묵은 어디로, 누가, 몇 명이서 가져갔을까. 하나씩 확인하자.',S.flags.memoSaid?null:'mango'),S.flags.memoSaid=true;
 }
 
 /* ================= 심문 ================= */
@@ -580,43 +752,57 @@ function portraitHTML(id){
   return '<div class="portrait"><svg viewBox="0 0 150 '+(s.apron?180:130)+'">'+h+'</svg></div>';
 }
 function renderTalk(){
+  cancelTyper();
   $('#left').innerHTML=portraitHTML(S.tab);
   var s=SUS[S.tab],h='<div class="tabs">';
   SUSORDER.forEach(function(id){h+='<button data-s="'+id+'" aria-selected="'+(id===S.tab)+'"'+(SUS[id].witness?' class="witness"':'')+'>'+esc(SUS[id].name)+(SUS[id].witness?'·증인':'')+'</button>'});
   h+='</div><div class="card"><div class="who">'+esc(s.name)+' <small>'+esc(s.role)+'</small></div>';
-  var n=0;
+  var n=0,intro=!S.flags['intro_'+S.tab],seq=[];
   s.lines.forEach(function(L){
     if(L.hidden&&!S.flags[L.id])return;n++;
     var active=L.sus&&(!L.needs||S.flags[L.needs]);
     var cls='tap'+(active&&S.easy?' sus-on':'')+(S.sel===L.id?' picked':'');
-    h+='<div class="stmt"><span class="n">'+n+'</span><button class="'+cls+'" data-l="'+L.id+'">"'+esc(L.t)+'"</button></div>';
+    var isNew=L.hidden&&!S.flags['seen_'+L.id];if(isNew)S.flags['seen_'+L.id]=true;
+    var txt='"'+esc(L.t)+'"'+(isNew?'<span class="new">새로운 말</span>':'');
+    if(intro||isNew){seq.push({id:L.id,html:txt});txt=''}
+    h+='<div class="stmt"><span class="n">'+n+'</span><button class="'+cls+(txt?'':' typing')+'" data-l="'+L.id+'" id="ln-'+L.id+'">'+txt+'</button></div>';
   });
   h+='</div><div id="talk-say">'+(S.flags['say_'+S.tab]||'')+'</div>';
   h+='<p class="muted" style="margin-top:8px">'+(s.witness?'증인의 말이에요. 중요한 말은 수첩에 기록돼요.':(S.sel?'아래 <b>단서 들이대기</b>로 반박하세요.':'거짓말 같은 말을 눌러 고르세요.'))+'</p>';
   $('#rscroll').innerHTML=h;
-  document.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){sTap();S.tab=b.dataset.s;S.sel=null;renderTalk();updateAct()})});
+  document.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){sTap();sPage();S.tab=b.dataset.s;S.sel=null;renderTalk();updateAct()})});
   document.querySelectorAll('[data-l]').forEach(function(b){b.addEventListener('click',function(){pickLine(b.dataset.l)})});
+  // 처음 만나는 인물은 말을 한 줄씩 꺼낸다 (인물별 목소리)
+  if(seq.length){S.flags['intro_'+S.tab]=true;var k=0;
+    (function next(){if(k>=seq.length)return;var it=seq[k++],el=$('#ln-'+it.id);if(!el)return;
+      typeHTML(el,it.html,S.tab,function(){el.classList.remove('typing');setTimeout(next,120)})})();}
   updateAct();
 }
-function say(html){S.flags['say_'+S.tab]='<div class="say">'+html+'</div>';var el=$('#talk-say');if(el)el.innerHTML=S.flags['say_'+S.tab]}
+function speakerOf(html){var m=/^<b>([^<]+)<\/b>/.exec(html);if(!m)return 'narr';var nm=m[1];
+  if(nm.indexOf('망고')>=0)return 'mango';if(nm.indexOf('양')>=0)return 'sheep';if(nm.indexOf('콩순')>=0)return 'kongsun';if(nm.indexOf('콩이')>=0)return 'kongi';if(nm.indexOf('도토')>=0)return 'doto';if(nm.indexOf('모리')>=0)return 'mori';return 'narr'}
+function say(html,silent){S.flags['say_'+S.tab]='<div class="say">'+html+'</div>';var el=$('#talk-say');if(!el)return;
+  if(silent){el.innerHTML=S.flags['say_'+S.tab];return}
+  el.innerHTML='<div class="say" id="say-live"></div>';typeHTML($('#say-live'),html,speakerOf(html))}
 function pickLine(id){
   var s=SUS[S.tab],L=null;s.lines.forEach(function(x){if(x.id===id)L=x});if(!L)return;
+  if(typers.length)return; // 말하는 중엔 잠시 기다리기 (화면을 누르면 바로 끝남)
   sTap();
-  if(L.gives){if(addClue(L.gives))say('<b>수첩에 기록</b> — '+CLUES[L.gives].t);else say(CLUES[L.gives].t);S.sel=null;renderTalk();return}
-  if(L.flag&&!L.sus){S.flags[L.flag]=true;say('<b>망고</b> "…콩순이 앞치마를? 그래, 한번 보자."');S.sel=null;renderTalk();return}
+  if(L.gives){var got=addClue(L.gives);S.sel=null;renderTalk();say((got?'<b>수첩에 기록</b> — ':'')+CLUES[L.gives].t,true);if(got)toast('증언 카드가 수첩에 추가됐어요');return}
+  if(L.flag&&!L.sus){S.flags[L.flag]=true;S.sel=null;renderTalk();say('<b>망고</b> "…콩순이 앞치마를? 그래, 한번 보자."');updateAct();return}
   var active=L.sus&&(!L.needs||S.flags[L.needs]);
-  if(!active){sNo();say('그 말은 이상한 점이 없어 보여요.');S.sel=null;renderTalk();return}
-  S.sel=id;say('<b>수상한 말을 골랐어요.</b> 아래 「단서 들이대기」에서 반박할 단서를 고르세요.');renderTalk();
+  if(!active){sNo();S.sel=null;renderTalk();say('<b>망고</b> "…그 말은 이상한 점이 없어 보이는데."');return}
+  S.sel=id;renderTalk();say('<b>수상한 말을 골랐어요.</b> 아래 「단서 들이대기」에서 반박할 단서를 고르세요.',true);
 }
 function present(clueId){
   closeSheet();
   var s=SUS[S.tab],L=null;s.lines.forEach(function(x){if(x.id===S.sel)L=x});if(!L)return;
   var hit=L.hit&&L.hit[clueId];
   if(hit&&!hit.partial){
-    sGood();if(hit.eyes)s.eyes=hit.eyes;if(hit.flag)S.flags[hit.flag]=true;if(hit.unlock)S.flags[hit.unlock]=true;
-    S.sel=null;renderTalk();say(hit.say);
-    if(hit.unlock==='k4')toast('콩이가 새로운 말을 했어요');
-    if(hit.flag==='s2')toast('콩순이가 사실상 인정했어요. 추리 탭에서 사슬을 완성하세요');
+    sSting();if(hit.eyes)s.eyes=hit.eyes;if(hit.flag)S.flags[hit.flag]=true;if(hit.unlock)S.flags[hit.unlock]=true;
+    S.sel=null;renderTalk();
+    say('<b>망고</b> "잠깐. 「'+CLUES[clueId].n.replace(/^[^:]+: /,'')+'」 — 이건 어떻게 설명하죠?"<br>'+hit.say);
+    if(hit.unlock==='k4')setTimeout(function(){toast('콩이가 새로운 말을 했어요')},1800);
+    if(hit.flag==='s2')setTimeout(function(){toast('콩순이가 사실상 인정했어요. 추리 탭에서 사슬을 완성하세요')},2200);
   }else if(hit&&hit.partial){
     sNo();renderTalk();say(hit.say+'<br><span class="muted">가까워요. 뒷문과 직접 이어지는 단서가 필요해요.</span>');
   }else{
@@ -624,12 +810,14 @@ function present(clueId){
     say('<b>'+esc(s.name)+'</b> "그건 저랑 상관없는데요?"'+(S.lamps?'':' <span class="muted">(등불을 다 썼어요)</span>'));
   }
 }
+var sSting=function(){beep([392,523,659],.12,'triangle',.11);setTimeout(function(){beep([880],.28,'triangle',.1)},200);buzz([15,30,25])};
 function examineApron(){
   sTap();
   if(addClue('c_stain')){S.flags.c_stain_found=true;
+    cancelTyper();
     $('#left').innerHTML='<div class="portrait"><svg viewBox="30 110 90 70"><use href="#rc-apron"></use><circle cx="80" cy="152" r="16" fill="none" stroke="#5b5a63" stroke-width="3"/></svg></div>';
-    say('<b>앞치마 살펴보기</b> — '+CLUES.c_stain.t+'<br><span class="muted">수첩에 기록됐어요. 콩순이의 말 중 하나가 수상해졌어요.</span>');
-    setTimeout(function(){if(S.mode==='talk')renderTalk()},1400);
+    say('<b>망고</b> 앞치마를 살펴본다… '+CLUES.c_stain.t+'<br><span class="muted">수첩에 기록됐어요. 콩순이의 말 중 하나가 수상해졌어요.</span>');
+    setTimeout(function(){if(S.mode==='talk'&&S.tab==='kongsun'){var keep=S.flags.say_kongsun||'';renderTalk();say(keep.replace(/^<div class="say">|<\/div>$/g,''),true)}},3200);
   }
   updateAct();
 }
@@ -673,19 +861,21 @@ function renderLogic(){
   $('#chain').querySelectorAll('[data-b]').forEach(function(b){b.addEventListener('click',function(){sTap();S.active=+b.dataset.b;renderLogic();openTray('chain')})});
   $('#chain').querySelectorAll('[data-p]').forEach(function(b){b.addEventListener('click',function(){sTap();S.active='p'+b.dataset.p;renderLogic();openTray('proof')})});
   $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">추리 노트</div><p style="margin:0;font-size:13px">빈칸마다 <b>그 결론을 만들어 내는 단서</b>를 하나 넣으세요. 사슬이 다 이어지면 범인이 저절로 드러납니다.</p></div>'+
-    '<div class="muted" style="margin-top:8px">틀린 단서를 넣으면 「그 단서로는 이 결론이 나오지 않아요」가 뜹니다. 첫 번째 실수는 봐 드려요.</div>'+(S.flags.logicSay||'');
+    '<div class="muted" style="margin-top:8px">틀린 단서를 넣으면 「그 단서로는 이 결론이 나오지 않아요」가 뜹니다. 첫 번째 실수는 봐 드려요.</div><div id="logic-say">'+(S.flags.logicNew?'':(S.flags.logicSay||''))+'</div>';
+  if(S.flags.logicNew){S.flags.logicNew=false;var ls=$('#logic-say');ls.innerHTML='<div class="say" id="logic-live"></div>';typeHTML($('#logic-live'),S.flags.logicSay.replace(/^<div class="say">|<\/div>$/g,''),'mango')}
+  if(S.flags.stampAt!=null){var sa=String(S.flags.stampAt),bl=sa[0]==='p'?$('#chain [data-p="'+sa.slice(1)+'"]'):$('#chain [data-b="'+sa+'"]');if(bl)bl.classList.add('stamp');S.flags.stampAt=null}
   updateAct();
 }
 function fillBlank(clueId){
-  closeSheet();
+  closeSheet();S.flags.logicNew=true;
   if(typeof S.active==='number'){
     var i=S.active,ok=CHAIN[i].ok.indexOf(clueId)>=0;
-    if(ok){sGood();S.chain[i]=clueId;S.flags.logicSay='<div class="say"><b>이어졌어요.</b> '+CLUES[clueId].t+'</div>';
-      if(CHAIN.every(function(c,k){return S.chain[k]})){sFan();toast('사슬이 완성됐어요! 결정적 증거를 더하면 별점이 올라요')}}
+    if(ok){sStamp();setTimeout(sGood,90);S.chain[i]=clueId;S.flags.stampAt=i;S.flags.logicSay='<div class="say"><b>이어졌어요.</b> '+CLUES[clueId].t+'</div>';
+      if(CHAIN.every(function(c,k){return S.chain[k]})){setTimeout(sFan,350);S.flags.logicSay='<div class="say"><b>망고</b> "…그렇다면 답은 하나뿐이야." 사슬이 완성됐어요. 결정적 증거를 더하면 별점이 올라요.</div>'}}
     else{sBad();S.chainErr++;if(S.chainErr>1)burn();S.flags.logicSay='<div class="say"><b>그 단서로는 이 결론이 나오지 않아요.</b> '+hintFor(i)+'</div>'}
   }else if(typeof S.active==='string'){
     var k=+S.active[1];
-    if(PROOFS.indexOf(clueId)>=0&&S.proofs.indexOf(clueId)<0){sGood();S.proofs[k]=clueId;S.flags.logicSay='<div class="say"><b>결정적 증거.</b> '+CLUES[clueId].t+'</div>'}
+    if(PROOFS.indexOf(clueId)>=0&&S.proofs.indexOf(clueId)<0){sStamp();setTimeout(sGood,90);S.proofs[k]=clueId;S.flags.stampAt='p'+k;S.flags.logicSay='<div class="say"><b>결정적 증거.</b> '+CLUES[clueId].t+'</div>'}
     else{sNo();S.flags.logicSay='<div class="say">그건 「두 사람이 했다」를 <b>직접</b> 보여 주는 증거가 아니에요. 몸에 남은 흔적을 찾아보세요.</div>'}
   }
   S.active=null;renderLogic();
@@ -697,7 +887,11 @@ function openTray(kind){
   var r=$('#right');var old=$('#sheet');if(old)old.remove();
   var d=document.createElement('div');d.className='sheet';d.id='sheet';
   var title={present:'어떤 단서를 들이댈까요?',chain:'빈칸에 넣을 단서',proof:'결정적 증거'}[kind];
-  var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div><div class="list"><div class="clues">';
+  var ctx='';
+  if(kind==='chain'&&typeof S.active==='number'){var c=CHAIN[S.active];ctx='<div class="ctx">'+(S.active+1)+'번 문장: <b>'+c.pre+'<u>______</u>'+c.post.replace(/<\/?b>/g,'')+'</b></div>'}
+  if(kind==='present'){var L=null;SUS[S.tab].lines.forEach(function(x){if(x.id===S.sel)L=x});if(L)ctx='<div class="ctx">'+esc(SUS[S.tab].name)+'의 말: <b>"'+esc(L.t)+'"</b> — 이 말과 어긋나는 단서를 고르세요.</div>'}
+  if(kind==='proof')ctx='<div class="ctx">「두 사람이 했다」를 <b>몸에 남은 흔적</b>으로 직접 보여 주는 단서를 고르세요.</div>';
+  var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div>'+ctx+'<div class="list"><div class="clues">';
   var any=false;
   ORDER.forEach(function(id){if(S.found[id]&&!CLUES[id].locked){any=true;h+=cardHTML(id,false,true)}});
   h+='</div>'+(any?'':'<p class="muted">아직 단서가 없어요. 현장을 먼저 조사하세요.</p>')+'</div>';
@@ -708,26 +902,39 @@ function openTray(kind){
 function closeSheet(){var s=$('#sheet');if(s)s.remove()}
 
 /* ================= 지목 → 해결 ================= */
+var SOLVE_T='설거지를 하던 콩이와 콩순이는 묵 냄새에 못 이겨 「한 입만」 먹다 반 통을 비웠습니다. 겁이 난 둘은 통을 <b>둘이 들고</b> 뒷문 밖 화단에 숨기고, 운동장으로 뛰어가 「원래 밖에 있었다」고 하기로 했죠. 콩이는 급히 나가다 앞치마 끈이 손잡이에 걸려 앞치마를 벗어 던졌고, 콩순이는 묵을 묻힌 채였습니다.';
+var SOLVE_S='<b>양 아주머니:</b> "벌은 축제 날 묵 통 나르기. <b>둘이서.</b>"';
 function accuse(){
   sFan();
   var star=3;if(S.rebutErr>0||S.chainErr>1)star=2;if(S.rebutErr>=2||S.chainErr>=3||S.lamps<=1)star=1;
   if(S.proofs.filter(Boolean).length===2&&star<3)star++;
   star=Math.max(1,Math.min(3,star));
-  $('#stars').textContent='★★★☆☆'.slice(3-star,6-star);
   var coin=star===3?120:(star===2?100:80);
   $('#reward').innerHTML='<span class="chip">🪙 +'+coin+'</span><span class="chip">⭐ 명성 +3</span><span class="chip">📖 도감 +3</span>'+(S.proofs.filter(Boolean).length?'<span class="chip">결정적 증거 '+S.proofs.filter(Boolean).length+'</span>':'');
   show('s-solve');
+  var sp=document.querySelectorAll('#stars span');sp.forEach(function(e,i){e.className='';e.textContent=i<star?'★':'☆';e.style.opacity=i<star?'':'.35'});
+  $('#solve-t').innerHTML='';$('#solve-sheep').innerHTML='';
+  var i=0;(function pop(){if(i<star){sp[i].classList.add('on');beep([523+i*130],.14,'triangle',.1);i++;setTimeout(pop,260)}
+    else{for(var k=star;k<3;k++)sp[k].classList.add('on');
+      setTimeout(function(){typeHTML($('#solve-t'),SOLVE_T,'narr',function(){typeHTML($('#solve-sheep'),SOLVE_S,'sheep')},14)},200)}})();
 }
 
 /* ================= 버튼 ================= */
-function start(easy){S.easy=easy;sTap();lockLandscape();addClue('t_lock',true);addClue('t_helpers',true);addClue('t_tub',true);show('s-brief')}
+var BRIEF_T='"탐정님! 올해 <b>첫 도토리로 만든 시식회용 묵</b>이 통째로 사라졌어요. 11시 30분에 배식대에 두고 <b>앞문을 잠그고</b> 창고에 갔는데 — 열쇠는 나만 있어요 — 11시 50분에 돌아오니 통이 없고 <b>뒷문이 열려</b> 있었어요. 도우미 둘은 그때 <b>설거지실에</b> 있었고요. 그 통은 무거워서 <b>둘이 양쪽 손잡이를 잡아야</b> 들어요."';
+function start(easy){S.easy=easy;wake();sTap();startMusic();lockLandscape();addClue('t_lock',true);addClue('t_helpers',true);addClue('t_tub',true);show('s-brief');
+  $('#brief-mango').style.visibility='hidden';$('#brief-mango-t').innerHTML='';
+  typeHTML($('#brief-say'),BRIEF_T,'sheep',function(){$('#brief-mango').style.visibility='visible';typeHTML($('#brief-mango-t'),'"…축제 첫 묵이라. 그럼 사건이네요."','mango')},22)}
 $('#m-easy').addEventListener('click',function(){start(true)});
 $('#m-hard').addEventListener('click',function(){start(false)});
-$('#btn-accept').addEventListener('click',function(){sTap();show('invest');lamps();setMode('scene');toast('아주머니의 증언 3장이 수첩에 들어갔어요')});
-$('#btn-pin').addEventListener('click',function(){sFan();show('s-board')});
+$('#btn-accept').addEventListener('click',function(){sTap();sPage();show('invest');lamps();updateDot();setMode('scene');toast('아주머니의 증언 3장이 수첩에 들어갔어요')});
+$('#btn-pin').addEventListener('click',function(){sFan();buzz([20,30,20,30,60]);show('s-board')});
 $('#btn-reset').addEventListener('click',function(){sTap();fresh();updateDot();show('s-title')});
-$('#t-sound').addEventListener('click',function(){S.sound=!S.sound;this.textContent=S.sound?'🔔':'🔕';if(S.sound)sTap()});
+$('#t-sound').addEventListener('click',function(){setSfx(!S.sound);if(S.sound)sTap()});
+$('#t-music').addEventListener('click',function(){wake();setMusic(!S.music)});
+$('#tg-sfx').addEventListener('click',function(){setSfx(!S.sound);if(S.sound)sTap()});
+$('#tg-bgm').addEventListener('click',function(){wake();setMusic(!S.music);if(S.music)startMusic()});
 
+loadPrefs();syncSoundUI();
 show('s-title');
 })();
 </script>
