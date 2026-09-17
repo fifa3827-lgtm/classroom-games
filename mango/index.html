@@ -83,9 +83,9 @@
   .portrait svg{height:92%;width:auto;max-width:100%}
 
   /* ---------- 수첩 / 카드 ---------- */
-  .clues{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
-  .clue{background:var(--panel);border:2px solid var(--line);border-radius:9px;padding:6px 5px;text-align:center;font-size:10.5px;line-height:1.3;box-shadow:2px 2px 0 var(--line);min-height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
-  .clue svg{width:26px;height:26px}
+  .clues{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:5px}
+  .clue{background:var(--panel);border:2px solid var(--line);border-radius:9px;padding:6px 5px;text-align:center;font-size:10.5px;line-height:1.3;box-shadow:2px 2px 0 var(--line);min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .clue svg{width:20px;height:20px}
   .clue.testi{background:#fff8e7;border-style:double;border-width:3px}
   .clue.locked{opacity:.5;border-style:dashed;box-shadow:none}
   .clue[aria-pressed="true"]{background:var(--must);transform:translateY(-3px)}
@@ -96,10 +96,9 @@
   .sheet{position:absolute;inset:0;background:var(--cream);z-index:10;display:flex;flex-direction:column}
   .sheet .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:2px solid var(--line);font-family:"Gaegu",cursive;font-weight:700;font-size:15px}
   .sheet .hd button{font-size:13px;border:2px solid var(--line);border-radius:999px;padding:1px 9px;background:var(--panel)}
-  .sheet .list{overflow-y:auto;padding:10px 12px}
+  .sheet .list{overflow-y:auto;padding:8px 12px 12px}
 
-  /* ---------- 추리 사슬 ---------- */
-  .chain{display:grid;gap:6px}
+  /* ---------- 추리 ---------- */
   .link{background:var(--panel);border:2.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.7;position:relative}
   .link .no{position:absolute;left:-9px;top:-9px;width:22px;height:22px;border-radius:50%;background:var(--brick);color:#fff;font-size:12px;font-weight:700;text-align:center;line-height:22px}
   .link.done{border-color:var(--olive);background:#f4f7ef}
@@ -139,6 +138,32 @@
   #rotate h2{font-size:26px}
   #rotate .ph{width:54px;height:96px;border:4px solid var(--line);border-radius:10px;animation:rot 1.6s ease-in-out infinite}
   @keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+  /* ---------- 추리 단계 카드 ---------- */
+  .logicwrap{width:100%;height:100%;overflow-y:auto;padding:12px 8px 8px 14px;scrollbar-width:thin}
+  .chain{display:grid;gap:6px}
+  .link.step{position:relative;display:block;width:100%;text-align:left;background:var(--panel);border:2.5px solid var(--line);border-radius:10px;padding:7px 10px 7px 16px;box-shadow:var(--sh)}
+  .link.step b{font-family:"Gaegu",cursive;font-size:15px}
+  .link.step.done{border-color:var(--olive);background:#f4f7ef}
+  .link.step.bad{border-color:var(--brick);background:#fff1ec;animation:shake .35s}
+  .link.step.open{outline:3px solid var(--must);outline-offset:1px}
+  .mini{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  .tag{display:inline-block;font-size:10.5px;background:#efe7d6;border:1.5px solid var(--cork-d);border-radius:999px;padding:1px 8px;line-height:1.5}
+  .tag.opt{background:#eef3e8;border-color:var(--olive)}
+  .tag.empty{background:transparent;border-style:dashed;color:var(--soft)}
+  .tag.slotbtn{background:#fff8e7;border-color:var(--must-d);font-weight:700;padding:3px 10px;font-size:11px}
+  .concl.small{font-size:12.5px;font-family:"Gowun Dodum",sans-serif;font-weight:400;line-height:1.6;text-align:left;color:var(--ink);background:#fff8e7;border-color:var(--must-d)}
+  .pick{margin-top:8px}
+  .pl{font-family:"Gaegu",cursive;font-weight:700;font-size:14px;margin-bottom:4px}
+  .pl small{font-family:"Gowun Dodum",sans-serif;font-weight:400;color:var(--soft);font-size:11px}
+  .opt{display:flex;gap:7px;align-items:flex-start;width:100%;text-align:left;background:var(--panel);border:2.5px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:5px;font-size:12.5px;line-height:1.55;box-shadow:var(--sh)}
+  .opt .dot{flex:0 0 14px;height:14px;border-radius:50%;border:2.5px solid var(--line);margin-top:2px;background:#fff}
+  .opt.on{background:#fff3d6;border-color:var(--must-d)}
+  .opt.on .dot{background:var(--brick);box-shadow:inset 0 0 0 2px #fff}
+  .opt.acc{font-family:"Gaegu",cursive;font-size:15px}
+  .clue.add{border-style:dashed;color:var(--soft);font-size:11px;min-height:56px}
+  .clue.picked-c{background:#eef3e8;border-color:var(--olive)}
+  .clue .x{font-size:9px;color:var(--brick)}
+
   /* ---------- 다듬기: 말하기·도장·배지 ---------- */
   .portrait.talking svg{animation:talk .22s ease-in-out infinite alternate;transform-origin:50% 90%}
   @keyframes talk{from{transform:translateY(0) scaleY(1)}to{transform:translateY(-3px) scaleY(1.015)}}
@@ -268,7 +293,7 @@
     <div class="txt">
       <div class="eyebrow">시험판 3 · 첫 사건</div>
       <h1>탐정 망고의<br><em>춤추는 대수사선</em></h1>
-      <p class="muted" style="margin:0">단서를 모으고, 진술을 무너뜨리고,<br>추리 사슬을 완성해 범인을 밝히세요.</p>
+      <p class="muted" style="margin:0">단서를 모으고, 진술을 무너뜨리고,<br>단서가 <b>무엇을 증명하는지</b> 직접 판단해 범인을 밝히세요.</p>
       <div class="modepick">
         <button id="m-easy"><b>처음이에요</b><span>수상한 말에 밑줄이 그어집니다</span></button>
         <button id="m-hard"><b>추리게임 해봤어요</b><span>수상한 말을 직접 찾습니다</span></button>
@@ -314,7 +339,7 @@
     <div class="txt">
       <div class="card" style="background:#fff8e7;border-color:var(--must-d)"><div class="who">다음 사건 「찢어진 축제 포스터」</div><p style="margin:0">내일 <b>아침 6시</b>에 열려요.</p></div>
       <div class="card"><b style="font-family:Gaegu,cursive;font-size:15px">여기까지가 시험판입니다</b><p class="muted" style="margin:4px 0 0">만든 사람에게 알려 주세요:</p>
-        <ol style="margin:4px 0 0;padding-left:20px;font-size:13px;line-height:1.8"><li>추리 사슬을 채우는 게 이해가 됐나요?</li><li>어디서 제일 헷갈렸나요?</li><li>붉은 발자국은 누구 거라고 생각하나요?</li><li>내일 아침에 열리면 열어 볼 것 같나요?</li></ol></div>
+        <ol style="margin:4px 0 0;padding-left:20px;font-size:13px;line-height:1.8"><li>추리 단계(단서+결론 고르기)가 이해됐나요?</li><li>어디서 제일 헷갈렸나요? 너무 어렵진 않았나요?</li><li>붉은 발자국은 누구 거라고 생각하나요?</li><li>내일 아침에 열리면 열어 볼 것 같나요?</li></ol></div>
       <button class="btn ghost" id="btn-reset">처음부터 다시</button>
     </div>
   </section>
@@ -322,7 +347,7 @@
   <!-- ===== 조사 모드 골격 ===== -->
   <div class="bar" id="bar" hidden>
     <span class="chip" id="t-left">사건 1 · 현장</span>
-    <span style="display:flex;gap:5px"><span class="chip" id="t-clue">🗒 0</span><span class="chip" id="t-lamp">💡 3</span><button class="chip" id="t-sound" title="효과음">🔔</button><button class="chip" id="t-music" title="음악">🎵</button></span>
+    <span style="display:flex;gap:5px"><span class="chip" id="t-clue">🗒 0</span><button class="chip" id="t-lamp" title="힌트">💡 3</button><button class="chip" id="t-sound" title="효과음">🔔</button><button class="chip" id="t-music" title="음악">🎵</button></span>
   </div>
   <div class="body" id="bodyx" hidden>
     <div class="left" id="left"></div>
@@ -409,12 +434,104 @@ var SUS={
 };
 var SUSORDER=['kongi','kongsun','doto','mori'];
 
-var CHAIN=[
-  {pre:'묵 통은 ',post:'을 따라 <b>뒷문으로</b> 나갔다.',ok:['c_crumbs']},
-  {pre:'뒷문은 ',post:'이므로, 통을 들고 나간 사람은 <b>안에</b> 있었다.',ok:['c_door']},
-  {pre:'앞문은 잠겨 있고, 창문은 ',post:'이니 <b>밖에서 들어온 사람은 없다.</b>',ok:['c_window']},
-  {pre:'통은 ',post:'이므로, 들고 나간 사람은 <b>둘 이상</b>이다.',ok:['c_tub','t_tub']},
-  {pre:'그 시각 안에 있던 사람은 ',post:'. 따라서 —',ok:['t_helpers']}
+/* ===== 추리: 단서 + 「그래서 무엇이 증명되는가」를 둘 다 고른다 =====
+   채점은 제출할 때 한 번에. 그래서 하나씩 찍어 볼 수 없다. */
+var STEPS=[
+ {t:'통이 나간 길',
+  q:'묵 통은 어느 길로 밖에 나갔을까?',
+  slots:1, need:['c_crumbs'],
+  opts:[
+   {t:'통은 <b>뒷문으로</b> 나갔다.',ok:true},
+   {t:'통은 <b>창문으로</b> 넘어갔다.',
+    why:'부스러기는 <b>뒷문</b> 쪽으로 이어져 있어요. 창문 쪽이 아니에요.'},
+   {t:'범인은 묵을 아주 좋아하는 사람이다.',
+    why:'부스러기는 <b>어느 길로 갔는지</b>만 알려 줘요. 누가 무엇을 좋아하는지는 말해 주지 않아요.'}],
+  whyClue:'바닥에 남은 길을 보여 주는 단서가 필요해요.'},
+
+ {t:'범인이 있던 자리',
+  q:'그 뒷문을 연 사람은 어디에 있었을까?',
+  slots:1, need:['c_door'],
+  opts:[
+   {t:'통을 들고 나간 사람은 <b>급식실 안에</b> 있었다.',ok:true},
+   {t:'범인은 뒷문 열쇠를 가지고 있었다.',
+    why:'뒷문에는 <b>열쇠가 없어요.</b> 안에서 미는 밀대뿐이에요.'},
+   {t:'범인은 힘이 센 사람이다.',
+    why:'문을 미는 건 누구나 해요. 힘과는 상관없는 단서예요.'}],
+  whyClue:'뒷문이 <b>어느 쪽에서만</b> 열리는지 보여 주는 단서가 필요해요.'},
+
+ {t:'바깥에서 들어올 길',
+  q:'밖에 있던 사람이 몰래 들어왔을 수도 있지 않을까? 들어올 길은 앞문·뒷문·창문 셋. 뒷문은 이미 확인했으니 <b>나머지 둘</b>을 막아야 해.',
+  slots:2, need:['c_window','t_lock'],
+  opts:[
+   {t:'<b>밖에서 들어온 사람은 없다.</b>',ok:true},
+   {t:'범인은 창문으로 도망쳤다.',
+    why:'창문 걸쇠는 <b>안쪽에</b> 걸려 있었어요. 나갔다면 걸쇠를 다시 걸 수 없어요.'},
+   {t:'열쇠를 가진 양 아주머니가 수상하다.',
+    why:'아직 <b>지울</b> 단계가 아니에요. 이 단서들이 말하는 건 「밖에서 들어오지 못한다」까지예요.'}],
+  whyClue:'앞문과 창문, <b>두 곳 모두</b> 막혀 있었다는 단서가 필요해요. (물증과 증언을 하나씩)'},
+
+ {t:'사람 수',
+  q:'그 통을 옮기려면 몇 사람이 필요했을까?',
+  slots:1, need:['c_tub','t_tub'],
+  opts:[
+   {t:'통을 들고 나간 사람은 <b>둘 이상</b>이다.',ok:true},
+   {t:'범인은 힘이 아주 센 한 사람이다.',
+    why:'손잡이가 <b>양쪽에</b> 하나씩이라 한 사람은 두 손으로도 한쪽밖에 못 잡아요. 힘의 문제가 아니에요.'},
+   {t:'통이 무거워서 범인은 천천히 움직였다.',
+    why:'속도는 아무도 보지 못했어요. 이 단서가 말하는 건 <b>사람 수</b>예요.'}],
+  whyClue:'통을 <b>몇 사람이</b> 들어야 하는지 보여 주는 단서예요. (물증이든 증언이든)'},
+
+ {t:'그 시각 안에 있던 사람',
+  q:'그럼 11시 30분부터 50분까지, 급식실 <b>안에</b> 있던 사람은 누구였을까?',
+  slots:1, need:['t_helpers'],
+  opts:[
+   {t:'그 시각 안에 있던 사람은 <b>콩이와 콩순이</b>뿐이다.',ok:true},
+   {t:'도우미 둘은 설거지하느라 바빴다.',
+    why:'바빴는지는 알 수 없어요. 이 증언이 말하는 건 <b>누가 안에 있었는가</b>예요.'},
+   {t:'아주머니는 도우미들을 의심하고 있다.',
+    why:'아주머니는 의심한 적이 없어요. 사실만 말했을 뿐이에요.'}],
+  whyClue:'그 시각 <b>누가 안에 있었는지</b> 말한 증언을 찾아보세요.'}
+];
+
+/* ===== 소거: 조건에 맞지 않는 사람을 「이유를 들어」 지운다 ===== */
+var ELIM=[
+ {id:'doto',name:'도토',sym:'doto',q:'도토는 왜 범인이 아닐까?',
+  opts:[
+   {t:'뒷문으로 나간 건 <b>회색 꼬리</b>였는데, 도토는 갈색이다.',ok:true},
+   {t:'도토는 낮잠을 자고 있었다고 <b>말했으니까.</b>',
+    why:'본인의 말은 <b>증거가 아니에요.</b> 거짓말일 수도 있으니까요.'},
+   {t:'도토는 착해 보이니까.',
+    why:'보이는 것으로는 아무것도 지울 수 없어요.'}]},
+ {id:'mori',name:'모리',sym:'mori',q:'모리는 왜 범인이 아닐까?',
+  opts:[
+   {t:'그 시각 급식실 <b>안에</b> 있던 사람은 도우미 둘뿐이었다.',ok:true},
+   {t:'모리는 도서관 사서라서 그럴 사람이 아니다.',
+    why:'직업으로는 아무도 지울 수 없어요.'},
+   {t:'모리는 창가에 안 갔다고 <b>말했으니까.</b>',
+    why:'본인의 말은 증거가 아니에요. 게다가 그 말은 창문 이야기지 묵 이야기가 아니에요.'}]},
+ {id:'sheep',name:'양 아주머니',sym:'sheep',q:'열쇠를 가진 양 아주머니는 왜 범인이 아닐까?',
+  opts:[
+   {t:'통은 둘이 들어야 하는데, 아주머니는 <b>혼자</b>였다.',ok:true},
+   {t:'우리에게 사건을 <b>의뢰한 사람</b>이니까.',
+    why:'의뢰했다고 범인이 아닌 건 아니에요. 그건 추리가 아니라 믿음이에요.'},
+   {t:'아주머니는 열쇠를 가지고 있으니까.',
+    why:'열쇠가 있다는 건 오히려 <b>의심할</b> 이유예요. 지울 이유가 못 돼요.'}]},
+ {id:'solo',name:'콩이 혼자 / 콩순이 혼자',sym:'rc',q:'둘 중 <b>한 명만</b> 한 일일 수는 없을까?',
+  opts:[
+   {t:'통은 <b>양쪽 손잡이를 둘이</b> 잡아야 옮길 수 있다.',ok:true},
+   {t:'둘은 사이가 좋아서 같이 했을 것이다.',
+    why:'사이가 좋다고 같이 한 건 아니에요. <b>물건</b>이 증명해 줘야 해요.'},
+   {t:'콩이가 콩순이 앞치마를 보라고 했으니까.',
+    why:'서로 미룬 건 맞지만, 그건 <b>둘 다</b> 했다는 증명이 못 돼요.'}]}
+];
+
+var ACCUSE=[
+ {id:'a_kongi',t:'콩이 혼자'},
+ {id:'a_kongsun',t:'콩순이 혼자'},
+ {id:'a_both',t:'콩이와 콩순이, 둘 다',ok:true},
+ {id:'a_doto',t:'도토'},
+ {id:'a_mori',t:'모리'},
+ {id:'a_sheep',t:'양 아주머니'}
 ];
 var PROOFS=['c_strap','c_stain'];
 
@@ -422,7 +539,9 @@ var PROOFS=['c_strap','c_stain'];
 var S;
 function fresh(){var snd=S?S.sound:true,mus=S?S.music:true;
   S={screen:'title',mode:'scene',easy:null,sound:snd,music:mus,lamps:3,found:{},flags:{},tab:'kongi',sel:null,
-  lens:{x:360,y:180},hot:null,chain:[null,null,null,null,null],proofs:[],active:null,chainErr:0,rebutErr:0,newNotes:0,idle:null};
+  lens:{x:360,y:180},hot:null,proofs:[],active:null,rebutErr:0,newNotes:0,idle:null,
+  phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,
+  steps:STEPS.map(function(){return {clues:[],opt:null}}),elim:{}};
   SUS.kongi.eyes='def';SUS.kongsun.eyes='def';}
 fresh();
 
@@ -474,6 +593,8 @@ var typers=[];
 function typeHTML(el,html,voice,done,speed){
   if(!el)return;cancelTyper(el);
   var i=0,out='',n=0,live=true,t={el:el};
+  // 글자가 늘어나도 아래 버튼이 밀리지 않도록 최종 높이를 미리 잡아 둔다
+  try{el.style.minHeight='';el.innerHTML=html;var _h=el.offsetHeight;if(_h)el.style.minHeight=_h+'px';el.innerHTML=''}catch(e){}
   var talker=voice&&voice!=='narr'?el.closest('.right, .full')&&document.querySelector('.portrait'):null;
   if(talker&&S.mode==='talk')talker.classList.add('talking');
   function finish(instant){if(!live)return;live=false;clearTimeout(t.timer);el.innerHTML=html;typers=typers.filter(function(x){return x!==t});
@@ -491,7 +612,7 @@ function typeHTML(el,html,voice,done,speed){
       if(voice&&/[가-힣a-zA-Z0-9]/.test(ch)&&n%2===0)blip(voice,ch);
     }
     el.innerHTML=out+(i<html.length?'<span class="cursor"></span>':'');
-    if(voice){var sc=el.closest('#rscroll,.txt');if(sc)sc.scrollTop=sc.scrollHeight}
+    if(voice&&S.mode!=='logic'){var sc=el.closest('#rscroll,.txt');if(sc)sc.scrollTop=sc.scrollHeight}
     var pause=/[.!?…,」"]/.test(html[i-1])?ms*6:ms;
     if(i<html.length)t.timer=setTimeout(step,pause);else finish(false);
   }
@@ -609,7 +730,11 @@ function idleHint(){
   if(S.screen!=='invest')return;var m='';
   if(S.mode==='scene'){var left=SPOTS.filter(function(sp){return !sp.decoy&&!S.found[sp.id]&&!CLUES[sp.id].locked}).length;m=left?'아직 조사하지 않은 곳이 '+left+'곳 있어요. 확대경을 천천히 끌어 보세요':'현장은 다 봤어요. 심문 탭으로 가 보세요'}
   else if(S.mode==='talk')m=S.sel?'수첩의 증언 카드도 들이댈 수 있어요':'용의자의 말 중 수첩의 증언과 어긋나는 말을 찾아보세요';
-  else if(S.mode==='logic'){var i=S.chain.indexOf(null);m=i>=0?hintFor(i).replace(/<[^>]+>/g,''):'지목 버튼을 누르세요!'}
+  else if(S.mode==='logic'){
+    if(S.phase==='chain'){var i=-1;STEPS.forEach(function(c,k){if(i<0&&!stepDone(k))i=k});
+      m=i>=0?(i+1)+'단계가 비었어요. '+STEPS[i].whyClue.replace(/<[^>]+>/g,''):'다 채웠으면 「이대로 추리한다」를 누르세요'}
+    else if(S.phase==='elim')m='「본인이 그렇게 말했으니까」는 지울 이유가 못 돼요';
+    else m='사슬이 가리키는 답을 고르세요'}
   else m='물증은 흰 카드, 증언은 이중선 카드예요';
   if(m)toast('💡 '+m);idleReset();
 }
@@ -625,12 +750,16 @@ function updateAct(){
     else{a.textContent='단서 들이대기';a.disabled=!S.sel}
   }
   else if(S.mode==='notes'){a.textContent='수첩 '+count()+'장';a.disabled=true}
-  else if(S.mode==='logic'){var done=CHAIN.every(function(c,i){return S.chain[i]});a.textContent=done?'지목한다!':'빈칸을 채우세요';a.className=done?'act warm':'act';a.disabled=!done}
+  else if(S.mode==='logic'){
+    if(S.phase==='chain'){var d=chainReady();a.textContent=d?'이대로 추리한다':'추론을 채우세요';a.className=d?'act warm':'act';a.disabled=!d}
+    else if(S.phase==='elim'){var d2=elimReady();a.textContent=d2?'이대로 지운다':'지울 이유를 고르세요';a.className=d2?'act warm':'act';a.disabled=!d2}
+    else{a.textContent='지목한다!';a.className='act warm';a.disabled=!S.flags.acc}
+  }
 }
 $('#act').addEventListener('click',function(){
   if(S.mode==='scene')inspect();
   else if(S.mode==='talk'){var s=SUS[S.tab];if(s.apron&&S.flags.apron&&!S.found.c_stain)examineApron();else openTray('present')}
-  else if(S.mode==='logic')accuse();
+  else if(S.mode==='logic'){if(S.phase==='chain')judgeChain();else if(S.phase==='elim')judgeElim();else doAccuse()}
 });
 
 /* ================= 현장 ================= */
@@ -836,59 +965,204 @@ function renderNotes(){
   var g=$('#note-grid'),h='';
   ORDER.forEach(function(id){if(S.found[id]||CLUES[id].locked)h+=cardHTML(id,false,true)});
   g.innerHTML=h||'<p class="muted">아직 기록이 없어요. 현장을 조사해 보세요.</p>';
-  $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">카드를 누르면 내용을 다시 볼 수 있어요</div><p class="muted" style="margin:0">물증은 흰 카드, 증언은 이중선 카드예요. 둘 다 추리 사슬에 넣을 수 있어요.</p></div>';
+  $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">카드를 누르면 내용을 다시 볼 수 있어요</div><p class="muted" style="margin:0">물증은 흰 카드, 증언은 이중선 카드예요. 둘 다 추리의 근거로 쓸 수 있어요.</p></div>';
   g.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();var c=CLUES[b.dataset.c];
     $('#rscroll').innerHTML='<div class="card"><div class="who">'+esc(c.n)+'</div><p style="margin:0">'+c.t+'</p></div>'+(c.odd?'<div class="note"><b>이 단서는 어디에 들어갈까?</b>사건과 이어지는 곳이 없다면… 그게 바로 이상한 점이에요.</div>':'')})});
 }
 
-/* ================= 추리 사슬 ================= */
+/* ================= 추리 (단서 + 결론을 둘 다 고른다) ================= */
+function stepDone(i){var st=S.steps[i];return st.clues.length===STEPS[i].slots&&st.opt!=null}
+function chainReady(){return STEPS.every(function(c,i){return stepDone(i)})}
+function elimReady(){return ELIM.every(function(e){return S.elim[e.id]!=null})}
+
 function renderLogic(){
-  $('#left').innerHTML='<div style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:6px"><div class="chain" id="chain"></div></div>';
-  var h='';
-  CHAIN.forEach(function(c,i){
-    var f=S.chain[i];
-    h+='<div class="link'+(f?' done':'')+'"><span class="no">'+(i+1)+'</span>'+c.pre+
-      '<button class="blank'+(f?' filled':'')+(S.active===i?' active':'')+'" data-b="'+i+'">'+(f?esc(CLUES[f].n):'단서 넣기')+'</button>'+c.post+'</div>';
+  cancelTyper();
+  if(S.phase==='chain')return renderChain();
+  if(S.phase==='elim')return renderElim();
+  return renderAccuse();
+}
+
+/* ---------- 1단계: 추론 사슬 ---------- */
+function renderChain(){
+  var h='<div class="chain" id="chain">';
+  STEPS.forEach(function(c,i){
+    var st=S.steps[i],done=stepDone(i),wrong=S.wrongSet&&S.wrongSet.indexOf(i)>=0;
+    h+='<button class="link step'+(done?' done':'')+(wrong?' bad':'')+(S.open===i?' open':'')+'" data-s="'+i+'">'+
+      '<span class="no">'+(i+1)+'</span><b>'+c.t+'</b>'+
+      '<div class="mini">'+(st.clues.length?st.clues.map(function(id){return '<span class="tag">'+esc(CLUES[id].n)+'</span>'}).join(''):'<span class="tag empty">단서 —</span>')+
+      (st.opt!=null?'<span class="tag opt">'+c.opts[st.opt].t.replace(/<[^>]+>/g,'')+'</span>':'<span class="tag empty">결론 —</span>')+'</div></button>';
   });
-  var done=CHAIN.every(function(c,i){return S.chain[i]});
-  if(done){
-    h+='<div class="concl">범인은 콩이와 콩순이, 둘 다.</div>';
-    h+='<div class="link"><span class="no">★</span>결정적 증거 (선택, 별점): '+
-      '<button class="blank'+(S.proofs[0]?' filled':'')+(S.active==='p0'?' active':'')+'" data-p="0">'+(S.proofs[0]?esc(CLUES[S.proofs[0]].n):'증거 넣기')+'</button> '+
-      '<button class="blank'+(S.proofs[1]?' filled':'')+(S.active==='p1'?' active':'')+'" data-p="1">'+(S.proofs[1]?esc(CLUES[S.proofs[1]].n):'증거 넣기')+'</button></div>';
-  }
-  $('#chain').innerHTML=h;
-  $('#chain').querySelectorAll('[data-b]').forEach(function(b){b.addEventListener('click',function(){sTap();S.active=+b.dataset.b;renderLogic();openTray('chain')})});
-  $('#chain').querySelectorAll('[data-p]').forEach(function(b){b.addEventListener('click',function(){sTap();S.active='p'+b.dataset.p;renderLogic();openTray('proof')})});
-  $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">추리 노트</div><p style="margin:0;font-size:13px">빈칸마다 <b>그 결론을 만들어 내는 단서</b>를 하나 넣으세요. 사슬이 다 이어지면 범인이 저절로 드러납니다.</p></div>'+
-    '<div class="muted" style="margin-top:8px">틀린 단서를 넣으면 「그 단서로는 이 결론이 나오지 않아요」가 뜹니다. 첫 번째 실수는 봐 드려요.</div><div id="logic-say">'+(S.flags.logicNew?'':(S.flags.logicSay||''))+'</div>';
-  if(S.flags.logicNew){S.flags.logicNew=false;var ls=$('#logic-say');ls.innerHTML='<div class="say" id="logic-live"></div>';typeHTML($('#logic-live'),S.flags.logicSay.replace(/^<div class="say">|<\/div>$/g,''),'mango')}
-  if(S.flags.stampAt!=null){var sa=String(S.flags.stampAt),bl=sa[0]==='p'?$('#chain [data-p="'+sa.slice(1)+'"]'):$('#chain [data-b="'+sa+'"]');if(bl)bl.classList.add('stamp');S.flags.stampAt=null}
+  h+='</div>';
+  $('#left').innerHTML='<div class="logicwrap">'+h+'</div>';
+  $('#chain').querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){sTap();S.open=+b.dataset.s;renderChain()})});
+  if(S.open==null){
+    var n=STEPS.filter(function(c,i){return stepDone(i)}).length;
+    $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">추리 노트</div>'+
+      '<p style="margin:0;font-size:13px">단계를 누르면 망고가 질문을 해요. 질문마다 <b>단서</b>와 <b>그 단서가 증명하는 것</b>을 함께 고르세요.</p>'+
+      '<p style="margin:6px 0 0;font-size:13px"><b>규칙 하나.</b> 단서가 <b>말해 주는 것만</b> 고르세요. 그럴듯한 <b>짐작</b>은 답이 아니에요.</p></div>'+
+      '<div class="note" style="margin-top:8px"><b>다 채운 뒤 한 번에 채점해요.</b>틀려도 잃는 것은 없고, 몇 번이든 다시 낼 수 있어요. 어려우면 망고가 점점 더 자세히 알려 줍니다.</div>'+
+      '<p class="muted" style="margin-top:8px">'+n+' / '+STEPS.length+' 단계 채움'+(S.tries?' · 추리 제출 '+S.tries+'회':'')+'</p>'+(S.flags.judgeSay||'');
+  } else renderStepPanel();
   updateAct();
 }
-function fillBlank(clueId){
-  closeSheet();S.flags.logicNew=true;
-  if(typeof S.active==='number'){
-    var i=S.active,ok=CHAIN[i].ok.indexOf(clueId)>=0;
-    if(ok){sStamp();setTimeout(sGood,90);S.chain[i]=clueId;S.flags.stampAt=i;S.flags.logicSay='<div class="say"><b>이어졌어요.</b> '+CLUES[clueId].t+'</div>';
-      if(CHAIN.every(function(c,k){return S.chain[k]})){setTimeout(sFan,350);S.flags.logicSay='<div class="say"><b>망고</b> "…그렇다면 답은 하나뿐이야." 사슬이 완성됐어요. 결정적 증거를 더하면 별점이 올라요.</div>'}}
-    else{sBad();S.chainErr++;if(S.chainErr>1)burn();S.flags.logicSay='<div class="say"><b>그 단서로는 이 결론이 나오지 않아요.</b> '+hintFor(i)+'</div>'}
-  }else if(typeof S.active==='string'){
-    var k=+S.active[1];
-    if(PROOFS.indexOf(clueId)>=0&&S.proofs.indexOf(clueId)<0){sStamp();setTimeout(sGood,90);S.proofs[k]=clueId;S.flags.stampAt='p'+k;S.flags.logicSay='<div class="say"><b>결정적 증거.</b> '+CLUES[clueId].t+'</div>'}
-    else{sNo();S.flags.logicSay='<div class="say">그건 「두 사람이 했다」를 <b>직접</b> 보여 주는 증거가 아니에요. 몸에 남은 흔적을 찾아보세요.</div>'}
-  }
-  S.active=null;renderLogic();
+function renderStepPanel(){
+  var i=S.open,c=STEPS[i],st=S.steps[i];
+  var h='<div class="card"><div class="who">'+(i+1)+'. '+esc(c.t)+'</div><p style="margin:0;font-size:13px" id="q-live"></p></div>';
+  h+='<div class="pick"><div class="pl">근거가 되는 단서 <small>'+st.clues.length+'/'+c.slots+'</small></div><div class="clues">';
+  st.clues.forEach(function(id){h+='<button class="clue picked-c" data-rm="'+id+'"><svg viewBox="0 0 28 28"><use href="'+CLUES[id].icon+'"></use></svg>'+esc(CLUES[id].n)+'<span class="x">빼기</span></button>'});
+  if(st.clues.length<c.slots)h+='<button class="clue add" id="add-clue">＋<br>단서 고르기</button>';
+  h+='</div></div>';
+  h+='<div class="pick"><div class="pl">그래서 무엇이 증명되나요?</div>';
+  c.opts.forEach(function(o,k){h+='<button class="opt'+(st.opt===k?' on':'')+'" data-o="'+k+'"><span class="dot"></span><span>'+o.t+'</span></button>'});
+  h+='</div>';
+  h+='<button class="btn ghost" id="step-close" style="margin-top:8px">단계 목록으로</button>';
+  $('#rscroll').innerHTML=h;$('#rscroll').scrollTop=0;
+  typeHTML($('#q-live'),c.q,'mango');
+  var a=$('#add-clue');if(a)a.addEventListener('click',function(){sTap();openTray('step')});
+  $('#rscroll').querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){sNo();var id=b.dataset.rm;st.clues=st.clues.filter(function(x){return x!==id});S.wrongSet=null;renderChain()})});
+  $('#rscroll').querySelectorAll('[data-o]').forEach(function(b){b.addEventListener('click',function(){sStamp();st.opt=+b.dataset.o;S.wrongSet=null;renderChain()})});
+  $('#step-close').addEventListener('click',function(){sTap();S.open=null;renderChain()});
 }
-function hintFor(i){return ['통이 어느 길로 나갔는지 보여 주는 <b>바닥</b>의 단서를 찾아보세요.','뒷문이 <b>어느 쪽에서만</b> 열리는지 보여 주는 단서예요.','창문이 <b>잠겨 있었다</b>는 단서가 필요해요.','통이 <b>몇 명이</b> 들어야 하는지 말해 주는 단서(물증이든 증언이든)예요.','그 시각에 <b>누가 안에 있었는지</b> 말한 증언을 찾아보세요.'][i]}
+function addStepClue(id){
+  closeSheet();var c=STEPS[S.open],st=S.steps[S.open];
+  if(st.clues.indexOf(id)>=0){sNo();return renderChain()}
+  if(st.clues.length>=c.slots)st.clues.pop();
+  st.clues.push(id);S.wrongSet=null;sStamp();renderChain();
+}
+/* 제출 — 여기서만 채점한다 */
+function judgeChain(){
+  S.tries++;
+  var wrong=[];
+  STEPS.forEach(function(c,i){
+    var st=S.steps[i];
+    var clueOK=(c.slots===1)?(c.need.indexOf(st.clues[0])>=0)
+      :(c.need.every(function(n){return st.clues.indexOf(n)>=0}));
+    if(!clueOK||!c.opts[st.opt].ok)wrong.push(i);
+  });
+  if(!wrong.length){
+    sFan();S.wrongSet=null;S.lastWrong=null;S.phase='elim';S.open=null;
+    S.flags.judgeSay='';
+    renderLogic();
+    say2('<b>망고</b> "좋아. 여기까지는 <b>빈틈이 없어.</b><br>이제 남은 일은 — 이 조건에 맞지 않는 사람을 하나씩 지우는 거야."');
+    return;
+  }
+  sBad();if(S.tries>1)burn();          // 첫 실패는 등불을 쓰지 않는다
+  S.lastWrong=wrong;
+  var lv=helpLv(S.tries);
+  S.wrongSet=(lv>=1)?wrong:null;
+  var head='<b>망고</b> "'+(wrong.length===1?'한 군데':wrong.length+'군데')+'가 어긋나."';
+  if(lv>=2){
+    var body='';
+    wrong.forEach(function(w){body+='<br><b>'+(w+1)+'번</b> — '+whyWrongStep(w)});
+    S.flags.judgeSay='<div class="say">'+head+body+'</div>';
+  }else if(lv>=1){
+    S.flags.judgeSay='<div class="say">'+head+' <span class="muted">빨간 단계를 다시 봐.</span><br><span class="muted">한 번 더 어긋나면 이유까지 알려 줄게.</span></div>';
+  }else{
+    S.flags.judgeSay='<div class="say">'+head+'<br><span class="muted">막히면 위쪽 💡 등불을 눌러 물어봐도 돼요. 다시 제출해도 잃는 건 없어요.</span></div>';
+  }
+  S.open=null;renderChain();
+}
+/* 도움 수위: 쉬움은 항상 최대, 보통도 두 번 틀리면 위치, 세 번이면 이유까지 */
+function helpLv(nFail){if(S.easy)return 2;if(nFail>=3)return 2;if(nFail>=2)return 1;return 0}
+function whyWrongStep(w){
+  var c=STEPS[w],st=S.steps[w];
+  var clueOK=(c.slots===1)?(c.need.indexOf(st.clues[0])>=0):(c.need.every(function(n){return st.clues.indexOf(n)>=0}));
+  if(!clueOK)return c.whyClue;
+  return c.opts[st.opt].why||'그 결론은 이 단서만으로는 나오지 않아요.';
+}
+function say2(html){
+  var el=$('#rscroll');if(!el)return;
+  var d=document.createElement('div');d.className='say';el.insertBefore(d,el.firstChild);
+  typeHTML(d,html,'mango');
+}
+
+/* ---------- 2단계: 소거 ---------- */
+function renderElim(){
+  var h='<div class="chain" id="chain">';
+  h+='<div class="concl small">지금까지: 밖에서 들어온 사람은 없고, 통을 옮긴 사람은 <b>둘 이상</b>이며, 그 시각 안에 있던 사람은 <b>콩이와 콩순이</b>뿐이다.</div>';
+  ELIM.forEach(function(e,i){
+    var v=S.elim[e.id],wrong=S.wrongSet&&S.wrongSet.indexOf(i)>=0;
+    h+='<button class="link step'+(v!=null?' done':'')+(wrong?' bad':'')+(S.open===i?' open':'')+'" data-s="'+i+'">'+
+      '<span class="no">'+(v!=null?'✕':'?')+'</span><b>'+esc(e.name)+'</b>'+
+      '<div class="mini">'+(v!=null?'<span class="tag opt">'+e.opts[v].t.replace(/<[^>]+>/g,'')+'</span>':'<span class="tag empty">지울 이유 —</span>')+'</div></button>';
+  });
+  h+='</div>';
+  $('#left').innerHTML='<div class="logicwrap">'+h+'</div>';
+  $('#chain').querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){sTap();S.open=+b.dataset.s;renderElim()})});
+  if(S.open==null){
+    var n=ELIM.filter(function(e){return S.elim[e.id]!=null}).length;
+    $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">소거 — 지울 이유를 고르세요</div>'+
+      '<p style="margin:0;font-size:13px">「그럴 사람이 아니다」는 이유가 될 수 없어요. <b>물건이나 몸으로 증명되는</b> 이유만 사람을 지울 수 있습니다.</p></div>'+
+      '<p class="muted" style="margin-top:8px">'+n+' / '+ELIM.length+' 명 지움'+(S.elimTries?' · 제출 '+S.elimTries+'회':'')+'</p>'+(S.flags.judgeSay||'');
+  }else{
+    var e=ELIM[S.open],h2='<div class="card"><div class="who">'+esc(e.name)+'</div><p style="margin:0;font-size:13px" id="q-live"></p></div><div class="pick">';
+    e.opts.forEach(function(o,k){h2+='<button class="opt'+(S.elim[e.id]===k?' on':'')+'" data-o="'+k+'"><span class="dot"></span><span>'+o.t+'</span></button>'});
+    h2+='</div><button class="btn ghost" id="step-close" style="margin-top:8px">목록으로</button>';
+    $('#rscroll').innerHTML=h2;$('#rscroll').scrollTop=0;
+    typeHTML($('#q-live'),e.q,'mango');
+    $('#rscroll').querySelectorAll('[data-o]').forEach(function(b){b.addEventListener('click',function(){sStamp();S.elim[e.id]=+b.dataset.o;S.wrongSet=null;renderElim()})});
+    $('#step-close').addEventListener('click',function(){sTap();S.open=null;renderElim()});
+  }
+  updateAct();
+}
+function judgeElim(){
+  S.elimTries++;
+  var wrong=[];
+  ELIM.forEach(function(e,i){if(!e.opts[S.elim[e.id]].ok)wrong.push(i)});
+  if(!wrong.length){
+    sFan();S.wrongSet=null;S.lastWrong=null;S.phase='accuse';S.open=null;S.flags.judgeSay='';renderLogic();
+    say2('<b>망고</b> "남은 건 하나뿐이야. …말해 봐."');
+    return;
+  }
+  sBad();if(S.elimTries>1)burn();
+  S.lastWrong=wrong;
+  var lv2=helpLv(S.elimTries);
+  S.wrongSet=(lv2>=1)?wrong:null;
+  var h2='<b>망고</b> "<b>'+wrong.length+'명</b>은 그 이유로 지울 수 없어."';
+  if(lv2>=2){var body2='';wrong.forEach(function(w){body2+='<br><b>'+esc(ELIM[w].name)+'</b> — '+ELIM[w].opts[S.elim[ELIM[w].id]].why});
+    S.flags.judgeSay='<div class="say">'+h2+body2+'</div>'}
+  else if(lv2>=1){S.flags.judgeSay='<div class="say">'+h2+' <span class="muted">빨간 쪽을 다시 봐.</span></div>'}
+  else{S.flags.judgeSay='<div class="say">'+h2+' 「본인이 그렇게 말했으니까」는 이유가 못 돼.<br><span class="muted">다시 골라도 잃는 건 없어요.</span></div>'}
+  S.open=null;renderElim();
+}
+
+/* ---------- 3단계: 지목 ---------- */
+function renderAccuse(){
+  var h='<div class="chain" id="chain"><div class="concl small">밖에서 들어온 사람 없음 · 둘 이상 · 그 시각 안엔 도우미 둘 · 나머지는 전부 지워짐</div>';
+  h+='<div class="link"><span class="no">★</span>결정적 증거 <small>(선택 — 별점이 올라요)</small><div class="mini">'+
+    '<button class="tag slotbtn" data-p="0">'+(S.proofs[0]?esc(CLUES[S.proofs[0]].n):'＋ 증거')+'</button>'+
+    '<button class="tag slotbtn" data-p="1">'+(S.proofs[1]?esc(CLUES[S.proofs[1]].n):'＋ 증거')+'</button></div></div></div>';
+  $('#left').innerHTML='<div class="logicwrap">'+h+'</div>';
+  $('#chain').querySelectorAll('[data-p]').forEach(function(b){b.addEventListener('click',function(){sTap();S.active='p'+b.dataset.p;openTray('proof')})});
+  var h2='<div class="card" style="background:#fff8e7"><div class="who">범인은 누구입니까?</div><p style="margin:0;font-size:13px">되돌릴 수 없어요. 사슬을 한 번 더 읽어 보세요.</p></div><div class="pick">';
+  ACCUSE.forEach(function(a){h2+='<button class="opt acc'+(S.flags.acc===a.id?' on':'')+'" data-a="'+a.id+'"><span class="dot"></span><span>'+esc(a.t)+'</span></button>'});
+  h2+='</div>'+(S.flags.judgeSay||'');
+  $('#rscroll').innerHTML=h2;
+  $('#rscroll').querySelectorAll('[data-a]').forEach(function(b){b.addEventListener('click',function(){sTap();S.flags.acc=b.dataset.a;renderAccuse()})});
+  updateAct();
+}
+function fillProof(clueId){
+  closeSheet();var k=+String(S.active)[1];
+  if(PROOFS.indexOf(clueId)>=0&&S.proofs.indexOf(clueId)<0){sStamp();setTimeout(sGood,90);S.proofs[k]=clueId}
+  else{sNo();S.flags.judgeSay='<div class="say">그건 「<b>두 사람이</b> 했다」를 몸에 남은 흔적으로 보여 주는 증거가 아니에요.</div>'}
+  S.active=null;renderAccuse();
+}
+function doAccuse(){
+  var pick=ACCUSE.filter(function(a){return a.id===S.flags.acc})[0];
+  if(!pick)return;
+  if(!pick.ok){sBad();burn();S.accErr++;
+    S.flags.judgeSay='<div class="say"><b>망고</b> "…그건 우리가 <b>지운</b> 사람이야. 사슬을 다시 읽어 보자."</div>';
+    S.flags.acc=null;renderAccuse();return}
+  accuse();
+}
 
 /* ================= 트레이 ================= */
 function openTray(kind){
   var r=$('#right');var old=$('#sheet');if(old)old.remove();
   var d=document.createElement('div');d.className='sheet';d.id='sheet';
-  var title={present:'어떤 단서를 들이댈까요?',chain:'빈칸에 넣을 단서',proof:'결정적 증거'}[kind];
+  var title={present:'어떤 단서를 들이댈까요?',step:'근거가 될 단서 고르기',proof:'결정적 증거'}[kind];
   var ctx='';
-  if(kind==='chain'&&typeof S.active==='number'){var c=CHAIN[S.active];ctx='<div class="ctx">'+(S.active+1)+'번 문장: <b>'+c.pre+'<u>______</u>'+c.post.replace(/<\/?b>/g,'')+'</b></div>'}
+  if(kind==='step'&&S.open!=null){var c=STEPS[S.open];ctx='<div class="ctx">'+(S.open+1)+'. '+esc(c.t)+' — <b>'+c.q.replace(/<[^>]+>/g,'')+'</b></div>'}
   if(kind==='present'){var L=null;SUS[S.tab].lines.forEach(function(x){if(x.id===S.sel)L=x});if(L)ctx='<div class="ctx">'+esc(SUS[S.tab].name)+'의 말: <b>"'+esc(L.t)+'"</b> — 이 말과 어긋나는 단서를 고르세요.</div>'}
   if(kind==='proof')ctx='<div class="ctx">「두 사람이 했다」를 <b>몸에 남은 흔적</b>으로 직접 보여 주는 단서를 고르세요.</div>';
   var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div>'+ctx+'<div class="list"><div class="clues">';
@@ -897,7 +1171,8 @@ function openTray(kind){
   h+='</div>'+(any?'':'<p class="muted">아직 단서가 없어요. 현장을 먼저 조사하세요.</p>')+'</div>';
   d.innerHTML=h;r.appendChild(d);
   $('#sheet-x').addEventListener('click',function(){sTap();S.active=null;closeSheet();if(S.mode==='logic')renderLogic()});
-  d.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();if(kind==='present')present(b.dataset.c);else fillBlank(b.dataset.c)})});
+  if(kind==='step'||kind==='proof'){var ex=document.createElement('p');ex.className='muted';ex.style.padding='0 12px';ex.innerHTML='필요 없는 단서를 넣으면 제출할 때 어긋납니다.';d.querySelector('.list').appendChild(ex)}
+  d.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();if(kind==='present')present(b.dataset.c);else if(kind==='step')addStepClue(b.dataset.c);else fillProof(b.dataset.c)})});
 }
 function closeSheet(){var s=$('#sheet');if(s)s.remove()}
 
@@ -906,7 +1181,8 @@ var SOLVE_T='설거지를 하던 콩이와 콩순이는 묵 냄새에 못 이겨
 var SOLVE_S='<b>양 아주머니:</b> "벌은 축제 날 묵 통 나르기. <b>둘이서.</b>"';
 function accuse(){
   sFan();
-  var star=3;if(S.rebutErr>0||S.chainErr>1)star=2;if(S.rebutErr>=2||S.chainErr>=3||S.lamps<=1)star=1;
+  var miss=(S.tries-1)+(S.elimTries-1)+S.accErr;   // 제출 실패 횟수
+  var star=3;if(miss>=1||S.rebutErr>0||S.lamps<3)star=2;if(miss>=3||S.rebutErr>=2||S.lamps<=0)star=1;
   if(S.proofs.filter(Boolean).length===2&&star<3)star++;
   star=Math.max(1,Math.min(3,star));
   var coin=star===3?120:(star===2?100:80);
@@ -929,6 +1205,27 @@ $('#m-hard').addEventListener('click',function(){start(false)});
 $('#btn-accept').addEventListener('click',function(){sTap();sPage();show('invest');lamps();updateDot();setMode('scene');toast('아주머니의 증언 3장이 수첩에 들어갔어요')});
 $('#btn-pin').addEventListener('click',function(){sFan();buzz([20,30,20,30,60]);show('s-board')});
 $('#btn-reset').addEventListener('click',function(){sTap();fresh();updateDot();show('s-title')});
+$('#t-lamp').addEventListener('click',function(){
+  if(S.screen!=='invest')return;
+  if(S.lamps<=0){sNo();return toast('등불을 다 썼어요')}
+  if(S.mode!=='logic'){sNo();return toast('등불은 추리 탭에서 쓸 수 있어요')}
+  if(S.phase==='accuse')return toast('이제 답을 고르기만 하면 돼요');
+  var list=S.phase==='chain'?STEPS:ELIM;
+  if(S.lastWrong&&S.lastWrong.length){
+    burn();sFind();S.wrongSet=S.lastWrong.slice();
+    var w=S.wrongSet[0];
+    S.flags.judgeSay='<div class="say"><b>망고</b> "'+(S.phase==='chain'?(w+1)+'번':esc(ELIM[w].name))+' 쪽을 다시 봐." <span class="muted">(등불 하나 사용)</span></div>';
+    S.open=null;renderLogic();return;
+  }
+  var i=-1;
+  if(S.phase==='chain'){STEPS.forEach(function(c,k){if(i<0&&!stepDone(k))i=k});
+    if(i<0)return toast('다 채웠어요. 제출해 보세요');
+    burn();sFind();S.flags.judgeSay='<div class="say"><b>망고</b> "'+(i+1)+'번 — '+STEPS[i].whyClue+'" <span class="muted">(등불 하나 사용)</span></div>'}
+  else{ELIM.forEach(function(e,k){if(i<0&&S.elim[e.id]==null)i=k});
+    if(i<0)return toast('다 골랐어요. 제출해 보세요');
+    burn();sFind();S.flags.judgeSay='<div class="say"><b>망고</b> "'+esc(ELIM[i].name)+' — 「본인이 그렇게 말했으니까」는 이유가 못 돼. <b>물건이나 몸</b>으로 증명되는 걸 찾아." <span class="muted">(등불 하나 사용)</span></div>'}
+  S.open=null;renderLogic();
+});
 $('#t-sound').addEventListener('click',function(){setSfx(!S.sound);if(S.sound)sTap()});
 $('#t-music').addEventListener('click',function(){wake();setMusic(!S.music)});
 $('#tg-sfx').addEventListener('click',function(){setSfx(!S.sound);if(S.sound)sTap()});
