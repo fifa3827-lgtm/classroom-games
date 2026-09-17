@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3e9d6">
+<meta name="description" content="탐정 망고의 춤추는 대수사선 — 사건 1 시험판">
+<style>
+  html,body{height:100%}
+  body{margin:0;background:#f3e9d6;font:14px/1.6 system-ui,sans-serif;-webkit-text-size-adjust:100%}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>탐정 망고 · 첫 사건</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap">
+<style>
+  :root{
+    --line:#4a3428; --ink:#3b2a1a; --soft:#7a6656;
+    --paper:#f3e9d6; --cream:#fbf7ee; --panel:#ffffff;
+    --must:#e8b25c; --must-d:#c9924a;
+    --teal:#3f7c86; --brick:#b34a3a; --olive:#7d8f5c;
+    --cork:#d5b184; --cork-d:#8b6a44;
+    --glow:#ffd97a;
+    --sh:2px 3px 0 var(--line);
+    --r:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Gowun Dodum","Apple SD Gothic Neo",system-ui,sans-serif;
+    font-size:15px;line-height:1.6;-webkit-tap-highlight-color:transparent;
+    overscroll-behavior:none;
+  }
+  .app{
+    max-width:460px;margin:0 auto;height:100%;
+    display:flex;flex-direction:column;background:var(--cream);
+    box-shadow:0 0 40px rgba(80,55,30,.18);position:relative;overflow:hidden;
+  }
+  /* ---------- 공통 ---------- */
+  h1,h2,h3{font-family:"Gaegu","Gowun Dodum",cursive;font-weight:700;margin:0;text-wrap:balance;letter-spacing:.01em}
+  .bar{
+    flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;
+    gap:8px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));
+    background:var(--cream);border-bottom:2px solid var(--line);
+  }
+  .chip{
+    background:var(--panel);border:2px solid var(--line);border-radius:999px;
+    padding:2px 10px;font-size:12px;font-weight:700;white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+  .stage{flex:1 1 auto;position:relative;overflow-y:auto;overflow-x:hidden;padding:14px;padding-block-end:8px}
+  .foot{
+    flex:0 0 auto;display:flex;gap:8px;padding:10px 14px;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    background:var(--cream);border-top:2px solid var(--line);
+  }
+  button{font:inherit;color:inherit;cursor:pointer}
+  .btn{
+    flex:1;background:var(--must);border:2.5px solid var(--line);border-radius:var(--r);
+    padding:12px 10px;font-weight:700;font-size:15px;box-shadow:var(--sh);
+    transition:transform .08s,box-shadow .08s;font-family:"Gaegu",cursive;
+  }
+  .btn:active{transform:translate(2px,3px);box-shadow:0 0 0 var(--line)}
+  .btn.ghost{background:var(--panel)}
+  .btn.go{background:var(--teal);color:#fff}
+  .btn:disabled{opacity:.42;box-shadow:var(--sh);transform:none;cursor:default}
+  .btn:focus-visible,.tap:focus-visible{outline:3px solid var(--brick);outline-offset:2px}
+  .card{
+    background:var(--panel);border:2.5px solid var(--line);border-radius:10px;
+    padding:12px 14px;box-shadow:var(--sh);
+  }
+  .who{font-family:"Gaegu",cursive;font-weight:700;font-size:16px;margin-bottom:2px;display:flex;gap:6px;align-items:center}
+  .who small{font-family:"Gowun Dodum",sans-serif;font-weight:400;font-size:11.5px;color:var(--soft)}
+  .muted{color:var(--soft);font-size:12.5px}
+  .center{text-align:center}
+  /* ---------- 표지 ---------- */
+  #s-title{display:flex;flex-direction:column;justify-content:center;gap:18px;text-align:center;padding:24px}
+  #s-title .eyebrow{font-size:12px;letter-spacing:.22em;color:var(--brick);font-weight:700}
+  #s-title h1{font-size:34px;line-height:1.25}
+  #s-title h1 em{font-style:normal;color:var(--brick)}
+  .modepick{display:grid;gap:10px;margin-top:4px}
+  .modepick button{
+    background:var(--panel);border:2.5px solid var(--line);border-radius:var(--r);
+    padding:12px;box-shadow:var(--sh);text-align:left;font-family:inherit;
+  }
+  .modepick button b{font-family:"Gaegu",cursive;font-size:17px;display:block}
+  .modepick button span{font-size:12.5px;color:var(--soft)}
+  .modepick button[aria-pressed="true"]{background:var(--must);border-color:var(--line)}
+  /* ---------- 대화 ---------- */
+  .stmt{margin:2px 0;padding:3px 0;display:flex;gap:7px;align-items:flex-start}
+  .stmt .n{
+    flex:0 0 19px;height:19px;border-radius:50%;background:var(--brick);color:#fff;
+    font-size:11px;font-weight:700;text-align:center;line-height:19px;margin-top:3px;
+  }
+  .tap{
+    background:none;border:0;padding:1px 2px;text-align:left;font:inherit;border-radius:4px;
+  }
+  .sus-on{background:linear-gradient(transparent 62%,#ffe08a 62%);border-bottom:2px dashed var(--must-d)}
+  .picked{background:linear-gradient(transparent 55%,#ffcf6a 55%);border-bottom:2px solid var(--brick)}
+  .tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+  .tabs button{
+    background:var(--panel);border:2px solid var(--line);border-radius:999px;
+    padding:4px 10px;font-size:12.5px;font-weight:700;font-family:"Gaegu",cursive;
+  }
+  .tabs button[aria-selected="true"]{background:var(--must)}
+  .tabs button.witness{border-style:dashed}
+  .portrait{display:flex;justify-content:center;margin:10px 0 4px}
+  .portrait svg{width:148px;height:auto}
+  .say{
+    background:#fff8e7;border:2px solid var(--must-d);border-radius:10px;
+    padding:9px 12px;font-size:13.5px;line-height:1.6;margin-top:10px;
+  }
+  .say b{color:var(--brick)}
+  /* ---------- 단서 트레이 ---------- */
+  .tray{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 2px;scrollbar-width:thin}
+  .clue{
+    flex:0 0 auto;width:62px;background:var(--panel);border:2px solid var(--line);
+    border-radius:9px;padding:5px 3px;text-align:center;font-size:9.5px;line-height:1.25;
+    box-shadow:2px 2px 0 var(--line);font-family:inherit;
+  }
+  .clue svg{width:26px;height:26px;display:block;margin:0 auto 2px}
+  .clue[aria-pressed="true"]{background:var(--must);transform:translateY(-4px)}
+  .clue.locked{opacity:.5;border-style:dashed;box-shadow:none}
+  .clue.empty{opacity:.4;border-style:dashed;box-shadow:none}
+  /* ---------- 현장 ---------- */
+  .scenewrap{position:relative;border:2.5px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--sh);touch-action:none;background:#eef1e6}
+  .scenewrap svg{display:block;width:100%;height:auto}
+  .hintline{font-size:12px;color:var(--soft);text-align:center;margin:8px 0 6px}
+  .found{animation:pop .4s ease}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+  /* ---------- 분석 ---------- */
+  .prints{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .print{
+    background:var(--panel);border:2.5px solid var(--line);border-radius:10px;padding:10px;
+    text-align:center;box-shadow:var(--sh);font-family:inherit;
+  }
+  .print[aria-pressed="true"]{background:var(--must)}
+  .print svg{width:44px;height:44px}
+  .print b{display:block;font-family:"Gaegu",cursive;font-size:14px}
+  .print span{font-size:10.5px;color:var(--soft);line-height:1.4;display:block}
+  .samples{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .sample{background:var(--panel);border:2px solid var(--line);border-radius:9px;padding:8px 4px;text-align:center;box-shadow:2px 2px 0 var(--line);font-family:inherit}
+  .sample b{display:block;font-family:"Gaegu",cursive;font-size:13px}
+  .sample span{font-size:10px;color:var(--soft);font-variant-numeric:tabular-nums}
+  .meter{height:16px;background:#e8dcc6;border:2px solid var(--line);border-radius:999px;overflow:hidden;margin-top:10px}
+  .meter i{display:block;height:100%;width:0;background:var(--teal);transition:width .6s cubic-bezier(.3,1.2,.5,1)}
+  .meter i.hit{background:var(--olive)}
+  /* ---------- 지목 ---------- */
+  .picks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pick{
+    background:var(--panel);border:2.5px solid var(--line);border-radius:10px;padding:10px 6px;
+    text-align:center;box-shadow:var(--sh);font-family:inherit;
+  }
+  .pick svg{width:52px;height:52px}
+  .pick b{display:block;font-family:"Gaegu",cursive;font-size:14px}
+  .pick[aria-pressed="true"]{background:var(--must)}
+  .pick.duo{grid-column:1/-1}
+  .pick.duo svg{width:44px;height:44px}
+  /* ---------- 해결 ---------- */
+  .reward{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+  .odd{background:#fff3ea;border:2px dashed var(--brick);border-radius:10px;padding:11px 13px;font-size:13.5px;line-height:1.65}
+  .odd b{color:var(--brick);display:block;font-family:"Gaegu",cursive;font-size:15px;margin-bottom:3px}
+  .stars{font-size:26px;letter-spacing:4px;text-align:center;color:var(--must-d)}
+  /* ---------- 연결판 ---------- */
+  .board{
+    background:var(--cork);border:6px solid var(--cork-d);border-radius:8px;
+    padding:14px 10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;
+    box-shadow:inset 0 0 30px rgba(90,60,30,.25);
+  }
+  .pinned{
+    width:74px;background:#fffaf0;border:1.5px solid #cbb590;padding:6px 4px;text-align:center;
+    font-size:9.5px;line-height:1.3;box-shadow:2px 3px 0 rgba(70,45,20,.3);transform:rotate(-3deg);position:relative;
+  }
+  .pinned svg{width:30px;height:30px}
+  .pinned:after{content:"";position:absolute;top:-6px;left:50%;margin-left:-5px;width:10px;height:10px;border-radius:50%;background:var(--brick);border:1px solid #8a2f25}
+  .slot{width:74px;height:78px;border:1.5px dashed var(--cork-d);opacity:.55}
+  .flyin{animation:fly .7s cubic-bezier(.3,1.1,.4,1)}
+  @keyframes fly{0%{transform:translateY(-120px) rotate(14deg) scale(1.3);opacity:0}100%{transform:rotate(-3deg)}}
+  /* ---------- 종료 ---------- */
+  .qa{background:var(--panel);border:2.5px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--sh)}
+  .qa ol{margin:6px 0 0;padding-left:20px;font-size:13.5px;line-height:1.9}
+  .toast{
+    position:absolute;left:14px;right:14px;bottom:78px;z-index:20;
+    background:var(--line);color:#fff8ea;border-radius:10px;padding:9px 13px;font-size:13.5px;
+    text-align:center;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;
+  }
+  .toast.on{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <!-- 망고 -->
+  <g id="mango">
+    <g stroke="#4a3428" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M30 50 l4 -34 l30 20z" fill="#fbf8f2"/><path d="M120 50 l-4 -34 l-30 20z" fill="#4a4a50"/>
+      <path d="M37 46 l3 -21 l19 13z" fill="#f2b8b8" stroke-width="1.8"/><path d="M113 46 l-3 -21 l-19 13z" fill="#f2b8b8" stroke-width="1.8"/>
+      <path d="M22 78 q0 -46 53 -48 q53 2 53 48 q0 40 -53 44 q-53 -4 -53 -44z" fill="#fbf8f2"/>
+      <path d="M52 40 q22 -14 62 -4 q14 8 14 30 q-10 -8 -20 -2 q-8 -14 -22 -8 q-10 -8 -22 -2 q-6 -8 -12 -14z" fill="#4a4a50"/>
+      <path d="M78 36 q10 -4 20 0 M92 44 q8 -2 14 4" stroke="#2c2c31" stroke-width="2" fill="none"/>
+      <path d="M104 56 q16 -4 24 10 q-2 16 -16 18 q-12 -4 -8 -28z" fill="#8f7d69" stroke-width="2"/>
+      <path d="M66 44 q9 -6 18 0 l-3 24 h-12z" fill="#fbf8f2" stroke="none"/>
+      <path d="M75 94 l-4 -3 h8z" fill="#e8a0aa"/>
+      <path d="M75 94 v3 q-4 4 -7 1 M75 97 q4 4 7 1" fill="none" stroke-width="1.8"/>
+      <path d="M28 92 l18 -1 M122 92 l-18 -1" stroke-width="1.5"/>
+    </g>
+    <ellipse cx="44" cy="92" rx="8" ry="4.5" fill="#f4b8b8" opacity=".75"/><ellipse cx="106" cy="92" rx="8" ry="4.5" fill="#f4b8b8" opacity=".75"/>
+    <circle cx="56" cy="74" r="11" fill="#b9c96a" stroke="#4a3428" stroke-width="2.2"/><circle cx="56" cy="75" r="6.5" fill="#2a1f1a"/>
+    <circle cx="94" cy="74" r="11" fill="#b9c96a" stroke="#4a3428" stroke-width="2.2"/><circle cx="94" cy="75" r="6.5" fill="#2a1f1a"/>
+    <circle cx="53" cy="71" r="2" fill="#fff"/><circle cx="91" cy="71" r="2" fill="#fff"/>
+  </g>
+  <!-- 너구리 머리 -->
+  <g id="rc-head">
+    <g stroke="#4a3428" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M32 44 l6 -26 l22 16z" fill="#8d8b94"/><path d="M118 44 l-6 -26 l-22 16z" fill="#8d8b94"/>
+      <path d="M38 42 l4 -15 l12 9z" fill="#f2b8b8" stroke-width="1.8"/><path d="M112 42 l-4 -15 l-12 9z" fill="#f2b8b8" stroke-width="1.8"/>
+      <path d="M18 70 q0 -40 57 -42 q57 2 57 42 q0 36 -57 44 q-57 -8 -57 -44z" fill="#8d8b94"/>
+      <path d="M22 66 q22 -16 44 -4 q-18 22 -44 4z" fill="#3f3a44"/>
+      <path d="M128 66 q-22 -16 -44 -4 q18 22 44 4z" fill="#3f3a44"/>
+      <path d="M52 86 q23 -8 46 0 q-4 24 -23 26 q-19 -2 -23 -26z" fill="#f5efe4"/>
+      <ellipse cx="75" cy="92" rx="6" ry="4.5" fill="#2a1f1a"/>
+      <path d="M75 96 v4 q-6 5 -10 0 M75 100 q6 5 10 0" stroke-width="1.8" fill="none"/>
+    </g>
+  </g>
+  <g id="rc-eye-def"><circle cx="53" cy="66" r="8" fill="#fbf8f2"/><circle cx="97" cy="66" r="8" fill="#fbf8f2"/><circle cx="54" cy="67" r="4.4" fill="#2a1f1a"/><circle cx="98" cy="67" r="4.4" fill="#2a1f1a"/><circle cx="52" cy="64" r="1.7" fill="#fff"/><circle cx="96" cy="64" r="1.7" fill="#fff"/></g>
+  <g id="rc-eye-fl"><circle cx="53" cy="66" r="8" fill="#fbf8f2"/><circle cx="97" cy="66" r="8" fill="#fbf8f2"/><circle cx="57" cy="68" r="4" fill="#2a1f1a"/><circle cx="101" cy="68" r="4" fill="#2a1f1a"/><path d="M136 52 q5 8 0 12 q-5 -4 0 -12z" fill="#9fd0e8" stroke="#4a3428" stroke-width="1.6"/><path d="M64 102 q11 -5 22 0" stroke="#4a3428" stroke-width="2" fill="none"/></g>
+  <g id="rc-eye-sp"><circle cx="53" cy="66" r="10" fill="#fbf8f2"/><circle cx="97" cy="66" r="10" fill="#fbf8f2"/><circle cx="53" cy="67" r="3.2" fill="#2a1f1a"/><circle cx="97" cy="67" r="3.2" fill="#2a1f1a"/><path d="M66 100 a9 8 0 0 0 18 0z" fill="#8a4a52" stroke="#4a3428" stroke-width="1.8"/></g>
+  <!-- 도토 -->
+  <g id="doto">
+    <g stroke="#4a3428" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M34 40 l2 -30 l26 22z" fill="#c07a44"/><path d="M116 40 l-2 -30 l-26 22z" fill="#c07a44"/>
+      <path d="M40 38 l1 -18 l15 13z" fill="#f2b8b8" stroke-width="1.8"/><path d="M110 38 l-1 -18 l-15 13z" fill="#f2b8b8" stroke-width="1.8"/>
+      <path d="M28 72 q0 -40 47 -40 q47 0 47 40 q0 44 -47 48 q-47 -4 -47 -48z" fill="#d18b4e"/>
+      <path d="M50 92 q25 -8 50 0 q-6 22 -25 24 q-19 -2 -25 -24z" fill="#f7e6cf"/>
+      <ellipse cx="75" cy="96" rx="5" ry="4" fill="#2a1f1a"/><path d="M75 100 v3" stroke-width="1.8"/>
+      <rect x="69" y="103" width="6" height="9" rx="1.5" fill="#fff"/><rect x="75" y="103" width="6" height="9" rx="1.5" fill="#fff"/>
+    </g>
+    <circle cx="57" cy="70" r="10" fill="#2a1f1a"/><circle cx="93" cy="70" r="10" fill="#2a1f1a"/>
+    <circle cx="53.5" cy="66.5" r="2.6" fill="#fff"/><circle cx="89.5" cy="66.5" r="2.6" fill="#fff"/>
+  </g>
+  <!-- 모리 -->
+  <g id="mori">
+    <g stroke="#4a3428" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M20 74 q0 -48 55 -48 q55 0 55 48 q0 42 -55 46 q-55 -4 -55 -46z" fill="#9c8069"/>
+      <path d="M30 60 q20 -22 45 -20 q25 -2 45 20 q-8 -26 -45 -26 q-37 0 -45 26z" fill="#8a6f58"/>
+      <ellipse cx="75" cy="96" rx="19" ry="13" fill="#f1a7a3"/>
+      <path d="M62 94 q13 -5 26 0" stroke-width="1.6" fill="none"/>
+      <ellipse cx="68" cy="93" rx="2.4" ry="3" fill="#8a4a52" stroke="none"/><ellipse cx="82" cy="93" rx="2.4" ry="3" fill="#8a4a52" stroke="none"/>
+      <circle cx="52" cy="70" r="17" fill="#e6f0f2" opacity=".55" stroke="#c9924a" stroke-width="2.4"/>
+      <circle cx="98" cy="70" r="17" fill="#e6f0f2" opacity=".55" stroke="#c9924a" stroke-width="2.4"/>
+      <path d="M69 70 h12" stroke="#c9924a" stroke-width="2.4"/>
+      <path d="M35 68 l-13 -4 M115 68 l13 -4" stroke="#c9924a" stroke-width="2"/>
+    </g>
+    <path d="M42 72 q10 -7 20 0" stroke="#2a1f1a" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <path d="M88 72 q10 -7 20 0" stroke="#2a1f1a" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 양 아주머니 -->
+  <g id="sheep">
+    <g stroke="#4a3428" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M26 52 q-14 -6 -8 -18 q10 -10 20 -2" fill="#efe6d4"/>
+      <path d="M124 52 q14 -6 8 -18 q-10 -10 -20 -2" fill="#efe6d4"/>
+      <circle cx="40" cy="40" r="15" fill="#fbf8f2"/><circle cx="110" cy="40" r="15" fill="#fbf8f2"/>
+      <circle cx="58" cy="28" r="16" fill="#fbf8f2"/><circle cx="92" cy="28" r="16" fill="#fbf8f2"/><circle cx="75" cy="24" r="16" fill="#fbf8f2"/>
+      <path d="M30 76 q0 -34 45 -34 q45 0 45 34 q0 34 -45 36 q-45 -2 -45 -36z" fill="#e8dcc8"/>
+      <path d="M20 66 q-16 4 -16 16 q14 8 22 -4z" fill="#e8dcc8"/><path d="M130 66 q16 4 16 16 q-14 8 -22 -4z" fill="#e8dcc8"/>
+      <ellipse cx="75" cy="92" rx="13" ry="9" fill="#d8c3a8"/>
+      <path d="M68 90 h14" stroke-width="1.6"/><path d="M75 96 v4" stroke-width="1.8"/>
+    </g>
+    <circle cx="58" cy="72" r="7" fill="#2a1f1a"/><circle cx="92" cy="72" r="7" fill="#2a1f1a"/>
+    <circle cx="55.6" cy="69.6" r="2.2" fill="#fff"/><circle cx="89.6" cy="69.6" r="2.2" fill="#fff"/>
+    <path d="M44 58 q12 -6 22 -2 M106 58 q-12 -6 -22 -2" stroke="#4a3428" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 단서 아이콘 -->
+  <g id="i-plate"><ellipse cx="14" cy="15" rx="11" ry="5" fill="#fff" stroke="#4a3428" stroke-width="2"/><ellipse cx="14" cy="14" rx="6" ry="2.4" fill="#e0d4bc"/></g>
+  <g id="i-spoon"><path d="M6 21 l9 -8" stroke="#9a9a9a" stroke-width="3" stroke-linecap="round"/><ellipse cx="17" cy="10" rx="4" ry="5.5" fill="#d9d2c8" stroke="#4a3428" stroke-width="1.6" transform="rotate(35 17 10)"/><path d="M10 23 l9 -8" stroke="#9a9a9a" stroke-width="3" stroke-linecap="round"/><ellipse cx="21" cy="12" rx="4" ry="5.5" fill="#d9d2c8" stroke="#4a3428" stroke-width="1.6" transform="rotate(35 21 12)"/></g>
+  <g id="i-crumb" fill="#8b5a36"><circle cx="8" cy="11" r="2.6"/><circle cx="16" cy="16" r="2.2"/><circle cx="11" cy="19" r="1.8"/><circle cx="20" cy="9" r="1.6"/></g>
+  <g id="i-apron"><path d="M6 8 q8 10 16 0 q-2 12 -8 14 q-6 -2 -8 -14z" fill="#f4ead6" stroke="#4a3428" stroke-width="1.8"/><path d="M6 8 q-3 -4 2 -5 M22 8 q3 -4 -2 -5" stroke="#4a3428" stroke-width="1.8" fill="none"/></g>
+  <g id="i-print" fill="#7a5a3f"><ellipse cx="10" cy="9" rx="3" ry="4.2"/><ellipse cx="17" cy="14" rx="3" ry="4.2"/><ellipse cx="9" cy="19" rx="3" ry="4.2"/></g>
+  <g id="i-lock"><rect x="7" y="12" width="14" height="11" rx="2" fill="#bdb6ab" stroke="#4a3428" stroke-width="1.8"/><path d="M10 12 V9 a4 4 0 0 1 8 0 v3" stroke="#4a3428" stroke-width="1.8" fill="none"/></g>
+</defs></svg>
+
+<div class="app" id="app">
+  <!-- 상단 -->
+  <div class="bar" id="topbar" hidden>
+    <span class="chip" id="t-left">사건 1 · 현장</span>
+    <span style="display:flex;gap:5px">
+      <span class="chip" id="t-lamp">💡 3</span>
+      <button class="chip" id="t-sound" aria-label="소리 켜기/끄기" style="cursor:pointer">🔔</button>
+    </span>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- ================= 표지 ================= -->
+    <section id="s-title">
+      <div class="eyebrow">시험판 · 첫 사건</div>
+      <div style="display:flex;justify-content:center"><svg viewBox="0 0 150 130" style="width:150px"><use href="#mango"/></svg></div>
+      <h1>탐정 망고의<br><em>춤추는 대수사선</em></h1>
+      <p class="muted" style="margin:0">도토리 마을의 소소한 사건을 풀고,<br>설명되지 않는 단서를 벽에 모으세요.</p>
+      <div class="modepick">
+        <button id="m-easy" aria-pressed="false"><b>처음이에요</b><span>수상한 말에 밑줄이 그어집니다</span></button>
+        <button id="m-hard" aria-pressed="false"><b>추리게임 해봤어요</b><span>수상한 말을 직접 찾습니다</span></button>
+      </div>
+      <p class="muted" style="margin:0;font-size:11.5px">한 판 5분 · 소리가 납니다</p>
+    </section>
+
+    <!-- ================= 의뢰 ================= -->
+    <section id="s-brief" hidden>
+      <div class="portrait"><svg viewBox="0 0 150 120"><use href="#sheep"/></svg></div>
+      <div class="card">
+        <div class="who">양 아주머니 <small>급식실장</small></div>
+        <p style="margin:0;font-size:14px">"탐정님! 오늘 후식으로 낼 <b>도토리묵</b>이 통째로 사라졌어요. 점심 전엔 분명 배식대 위에 있었는데… 아이들 후식이 걸린 문제라고요!"</p>
+      </div>
+      <div class="say" style="margin-top:12px"><b>망고</b> "…묵 한 접시요. 뭐, 사건은 사건이죠."</div>
+      <div class="center muted" style="margin-top:14px">보수 🪙 120 · 난이도 ★☆☆☆☆</div>
+    </section>
+
+    <!-- ================= 현장 ================= -->
+    <section id="s-scene" hidden>
+      <div class="scenewrap" id="scenewrap">
+        <svg id="scene" viewBox="0 0 360 470">
+          <defs>
+            <clipPath id="lensclip"><circle id="lenscircle" cx="180" cy="235" r="52"/></clipPath>
+          </defs>
+          <g id="art">
+            <rect width="360" height="470" fill="#e7eee0"/>
+            <rect x="0" y="0" width="360" height="250" fill="#eef2e7"/>
+            <!-- 창 -->
+            <rect x="24" y="44" width="128" height="122" rx="5" fill="#cfe0e2" stroke="#4a3428" stroke-width="2.5"/>
+            <rect x="30" y="50" width="116" height="110" rx="3" fill="#e2eff0"/>
+            <path d="M30 118 q34 -26 116 -10 v52 h-116z" fill="#efc99a" opacity=".85"/>
+            <circle cx="112" cy="78" r="18" fill="#fff3d2"/>
+            <path d="M88 50 v110 M30 105 h116" stroke="#fff" stroke-width="3"/>
+            <text x="88" y="38" text-anchor="middle" font-size="11" fill="#7a6656" font-family="Gowun Dodum">창문 (광장 쪽)</text>
+            <!-- 냉장고 -->
+            <rect x="246" y="66" width="86" height="150" rx="5" fill="#dcd5c6" stroke="#4a3428" stroke-width="2.5"/>
+            <path d="M246 132 h86" stroke="#4a3428" stroke-width="2"/>
+            <rect x="252" y="96" width="7" height="26" rx="3" fill="#b0a897" stroke="#4a3428" stroke-width="1.6"/>
+            <rect x="252" y="146" width="7" height="26" rx="3" fill="#b0a897" stroke="#4a3428" stroke-width="1.6"/>
+            <text x="289" y="58" text-anchor="middle" font-size="11" fill="#7a6656" font-family="Gowun Dodum">냉장고</text>
+            <!-- 배식대 -->
+            <rect x="0" y="250" width="360" height="42" fill="#b9cebd" stroke="#4a3428" stroke-width="2.5"/>
+            <rect x="0" y="292" width="360" height="26" fill="#a4baa8"/>
+            <text x="300" y="244" text-anchor="middle" font-size="11" fill="#7a6656" font-family="Gowun Dodum">배식대</text>
+            <!-- 접시 -->
+            <ellipse cx="86" cy="258" rx="42" ry="12" fill="#fff" stroke="#4a3428" stroke-width="2.5"/>
+            <ellipse cx="86" cy="256" rx="30" ry="7" fill="#efe7d6"/>
+            <ellipse cx="82" cy="256" rx="12" ry="3.4" fill="#c49a6a" opacity=".55"/>
+            <!-- 숟가락 -->
+            <g stroke="#9a9a9a" stroke-width="5" stroke-linecap="round"><path d="M176 268 l26 -12"/><path d="M186 276 l26 -12"/></g>
+            <ellipse cx="206" cy="252" rx="8" ry="11" fill="#d9d2c8" stroke="#4a3428" stroke-width="2" transform="rotate(35 206 252)"/>
+            <ellipse cx="216" cy="260" rx="8" ry="11" fill="#d9d2c8" stroke="#4a3428" stroke-width="2" transform="rotate(35 216 260)"/>
+            <!-- 바닥 -->
+            <rect x="0" y="318" width="360" height="152" fill="#e6d3b3"/>
+            <path d="M0 356 h360 M0 396 h360 M0 436 h360" stroke="#d8c096" stroke-width="1.4"/>
+            <path d="M70 318 v152 M160 318 v152 M250 318 v152" stroke="#d8c096" stroke-width="1.4"/>
+            <!-- 뒷문 -->
+            <rect x="286" y="300" width="74" height="170" fill="#c9a06a" stroke="#4a3428" stroke-width="2.5"/>
+            <rect x="296" y="316" width="54" height="60" rx="3" fill="#b88f5c"/>
+            <circle cx="298" cy="392" r="5" fill="#8a6a44" stroke="#4a3428" stroke-width="1.6"/>
+            <text x="322" y="294" text-anchor="middle" font-size="11" fill="#7a6656" font-family="Gowun Dodum">뒷문</text>
+            <!-- 부스러기 -->
+            <g fill="#8b5a36"><circle cx="150" cy="330" r="2.6"/><circle cx="178" cy="346" r="2.2"/><circle cx="206" cy="362" r="2.6"/><circle cx="232" cy="378" r="2"/><circle cx="258" cy="392" r="2.4"/><circle cx="276" cy="404" r="2"/></g>
+            <!-- 앞치마 끈 -->
+            <path d="M296 396 q14 10 6 26" stroke="#f4ead6" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <path d="M296 396 q14 10 6 26" stroke="#4a3428" stroke-width="1" fill="none" opacity=".5"/>
+            <!-- 흙 발자국 -->
+            <g fill="#7a5a3f" opacity=".72"><ellipse cx="60" cy="182" rx="3.4" ry="5"/><ellipse cx="71" cy="192" rx="3.4" ry="5"/><ellipse cx="58" cy="202" rx="3.4" ry="5"/></g>
+            <!-- 지문 -->
+            <g opacity=".25"><circle cx="255" cy="108" r="6" fill="none" stroke="#5a4a38" stroke-width="1.2"/><circle cx="255" cy="108" r="3" fill="none" stroke="#5a4a38" stroke-width="1.2"/></g>
+          </g>
+          <!-- 확대 레이어 -->
+          <g clip-path="url(#lensclip)"><g id="mag"><use href="#art"/></g></g>
+          <!-- 빛 -->
+          <g id="glows"></g>
+          <!-- 렌즈 테 -->
+          <g id="lens">
+            <circle id="lensring" cx="180" cy="235" r="52" fill="none" stroke="#5b5a63" stroke-width="7"/>
+            <circle id="lensring2" cx="180" cy="235" r="52" fill="none" stroke="#e8f4f8" stroke-width="2"/>
+            <path id="lenshandle" d="M217 272 l34 34" stroke="#7a5233" stroke-width="13" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </div>
+      <p class="hintline" id="scene-hint">확대경을 끌어서 살펴보고, 빛나는 곳에서 손을 떼면 단서를 줍습니다</p>
+      <div class="tray" id="scene-tray"></div>
+    </section>
+
+    <!-- ================= 심문 ================= -->
+    <section id="s-talk" hidden>
+      <div class="tabs" id="talk-tabs"></div>
+      <div class="card">
+        <div class="who" id="talk-who"></div>
+        <div id="talk-lines"></div>
+      </div>
+      <div class="portrait"><svg viewBox="0 0 150 130" id="talk-portrait"></svg></div>
+      <div class="say" id="talk-say" hidden></div>
+      <p class="hintline" id="talk-hint" style="margin-bottom:4px"></p>
+      <div class="tray" id="talk-tray"></div>
+    </section>
+
+    <!-- ================= 분석 ================= -->
+    <section id="s-lab" hidden>
+      <div class="card" style="margin-bottom:10px"><b style="font-family:Gaegu,cursive;font-size:15px">발자국 감정</b><div class="muted" style="font-size:12.5px">발자국을 고르고, 아래 표본을 눌러 겹쳐 보세요.</div></div>
+      <div class="prints">
+        <button class="print" id="p-back" aria-pressed="false"><svg viewBox="0 0 28 28"><use href="#i-print"/></svg><b>뒷문 발자국</b><span>6cm · 발가락 5<br>묵이 묻음</span></button>
+        <button class="print" id="p-win" aria-pressed="false"><svg viewBox="0 0 28 28"><use href="#i-print"/></svg><b>창가 발자국</b><span>3cm · 발가락 5<br>흙이 묻음</span></button>
+      </div>
+      <div class="meter"><i id="lab-meter"></i></div>
+      <div class="samples" id="lab-samples"></div>
+      <div class="say" id="lab-say" hidden></div>
+    </section>
+
+    <!-- ================= 지목 ================= -->
+    <section id="s-accuse" hidden>
+      <div class="card" style="margin-bottom:10px"><b style="font-family:Gaegu,cursive;font-size:15px">도토리묵을 먹은 건 누구?</b><div class="muted" style="font-size:12.5px">범인과 결정적 단서 2개를 고르세요.</div></div>
+      <div class="picks" id="acc-picks"></div>
+      <p class="hintline" style="margin:12px 0 4px">결정적 단서 <span id="acc-count">0 / 2</span></p>
+      <div class="tray" id="acc-tray"></div>
+      <div class="say" id="acc-say" hidden></div>
+    </section>
+
+    <!-- ================= 해결 ================= -->
+    <section id="s-solve" hidden>
+      <div class="stars" id="solve-stars">★★★</div>
+      <div class="card" style="margin-top:8px">
+        <div class="who">사건 해결!</div>
+        <p style="margin:0;font-size:14px">콩이와 콩순이는 점심 전에 너무 배가 고파 도토리묵을 「한 입만」 먹으려다 접시를 비웠습니다. 앞치마 끈은 급히 뒷문으로 나가다 걸린 것. 벌은 일주일 설거지 당번.</p>
+      </div>
+      <div class="reward" id="solve-reward"></div>
+      <div class="odd">
+        <b>…그런데, 설명이 안 되는 게 하나 있어요.</b>
+        창가의 <b style="display:inline;font-family:inherit;font-size:inherit">작은 흙 발자국</b>. 너구리 발이 아니고, 흙은 급식실 것도 아니에요. 창밖은 광장 쪽인데… 누가, 왜?
+      </div>
+    </section>
+
+    <!-- ================= 연결판 ================= -->
+    <section id="s-board" hidden>
+      <div class="board" id="board">
+        <div class="pinned flyin"><svg viewBox="0 0 28 28"><use href="#i-print"/></svg>작은 흙 발자국<br><span style="color:#8a7355">사건 1</span></div>
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+      </div>
+      <p class="center muted" style="margin:10px 0 0">1 / 5 · 다섯 장이 모이면 <b>추론</b>할 수 있어요</p>
+      <div class="card" style="margin-top:12px;background:#fff8e7;border-color:var(--must-d)">
+        <div class="who">다음 사건 「찢어진 축제 포스터」</div>
+        <p style="margin:0;font-size:14px">내일 <b>아침 6시</b>에 열려요.</p>
+      </div>
+      <div class="qa" style="margin-top:12px">
+        <b style="font-family:Gaegu,cursive;font-size:15px">여기까지가 시험판입니다</b>
+        <p class="muted" style="margin:4px 0 0;font-size:12.5px">만든 사람에게 알려 주세요:</p>
+        <ol>
+          <li>어디서 제일 헷갈렸나요?</li>
+          <li>흙 발자국은 누구 거라고 생각하나요?</li>
+          <li>내일 아침에 열리면 정말 열어 볼 것 같나요?</li>
+          <li>글자가 많았나요, 적당했나요?</li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- 하단 -->
+  <div class="foot" id="foot" hidden>
+    <button class="btn ghost" id="btn-back" hidden>◀ 뒤로</button>
+    <button class="btn go" id="btn-next">다음</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s){return document.querySelector(s)};
+
+  /* ---------------- 데이터 ---------------- */
+  var CLUES={
+    plate:{name:'빈 접시',icon:'#i-plate',line:'도토리묵이 담겨 있던 접시예요. 묵 자국만 남았네요.',x:86,y:258},
+    spoons:{name:'숟가락 두 개',icon:'#i-spoon',line:'숟가락이 두 개예요. 둘 다 묵이 묻어 있어요.',x:196,y:262},
+    crumbs:{name:'부스러기',icon:'#i-crumb',line:'묵 부스러기가 배식대에서 뒷문 쪽으로 이어져요.',x:206,y:362},
+    apron:{name:'앞치마 끈',icon:'#i-apron',line:'뒷문 손잡이에 크림색 앞치마 끈이 걸려 있어요.',x:300,y:408},
+    print:{name:'흙 발자국',icon:'#i-print',line:'창가에 아주 작은 흙 발자국이 있어요. 창문은 광장 쪽이에요.',x:63,y:192},
+    finger:{name:'지문',icon:'#i-lock',line:'이건 지문 가루가 있어야 볼 수 있어요. 나중에 다시 오세요.',x:255,y:108,locked:true}
+  };
+  var ORDER=['plate','spoons','crumbs','apron','print','finger'];
+
+  var SUS={
+    kongi:{name:'콩이',role:'급식 도우미',sym:'rc',eyes:'def',
+      lines:[
+        {id:'a',t:'저희는 오늘 급식실에 한 번도 안 들어갔어요.',sus:true,
+          hit:{apron:{eyes:'fl',say:'<b>콩이</b> "아… 그, 그건 앞치마 찾으러 잠깐 들어간 거예요! 진짜 잠깐!"',unlock:'d'}}},
+        {id:'b',t:'점심시간엔 운동장에서 놀았고요.',sus:false},
+        {id:'c',t:'도토리묵은 원래 싫어해요!',sus:true,
+          hit:{crumbs:{eyes:'fl',say:'<b>콩이</b> "…그, 그건 콩순이가! 아니, 아무도…"',flag:'kongsun'},
+               spoons:{eyes:'fl',say:'<b>콩이</b> "…그, 그건 콩순이가! 아니, 아무도…"',flag:'kongsun'}}},
+        {id:'d',t:'묵은 만지지도 않았어요.',sus:true,hidden:true,
+          hit:{spoons:{eyes:'sp',say:'<b>콩이</b> "…둘이서요. 배가 너무 고파서… 죄송해요."',flag:'kongsun'}}}
+      ]},
+    kongsun:{name:'콩순이',role:'급식 도우미',sym:'rc',eyes:'def',ribbon:true,
+      lines:[
+        {id:'a',t:'언니는 진짜 안 먹었어요. 제가… 아니, 아무도 안 먹었어요.',sus:true,needs:'kongsun',
+          hit:{spoons:{eyes:'fl',say:'<b>콩순이</b> "두 개면… 두 명이… 언니이이!"',flag:'ready'}}},
+        {id:'b',t:'숟가락은 원래 거기 있던 거예요.',sus:false},
+        {id:'c',t:'부스러기는 새들이 떨어뜨렸겠죠.',sus:false}
+      ]},
+    doto:{name:'도토',role:'느티나무 집주인',sym:'doto',
+      lines:[
+        {id:'a',t:'도토리묵? 냄새는 좋았지.',sus:false},
+        {id:'b',t:'난 나무 위에 있었어. 창문으로 다 봤지.',sus:false},
+        {id:'c',t:'회색 애들 둘이 뒷문으로 후다닥 나가더라.',sus:false}
+      ]},
+    mori:{name:'모리',role:'도서관 사서 · 증인',sym:'mori',witness:true,
+      lines:[
+        {id:'a',t:'저는… 도서관 신간 안내문을 붙이러 잠깐 왔었어요.',sus:false},
+        {id:'b',t:'창가엔… 안 갔어요. 게시판만 보고 바로 나갔어요.',sus:false},
+        {id:'c',t:'묵은… 못 봤어요. 정말요.',sus:false}
+      ]}
+  };
+  var SUSORDER=['kongi','kongsun','doto','mori'];
+
+  var SAMPLES=[
+    {id:'rc',name:'너구리',spec:'6cm · 5개',back:96,win:40,
+      backSay:'<b>딱 맞아요!</b> 뒷문으로 나간 건 너구리예요.',winSay:'너무 커요. 창가 발자국은 이것보다 훨씬 작아요.'},
+    {id:'sq',name:'다람쥐',spec:'2.5cm · 4개',back:45,win:58,
+      backSay:'너무 작고 발가락도 달라요.',winSay:'발가락 수가 달라요. 다람쥐는 넷, 이건 다섯이에요.'},
+    {id:'mo',name:'두더지',spec:'3cm · 5개',back:38,win:95,
+      backSay:'크기가 한참 모자라요.',winSay:'…맞긴 맞는데, <b>두더지가 왜 급식실 창가에?</b>'}
+  ];
+
+  /* ---------------- 상태 ---------------- */
+  var S={screen:'title',easy:null,sound:true,lamps:3,found:{},tab:'kongi',
+    sel:null,flags:{},star:3,wrong:0,accused:null,accClues:[],print:'back',labDone:false};
+
+  /* ---------------- 소리 ---------------- */
+  var ac=null;
+  function beep(freqs,dur,type,vol){
+    if(!S.sound)return;
+    try{
+      if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();
+      if(ac.state==='suspended')ac.resume();
+      freqs.forEach(function(f,i){
+        var o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+i*(dur*.62);
+        o.type=type||'sine';o.frequency.setValueAtTime(f,t);
+        g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||.13,t+.012);
+        g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+        o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+.02);
+      });
+    }catch(e){}
+  }
+  var sTap=function(){beep([620],.07,'sine',.08)};
+  var sFind=function(){beep([740,988],.13,'triangle',.11)};
+  var sGood=function(){beep([659,880],.16,'triangle',.12)};
+  var sBad=function(){beep([300,220],.16,'sine',.1)};
+  var sFan=function(){beep([523,659,784,1047],.2,'triangle',.12)};
+
+  /* ---------------- 토스트 ---------------- */
+  var toastT=null;
+  function toast(msg){
+    var el=$('#toast');el.textContent=msg;el.classList.add('on');
+    clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove('on')},1900);
+  }
+
+  /* ---------------- 화면 전환 ---------------- */
+  var SCREENS={title:'#s-title',brief:'#s-brief',scene:'#s-scene',talk:'#s-talk',
+    lab:'#s-lab',accuse:'#s-accuse',solve:'#s-solve',board:'#s-board'};
+  var TITLES={brief:'사건 1 · 의뢰',scene:'사건 1 · 현장',talk:'사건 1 · 심문',
+    lab:'사건 1 · 분석',accuse:'사건 1 · 지목',solve:'사건 1 · 해결',board:'연결판'};
+
+  function go(name){
+    S.screen=name;
+    for(var k in SCREENS)$(SCREENS[k]).hidden=(k!==name);
+    var isTitle=(name==='title');
+    $('#topbar').hidden=isTitle;$('#foot').hidden=isTitle;
+    if(!isTitle)$('#t-left').textContent=TITLES[name]||'';
+    $('#stage').scrollTop=0;
+    lamps();
+    var back=$('#btn-back'),next=$('#btn-next');
+    back.hidden=true;next.disabled=false;
+    if(name==='brief'){next.textContent='🔍 사건을 맡는다'}
+    else if(name==='scene'){back.hidden=false;back.textContent='◀ 의뢰';next.textContent='용의자 만나기 ▶'}
+    else if(name==='talk'){back.hidden=false;back.textContent='◀ 현장';next.textContent='발자국 감정 ▶'}
+    else if(name==='lab'){back.hidden=false;back.textContent='◀ 심문';next.textContent='범인 지목 ▶'}
+    else if(name==='accuse'){back.hidden=false;back.textContent='◀ 분석';next.textContent='이 사람이 범인이다!';
+      next.disabled=!(S.accused&&S.accClues.length===2)}
+    else if(name==='solve'){next.textContent='📌 연결판에 꽂기'}
+    else if(name==='board'){next.textContent='처음부터 다시';}
+    if(name==='scene')drawGlows();
+    if(name==='talk')renderTalk();
+    if(name==='accuse')renderAccuse();
+    if(name==='solve')renderSolve();
+    if(name==='board')sFan();
+  }
+
+  function lamps(){$('#t-lamp').textContent='💡 '+S.lamps}
+
+  /* ---------------- 단서 트레이 ---------------- */
+  function trayHTML(el,opts){
+    opts=opts||{};
+    el.innerHTML='';
+    ORDER.forEach(function(id){
+      var c=CLUES[id],got=!!S.found[id];
+      var b=document.createElement(opts.clickable?'button':'div');
+      b.className='clue'+(got?'':(c.locked?' locked':' empty'));
+      if(got&&opts.clickable){
+        b.setAttribute('aria-pressed',String(opts.selected&&opts.selected.indexOf(id)>=0));
+        b.addEventListener('click',function(){opts.onPick(id)});
+      }else if(opts.clickable){b.disabled=true}
+      b.innerHTML='<svg viewBox="0 0 28 28" aria-hidden="true"><use href="'+
+        (got?c.icon:'#i-lock')+'"></use></svg>'+(got?c.name:(c.locked?'🔒 지문':'???'));
+      el.appendChild(b);
+    });
+  }
+
+  /* ---------------- 현장: 확대경 ---------------- */
+  var lensX=180,lensY=200,R=52;
+  function setLens(x,y){
+    lensX=Math.max(R*.5,Math.min(360-R*.5,x));
+    lensY=Math.max(R*.5,Math.min(470-R*.5,y));
+    ['#lenscircle','#lensring','#lensring2'].forEach(function(s){
+      var e=$(s);e.setAttribute('cx',lensX);e.setAttribute('cy',lensY);
+    });
+    $('#lenshandle').setAttribute('d','M'+(lensX+37)+' '+(lensY+37)+' l34 34');
+    $('#mag').setAttribute('transform','translate('+lensX+','+lensY+') scale(1.7) translate('+(-lensX)+','+(-lensY)+')');
+    drawGlows();
+  }
+  function nearClue(){
+    var best=null,bd=1e9;
+    ORDER.forEach(function(id){
+      if(S.found[id])return;
+      var c=CLUES[id],d=Math.hypot(c.x-lensX,c.y-lensY);
+      if(d<R*.92&&d<bd){bd=d;best=id}
+    });
+    return best;
+  }
+  function drawGlows(){
+    var g=$('#glows');if(!g)return;
+    var html='';
+    ORDER.forEach(function(id){
+      if(S.found[id])return;
+      var c=CLUES[id],d=Math.hypot(c.x-lensX,c.y-lensY);
+      if(d<R*.92){
+        html+='<circle cx="'+c.x+'" cy="'+c.y+'" r="14" fill="'+(c.locked?'#9a9a9a':'#ffd97a')+
+          '" opacity="'+(c.locked?.45:.75)+'"/>'+
+          '<circle cx="'+c.x+'" cy="'+c.y+'" r="20" fill="none" stroke="'+(c.locked?'#9a9a9a':'#e8b25c')+'" stroke-width="2.5" opacity=".7"/>';
+      }
+    });
+    g.innerHTML=html;
+  }
+  function svgPoint(ev){
+    var svg=$('#scene'),r=svg.getBoundingClientRect();
+    return {x:(ev.clientX-r.left)/r.width*360,y:(ev.clientY-r.top)/r.height*470};
+  }
+  function initScene(){
+    var w=$('#scenewrap'),dragging=false;
+    w.addEventListener('pointerdown',function(e){
+      dragging=true;w.setPointerCapture(e.pointerId);
+      var p=svgPoint(e);setLens(p.x,p.y);
+    });
+    w.addEventListener('pointermove',function(e){
+      if(!dragging)return;var p=svgPoint(e);setLens(p.x,p.y);
+    });
+    w.addEventListener('pointerup',function(e){
+      dragging=false;
+      var id=nearClue();
+      if(!id)return;
+      var c=CLUES[id];
+      if(c.locked){sBad();toast('🔒 지문 가루가 있어야 볼 수 있어요');return}
+      S.found[id]=true;sFind();
+      $('#scene-hint').innerHTML='<b>'+c.name+'</b> — '+c.line;
+      trayHTML($('#scene-tray'),{});
+      drawGlows();
+      var n=Object.keys(S.found).length;
+      if(n===5)toast('단서를 다 모았어요! 용의자를 만나 보세요');
+    });
+    setLens(180,200);
+    trayHTML($('#scene-tray'),{});
+  }
+
+  /* ---------------- 심문 ---------------- */
+  function portrait(who){
+    var s=SUS[who],h='';
+    if(s.sym==='rc'){
+      h='<use href="#rc-head"></use><use href="#rc-eye-'+(s.eyes||'def')+'"></use>';
+      if(s.ribbon)h+='<path d="M112 26 l-13 -7 v14z M112 26 l13 -7 v14z" fill="#e8a0aa" stroke="#4a3428" stroke-width="2"/><circle cx="112" cy="26" r="3.5" fill="#e8a0aa" stroke="#4a3428" stroke-width="1.6"/>';
+    }else{h='<use href="#'+s.sym+'"></use>'}
+    return h;
+  }
+  function renderTalk(){
+    var tabs=$('#talk-tabs');tabs.innerHTML='';
+    SUSORDER.forEach(function(id){
+      var b=document.createElement('button');
+      b.textContent=SUS[id].name+(SUS[id].witness?'·증인':'');
+      b.setAttribute('aria-selected',String(id===S.tab));
+      if(SUS[id].witness)b.className='witness';
+      b.addEventListener('click',function(){sTap();S.tab=id;S.sel=null;renderTalk()});
+      tabs.appendChild(b);
+    });
+    var s=SUS[S.tab];
+    $('#talk-who').innerHTML=s.name+' <small>'+s.role+'</small>';
+    $('#talk-portrait').innerHTML=portrait(S.tab);
+    var box=$('#talk-lines');box.innerHTML='';
+    var n=0;
+    s.lines.forEach(function(L){
+      if(L.hidden&&!S.flags[L.id+'_'+S.tab])return;
+      n++;
+      var row=document.createElement('div');row.className='stmt';
+      var num=document.createElement('span');num.className='n';num.textContent=n;
+      var btn=document.createElement('button');btn.className='tap';btn.type='button';
+      btn.textContent='"'+L.t+'"';
+      var active=L.sus&&(!L.needs||S.flags[L.needs]);
+      if(active&&S.easy)btn.classList.add('sus-on');
+      if(S.sel===L.id)btn.classList.add('picked');
+      btn.addEventListener('click',function(){
+        if(!active){sTap();say('그 말은 이상한 점이 없어 보여요.');S.sel=null;renderTalk();return}
+        sTap();S.sel=L.id;say('<b>수상한 말을 골랐어요.</b> 아래에서 반박할 단서를 고르세요.');renderTalk();
+      });
+      row.appendChild(num);row.appendChild(btn);box.appendChild(row);
+    });
+    $('#talk-hint').textContent=S.sel?'단서를 눌러 들이대세요':(s.witness?'증인의 말입니다':'수상한 말을 눌러 보세요');
+    trayHTML($('#talk-tray'),{clickable:true,selected:[],onPick:present});
+  }
+  function say(html){var el=$('#talk-say');el.hidden=false;el.innerHTML=html}
+  function present(clueId){
+    if(!S.sel){sTap();toast('먼저 수상한 말을 고르세요');return}
+    var s=SUS[S.tab],L=null;
+    s.lines.forEach(function(x){if(x.id===S.sel)L=x});
+    if(!L)return;
+    var hit=L.hit&&L.hit[clueId];
+    if(hit){
+      sGood();
+      if(hit.eyes)s.eyes=hit.eyes;
+      if(hit.unlock)S.flags[hit.unlock+'_'+S.tab]=true;
+      if(hit.flag)S.flags[hit.flag]=true;
+      S.sel=null;renderTalk();say(hit.say);
+      if(S.flags.ready)toast('이제 범인을 지목할 수 있어요');
+    }else{
+      sBad();S.lamps=Math.max(0,S.lamps-1);lamps();S.star=Math.min(S.star,2);
+      say('<b>'+s.name+'</b> "그건 저랑 상관없는데요?"'+(S.lamps?'':' <span class="muted">(등불을 다 썼어요)</span>'));
+    }
+  }
+
+  /* ---------------- 분석 ---------------- */
+  function renderLab(){
+    var box=$('#lab-samples');box.innerHTML='';
+    SAMPLES.forEach(function(sm){
+      var b=document.createElement('button');b.className='sample';
+      b.innerHTML='<b>'+sm.name+'</b><span>'+sm.spec+'</span>';
+      b.addEventListener('click',function(){
+        sTap();
+        var v=S.print==='back'?sm.back:sm.win;
+        var m=$('#lab-meter');m.style.width=v+'%';
+        m.classList.toggle('hit',v>=90);
+        var el=$('#lab-say');el.hidden=false;
+        el.innerHTML='<b>겹침 '+v+'%</b> — '+(S.print==='back'?sm.backSay:sm.winSay);
+        if(v>=90){sGood();S.labDone=true}
+      });
+      box.appendChild(b);
+    });
+    $('#p-back').setAttribute('aria-pressed',String(S.print==='back'));
+    $('#p-win').setAttribute('aria-pressed',String(S.print==='win'));
+  }
+  function pickPrint(which){
+    sTap();S.print=which;$('#lab-meter').style.width='0';
+    $('#lab-say').hidden=true;renderLab();
+  }
+
+  /* ---------------- 지목 ---------------- */
+  var PICKS=[
+    {id:'kongi',label:'콩이',sym:'rc'},
+    {id:'kongsun',label:'콩순이',sym:'rc',ribbon:true},
+    {id:'doto',label:'도토',sym:'doto'},
+    {id:'both',label:'콩이와 콩순이 둘 다',sym:'duo'}
+  ];
+  function renderAccuse(){
+    var box=$('#acc-picks');box.innerHTML='';
+    PICKS.forEach(function(p){
+      var b=document.createElement('button');
+      b.className='pick'+(p.sym==='duo'?' duo':'');
+      b.setAttribute('aria-pressed',String(S.accused===p.id));
+      var art=p.sym==='duo'
+        ? '<svg viewBox="0 0 150 130"><use href="#rc-head"></use><use href="#rc-eye-def"></use></svg><svg viewBox="0 0 150 130"><use href="#rc-head"></use><use href="#rc-eye-def"></use></svg>'
+        : '<svg viewBox="0 0 150 130">'+(p.sym==='rc'
+            ? '<use href="#rc-head"></use><use href="#rc-eye-def"></use>'+(p.ribbon?'<path d="M112 26 l-13 -7 v14z M112 26 l13 -7 v14z" fill="#e8a0aa" stroke="#4a3428" stroke-width="2"/>':'')
+            : '<use href="#doto"></use>')+'</svg>';
+      b.innerHTML=art+'<b>'+p.label+'</b>';
+      b.addEventListener('click',function(){sTap();S.accused=p.id;renderAccuse();gate()});
+      box.appendChild(b);
+    });
+    $('#acc-count').textContent=S.accClues.length+' / 2';
+    trayHTML($('#acc-tray'),{clickable:true,selected:S.accClues,onPick:function(id){
+      sTap();
+      var i=S.accClues.indexOf(id);
+      if(i>=0)S.accClues.splice(i,1);
+      else if(S.accClues.length<2)S.accClues.push(id);
+      else toast('단서는 2개까지예요');
+      renderAccuse();gate();
+    }});
+  }
+  function gate(){$('#btn-next').disabled=!(S.accused&&S.accClues.length===2)}
+
+  function judge(){
+    var c=S.accClues,has=function(x){return c.indexOf(x)>=0};
+    if(S.accused!=='both'){
+      sBad();S.wrong++;S.star=Math.min(S.star,2);
+      var msg=S.accused==='doto'
+        ? '도토는 나무 위에서 봤다고 했죠. 발자국도 안 맞고요.'
+        : '한 명이 숟가락을 <b>두 개</b> 쓸까요?';
+      showAcc(msg);return false;
+    }
+    if(has('print')){
+      sBad();S.wrong++;S.star=Math.min(S.star,2);
+      showAcc('그 발자국은… 너구리 발이 아니에요. 이 사건과 관계가 있을까요?');return false;
+    }
+    if(has('spoons')&&has('apron')){sFan();return true}
+    if((has('spoons')||has('apron'))&&has('crumbs')){
+      sFan();S.star=Math.min(S.star,2);return true;
+    }
+    sBad();S.wrong++;S.star=Math.min(S.star,2);
+    showAcc('단서가 범인을 딱 가리키지 못해요. 둘이었다는 걸 보여 주는 게 뭘까요?');return false;
+  }
+  function showAcc(html){var el=$('#acc-say');el.hidden=false;el.innerHTML='<b>다시 생각해 보세요.</b> '+html}
+
+  function renderSolve(){
+    if(S.wrong>0)S.star=Math.min(S.star,2);
+    if(S.lamps<3)S.star=Math.min(S.star,2);
+    if(S.wrong>=2||S.lamps<=1)S.star=1;
+    $('#solve-stars').textContent='★★★☆☆'.slice(3-S.star,6-S.star);
+    var coin=S.star===3?120:(S.star===2?100:80);
+    $('#solve-reward').innerHTML=
+      '<span class="chip">🪙 +'+coin+'</span><span class="chip">⭐ 명성 +3</span><span class="chip">📖 도감 +3</span>';
+  }
+
+  /* ---------------- 버튼 ---------------- */
+  $('#btn-next').addEventListener('click',function(){
+    sTap();
+    var s=S.screen;
+    if(s==='brief')go('scene');
+    else if(s==='scene'){
+      if(Object.keys(S.found).length===0){toast('단서를 하나라도 찾아보세요');return}
+      go('talk');
+    }
+    else if(s==='talk')go('lab');
+    else if(s==='lab')go('accuse');
+    else if(s==='accuse'){if(judge())go('solve')}
+    else if(s==='solve')go('board');
+    else if(s==='board')reset();
+  });
+  $('#btn-back').addEventListener('click',function(){
+    sTap();
+    var s=S.screen;
+    if(s==='scene')go('brief');
+    else if(s==='talk')go('scene');
+    else if(s==='lab')go('talk');
+    else if(s==='accuse')go('lab');
+  });
+  $('#t-sound').addEventListener('click',function(){
+    S.sound=!S.sound;this.textContent=S.sound?'🔔':'🔕';if(S.sound)sTap();
+  });
+  $('#p-back').addEventListener('click',function(){pickPrint('back')});
+  $('#p-win').addEventListener('click',function(){pickPrint('win')});
+
+  function start(easy){
+    S.easy=easy;sTap();go('brief');
+  }
+  $('#m-easy').addEventListener('click',function(){
+    this.setAttribute('aria-pressed','true');start(true);
+  });
+  $('#m-hard').addEventListener('click',function(){
+    this.setAttribute('aria-pressed','true');start(false);
+  });
+
+  function reset(){
+    S.lamps=3;S.found={};S.tab='kongi';S.sel=null;S.flags={};S.star=3;S.wrong=0;
+    S.accused=null;S.accClues=[];S.print='back';S.labDone=false;
+    SUS.kongi.eyes='def';SUS.kongsun.eyes='def';
+    $('#talk-say').hidden=true;$('#acc-say').hidden=true;$('#lab-say').hidden=true;
+    $('#lab-meter').style.width='0';
+    $('#scene-hint').textContent='확대경을 끌어서 살펴보고, 빛나는 곳에서 손을 떼면 단서를 줍습니다';
+    $('#m-easy').setAttribute('aria-pressed','false');
+    $('#m-hard').setAttribute('aria-pressed','false');
+    trayHTML($('#scene-tray'),{});setLens(180,200);
+    go('title');
+  }
+
+  initScene();renderLab();
+  try{
+    if(window.claude&&window.claude.hot){
+      window.claude.hot.snapshot(function(){return S});
+    }
+  }catch(e){}
+})();
+</script>
+
+</body>
+</html>
