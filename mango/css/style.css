@@ -286,3 +286,30 @@ img.mface{width:32px;height:32px;object-fit:cover;object-position:center 42%;
 .say img.mface{vertical-align:-8px}
 img.mjoy{width:82px;height:82px;object-fit:contain;
   display:block;margin:0 auto -6px}
+
+/* ===== 분석 미니게임 (CASE-4) — 시간제한도 실패도 없다. 별점에만 반영. ===== */
+.minigame{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:rgba(59,42,26,.55);backdrop-filter:blur(2px);
+  padding:calc(10px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px))
+          calc(10px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
+.minigame[hidden]{display:none}
+.mg-box{background:var(--paper);border:2.5px solid var(--line);border-radius:12px;box-shadow:var(--sh);
+  width:min(100%,760px);max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+.mg-head,.mg-foot{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);
+  border-bottom:2px solid var(--line);flex:0 0 auto}
+.mg-foot{border-bottom:0;border-top:2px solid var(--line)}
+.mg-head b{font-family:"Gaegu",cursive;font-size:16px}
+.mg-head .muted,.mg-foot .muted{flex:1;font-size:11.5px}
+.minigame button.mini{border:2px solid var(--line);border-radius:999px;background:var(--panel);
+  padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.mg-stage{position:relative;flex:1 1 auto;min-height:0;background:#efe6d3;touch-action:none;overflow:hidden}
+.mg-stage svg{display:block;width:100%;height:100%}
+.jig-slot{fill:none;stroke:#b7a894;stroke-width:2;stroke-dasharray:6 5}
+.jig-piece{cursor:grab}
+.jig-piece.snapped{cursor:default}
+.jig-done{font-family:"Gaegu",cursive;font-size:19px;fill:var(--olive)}
+@media (max-height:470px){
+  .mg-head,.mg-foot{padding:4px 8px}
+  .mg-head b{font-size:14px}
+  .mg-head .muted,.mg-foot .muted{font-size:10.5px}
+}
