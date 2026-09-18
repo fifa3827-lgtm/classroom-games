@@ -146,8 +146,9 @@ function syncFullUI(){
   if(!b)return;
   var can=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
   b.hidden=!can; if(t)t.hidden=!can||isFull();
-  b.setAttribute('aria-pressed',isFull()?'true':'false');
-  b.textContent=isFull()?'⛶ 전체 화면 끄기':'⛶ 전체 화면';
+  /* 전체 화면은 켜고 끄는 상태가 아니라 동작이다. aria-pressed 를 주면
+     .snd 규칙이 「눌리지 않음」으로 보고 흐리게+취소선을 그어, 못 쓰는 버튼처럼 보인다. */
+  b.innerHTML='<svg class="bi" viewBox="0 0 28 28"><use href="#i-expand"></use></svg> '+(isFull()?'전체 화면 끄기':'전체 화면');
 }
 
 /* ================= 수첩 ================= */
