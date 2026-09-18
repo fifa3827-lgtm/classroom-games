@@ -1,0 +1,129 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>제미나이 프롬프트 대장 · 탐정 망고</title>
+<style>
+:root{--cream:#fbf7ee;--brown:#4a3428;--mustard:#d6a83c;--teal:#3f7c86;--brick:#b34a3a;--olive:#7d8f5c;--line:#e0d5c2}
+*{box-sizing:border-box}
+body{margin:0;background:#f4efe3;color:var(--brown);
+ font:16px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+header{background:var(--brown);color:var(--cream);padding:18px 16px}
+header h1{margin:0;font-size:19px}
+header p{margin:6px 0 0;font-size:13px;opacity:.85}
+main{max-width:860px;margin:0 auto;padding:16px}
+.note{background:#fff8e7;border:2px solid var(--line);border-left:5px solid var(--mustard);
+ border-radius:8px;padding:12px 14px;font-size:14px;margin:0 0 18px}
+.note b{color:var(--brick)}
+h2{font-size:17px;margin:26px 0 4px;padding-bottom:6px;border-bottom:2.5px solid var(--brown)}
+.gnote{font-size:13.5px;color:#6b5a4a;margin:8px 0 14px}
+.item{background:var(--cream);border:2.5px solid var(--line);border-radius:10px;
+ box-shadow:2px 3px 0 rgba(74,52,40,.08);margin:0 0 12px;overflow:hidden}
+.ihead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;
+ background:#f6efe0;border-bottom:2px solid var(--line)}
+.ihead .lb{font-weight:700;font-size:14.5px;flex:1 1 200px}
+code.fn{background:var(--brown);color:var(--cream);padding:3px 8px;border-radius:5px;
+ font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+.size{font-size:12px;color:#7a6a58}
+.p{padding:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;
+ font-family:ui-monospace,Menlo,monospace;max-height:8.6em;overflow:hidden;position:relative;cursor:pointer}
+.p.open{max-height:none}
+.p:not(.open)::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2.4em;
+ background:linear-gradient(transparent,var(--cream))}
+.act{display:flex;gap:8px;padding:0 12px 12px}
+button{font:inherit;font-size:13.5px;border:2.5px solid var(--brown);border-radius:8px;
+ padding:8px 14px;background:var(--cream);color:var(--brown);cursor:pointer;box-shadow:2px 2px 0 var(--brown)}
+button:active{transform:translate(2px,2px);box-shadow:none}
+button.go{background:var(--mustard)}
+button.ok{background:var(--olive);color:#fff;border-color:var(--olive)}
+.ban{background:#fdeceb;border:2px solid var(--brick);border-radius:8px;padding:12px 14px;
+ font-size:14px;margin:18px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--cream);
+ border:2.5px solid var(--line);border-radius:8px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:#f6efe0}
+tr:last-child td{border-bottom:0}
+ol.steps{padding-left:22px}ol.steps li{margin:8px 0;font-size:14.5px}
+footer{text-align:center;font-size:12.5px;color:#7a6a58;padding:24px 16px 40px}
+a{color:var(--teal)}
+</style></head><body>
+<header>
+  <h1>제미나이 프롬프트 대장 — 탐정 망고 · 사건 1</h1>
+  <p>프롬프트를 복사해 제미나이에 붙이고, 나온 그림을 <b>적힌 파일명 그대로</b> <code>mango/img/</code> 에 넣으면 게임이 바로 그 그림을 씁니다.</p>
+</header>
+<main>
+
+<div class="note">
+  <b>순서가 중요합니다.</b> ① 망고 4장을 먼저 확정하세요 — 이후 모든 인물이 이 그림의 선·채도에 맞춰집니다.
+  ② 인물은 <b>한 대화 안에서 연달아</b> 뽑으세요. 첫 장이 마음에 들면 「같은 캐릭터로 표정만 바꿔서」라고 이어 말하는 쪽이, 새 대화에서 다시 뽑는 것보다 훨씬 일관됩니다.
+  ③ 배경은 마음에 드는 그림을 먼저 얻고, 조사 지점 좌표를 <a href="spots.html">좌표 맞추기</a>로 그림에 맞춰 옮기세요. 물건을 정확한 자리에 그려 달라고 씨름하는 것보다 빠릅니다.
+</div>
+
+<div class="ban" id="ban"></div>
+
+<div id="list"></div>
+
+<h2>그림이 나온 뒤 — 보정과 넣기</h2>
+<ol class="steps">
+  <li><b>인물·아이콘은 배경을 지웁니다.</b> 크림색 배경 그대로 두면 초상 뒤에 네모가 보입니다. 제미나이에 「배경을 투명하게」가 잘 안 되면 <a href="https://www.remove.bg" target="_blank" rel="noopener">remove.bg</a> 같은 도구로 지우고 PNG로 저장하세요.</li>
+  <li><b>크기를 줄입니다.</b> 초상은 가로 300px, 아이콘은 56px이면 충분합니다. 원본 1024px을 그대로 넣으면 태블릿에서 첫 화면이 느려집니다.</li>
+  <li><b>배경·표지는 WebP로.</b> 1440×720으로 줄이고 품질 80쯤으로 저장하면 200KB 안쪽에 들어옵니다.</li>
+  <li><b>파일명을 정확히</b> 맞춰 <code>mango/img/</code> 에 올립니다. 이름이 한 글자라도 다르면 게임은 조용히 지금 SVG 그림을 계속 씁니다 — 깨지지는 않지만 바뀌지도 않습니다.</li>
+  <li>게임을 열어 확인합니다. <b>한 장씩 넣어도 됩니다</b> — 콩이만 그림이고 도토는 SVG인 상태로도 정상 작동합니다.</li>
+</ol>
+
+<h2>파일명 한눈에</h2>
+<table id="tbl"><thead><tr><th>파일명</th><th>무엇</th><th>규격</th></tr></thead><tbody></tbody></table>
+
+<footer>PRD 0.7 · ART-1~ART-10 / 시즌1 바이블 9장 기준 · 스타일 레퍼런스는 이 문서로 고정합니다(ART-10)</footer>
+</main>
+
+<script type="module">
+import {STYLE,GROUPS} from './prompts-data.js';
+document.getElementById('ban').textContent = STYLE.ban;
+
+var listEl=document.getElementById('list'), rows=[];
+GROUPS.forEach(function(g){
+  var h2=document.createElement('h2'); h2.textContent=g.title; listEl.appendChild(h2);
+  if(g.note){var n=document.createElement('p');n.className='gnote';n.textContent=g.note;listEl.appendChild(n)}
+  g.items.forEach(function(it){
+    rows.push(it);
+    var d=document.createElement('div'); d.className='item';
+    d.innerHTML='<div class="ihead"><span class="lb"></span><code class="fn"></code>'+
+      (it.size?'<span class="size"></span>':'')+'</div>'+
+      '<div class="p" title="눌러서 펼치기"></div>'+
+      '<div class="act"><button class="go">프롬프트 복사</button><button class="fnc">파일명 복사</button></div>';
+    d.querySelector('.lb').textContent=it.label;
+    d.querySelector('.fn').textContent=it.file;
+    if(it.size)d.querySelector('.size').textContent=it.size;
+    var pe=d.querySelector('.p'); pe.textContent=it.p;
+    pe.onclick=function(){pe.classList.toggle('open')};
+    d.querySelector('.go').onclick=function(e){copy(it.p,e.target,'프롬프트 복사')};
+    d.querySelector('.fnc').onclick=function(e){copy(it.file,e.target,'파일명 복사')};
+    listEl.appendChild(d);
+  });
+});
+
+var tb=document.querySelector('#tbl tbody');
+rows.forEach(function(it){
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td><code class="fn"></code></td><td></td><td class="size"></td>';
+  tr.children[0].firstChild.textContent=it.file;
+  tr.children[1].textContent=it.label;
+  tr.children[2].textContent=it.size||(/\.webp$/.test(it.file)?'1440×720':'투명 PNG');
+  tb.appendChild(tr);
+});
+
+function copy(t,btn,back){
+  var done=function(){btn.textContent='복사됐어요 ✓';btn.classList.add('ok');
+    setTimeout(function(){btn.textContent=back;btn.classList.remove('ok')},1400)};
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(t).then(done,fallback);
+  else fallback();
+  function fallback(){
+    var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');done()}catch(e){btn.textContent='복사 실패 — 길게 눌러 복사하세요'}
+    document.body.removeChild(ta);
+  }
+}
+</script>
+</body></html>
