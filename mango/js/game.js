@@ -30,6 +30,8 @@ function probeCaseArt(){
     var s=C.suspects[id];if(!s.img)return;
     /* 시트에서 분노 칸을 뺐다. 'ang' 을 남기면 없는 파일을 인물마다 두드린다. */ ['def','fl','sp'].forEach(function(e){list.push(s.img+'-'+e+'.png')});
   });
+  /* 의뢰인은 용의자 목록에 없어서 위 반복문이 지나친다. 따로 넣어야 그림이 뜬다. */
+  if(C.brief&&C.brief.sym)list.push(C.brief.sym+'-def.png');
   Object.keys(C.clues).forEach(function(k){if(C.clues[k].iconImg)list.push(C.clues[k].iconImg)});
   return Promise.all(list.map(probe));
 }
@@ -657,11 +659,18 @@ function start(easy){
   S.easy=easy;wake();sTap();startMusic();
   (C.startClues||[]).forEach(function(id){addClue(id,true)});
   show('s-brief');
+  applyBriefArt();
   $('#brief-mango').style.visibility='hidden';$('#brief-mango-t').innerHTML='';
   typeHTML($('#brief-say'),C.brief.text,C.brief.sym||'sheep',function(){
     $('#brief-mango').style.visibility='visible';
     typeHTML($('#brief-mango-t'),C.brief.mango,'mango');
   },22);
+}
+/* 의뢰인 그림이 있으면 SVG 대신 쓴다. 없으면 HTML 에 있는 SVG 를 그대로 둔다. */
+function applyBriefArt(){
+  var box=$('#brief-art'),sym=C.brief&&C.brief.sym;if(!box||!sym)return;
+  var f=sym+'-def.png';
+  if(artOK(f))box.innerHTML='<img class="pim" src="'+artURL(f)+'" alt="">';
 }
 function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle()}
 
