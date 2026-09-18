@@ -1,0 +1,164 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>조사 지점 좌표 맞추기 · 탐정 망고</title>
+<style>
+:root{--cream:#fbf7ee;--brown:#4a3428;--mustard:#d6a83c;--teal:#3f7c86;--brick:#b34a3a;--olive:#7d8f5c;--line:#e0d5c2}
+*{box-sizing:border-box}
+body{margin:0;background:#f4efe3;color:var(--brown);
+ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+header{background:var(--brown);color:var(--cream);padding:16px}
+header h1{margin:0;font-size:18px}
+header p{margin:6px 0 0;font-size:13px;opacity:.85}
+main{max-width:980px;margin:0 auto;padding:14px}
+.note{background:#fff8e7;border:2px solid var(--line);border-left:5px solid var(--mustard);
+ border-radius:8px;padding:12px 14px;font-size:14px;margin:0 0 14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+button,label.file{font:inherit;font-size:13.5px;border:2.5px solid var(--brown);border-radius:8px;
+ padding:8px 14px;background:var(--cream);color:var(--brown);cursor:pointer;box-shadow:2px 2px 0 var(--brown)}
+button:active,label.file:active{transform:translate(2px,2px);box-shadow:none}
+button.go{background:var(--mustard)}
+button.ok{background:var(--olive);color:#fff;border-color:var(--olive)}
+input[type=file]{display:none}
+.stage{position:relative;background:#e9e3d4;border:2.5px solid var(--brown);border-radius:10px;
+ overflow:hidden;aspect-ratio:2/1;touch-action:none}
+.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.stage svg{position:absolute;inset:0;width:100%;height:100%}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+ font-size:14px;color:#7a6a58;padding:20px}
+.spots{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.sp{font:inherit;font-size:13px;border:2px solid var(--line);border-radius:7px;padding:6px 10px;
+ background:var(--cream);cursor:pointer;box-shadow:none}
+.sp.cur{border-color:var(--brick);background:#fdeceb;font-weight:700}
+.sp.set{border-color:var(--olive)}
+.sp .t{font-size:11px;color:#7a6a58;margin-left:4px}
+textarea{width:100%;min-height:150px;font:12.5px/1.5 ui-monospace,Menlo,monospace;
+ border:2.5px solid var(--line);border-radius:8px;padding:10px;background:var(--cream);color:var(--brown)}
+h2{font-size:16px;margin:20px 0 8px;padding-bottom:6px;border-bottom:2.5px solid var(--brown)}
+.rng{display:flex;align-items:center;gap:10px;font-size:13.5px;margin:6px 0 0}
+.rng input{flex:1}
+footer{text-align:center;font-size:12.5px;color:#7a6a58;padding:20px 16px 40px}
+</style></head><body>
+<header>
+  <h1>조사 지점 좌표 맞추기</h1>
+  <p>제미나이로 뽑은 급식실 배경을 올리고, 아래 단서 이름을 고른 뒤 그림에서 그 물건을 누르세요. 다 찍으면 JSON을 복사해 사건 파일에 붙입니다.</p>
+</header>
+<main>
+<div class="note">
+  배경 그림이 바뀌면 물건 위치도 바뀝니다. 이 페이지는 <b>확대경이 멈추는 자리</b>를 그림에 맞춰 다시 찍는 도구입니다.
+  누른 자리가 지점의 중심이고, 아래 슬라이더가 그 지점의 반경(확대경이 얼마나 가까이 가야 이름표가 뜨는지)입니다.
+  <b>찍지 않은 지점은 지금 좌표를 그대로 유지</b>하므로, 위치가 크게 달라진 것만 골라 찍어도 됩니다.
+</div>
+
+<div class="bar">
+  <label class="file">배경 그림 고르기<input type="file" id="pick" accept="image/*"></label>
+  <button id="load">현재 좌표 불러오기</button>
+  <button id="reset">찍은 것 지우기</button>
+  <button class="go" id="copy">JSON 복사</button>
+</div>
+
+<div class="stage" id="stage">
+  <div class="empty" id="empty">여기에 배경 그림이 보입니다.<br>먼저 「배경 그림 고르기」를 누르세요.<br><small>그림을 올리지 않아도 좌표는 찍을 수 있지만, 눈으로 맞출 수 없습니다.</small></div>
+  <svg id="ov" viewBox="0 0 720 360"></svg>
+</div>
+
+<div class="rng">
+  <span>반경</span><input type="range" id="r" min="12" max="70" value="30"><span id="rv">30</span>
+</div>
+
+<div class="spots" id="spots"></div>
+
+<h2>사건 파일에 붙일 JSON</h2>
+<textarea id="out" readonly></textarea>
+
+<footer>이 페이지는 게임을 고치지 않습니다. 복사한 JSON을 <code>data/case-01.json</code> 의 <code>"spots"</code> 값으로 바꿔 넣어야 반영됩니다.</footer>
+</main>
+
+<script>
+var $=function(s){return document.querySelector(s)};
+var SPOTS=[], cur=null, img=null;
+
+$('#pick').onchange=function(e){
+  var f=e.target.files&&e.target.files[0]; if(!f)return;
+  var u=URL.createObjectURL(f);
+  if(img)img.remove();
+  img=document.createElement('img'); img.src=u;
+  $('#stage').insertBefore(img,$('#ov'));
+  $('#empty').style.display='none';
+};
+
+$('#load').onclick=function(){
+  fetch('../data/case-01.json',{cache:'no-cache'}).then(function(r){
+    if(!r.ok)throw new Error(r.status); return r.json();
+  }).then(function(c){
+    SPOTS=c.spots.map(function(s){
+      return {raw:s, id:s.id, x:s.x, y:s.y, r:s.r,
+              label:s.decoy?(s.label||s.id):((c.clues[s.id]||{}).n||s.id),
+              decoy:!!s.decoy, moved:false};
+    });
+    draw();
+  }).catch(function(){
+    alert('사건 파일을 못 읽었어요. 이 페이지는 mango/art/ 안에서, 웹 주소로 열어야 합니다(파일을 직접 여는 방식으로는 안 됩니다).');
+  });
+};
+
+$('#reset').onclick=function(){SPOTS.forEach(function(s){s.moved=false});draw()};
+$('#r').oninput=function(){ $('#rv').textContent=this.value;
+  if(cur){cur.r=+this.value;cur.moved=true;draw()} };
+
+$('#stage').addEventListener('pointerdown',function(e){
+  if(!cur)return;
+  var r=$('#ov').getBoundingClientRect();
+  cur.x=Math.round((e.clientX-r.left)/r.width*720);
+  cur.y=Math.round((e.clientY-r.top)/r.height*360);
+  cur.r=+$('#r').value; cur.moved=true;
+  var i=SPOTS.indexOf(cur);
+  if(i>-1&&i<SPOTS.length-1)cur=SPOTS[i+1];   // 다음 지점으로 자동 이동
+  draw();
+});
+
+function draw(){
+  var sv=$('#ov'),h='';
+  SPOTS.forEach(function(s){
+    var c=s===cur?'#b34a3a':(s.moved?'#7d8f5c':'#5b5a63');
+    var dash=s.decoy?' stroke-dasharray="6 4"':'';
+    h+='<circle cx="'+s.x+'" cy="'+s.y+'" r="'+s.r+'" fill="none" stroke="'+c+'" stroke-width="2.5"'+dash+'/>'+
+       '<circle cx="'+s.x+'" cy="'+s.y+'" r="3" fill="'+c+'"/>'+
+       '<text x="'+s.x+'" y="'+(s.y-s.r-5)+'" font-size="11" text-anchor="middle" fill="'+c+'" '+
+       'stroke="#fff" stroke-width="3" paint-order="stroke">'+esc(s.label)+'</text>';
+  });
+  sv.innerHTML=h;
+
+  var box=$('#spots');box.innerHTML='';
+  SPOTS.forEach(function(s){
+    var b=document.createElement('button');
+    b.className='sp'+(s===cur?' cur':'')+(s.moved?' set':'');
+    b.innerHTML='';
+    b.appendChild(document.createTextNode(s.label+(s.decoy?' (미끼)':'')));
+    var t=document.createElement('span');t.className='t';t.textContent=s.x+','+s.y;
+    b.appendChild(t);
+    b.onclick=function(){cur=s;$('#r').value=s.r;$('#rv').textContent=s.r;draw()};
+    box.appendChild(b);
+  });
+
+  /* 원본 지점을 그대로 두고 좌표만 갈아 끼운다 — 미끼 설명문·이름표가 사라지지 않게. */
+  $('#out').value=SPOTS.length? JSON.stringify(SPOTS.map(function(s){
+    var o={};
+    Object.keys(s.raw).forEach(function(k){o[k]=s.raw[k]});
+    o.x=s.x;o.y=s.y;o.r=s.r;
+    return o;
+  })) : '';
+}
+function esc(t){return String(t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+
+$('#copy').onclick=function(e){
+  var t=$('#out').value;
+  if(!t){alert('먼저 「현재 좌표 불러오기」를 누르세요.');return}
+  var b=e.target, done=function(){b.textContent='복사됐어요 ✓';b.classList.add('ok');
+    setTimeout(function(){b.textContent='JSON 복사';b.classList.remove('ok')},1400)};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,fb);else fb();
+  function fb(){$('#out').select();try{document.execCommand('copy');done()}catch(_){alert('직접 선택해 복사하세요')}}
+};
+
+$('#load').click();
+</script>
+</body></html>
