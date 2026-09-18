@@ -5,10 +5,10 @@ export var STYLE = {
   cel: "hand-drawn 2D animation cel style, thick dark-brown outlines #4a3428 about 2.6px, flat matte colors with exactly one hard-edged shadow tone, big round eyes with a single tiny dot highlight, exaggerated proportions with head about 45% of body height, autumn muted palette (mustard #d6a83c, teal #3f7c86, brick #b34a3a, cream #fbf7ee, olive #7d8f5c), storybook children's book quality, plain flat cream #fbf7ee background, no gradient, no text, no watermark, no border",
   paint: "gouache painting on textured paper, visible brush strokes, no outlines, low saturation, warm late-afternoon light from the left, soft vignette at the corners, three clear depth layers (foreground / middle / far), autumn European-style small town of animals, storybook illustration, no characters, no people, no animals, no text, no watermark",
   icon: "single small object icon, hand-drawn cel style, thick dark-brown outline #4a3428, flat matte fill, one hard shadow tone, centered, isolated on plain flat cream #fbf7ee background, no shadow on the ground, no text, no label, no border, simple and readable at 28 pixels",
-  ban: "금지: 실사풍, 3D 렌더, 그라데이션 배경, 글자·말풍선·서명, 사람(인간), 무기, 로고, 기존 애니메이션 작품 언급. 「지브리풍」·「디즈니풍」처럼 특정 작품 이름을 쓰지 않는다(ART-10)."
+  ban: "금지: 실사풍, 3D 렌더, 그라데이션 배경, 글자·말풍선·서명, 사람(인간), 무기, 로고, 기존 애니메이션 작품 언급. 「지브리풍」·「디즈니풍」처럼 특정 작품 이름을 쓰지 않는다(ART-10). 망고의 머리 위 회색은 실제 고양이의 털 무늬다 — 모자로 그려지면 다시 뽑거나 꼭지를 지워야 한다(ART-2)."
 };
 
-export var MANGO_ID = "white cat, dark grey cap-like marking on top of the head shifted to the RIGHT so the LEFT ear stays white, a brown tabby patch beside the RIGHT ear reaching down to the cheek, one white stripe from forehead down to the nose, yellow-green eyes #b9c96a, pink nose and inner ears, chubby pear-shaped body with short legs, teal vest #3f7c86, brick-red bow tie #b34a3a, brown leather satchel, brass magnifying glass, NO hat";
+export var MANGO_ID = "white cat, a dark grey FUR MARKING on top of the head — it is fur, not clothing: flat against the head with soft irregular fur edges, NO hat, NO cap, no brim, no seam, and nothing sticking up on top — shifted to the RIGHT so the LEFT ear stays white, a brown tabby patch beside the RIGHT ear reaching down to the cheek, one white stripe from forehead down to the nose, yellow-green eyes #b9c96a, pink nose and inner ears, chubby pear-shaped body with short legs, teal vest #3f7c86, brick-red bow tie #b34a3a, brown leather satchel, brass magnifying glass, NO hat";
 
 export var GROUPS = [
 
