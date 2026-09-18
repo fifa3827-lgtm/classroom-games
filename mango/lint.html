@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>사건 파일 검사기 · 탐정 망고</title>
+<style>
+ body{font-family:"Gowun Dodum",system-ui,sans-serif;background:#f7f1e4;color:#2b2418;margin:0;padding:24px;line-height:1.7}
+ .wrap{max-width:860px;margin:0 auto}
+ h1{font-size:22px;margin:0 0 4px} .sub{color:#7a6f5c;font-size:13px;margin:0 0 18px}
+ .card{background:#fff;border:2px solid #e3d9c6;border-radius:14px;padding:14px 18px;margin-bottom:12px}
+ .ok{color:#3d6b3d} .bad{color:#b3402f} .warn{color:#9a7a20}
+ li{margin:2px 0} code{background:#f2ece0;padding:1px 5px;border-radius:4px;font-size:12px}
+ .sum{font-size:16px;font-weight:700;margin:0 0 8px}
+ input{border:2px solid #e3d9c6;border-radius:8px;padding:6px 10px;font:inherit;width:260px}
+ button{border:2px solid #2b2418;border-radius:8px;background:#e8b25c;padding:6px 14px;font:inherit;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body><div class="wrap">
+<h1>사건 파일 검사기</h1>
+<p class="sub">사건 JSON이 논리 공정성 규칙을 지키는지 기계로 확인합니다. 사건을 새로 쓸 때마다 여기부터 통과시키세요.</p>
+<p><input id="f" value="data/case-01.json"><button id="go">검사</button></p>
+<div id="out"></div>
+</div>
+<script type="module">
+const $=s=>document.querySelector(s);
+function run(C){
+  const E=[],W=[],I=[];
+  const clue=id=>C.clues[id];
+  const has=id=>!!C.clues[id];
+  const collectable=new Set();
+  (C.startClues||[]).forEach(id=>collectable.add(id));
+  (C.spots||[]).forEach(s=>{if(!s.decoy&&!(clue(s.id)||{}).locked)collectable.add(s.id)});
+  Object.values(C.suspects||{}).forEach(s=>(s.lines||[]).forEach(L=>{
+    if(L.gives)collectable.add(L.gives);
+    if(L.hit)Object.values(L.hit).forEach(h=>{if(h.flag==='c_stain_found')collectable.add('c_stain')});
+  }));
+  collectable.add('c_stain');           // 앞치마 살펴보기로 얻는다
+
+  // 1. 참조 무결성
+  (C.spots||[]).forEach(s=>{if(!s.decoy&&!has(s.id))E.push(`현장 지점 <code>${s.id}</code> 에 해당하는 단서가 없습니다`)});
+  (C.order||[]).forEach(id=>{if(!has(id))E.push(`order 의 <code>${id}</code> 가 clues 에 없습니다`)});
+  Object.keys(C.clues||{}).forEach(id=>{if(!(C.order||[]).includes(id))W.push(`<code>${id}</code> 가 order 에 빠져 수첩에 안 보일 수 있습니다`)});
+  (C.suspectOrder||[]).forEach(id=>{if(!C.suspects[id])E.push(`suspectOrder 의 <code>${id}</code> 가 suspects 에 없습니다`)});
+
+  // 2. 추리 단계
+  (C.steps||[]).forEach((st,i)=>{
+    const n=i+1;
+    if(!st.need||!st.need.length)E.push(`${n}단계: 정답 단서(need)가 없습니다`);
+    (st.need||[]).forEach(id=>{
+      if(!has(id))E.push(`${n}단계: 단서 <code>${id}</code> 가 없습니다`);
+      else if(!collectable.has(id))E.push(`${n}단계: <code>${id}</code> 는 게임 안에서 모을 수 없습니다`);
+    });
+    if(st.slots>1&&(st.need||[]).length!==st.slots)
+      E.push(`${n}단계: 칸이 ${st.slots}개인데 정답 단서는 ${(st.need||[]).length}개입니다`);
+    const ok=(st.opts||[]).filter(o=>o.ok);
+    if(ok.length!==1)E.push(`${n}단계: 정답 결론이 ${ok.length}개입니다 (정확히 1개여야 합니다)`);
+    (st.opts||[]).forEach((o,k)=>{if(!o.ok&&!o.why)E.push(`${n}단계 ${k+1}번 오답: 「왜 아닌지」 설명(why)이 없습니다`)});
+    if((st.opts||[]).length<3)W.push(`${n}단계: 선택지가 ${(st.opts||[]).length}개뿐입니다 (3개 권장)`);
+    if(!st.whyClue)W.push(`${n}단계: 막혔을 때 줄 방향 힌트(whyClue)가 없습니다`);
+  });
+
+  // 3. 소거
+  (C.elim||[]).forEach(e=>{
+    const ok=(e.opts||[]).filter(o=>o.ok);
+    if(ok.length!==1)E.push(`소거 「${e.name}」: 정답이 ${ok.length}개입니다`);
+    (e.opts||[]).forEach((o,k)=>{if(!o.ok&&!o.why)E.push(`소거 「${e.name}」 ${k+1}번 오답: 설명(why)이 없습니다`)});
+  });
+  const culprits=(C.accuse||[]).filter(a=>a.ok);
+  if(culprits.length!==1)E.push(`지목 정답이 ${culprits.length}개입니다 (정확히 1개)`);
+  if((C.accuse||[]).length<3)W.push('지목 후보가 너무 적습니다');
+  const elimNames=(C.elim||[]).map(e=>e.id);
+  if(!elimNames.includes('solo'))W.push('「둘 중 한 명만」 같은 단독범 가설을 소거 대상에 두면 공범 논리가 분명해집니다');
+
+  // 4. 이상한 단서
+  const odd=Object.keys(C.clues||{}).filter(id=>C.clues[id].odd);
+  if(odd.length!==1)E.push(`「이상한 단서」(odd)가 ${odd.length}개입니다 (사건마다 정확히 1개)`);
+  odd.forEach(id=>{
+    const inStep=(C.steps||[]).some(s=>(s.need||[]).includes(id));
+    const inProof=(C.proofs||[]).includes(id);
+    if(inStep||inProof)E.push(`이상한 단서 <code>${id}</code> 가 사건 해결에 쓰이고 있습니다 (쓰이면 안 됩니다)`);
+  });
+
+  // 5. 결정적 증거
+  (C.proofs||[]).forEach(id=>{
+    if(!has(id))E.push(`proofs 의 <code>${id}</code> 가 없습니다`);
+    else if(!collectable.has(id))E.push(`결정적 증거 <code>${id}</code> 를 모을 수 없습니다`);
+  });
+
+  // 6. 읽기 부담
+  Object.values(C.suspects||{}).forEach(s=>(s.lines||[]).forEach(L=>{
+    if((L.t||'').length>60)W.push(`「${s.name}」의 진술이 깁니다(${L.t.length}자): "${L.t.slice(0,24)}…"`);
+  }));
+  if((C.solve?.text||'').length>320)W.push('해결 해설이 깁니다 (5문장 이내 권장)');
+
+  I.push(`단서 ${Object.keys(C.clues||{}).length}개 · 현장 지점 ${(C.spots||[]).length}개(미끼 ${(C.spots||[]).filter(s=>s.decoy).length}) · 인물 ${(C.suspectOrder||[]).length}명`);
+  I.push(`추리 ${(C.steps||[]).length}단계 · 소거 ${(C.elim||[]).length}명 · 지목 후보 ${(C.accuse||[]).length}명`);
+  return {E,W,I};
+}
+function render(r,name){
+  const li=a=>a.map(x=>`<li>${x}</li>`).join('');
+  $('#out').innerHTML=
+   `<div class="card"><p class="sum ${r.E.length?'bad':'ok'}">${r.E.length?`❌ 통과 못 함 — 고칠 것 ${r.E.length}건`:'✅ 통과 — 논리 규칙에 어긋나는 곳이 없습니다'}</p>`+
+   (r.E.length?`<ul class="bad">${li(r.E)}</ul>`:'')+`</div>`+
+   (r.W.length?`<div class="card"><p class="sum warn">⚠ 살펴볼 것 ${r.W.length}건</p><ul class="warn">${li(r.W)}</ul></div>`:'')+
+   `<div class="card"><p class="sum">📄 ${name}</p><ul>${li(r.I)}</ul></div>`;
+}
+async function go(){
+  const f=$('#f').value.trim();
+  try{
+    const C=await (await fetch(f,{cache:'no-cache'})).json();
+    render(run(C),f);
+  }catch(e){$('#out').innerHTML=`<div class="card bad">읽지 못했습니다: ${e.message}</div>`}
+}
+$('#go').addEventListener('click',go); go();
+</script>
+</body></html>
