@@ -209,7 +209,7 @@
 #s-title.has-cover::after{content:"";position:absolute;left:0;right:0;bottom:0;height:22%;
   pointer-events:none;
   background:linear-gradient(to bottom,rgba(251,247,238,0),rgba(251,247,238,.72))}
-#s-title.has-cover>*{position:relative;z-index:1}
+#s-title.has-cover>*{position:relative;z-index:1} /* 안내줄이 그림 위 안개와 밝기가 비슷해 묻힌다. 막을 더 씌우면 그림이 죽으니 글자만 진하게 한다. */ #s-title.has-cover .muted{color:#4a3428;font-weight:700}
 
 /* ===== 망고 그림 ===== */
 .art.img{display:grid;place-items:center;padding:0}

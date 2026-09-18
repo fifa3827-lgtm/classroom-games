@@ -28,7 +28,7 @@ function probeCaseArt(){
   if(C.sceneImg)list.push(C.sceneImg);
   C.suspectOrder.forEach(function(id){
     var s=C.suspects[id];if(!s.img)return;
-    ['def','fl','sp','ang'].forEach(function(e){list.push(s.img+'-'+e+'.png')});
+    /* 시트에서 분노 칸을 뺐다. 'ang' 을 남기면 없는 파일을 인물마다 두드린다. */ ['def','fl','sp'].forEach(function(e){list.push(s.img+'-'+e+'.png')});
   });
   Object.keys(C.clues).forEach(function(k){if(C.clues[k].iconImg)list.push(C.clues[k].iconImg)});
   return Promise.all(list.map(probe));
