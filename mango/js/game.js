@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609190005';
-import * as Save from './save.js?v=2609190005';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609190044';
+import * as Save from './save.js?v=2609190044';
 
 var C=null;   // 현재 사건 데이터
 
@@ -98,7 +98,7 @@ function cancelTyper(el){typers.slice().forEach(function(t){if(!el||t.el===el)t.
 function skipTypers(){if(typers.length){typers.slice().forEach(function(t){t.finish(true)});return true}return false}
 document.addEventListener('pointerdown',function(e){ // 아무 곳이나 누르면 대사가 바로 끝까지 나옴
   /* 인트로는 스스로 처리한다 — 여기서 먼저 끝내 버리면 한 번 눌러 글도 끝나고 장도 넘어간다 */
-  if(typers.length&&!e.target.closest('.tab,.act,.snd,#t-sound,#t-music,#t-home,#t-full,#s-intro'))skipTypers();
+  if(typers.length&&!e.target.closest('.tab,.act,.snd,#t-sound,#t-music,#t-home,#t-full,#s-intro,#mini'))skipTypers();
 },true);
 
 
@@ -167,6 +167,154 @@ function syncFullUI(){
    「이어서 하기」에 지금까지 한 것이 남는다. */
 function toTitle(){touch();show('s-title');refreshTitle()}
 
+/* ================= 분석 미니게임 (CASE-4) =================
+   시간제한도 실패도 없다. 걸린 시간과 시도 횟수는 별점에만 반영한다(결정 4).
+   사건 파일이 현장 지점에 mini:"jigsaw" 를 선언하면 「조사하기」가 이 오버레이를 연다.
+   맞추면 그 지점의 단서를 얻는다 — 퍼즐이 곧 단서다. */
+var MINI={on:false,give:null,t0:0,moves:0,done:0,total:0};
+
+function openMini(sp){
+  var c=C.clues[sp.id];
+  MINI={on:true,give:sp.id,t0:Date.now(),moves:0,done:0,total:0};
+  $('#mini-title').textContent=(sp.miniTitle||c.n);
+  $('#mini-tip').textContent=sp.miniTip||'조각을 끌어다 자리에 맞추세요. 가까이 가면 저절로 붙어요.';
+  $('#mini').hidden=false;
+  if(sp.mini==='jigsaw')jigsaw(sp);
+  updateAct();
+}
+function closeMini(){
+  MINI.on=false;$('#mini').hidden=true;$('#mini-stage').innerHTML='';
+  cancelAnimationFrame(MINI.raf);updateAct();
+}
+function miniWin(){
+  var sec=Math.round((Date.now()-MINI.t0)/1000);
+  S.mini=S.mini||{};S.mini[MINI.give]={sec:sec,moves:MINI.moves};
+  sFan();
+  var id=MINI.give;
+  setTimeout(function(){
+    closeMini();
+    var sp=null;C.spots.forEach(function(x){if(x.id===id)sp=x});
+    finishInspect(sp,addClue(id));
+    toast('다 맞췄어요 · '+sec+'초');
+  },900);
+}
+
+/* ---- 찢어진 조각 맞추기 ----
+   조각은 사건 파일이 준다: sp.pieces = [{d:"패스", x:놓을자리x, y:놓을자리y}]
+   없으면 그림을 격자로 잘라 만든다(포스터 그림이 없을 때의 대비). */
+function jigsaw(sp){
+  var W=780,H=340, snap=36;               /* 손가락으로 맞추는 거리 — 넉넉하게 */
+  /* 판은 왼쪽, 조각 놓을 자리는 오른쪽. 조각이 판 위에 겹쳐 있으면 집기 어렵다. */
+  var pieces=sp.pieces||autoPieces(sp);
+  MINI.total=pieces.length;MINI.targets=pieces;
+  /* 조각 안에 인쇄면(sp.art)을 제 위치로 잘라 넣는다. 맞추면 그림이 이어진다. */
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" id="jig"><defs>';
+  if(sp.art)svg+='<g id="jig-art">'+sp.art+'</g>';
+  pieces.forEach(function(p,i){svg+='<clipPath id="jc'+i+'"><path d="'+p.d+'"/></clipPath>'});
+  svg+='</defs>';
+  svg+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#efe6d3"/>';
+  svg+='<g id="jig-slots">';
+  pieces.forEach(function(p){svg+='<path class="jig-slot" d="'+p.d+'" transform="translate('+p.x+','+p.y+')"/>'});
+  svg+='</g><g id="jig-pieces"></g>';
+  svg+='<text id="jig-msg" class="jig-done" x="'+(W/2)+'" y="'+(H-12)+'" text-anchor="middle"></text></svg>';
+  $('#mini-stage').innerHTML=svg;
+
+  var g=document.getElementById('jig-pieces');
+  var NS='http://www.w3.org/2000/svg';
+  pieces.forEach(function(p,i){
+    var grp=document.createElementNS(NS,'g');
+    grp.setAttribute('class','jig-piece');
+    grp.setAttribute('transform','translate(0,0)');
+    grp.dataset.i=i;grp.dataset.x=0;grp.dataset.y=0;
+    var body=document.createElementNS(NS,'path');
+    body.setAttribute('d',p.d);body.setAttribute('fill',p.fill||'#fffaf0');
+    grp.appendChild(body);
+    if(sp.art){                                   /* 인쇄면 — 이 조각이 덮는 부분만 */
+      var u=document.createElementNS(NS,'use');
+      u.setAttribute('href','#jig-art');
+      u.setAttribute('transform','translate('+(-(p.ox||0))+','+(-(p.oy||0))+')');
+      var clip=document.createElementNS(NS,'g');
+      clip.setAttribute('clip-path','url(#jc'+i+')');
+      clip.appendChild(u);grp.appendChild(clip);
+    }
+    var edge=document.createElementNS(NS,'path');  /* 테두리는 인쇄면 위에 */
+    edge.setAttribute('d',p.d);edge.setAttribute('fill','none');
+    edge.setAttribute('stroke','#4a3428');edge.setAttribute('stroke-width','2');
+    grp.appendChild(edge);
+    g.appendChild(grp);
+  });
+  scatter(g,pieces,W,H);
+  countMini();
+
+  var stage=document.getElementById('jig'),drag=null;
+  function pt(e){var r=stage.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H}}
+  stage.addEventListener('pointerdown',function(e){
+    var el=e.target.closest('.jig-piece');if(!el||el.classList.contains('snapped'))return;
+    var p=pt(e);drag={el:el,dx:p.x-(+el.dataset.x),dy:p.y-(+el.dataset.y)};
+    el.parentNode.appendChild(el);                     // 잡은 조각을 맨 위로
+    stage.setPointerCapture(e.pointerId);sTap();
+  });
+  stage.addEventListener('pointermove',function(e){
+    if(!drag)return;var p=pt(e);
+    var nx=p.x-drag.dx, ny=p.y-drag.dy;
+    drag.el.dataset.x=nx;drag.el.dataset.y=ny;
+    drag.el.setAttribute('transform','translate('+nx+','+ny+')');
+  });
+  stage.addEventListener('pointerup',function(e){
+    if(!drag)return;var el=drag.el;drag=null;MINI.moves++;
+    var i=+el.dataset.i,tgt=pieces[i];
+    var dx=(+el.dataset.x)-tgt.x, dy=(+el.dataset.y)-tgt.y;
+    if(Math.hypot(dx,dy)<snap){
+      el.dataset.x=tgt.x;el.dataset.y=tgt.y;
+      el.setAttribute('transform','translate('+tgt.x+','+tgt.y+')');
+      el.classList.add('snapped');sStamp();MINI.done++;countMini();
+      if(MINI.done>=MINI.total){document.getElementById('jig-msg').textContent='맞췄어요!';miniWin()}
+    }
+  });
+}
+/* 조각을 오른쪽에 겹치지 않게 늘어놓는다.
+   겹쳐 놓으면 아이가 원하는 조각을 집지 못한다 — 실제로 그렇게 나왔다. */
+function scatter(g,pieces,W,H){
+  var X0=300, X1=W-16, Y0=16, gap=12;
+  /* 조각 모양만 잰다. 묶음(g)을 재면 잘라 낸 인쇄면까지 들어가 모두 포스터 전체 크기로 잡힌다. */
+  var boxes=[].slice.call(g.children).map(function(el){var b=el.firstChild.getBBox();
+    return {el:el,w:b.width,h:b.height,ox:b.x,oy:b.y}});
+  var order=boxes.slice().sort(function(a,b){return b.h-a.h});
+  var cx=X0, cy=Y0, rowH=0;
+  order.forEach(function(b){
+    if(cx+b.w>X1&&cx>X0){cx=X0;cy+=rowH+gap;rowH=0}
+    var nx=cx-b.ox, ny=cy-b.oy;
+    b.el.dataset.x=nx;b.el.dataset.y=ny;
+    b.el.setAttribute('transform','translate('+nx+','+ny+')');
+    cx+=b.w+gap; rowH=Math.max(rowH,b.h);
+  });
+  /* 아래로 넘쳤으면 조금씩 위로 당겨 화면 안에 넣는다 */
+  var over=cy+rowH-(H-16);
+  if(over>0)boxes.forEach(function(b){var ny=(+b.el.dataset.y)-over;b.el.dataset.y=ny;
+    b.el.setAttribute('transform','translate('+b.el.dataset.x+','+ny+')')});
+}
+function countMini(){$('#mini-count').textContent=MINI.done+' / '+MINI.total+' 조각';}
+/* 막혔을 때 — 조각 하나를 대신 놓아 준다. 실패는 없고 별점에만 남는다(결정 4). */
+function miniHint(){
+  var left=[].slice.call(document.querySelectorAll('.jig-piece:not(.snapped)'));
+  if(!left.length)return;
+  var el=left[0], i=+el.dataset.i;
+  MINI.hinted=(MINI.hinted||0)+1;MINI.moves+=3;
+  var t=MINI.targets&&MINI.targets[i];if(!t)return;
+  el.dataset.x=t.x;el.dataset.y=t.y;
+  el.setAttribute('transform','translate('+t.x+','+t.y+')');
+  el.classList.add('snapped');sStamp();MINI.done++;countMini();
+  if(MINI.done>=MINI.total){var m=document.getElementById('jig-msg');if(m)m.textContent='맞췄어요!';miniWin()}
+}
+/* 조각을 사건 파일이 안 줬을 때 — 네모를 격자로 잘라 임시 조각을 만든다 */
+function autoPieces(sp){
+  var out=[],cols=3,rows=2,w=76,h=60,ox=40,oy=70;
+  for(var r=0;r<rows;r++)for(var c=0;c<cols;c++)
+    out.push({d:'M0 0 h'+w+' v'+h+' h-'+w+'z', x:ox+c*w, y:oy+r*h});
+  return out;
+}
+
 /* ================= 수첩 ================= */
 function addClue(id,quiet){
   if(S.found[id])return false;
@@ -204,11 +352,12 @@ function idleHint(){
   else m='물증은 흰 카드, 증언은 이중선 카드예요';
   if(m)toast('💡 '+m);idleReset();
 }
-document.addEventListener('pointerdown',function(){if(S.screen==='invest')idleReset()});
+document.addEventListener('pointerdown',function(){if(S.screen==='invest'&&!MINI.on)idleReset()});
 
 function updateAct(){
   touch();
   var a=$('#act');a.className='act';a.disabled=true;
+  if(MINI.on){a.textContent='분석하는 중…';return}
   if(S.mode==='scene'){a.textContent='조사하기';a.disabled=!S.hot}
   else if(S.mode==='talk'){
     var s=C.suspects[S.tab];
@@ -278,7 +427,13 @@ function inspect(){
   if(sp.decoy){sNo();rightScene('<div class="card"><div class="who">'+esc(sp.label)+'</div><p style="margin:0">'+esc(sp.decoy)+'</p></div>');return}
   var c=C.clues[sp.id];
   if(c.locked){sBad();rightScene('<div class="card"><div class="who">🔒 '+esc(c.n)+'</div><p style="margin:0">'+c.t+'</p></div>');return}
-  var isNew=addClue(sp.id);
+  /* 분석 미니게임이 걸린 지점은 퍼즐을 풀어야 단서를 얻는다 */
+  if(sp.mini&&!S.found[sp.id]){openMini(sp);return}
+  finishInspect(sp,addClue(sp.id));
+}
+function finishInspect(sp,isNew){
+  if(!sp)return;
+  var c=C.clues[sp.id];
   drawFound();setLens(S.lens.x,S.lens.y);
   /* 조사하면 딸려 나오는 것들 — 사건 파일이 단서에 선언한다(예전엔 c_print·c_tub 이 코드에 박혀 있었다)
        follow: {give, who, voice, say}  → 조사 순간 다른 카드(증언)가 추가되고 그 사람이 한 줄 말한다
@@ -802,6 +957,8 @@ function bindGame(){
   $('#t-sound').addEventListener('click',function(){setSfx(!A.sfx);if(A.sfx)sTap()});
   $('#t-music').addEventListener('click',function(){wake();setMusic(!A.music)});
   $('#t-lamp').addEventListener('click',lampHint);
+  $('#mini-close').addEventListener('click',function(){sTap();closeMini();toast('언제든 다시 조사할 수 있어요')});
+  $('#mini-hint').addEventListener('click',function(){sTap();miniHint()});
   $('#t-home').addEventListener('click',function(){sTap();toTitle()});
   $('#t-full').addEventListener('click',function(){wake();sTap();if(isFull())fullOff();else fullOn();setTimeout(syncFullUI,300)});
   document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){sTap();setMode(b.dataset.mode)})});

@@ -32,8 +32,10 @@ for fn in ['save','saveNow','load','clear','has','loadPrefs','savePrefs','makeCo
 save = save.replace('SaveMod_SaveMod_','SaveMod_')
 
 # 사건 데이터는 fetch 대신 그대로 박아 넣는다
-game = re.sub(r"fetch\('data/case-'\+CASE\+'\.json'[\s\S]*?\}\);\s*$",
-              "C=__CASE__;document.title='탐정 망고 · '+(C.title||'첫 사건');boot();\n", game)
+# 사건 데이터를 그대로 박는다. fetch(...) 한 덩어리를 통째로 갈아 끼운다.
+i = game.index("fetch('data/case-'")
+j = game.index('  });', i) + len('  });')
+game = game[:i] + "C=__CASE__;document.title='탐정 망고 · '+(C.title||'첫 사건');\nprobeCaseArt().then(boot,boot);" + game[j:]
 bundle = "(function(){\n'use strict';\nvar __CASE__=" + json.dumps(case, ensure_ascii=False) + ";\n" \
        + strip(audio) + "\n" + save + "\n" + game + "\n})();"
 

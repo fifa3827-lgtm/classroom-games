@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="탐정 망고">
-<link rel="stylesheet" href="css/style.css?v=2609190005">
+<link rel="stylesheet" href="css/style.css?v=2609190044">
 </head>
 <body>
 
@@ -216,8 +216,18 @@
     <button class="act" id="act" disabled>조사하기</button>
   </div>
 </div>
+<!-- ===== 분석 미니게임 오버레이 (CASE-4) ===== -->
+<div class="minigame" id="mini" hidden>
+  <div class="mg-box">
+    <div class="mg-head"><b id="mini-title">분석</b><span class="muted" id="mini-tip"></span>
+      <button class="mini" id="mini-close">그만두기</button></div>
+    <div class="mg-stage" id="mini-stage"></div>
+    <div class="mg-foot"><span class="muted" id="mini-count"></span>
+      <button class="mini" id="mini-hint">한 조각 놓아 주기</button></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
-<script type="module" src="js/game.js?v=2609190005"></script>
+<script type="module" src="js/game.js?v=2609190044"></script>
 </body>
 </html>
