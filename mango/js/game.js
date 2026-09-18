@@ -22,7 +22,8 @@ function probe(f){return new Promise(function(done){
 })}
 /* 사건 파일이 선언한 그림을 한 번에 확인한다. 없는 건 조용히 넘어간다. */
 function probeCaseArt(){
-  var list=[];
+  var list=['mango-full.png'];
+  MANGO.forEach(function(e){list.push('mango-'+e+'.png');list.push('mango-face-'+e+'.png')});
   if(C.coverImg)list.push(C.coverImg);
   if(C.sceneImg)list.push(C.sceneImg);
   C.suspectOrder.forEach(function(id){
@@ -39,6 +40,20 @@ function faceFile(s,ex){
   if(artOK(f))return f;
   f=s.img+'-def.png';
   return artOK(f)?f:null;
+}
+/* 망고는 사건 데이터가 아니라 게임의 주인공이라, 파일명을 고정으로 둔다. */
+var MANGO=['def','sp','fl','joy'];
+function mangoFile(ex,kind){
+  var p=(kind==='face')?'mango-face-':'mango-';
+  var f=p+(ex||'def')+'.png';
+  if(artOK(f))return f;
+  f=p+'def.png';
+  return artOK(f)?f:null;
+}
+/* 작은 망고 얼굴(머리만 잘라 둔 그림) — 없으면 아무것도 넣지 않는다. */
+function mface(ex){
+  var f=mangoFile(ex,'face');
+  return f?'<img class="mface" src="'+artURL(f)+'" alt="망고">':'';
 }
 function clueIcon(c,got){
   if(got&&artOK(c.iconImg))return '<img class="cicon" src="'+artURL(c.iconImg)+'" alt="">';
@@ -236,7 +251,7 @@ function inspect(){
     extra+='<div class="say"><b>발자국 감정</b> 길이 3cm · 발가락 5개. 너구리(6cm)도, 다람쥐(발가락 4개)도 아니에요. …이 크기라면 두더지? <span class="muted">— 두더지는 용의자 목록에 없어요.</span></div>';
   }
   if(sp.id==='c_tub')extra+='<div class="muted" style="margin-top:6px">수첩의 증언 「통은 둘이 든다」와 같은 뜻이에요.</div>';
-  rightScene('<div class="card"><div class="who">'+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div><p style="margin:0" id="sc-desc"></p></div>'+extra);
+  rightScene('<div class="card"><div class="who">'+(isNew?mface('sp'):mface('def'))+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div><p style="margin:0" id="sc-desc"></p></div>'+extra);
   typeHTML($('#sc-desc'),c.t,isNew?'mango':null,after);
   if(count()>=8&&!S.flags.hint8){S.flags.hint8=true;toast('단서가 많이 모였어요. 심문과 추리 탭도 써 보세요')}
 }
@@ -244,6 +259,8 @@ function rightScene(html){
   var base='<p class="muted" style="margin:0 0 8px">확대경을 끌어 살펴보고, 이름표가 뜨면 <b>조사하기</b>를 누르세요. 조사한 곳은 ✓로 표시돼요.</p>';
   $('#rscroll').innerHTML=base+(html||'<div class="card" style="background:#fff8e7"><div class="who">망고의 메모</div><p style="margin:0;font-size:13px" id="sc-memo"></p></div>');
   if(!html)typeHTML($('#sc-memo'),'앞문은 잠겨 있었고, 뒷문은 열려 있었다. 묵은 어디로, 누가, 몇 명이서 가져갔을까. 하나씩 확인하자.',S.flags.memoSaid?null:'mango'),S.flags.memoSaid=true;
+  var mm=$('#rscroll').querySelector('.card .who');
+  if(mm&&/망고의 메모/.test(mm.textContent))mm.insertAdjacentHTML('afterbegin',mface('def'));
 }
 
 /* ================= 심문 ================= */
@@ -417,14 +434,14 @@ function judgeChain(){
     sFan();S.wrongSet=null;S.lastWrong=null;S.phase='elim';S.open=null;
     S.flags.judgeSay='';
     renderLogic();
-    say2('<b>망고</b> "좋아. 여기까지는 <b>빈틈이 없어.</b><br>이제 남은 일은 — 이 조건에 맞지 않는 사람을 하나씩 지우는 거야."');
+    say2(mface('joy')+'<b>망고</b> "좋아. 여기까지는 <b>빈틈이 없어.</b><br>이제 남은 일은 — 이 조건에 맞지 않는 사람을 하나씩 지우는 거야."');
     return;
   }
   sBad();if(S.tries>1)burn();          // 첫 실패는 등불을 쓰지 않는다
   S.lastWrong=wrong;
   var lv=helpLv(S.tries);
   S.wrongSet=(lv>=1)?wrong:null;
-  var head='<b>망고</b> "'+(wrong.length===1?'한 군데':wrong.length+'군데')+'가 어긋나."';
+  var head=mface('fl')+'<b>망고</b> "'+(wrong.length===1?'한 군데':wrong.length+'군데')+'가 어긋나."';
   if(lv>=2){
     var body='';
     wrong.forEach(function(w){body+='<br><b>'+(w+1)+'번</b> — '+whyWrongStep(w)});
@@ -631,7 +648,7 @@ function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle
 
 function refreshTitle(){
   var d=Save.load(), box=$('#resume');
-  applyCover();
+  applyCover();applyArt();
   if(!box)return;
   if(d){box.hidden=false;$('#resume-when').textContent=Save.agoText(d.t)}
   else box.hidden=true;
@@ -695,6 +712,22 @@ fetch('data/case-01.json',{cache:'no-cache'})
       '인터넷 주소(https://…)로 열어야 동작해요. 파일을 컴퓨터에 내려받아 직접 열면 브라우저가 막습니다.</p>'+
       '<p style="color:#888">'+esc(e.message)+'</p></div>';
   });
+
+/* 화면 큰 그림 자리(.art)를 그림으로 바꾼다. 파일이 없으면 지금 SVG 그대로. */
+function setArt(sel,file,alt){
+  var box=document.querySelector(sel+' .art');
+  if(!box||!artOK(file))return;
+  box.classList.add('img');
+  box.innerHTML='<img src="'+artURL(file)+'" alt="'+(alt||'')+'">';
+}
+function applyArt(){
+  setArt('#s-title','mango-full.png','탐정 망고');
+  var j=mangoFile('joy','bust');
+  if(j&&!document.querySelector('#s-solve .mjoy')){
+    var st=$('#stars');
+    if(st)st.insertAdjacentHTML('beforebegin','<img class="mjoy" src="'+artURL(j)+'" alt="망고">');
+  }
+}
 
 /* 표지 그림이 있으면 첫 화면 배경으로 깔고, 없으면 지금 색 배경 그대로 */
 function applyCover(){
