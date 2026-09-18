@@ -753,6 +753,8 @@ function applyArt(){
 /* 표지 그림이 있으면 첫 화면 배경으로 깔고, 없으면 지금 색 배경 그대로 */
 function applyCover(){
   var t=$('#s-title');if(!t)return;
-  if(artOK(C&&C.coverImg)){t.classList.add('has-cover');t.style.setProperty('--cover','url("'+artURL(C.coverImg)+'")')}
-  else t.classList.remove('has-cover');
+  /* CSS 변수에 상대 경로를 넣으면 스타일시트(css/) 기준으로 풀려 img 를 못 찾는다.
+     인라인 style 로 직접 넣으면 문서 기준으로 풀린다. */
+  if(artOK(C&&C.coverImg)){t.classList.add('has-cover');t.style.backgroundImage='url("'+artURL(C.coverImg)+'")'}
+  else{t.classList.remove('has-cover');t.style.backgroundImage=''}
 }
