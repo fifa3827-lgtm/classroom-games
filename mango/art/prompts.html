@@ -15,6 +15,8 @@ main{max-width:860px;margin:0 auto;padding:16px}
 .note b{color:var(--brick)}
 h2{font-size:17px;margin:26px 0 4px;padding-bottom:6px;border-bottom:2.5px solid var(--brown)}
 .gnote{font-size:13.5px;color:#6b5a4a;margin:8px 0 14px}
+.inote{font-size:13px;line-height:1.55;color:#7a3f34;background:#fff3ee;
+  border-left:4px solid var(--brick);border-radius:0 6px 6px 0;padding:8px 11px;margin:8px 0 2px}
 .item{background:var(--cream);border:2.5px solid var(--line);border-radius:10px;
  box-shadow:2px 3px 0 rgba(74,52,40,.08);margin:0 0 12px;overflow:hidden}
 .ihead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;
@@ -89,10 +91,12 @@ GROUPS.forEach(function(g){
     var d=document.createElement('div'); d.className='item';
     d.innerHTML='<div class="ihead"><span class="lb"></span><code class="fn"></code>'+
       (it.size?'<span class="size"></span>':'')+'</div>'+
+      (it.note?'<div class="inote"></div>':'')+
       '<div class="p" title="눌러서 펼치기"></div>'+
       '<div class="act"><button class="go">프롬프트 복사</button><button class="fnc">파일명 복사</button></div>';
     d.querySelector('.lb').textContent=it.label;
     d.querySelector('.fn').textContent=it.file;
+    if(it.note)d.querySelector('.inote').textContent=it.note;
     if(it.size)d.querySelector('.size').textContent=it.size;
     var pe=d.querySelector('.p'); pe.textContent=it.p;
     pe.onclick=function(){pe.classList.toggle('open')};
