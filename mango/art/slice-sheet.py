@@ -30,6 +30,8 @@ from scipy import ndimage
 BG_TOL      = 18      # 배경색으로 볼 색 차이
 POCKET_MAX  = 8000    # 이보다 작은 「갇힌 배경」은 지운다 (몸통 안쪽 흰색은 이보다 크다)
 MIN_FIGURE  = 20000   # 칸 하나로 볼 최소 크기
+SPECKLE     = 300     # 이보다 작은 조각은 잡티로 보고 버린다
+MARK_MIN    = 40      # 땀방울·「!」로 볼 최소 크기 (이하는 계단 자국)
 BUST_W      = 300
 FACE_W      = 112
 COLORS      = 96
@@ -82,7 +84,12 @@ def find_cells(im, want=None):
     for i in range(1, n + 1):
         ys, xs = np.nonzero(lab == i)
         box = [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
-        (figs if sz[i - 1] >= MIN_FIGURE else bits).append(box)
+        if sz[i - 1] >= MIN_FIGURE:
+            figs.append(box)
+        elif sz[i - 1] >= SPECKLE:
+            bits.append(box)        # 땀방울·「!」처럼 뜻이 있는 조각
+        # SPECKLE 미만은 배경 테두리의 잡티다 — 칸에 합치면 칸이 옆으로 부풀어
+        # 옆 인물을 끌어들인다. 그냥 버린다.
     if not figs:
         sys.exit('칸을 찾지 못했습니다. 배경이 단색인지, 인물이 잘리지 않았는지 확인하세요.')
 
@@ -207,9 +214,21 @@ def isolate(im):
     # 머리 아래에서 떨어져 있는 조각은 옆 인물의 팔·꼬리다. 머리 옆·위의 작은 것만 남긴다
     ys, xs = np.nonzero(lab == main)
     head_bottom = ys.min() + (ys.max() - ys.min()) * 0.55
+    W = a.shape[1]
+    # 옆 칸에서 잘려 온 귀·꼬리는 작고 높이도 비슷해서 땀방울로 오인된다.
+    # 가르는 기준은 「잘린 면에 붙어 있는가」다 — 땀방울이나 「!」는 인물 옆에
+    # 떠 있을 뿐 칸 테두리에 닿지 않는다. 옆 인물의 조각은 반드시 닿는다.
+    boxes = ndimage.find_objects(lab)
     for i in range(1, n + 1):
         if i == main:
             continue
+        if sz[i - 1] < MARK_MIN:
+            continue                # 1~2픽셀짜리 계단 자국
+        sl = boxes[i - 1]
+        if sl is None:
+            continue
+        if sl[1].start <= 2 or sl[1].stop >= W - 2:
+            continue                # 잘린 면에 붙어 있다 = 옆 인물
         cy = ndimage.center_of_mass(al, lab, i)[0]
         if cy < head_bottom and sz[i - 1] < sz[main - 1] * 0.06:
             keep[i] = True          # 땀방울·「!」 같은 표시는 남긴다
