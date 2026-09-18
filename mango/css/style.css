@@ -226,6 +226,18 @@
 #s-title.has-cover .txt>p.muted{
   text-shadow:0 0 5px #fbf7ee, 0 0 10px #fbf7ee, 0 0 18px rgba(251,247,238,.85)}
 
+/* 인트로 — 표지와 같은 그림을 깔되 조금 어둡게 눌러 「이야기가 시작된다」는 느낌을 준다.
+   글은 표지처럼 반투명 카드 위에 놓는다. */
+#s-intro.has-cover{background-size:cover;background-position:center;background-repeat:no-repeat;position:relative}
+#s-intro.has-cover::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to right,rgba(40,28,20,.05),rgba(40,28,20,.28))}
+#s-intro.has-cover>*{position:relative;z-index:1}
+#s-intro.has-cover .intro-card{background:rgba(251,247,238,.94);backdrop-filter:blur(2px)}
+#s-intro.has-cover .eyebrow{color:#fbf7ee;text-shadow:0 0 6px rgba(40,28,20,.9),0 1px 0 rgba(40,28,20,.8)}
+#s-intro.has-cover .muted{color:#fbf7ee;text-shadow:0 0 6px rgba(40,28,20,.9)}
+#s-intro .intro-card .who:empty{display:none}
+#s-intro .txt{justify-content:center}
+
 /* 낮은 가로 화면(폰을 눕힌 경우)에서는 표지 글이 세로로 넘쳐
    위로는 「시험판」 띠가, 아래로는 안내줄이 잘렸다. 넘친 글이 위로 밀리면서
    제목이 나뭇잎 위로 올라가 읽기도 나빠졌다. 높이에 맞춰 줄인다. */

@@ -141,15 +141,32 @@
     </div>
   </section>
 
+  <!-- ===== 인트로(도입 자막) — 사건 파일의 intro 배열을 한 장씩 보여 준다 ===== -->
+  <section class="full intro" id="s-intro" hidden>
+    <div class="art" id="intro-art"><svg viewBox="0 0 150 130"><use href="#mango"/></svg></div>
+    <div class="txt">
+      <div class="eyebrow" id="intro-day"></div>
+      <div class="card intro-card">
+        <div class="who" id="intro-who"></div>
+        <p style="margin:0;font-size:14px;min-height:3.2em" id="intro-say"></p>
+      </div>
+      <div class="row" style="display:flex;gap:8px;justify-content:flex-end;align-items:center">
+        <span class="muted" style="margin-right:auto" id="intro-page"></span>
+        <button class="mini" id="intro-skip">건너뛰기</button>
+        <button class="mini go" id="intro-next">다음 ▸</button>
+      </div>
+    </div>
+  </section>
+
   <section class="full" id="s-brief" hidden>
     <div class="art" id="brief-art"><svg viewBox="0 0 150 120"><use href="#sheep"/></svg></div>
     <div class="txt">
       <div class="card">
-        <div class="who">양 아주머니 <small>급식실장</small></div>
+        <div class="who"><span id="brief-who">양 아주머니</span> <small id="brief-role">급식실장</small></div>
         <p style="margin:0;font-size:13.5px" id="brief-say"></p>
       </div>
       <div class="say" id="brief-mango" style="visibility:hidden"><b>망고</b> <span id="brief-mango-t"></span></div>
-      <p class="muted" style="margin:0">아주머니의 말은 <b>수첩</b>에 증언 카드로 기록됩니다.</p>
+      <p class="muted" style="margin:0" id="brief-note">아주머니의 말은 <b>수첩</b>에 증언 카드로 기록됩니다.</p>
       <button class="btn" id="btn-accept">🔍 사건을 맡는다</button>
     </div>
   </section>

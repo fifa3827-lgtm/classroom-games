@@ -97,7 +97,8 @@ function typeHTML(el,html,voice,done,speed){
 function cancelTyper(el){typers.slice().forEach(function(t){if(!el||t.el===el)t.finish(true)})}
 function skipTypers(){if(typers.length){typers.slice().forEach(function(t){t.finish(true)});return true}return false}
 document.addEventListener('pointerdown',function(e){ // 아무 곳이나 누르면 대사가 바로 끝까지 나옴
-  if(typers.length&&!e.target.closest('.tab,.act,.snd,#t-sound,#t-music,#t-home,#t-full'))skipTypers();
+  /* 인트로는 스스로 처리한다 — 여기서 먼저 끝내 버리면 한 번 눌러 글도 끝나고 장도 넘어간다 */
+  if(typers.length&&!e.target.closest('.tab,.act,.snd,#t-sound,#t-music,#t-home,#t-full,#s-intro'))skipTypers();
 },true);
 
 
@@ -117,12 +118,12 @@ var toastT;function toast(m){var el=$('#toast');el.textContent=m;el.classList.ad
 
 /* ================= 화면 전환 ================= */
 function show(id){
-  ['s-title','s-brief','s-solve','s-board'].forEach(function(s){$('#'+s).hidden=(s!==id)});
+  ['s-title','s-intro','s-brief','s-solve','s-board'].forEach(function(s){$('#'+s).hidden=(s!==id)});
   var inv=(id==='invest');
   $('#bar').hidden=!inv;$('#bodyx').hidden=!inv;$('#foot').hidden=!inv;
   S.screen=id;
   cancelTyper();
-  if(id==='s-title'||id==='s-brief')setMood('calm');
+  if(id==='s-title'||id==='s-intro'||id==='s-brief')setMood('calm');
   else if(id==='s-solve'||id==='s-board')setMood('resolve');
   if(id==='s-solve'||id==='s-board')Save.clear();     // 사건을 끝냈으면 이어하기는 지운다
   else touch();
@@ -671,13 +672,55 @@ A.onChange=function(){Save.savePrefs({s:A.sfx,m:A.music});syncSoundUI()};
 function start(easy){
   S.easy=easy;wake();sTap();startMusic();
   (C.startClues||[]).forEach(function(id){addClue(id,true)});
+  /* 표지에서 곧장 「탐정님!」으로 들어가면 누가 누군지도 모른 채 시작한다.
+     사건 파일이 intro 를 선언하면 자막 몇 장을 먼저 보여 주고 브리핑으로 간다. */
+  if(C.intro&&C.intro.length)runIntro(brief);else brief();
+}
+function brief(){
   show('s-brief');
   applyBriefArt();
+  var b=C.brief||{};
+  if($('#brief-who'))$('#brief-who').textContent=b.who||'';
+  if($('#brief-role'))$('#brief-role').textContent=b.role||'';
+  if($('#brief-note')&&b.note)$('#brief-note').innerHTML=b.note;
   $('#brief-mango').style.visibility='hidden';$('#brief-mango-t').innerHTML='';
-  typeHTML($('#brief-say'),C.brief.text,C.brief.sym||'sheep',function(){
+  typeHTML($('#brief-say'),b.text,b.sym||'sheep',function(){
     $('#brief-mango').style.visibility='visible';
-    typeHTML($('#brief-mango-t'),C.brief.mango,'mango');
+    typeHTML($('#brief-mango-t'),b.mango,'mango');
   },22);
+}
+/* 인트로 자막. 한 장씩 타자기로 나오고, 화면을 누르면 다음 장. 건너뛰기 가능. */
+var INTRO={i:0,done:null};
+function introArt(who){
+  var box=$('#intro-art');if(!box)return;
+  var f=null;
+  if(who==='mango'||who==='narr')f=artOK('mango-full.png')?'mango-full.png':mangoFile('def');
+  else if(who)f=artOK(who+'-def.png')?who+'-def.png':null;
+  if(f)box.innerHTML='<img class="pim" src="'+artURL(f)+'" alt="">';
+  else box.innerHTML='<svg viewBox="0 0 150 130"><use href="#'+(who==='narr'?'mango':(who||'mango'))+'"></use></svg>';
+}
+function introPage(){
+  var pg=C.intro[INTRO.i],last=INTRO.i===C.intro.length-1;
+  var who=pg.who||'narr';
+  introArt(who);
+  $('#intro-day').textContent=pg.day||C.intro[0].day||'';
+  var nm={mango:'망고',narr:''}[who];
+  if(nm===undefined)nm=(C.suspects&&C.suspects[who]&&C.suspects[who].name)||who;
+  $('#intro-who').textContent=nm;$('#intro-who').hidden=!nm;
+  $('#intro-page').textContent=(INTRO.i+1)+' / '+C.intro.length;
+  $('#intro-next').textContent=last?'시작 ▸':'다음 ▸';
+  $('#intro-say').innerHTML='';
+  typeHTML($('#intro-say'),pg.t,who==='narr'?'narr':who,null,20);
+}
+function introNext(){
+  sTap();
+  if(typers.length){skipTypers();return}      // 글이 나오는 중이면 먼저 다 보여 준다
+  if(INTRO.i>=C.intro.length-1){var d=INTRO.done;INTRO.done=null;if(d)d();return}
+  INTRO.i++;introPage();
+}
+function runIntro(done){
+  INTRO.i=0;INTRO.done=done;
+  show('s-intro');introPage();
 }
 /* 의뢰인 그림이 있으면 SVG 대신 쓴다. 없으면 HTML 에 있는 SVG 를 그대로 둔다. */
 function applyBriefArt(){
@@ -696,6 +739,10 @@ function refreshTitle(){
 }
 
 function bindTitle(){
+  $('#intro-next').addEventListener('click',introNext);
+  $('#intro-skip').addEventListener('click',function(){sTap();cancelTyper();var d=INTRO.done;INTRO.done=null;if(d)d()});
+  /* 글 위 아무 데나 눌러도 넘어간다 — 단추까지 손을 옮기지 않아도 되게 */
+  $('#s-intro .txt').addEventListener('click',function(e){if(!e.target.closest('button'))introNext()});
   $('#m-easy').addEventListener('click',function(){start(true)});
   $('#m-hard').addEventListener('click',function(){start(false)});
   var bf=$('#tg-full');
@@ -780,6 +827,11 @@ function applyCover(){
   var t=$('#s-title');if(!t)return;
   /* CSS 변수에 상대 경로를 넣으면 스타일시트(css/) 기준으로 풀려 img 를 못 찾는다.
      인라인 style 로 직접 넣으면 문서 기준으로 풀린다. */
-  if(artOK(C&&C.coverImg)){t.classList.add('has-cover');t.style.backgroundImage='url("'+artURL(C.coverImg)+'")'}
-  else{t.classList.remove('has-cover');t.style.backgroundImage=''}
+  /* 인트로도 같은 그림 위에서 진행한다 — 표지 → 자막 → 브리핑이 한 장면처럼 이어지게 */
+  var i=$('#s-intro');
+  if(artOK(C&&C.coverImg)){var u='url("'+artURL(C.coverImg)+'")';
+    t.classList.add('has-cover');t.style.backgroundImage=u;
+    if(i){i.classList.add('has-cover');i.style.backgroundImage=u}}
+  else{t.classList.remove('has-cover');t.style.backgroundImage='';
+    if(i){i.classList.remove('has-cover');i.style.backgroundImage=''}}
 }
