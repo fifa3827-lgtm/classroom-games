@@ -5,7 +5,7 @@ import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
         blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js';
 import * as Save from './save.js';
 
-var C=null;
+var C=null;   // 현재 사건 데이터
 
 /* ================= 그림 자산 ================= */
 /* data/case-NN.json 이 img 이름을 적으면 img/ 에서 찾아 쓰고,
@@ -58,7 +58,7 @@ function mface(ex){
 function clueIcon(c,got){
   if(got&&artOK(c.iconImg))return '<img class="cicon" src="'+artURL(c.iconImg)+'" alt="">';
   return '<svg viewBox="0 0 28 28"><use href="'+(got?c.icon:'#i-lock')+'"></use></svg>';
-}                                   // 현재 사건 데이터
+}
 var $=function(s){return document.querySelector(s)};
 var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
 
@@ -125,11 +125,29 @@ function show(id){
   if(id==='s-solve'||id==='s-board')Save.clear();     // 사건을 끝냈으면 이어하기는 지운다
   else touch();
 }
-function lockLandscape(){
+/* 전체 화면은 자동으로 켜지 않는다.
+   크롬이 「전체 화면을 종료하려면…」 안내를 띄우는데, 게임 중에 뜨면 하단 버튼을 가린다.
+   그래서 표지의 버튼으로만 켠다 — 안내가 표지 위에 떠서 아무것도 막지 않는다. */
+function fullOn(){
   try{var el=document.documentElement;
     var p=(el.requestFullscreen||el.webkitRequestFullscreen);
-    if(p){var r=p.call(el);if(r&&r.then)r.then(function(){try{screen.orientation.lock('landscape').catch(function(){})}catch(e){}}).catch(function(){})}
-  }catch(e){}
+    if(!p)return false;
+    var r=p.call(el);
+    if(r&&r.then)r.then(function(){try{screen.orientation.lock('landscape').catch(function(){})}catch(e){}}).catch(function(){});
+    return true;
+  }catch(e){return false}
+}
+function fullOff(){
+  try{(document.exitFullscreen||document.webkitExitFullscreen).call(document)}catch(e){}
+}
+function isFull(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
+function syncFullUI(){
+  var b=$('#tg-full'),t=$('#full-tip');
+  if(!b)return;
+  var can=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+  b.hidden=!can; if(t)t.hidden=!can||isFull();
+  b.setAttribute('aria-pressed',isFull()?'true':'false');
+  b.textContent=isFull()?'⛶ 전체 화면 끄기':'⛶ 전체 화면';
 }
 
 /* ================= 수첩 ================= */
@@ -635,7 +653,7 @@ A.onChange=function(){Save.savePrefs({s:A.sfx,m:A.music});syncSoundUI()};
 
 /* ================= 시작 ================= */
 function start(easy){
-  S.easy=easy;wake();sTap();startMusic();lockLandscape();
+  S.easy=easy;wake();sTap();startMusic();
   (C.startClues||[]).forEach(function(id){addClue(id,true)});
   show('s-brief');
   $('#brief-mango').style.visibility='hidden';$('#brief-mango-t').innerHTML='';
@@ -648,7 +666,7 @@ function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle
 
 function refreshTitle(){
   var d=Save.load(), box=$('#resume');
-  applyCover();applyArt();
+  applyCover();applyArt();syncFullUI();
   if(!box)return;
   if(d){box.hidden=false;$('#resume-when').textContent=Save.agoText(d.t)}
   else box.hidden=true;
@@ -657,7 +675,10 @@ function refreshTitle(){
 function bindTitle(){
   $('#m-easy').addEventListener('click',function(){start(true)});
   $('#m-hard').addEventListener('click',function(){start(false)});
-  $('#btn-resume').addEventListener('click',function(){var d=Save.load();if(d){wake();sTap();startMusic();lockLandscape();restore(d)}});
+  var bf=$('#tg-full');
+  if(bf)bf.addEventListener('click',function(){wake();sTap();if(isFull())fullOff();else fullOn();setTimeout(syncFullUI,300)});
+  ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){document.addEventListener(ev,syncFullUI)});
+  $('#btn-resume').addEventListener('click',function(){var d=Save.load();if(d){wake();sTap();startMusic();restore(d)}});
   $('#btn-fresh').addEventListener('click',function(){
     sTap();
     if(!$('#btn-fresh').dataset.sure){$('#btn-fresh').dataset.sure='1';$('#btn-fresh').textContent='정말 지울까요? 한 번 더';
