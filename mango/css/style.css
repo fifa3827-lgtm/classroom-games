@@ -176,7 +176,9 @@
   @keyframes starin{to{opacity:1;transform:none}}
   .cursor{display:inline-block;width:8px;height:14px;background:var(--brick);vertical-align:-2px;margin-left:2px;animation:blink .7s infinite}
   .tap.typing{pointer-events:none}
-  .snd{display:flex;gap:6px;justify-content:flex-end}
+  .snd{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  /* 폭이 좁으면 단추 안에서 글자가 접혀 「효과 / 음」처럼 갈라진다 */
+  .snd button{white-space:nowrap}
   .snd button{border:2px solid var(--line);border-radius:999px;background:var(--panel);padding:2px 10px;font-size:12px;font-weight:700}
   .snd button[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
   .snd button.wide{background:var(--must);border-color:var(--brown);padding-left:12px;padding-right:12px}
@@ -215,6 +217,52 @@
   pointer-events:none;
   background:linear-gradient(to bottom,rgba(251,247,238,0),rgba(251,247,238,.72))}
 #s-title.has-cover>*{position:relative;z-index:1} /* 안내줄이 그림 위 안개와 밝기가 비슷해 묻힌다. 막을 더 씌우면 그림이 죽으니 글자만 진하게 한다. */ #s-title.has-cover .muted{color:#4a3428;font-weight:700}
+
+/* 제목이 나뭇잎 위에 놓이면 잎마다 밝기가 달라(42~222) 어떤 글자는
+   배경과 같은 밝기가 된다. 막을 씌우면 그림이 죽으므로, 글자에만
+   크림색 테를 둘러 어떤 잎 위에 놓여도 윤곽이 남게 한다. */
+#s-title.has-cover .eyebrow,
+#s-title.has-cover h1,
+#s-title.has-cover .txt>p.muted{
+  text-shadow:0 0 5px #fbf7ee, 0 0 10px #fbf7ee, 0 0 18px rgba(251,247,238,.85)}
+
+/* 낮은 가로 화면(폰을 눕힌 경우)에서는 표지 글이 세로로 넘쳐
+   위로는 「시험판」 띠가, 아래로는 안내줄이 잘렸다. 넘친 글이 위로 밀리면서
+   제목이 나뭇잎 위로 올라가 읽기도 나빠졌다. 높이에 맞춰 줄인다. */
+@media (max-height:470px){
+  #s-title{padding-top:8px;padding-bottom:8px}
+  #s-title .txt{gap:7px}
+  #s-title h1{font-size:25px;line-height:1.15}
+  #s-title .eyebrow{font-size:10px}
+  /* 두 칸을 나란히 놓으면 한 번에 80px 가까이 줄어든다 */
+  #s-title .modepick{grid-template-columns:1fr 1fr;gap:7px}
+  #s-title .modepick button{padding:7px 10px}
+  #s-title .modepick button b{font-size:15px}
+  #s-title .modepick button span{font-size:11px;line-height:1.25;display:block}
+  #s-title .resume{padding:7px 9px}
+}
+@media (max-height:400px){
+  #s-title h1{font-size:22px}
+  #s-title .txt{gap:5px}
+  #s-title .txt>p.muted{font-size:11px}
+}
+/* 폭이 좁으면 소리 단추 넷이 한 줄에 못 들어가 하나만 아래로 떨어진다.
+   줄바꿈보다 보기 나쁘므로, 좁을 때는 단추 자체를 줄여 한 줄을 지킨다. */
+@media (max-width:760px){
+  .snd{gap:4px}
+  .snd button{padding:2px 7px;font-size:11px}
+  .snd button.wide{padding-left:8px;padding-right:8px}
+  .snd .bi{width:12px;height:12px}
+}
+/* 폭까지 좁으면 두 칸의 설명 줄이 두 줄로 접히며 다시 넘친다 */
+@media (max-height:470px) and (max-width:720px){
+  #s-title .modepick button b{font-size:14px}
+  #s-title .modepick button span{font-size:10px}
+  #s-title .modepick button{padding:6px 8px}
+  #s-title h1{font-size:21px}
+  #s-title .txt{gap:5px}
+  #s-title .txt>p.muted{font-size:10.5px;line-height:1.35}
+}
 
 /* ===== 망고 그림 ===== */
 .art.img{display:grid;place-items:center;padding:0}
