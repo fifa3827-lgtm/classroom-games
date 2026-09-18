@@ -33,8 +33,12 @@ export var GROUPS = [
 /* ───────────────────────── 2. 사건 1 인물 ───────────────────────── */
 {
   title: "2. 사건 1 인물 6명",
-  note: "실루엣 규칙(바이블 9.5): 기본 도형 + 돌출 요소 하나의 조합이 겹치면 안 된다. 4장을 뽑은 뒤 검은 실루엣만 나란히 놓고 구별되는지 확인한다. 표정은 def·sp·fl 세 장이 필수이고, 도토만 ang(분노)을 하나 더 만든다.",
+  note: "★ 망고를 뽑아 보고 배운 것 — 표정을 한 장씩 따로 주문하면 머리 크기·팔 자세·소품 위치가 프레임마다 달라져서, 게임에서 표정이 바뀔 때 얼굴이 툭 튑니다. 용의자는 반박 성공 시 표정이 바뀌는 연출이 핵심이므로, 표정을 낱장으로 주문하지 말고 아래 프롬프트처럼 「한 장에 네 표정을 나란히」 주문하세요. 같은 그림 안에 있으면 제미나이가 크기와 자세를 스스로 맞춰 줍니다. 받은 한 장은 제가 네 칸으로 잘라 정렬해 드립니다. 실루엣 규칙(바이블 9.5): 기본 도형 + 돌출 요소 하나의 조합이 겹치면 안 되므로, 네 칸을 검은 실루엣으로 바꿔 다른 인물과 구별되는지 확인합니다.",
   items: [
+    { file:"(4표정 한 장) kongi-sheet.png", label:"★ 권장 — 네 표정을 한 장에 (콩이 예시)", size:"가로로 긴 한 장",
+      p:"A single wide image divided into FOUR equal panels side by side, showing the SAME character with four different facial expressions. The character: an anthropomorphic raccoon girl as a school lunch helper, wide round pot-shaped body, bushy ringed tail visible behind the shoulder, grey-brown fur with the classic dark raccoon eye mask, round black eyes, small dark nose, NOT wearing an apron. CRITICAL: in all four panels the head is the SAME SIZE and in the SAME position, the body and arms are in the SAME pose, and only the face changes. Panel 1: neutral, slightly stiff, being questioned. Panel 2: startled — eyes wide and round, mouth open in a small gasp. Panel 3: caught in a lie — pupils rolled up to the upper corner avoiding the viewer, forced stiff smile, three sweat drops. Panel 4: sulking — eyes downcast, lower lip pushed out. Front-facing bust, chest up, identical framing in every panel. "+STYLE.cel },
+    { file:"(쓰는 법)", label:"위 프롬프트를 다른 인물에 쓰는 방법",
+      p:"위 프롬프트에서 「The character:」 다음 문장만, 아래 인물별 프롬프트에서 몸·털·소품을 설명한 부분으로 바꿔 넣으세요. 네 칸의 표정 설명(Panel 1~4)은 인물의 네 번째 칸(본성)에 맞춰 고칩니다 — 콩순이=눈굴림, 도토=분노, 모리=당황(단, 모리는 네 칸 모두 눈을 내리깐 채), 양 아주머니=난처함, 밤이=신남. 받은 한 장을 그대로 올려 주시면 네 칸으로 잘라 눈 위치를 맞춰 파일로 만들어 드립니다." },
     { file:"kongi-def.png", label:"콩이 · 기본 — 너구리, 앞치마 없음",
       p:"An anthropomorphic raccoon girl as a school lunch helper, front-facing bust portrait. Wide round pot-shaped body, bushy ringed tail visible behind the shoulder, grey-brown fur with the classic dark raccoon eye mask, round black eyes, small dark nose, NOT wearing an apron (bare chest fur showing), neutral slightly stiff expression as if being questioned. "+STYLE.cel },
     { file:"kongi-sp.png", label:"콩이 · 놀람",
