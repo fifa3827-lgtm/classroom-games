@@ -109,8 +109,9 @@ export var GROUPS = [
   items: [
     { file:"cover-01.webp", label:"표지 (첫 화면 배경)", size:"1440×720 → WebP 250KB 이하",
       p:"Title-screen illustration for a children's detective mystery game, horizontal 2:1 composition, empty middle area left clear for a title card. An autumn animal village square at dusk seen from a low angle: a great old zelkova tree with golden leaves on the right, warm lantern light, cobblestones, a small detective office window glowing on the left, scattered fallen leaves in the foreground, a long thin shadow of a small cat with a magnifying glass stretching across the cobblestones from the bottom edge. Mysterious but gentle and inviting, not scary. "+STYLE.paint },
-    { file:"icon-app.png", label:"앱 아이콘 (홈 화면 추가용)", size:"512×512",
-      p:"App icon: a brass magnifying glass overlapping a single golden autumn zelkova leaf, centered on a flat cream #fbf7ee circle with a thick dark-brown outline, simple bold shapes readable at 48 pixels. "+STYLE.icon }
+    { file:"icon-app.png", label:"앱 아이콘 (홈 화면 추가용) ★ 망고 기본 그림을 첨부할 것", size:"512×512",
+      note:"홈 화면에서 48px 로 보인다. 망고의 정체성 6요소 중 48px 에서 살아남는 것은 회색 무늬·흰 줄·연두 눈 셋뿐이므로 그 셋만 크게 남기고 나머지는 단순화한다. 몸·조끼·돋보기는 넣지 않는다 — 넣으면 얼굴이 작아져 아무것도 안 보인다. 모서리가 잘리는 기기가 있으니 얼굴을 한가운데 두고 사방에 여백을 남긴다.",
+      p:"App icon. Use the attached character as the exact reference for the face. Draw ONLY the cat's HEAD, large and centered, filling most of the square, on a flat mustard #d6a83c background with no border. Keep these three things bold and unmistakable: the dark grey FUR MARKING on top of the head shifted to the RIGHT so the LEFT ear stays white, the single white stripe running from forehead down to the nose, and the yellow-green eyes #b9c96a. The grey is fur, not a hat — no hat, no cap, no brim, nothing sticking up. Simplify everything else: no body, no vest, no magnifying glass, no whiskers, no background objects. Leave clear empty margin on all four sides so nothing is lost when the corners are rounded off. Very simple bold shapes that stay readable at 48 pixels. hand-drawn cel style, thick dark-brown outline #4a3428, flat matte fill, one hard shadow tone, no text, no label, no watermark" }
   ]
 },
 
