@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js';
-import * as Save from './save.js';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609190005';
+import * as Save from './save.js?v=2609190005';
 
 var C=null;   // 현재 사건 데이터
 
@@ -183,7 +183,7 @@ function burn(){S.lamps=Math.max(0,S.lamps-1);lamps()}
 function setMode(m){
   S.mode=m;S.hot=null;S.sel=null;S.active=null;
   document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.mode===m))});
-  $('#t-left').textContent={scene:'사건 1 · 현장',talk:'사건 1 · 심문',notes:'사건 1 · 수첩',logic:'사건 1 · 추리'}[m];
+  $('#t-left').textContent='사건 '+(C.no||1)+' · '+{scene:'현장',talk:'심문',notes:'수첩',logic:'추리'}[m];
   if(m==='notes'){S.newNotes=0;updateDot()}
   closeSheet();cancelTyper();
   setMood({scene:'invest',talk:'tense',notes:'invest',logic:'build'}[m]);
@@ -212,7 +212,8 @@ function updateAct(){
   if(S.mode==='scene'){a.textContent='조사하기';a.disabled=!S.hot}
   else if(S.mode==='talk'){
     var s=C.suspects[S.tab];
-    if(s.apron&&S.flags.apron&&!S.found.c_stain){a.textContent='앞치마 살펴보기';a.className='act warm';a.disabled=false}
+    var ex=extraAction(s);
+    if(ex){a.textContent=ex.label;a.className='act warm';a.disabled=false}
     else{a.textContent='단서 들이대기';a.disabled=!S.sel}
   }
   else if(S.mode==='notes'){a.textContent='수첩 '+count()+'장';a.disabled=true}
@@ -224,7 +225,7 @@ function updateAct(){
 }
 function onAct(){
   if(S.mode==='scene')inspect();
-  else if(S.mode==='talk'){var s=C.suspects[S.tab];if(s.apron&&S.flags.apron&&!S.found.c_stain)examineApron();else openTray('present')}
+  else if(S.mode==='talk'){var s=C.suspects[S.tab],ex=extraAction(s);if(ex)doExtra(ex);else openTray('present')}
   else if(S.mode==='logic'){if(S.phase==='chain')judgeChain();else if(S.phase==='elim')judgeElim();else doAccuse()}
 }
 
@@ -279,13 +280,16 @@ function inspect(){
   if(c.locked){sBad();rightScene('<div class="card"><div class="who">🔒 '+esc(c.n)+'</div><p style="margin:0">'+c.t+'</p></div>');return}
   var isNew=addClue(sp.id);
   drawFound();setLens(S.lens.x,S.lens.y);
+  /* 조사하면 딸려 나오는 것들 — 사건 파일이 단서에 선언한다(예전엔 c_print·c_tub 이 코드에 박혀 있었다)
+       follow: {give, who, voice, say}  → 조사 순간 다른 카드(증언)가 추가되고 그 사람이 한 줄 말한다
+       note: html                       → 설명 아래 덧붙이는 글 */
   var extra='',after=null;
-  if(sp.id==='c_print'){
-    if(addClue('t_wiped',true)){extra+='<div class="say" id="sc-sheep"><b>양 아주머니</b> <span></span><br><span class="muted">→ 증언 카드가 수첩에 추가됐어요.</span></div>';
-      after=function(){typeHTML(document.querySelector('#sc-sheep span'),'"창턱요? 어제 저녁에 닦았는데요?"','sheep')}}
-    extra+='<div class="say"><b>발자국 감정</b> 길이 3cm · 발가락 5개. 너구리(6cm)도, 다람쥐(발가락 4개)도 아니에요. …이 크기라면 두더지? <span class="muted">— 두더지는 용의자 목록에 없어요.</span></div>';
+  var f=c.follow;
+  if(f&&f.give&&addClue(f.give,true)){
+    extra+='<div class="say" id="sc-follow"><b>'+esc(f.who||'')+'</b> <span></span><br><span class="muted">→ 증언 카드가 수첩에 추가됐어요.</span></div>';
+    after=function(){var el=document.querySelector('#sc-follow span');if(el)typeHTML(el,f.say||'',f.voice||'narr')};
   }
-  if(sp.id==='c_tub')extra+='<div class="muted" style="margin-top:6px">수첩의 증언 「통은 둘이 든다」와 같은 뜻이에요.</div>';
+  if(c.note)extra+=c.note;
   rightScene('<div class="card"><div class="who">'+(isNew?mface('sp'):mface('def'))+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div><p style="margin:0" id="sc-desc"></p></div>'+extra);
   typeHTML($('#sc-desc'),c.t,isNew?'mango':null,after);
   if(count()>=8&&!S.flags.hint8){S.flags.hint8=true;toast('단서가 많이 모였어요. 심문과 추리 탭도 써 보세요')}
@@ -293,7 +297,8 @@ function inspect(){
 function rightScene(html){
   var base='<p class="muted" style="margin:0 0 8px">확대경을 끌어 살펴보고, 이름표가 뜨면 <b>조사하기</b>를 누르세요. 조사한 곳은 ✓로 표시돼요.</p>';
   $('#rscroll').innerHTML=base+(html||'<div class="card" style="background:#fff8e7"><div class="who">망고의 메모</div><p style="margin:0;font-size:13px" id="sc-memo"></p></div>');
-  if(!html)typeHTML($('#sc-memo'),'앞문은 잠겨 있었고, 뒷문은 열려 있었다. 묵은 어디로, 누가, 몇 명이서 가져갔을까. 하나씩 확인하자.',S.flags.memoSaid?null:'mango'),S.flags.memoSaid=true;
+  /* 현장 첫 화면의 망고 메모 — 사건 파일의 memo (없으면 일반 문장) */
+  if(!html)typeHTML($('#sc-memo'),C.memo||'하나씩 확인하자. 단서가 말해 주는 것만 믿는다.',S.flags.memoSaid?null:'mango'),S.flags.memoSaid=true;
   var mm=$('#rscroll').querySelector('.card .who');
   if(mm&&/망고의 메모/.test(mm.textContent))mm.insertAdjacentHTML('afterbegin',mface('def'));
 }
@@ -335,7 +340,12 @@ function renderTalk(){
   updateAct();
 }
 function speakerOf(html){var m=/^<b>([^<]+)<\/b>/.exec(html);if(!m)return 'narr';var nm=m[1];
-  if(nm.indexOf('망고')>=0)return 'mango';if(nm.indexOf('양')>=0)return 'sheep';if(nm.indexOf('콩순')>=0)return 'kongsun';if(nm.indexOf('콩이')>=0)return 'kongi';if(nm.indexOf('도토')>=0)return 'doto';if(nm.indexOf('모리')>=0)return 'mori';return 'narr'}
+  if(nm.indexOf('망고')>=0)return 'mango';
+  /* 사건 파일의 인물 이름으로 목소리를 찾는다(예전엔 사건 1 인물만 박혀 있었다) */
+  var hit=null;(C.suspectOrder||[]).forEach(function(id){if(!hit&&nm.indexOf(C.suspects[id].name)>=0)hit=id});
+  if(hit)return hit;
+  if(C.brief&&C.brief.who&&nm.indexOf(C.brief.who)>=0)return C.brief.sym||'narr';
+  if(nm.indexOf('양')>=0)return 'sheep';return 'narr'}
 function say(html,silent){S.flags['say_'+S.tab]='<div class="say">'+html+'</div>';var el=$('#talk-say');if(!el)return;
   if(silent){el.innerHTML=S.flags['say_'+S.tab];return}
   el.innerHTML='<div class="say" id="say-live"></div>';typeHTML($('#say-live'),html,speakerOf(html))}
@@ -344,7 +354,7 @@ function pickLine(id){
   if(typers.length)return; // 말하는 중엔 잠시 기다리기 (화면을 누르면 바로 끝남)
   sTap();
   if(L.gives){var got=addClue(L.gives);S.sel=null;renderTalk();say((got?'<b>수첩에 기록</b> — ':'')+C.clues[L.gives].t,true);if(got)toast('증언 카드가 수첩에 추가됐어요');return}
-  if(L.flag&&!L.sus){S.flags[L.flag]=true;S.sel=null;renderTalk();say('<b>망고</b> "…콩순이 앞치마를? 그래, 한번 보자."');updateAct();return}
+  if(L.flag&&!L.sus){S.flags[L.flag]=true;S.sel=null;renderTalk();say(L.say||'<b>망고</b> "…그래, 한번 보자."');updateAct();return}
   var active=L.sus&&(!L.needs||S.flags[L.needs]);
   if(!active){sNo();S.sel=null;renderTalk();say('<b>망고</b> "…그 말은 이상한 점이 없어 보이는데."');return}
   S.sel=id;renderTalk();say('<b>수상한 말을 골랐어요.</b> 아래 「단서 들이대기」에서 반박할 단서를 고르세요.',true);
@@ -355,25 +365,36 @@ function present(clueId){
   var hit=L.hit&&L.hit[clueId];
   if(hit&&!hit.partial){
     sSting();if(hit.eyes)s.eyes=hit.eyes;if(hit.flag)S.flags[hit.flag]=true;if(hit.unlock)S.flags[hit.unlock]=true;
+    /* 반박에 성공해야 나오는 단서는 hit.give 로 준다 — 사건 파일이 정한다 */
+    var gave=hit.give&&addClue(hit.give);
     S.sel=null;renderTalk();
-    say('<b>망고</b> "잠깐. 「'+C.clues[clueId].n.replace(/^[^:]+: /,'')+'」 — 이건 어떻게 설명하죠?"<br>'+hit.say);
-    if(hit.unlock==='k4')setTimeout(function(){toast('콩이가 새로운 말을 했어요')},1800);
-    if(hit.flag==='s2')setTimeout(function(){toast('콩순이가 사실상 인정했어요. 추리 탭에서 사슬을 완성하세요')},2200);
+    say('<b>망고</b> "잠깐. 「'+C.clues[clueId].n.replace(/^[^:]+: /,'')+'」 — 이건 어떻게 설명하죠?"<br>'+hit.say+
+        (gave?'<br><span class="muted">→ 새 카드가 수첩에 들어갔어요.</span>':''));
+    if(hit.toast)setTimeout(function(){toast(hit.toast)},1800);
   }else if(hit&&hit.partial){
-    sNo();renderTalk();say(hit.say+'<br><span class="muted">가까워요. 뒷문과 직접 이어지는 단서가 필요해요.</span>');
+    sNo();renderTalk();say(hit.say+'<br><span class="muted">'+(hit.hint||'가까워요. 조금 더 직접 이어지는 단서가 필요해요.')+'</span>');
   }else{
     sBad();burn();S.rebutErr++;renderTalk();
     say('<b>'+esc(s.name)+'</b> "그건 저랑 상관없는데요?"'+(S.lamps?'':' <span class="muted">(등불을 다 썼어요)</span>'));
   }
 }
-function examineApron(){
+/* 인물의 extra: {label, needFlag, give, say} — 반박에 성공해 needFlag 가 서면
+   행동 단추가 뜨고, 누르면 give 단서를 준다. 사건 1의 「앞치마 살펴보기」가 이 형태다. */
+function extraAction(s){
+  var e=s&&s.extra;if(!e)return null;
+  if(e.needFlag&&!S.flags[e.needFlag])return null;
+  if(e.give&&S.found[e.give])return null;
+  return e;
+}
+function doExtra(e){
   sTap();
-  if(addClue('c_stain')){S.flags.c_stain_found=true;
-    cancelTyper();
-    $('#left').innerHTML='<div class="portrait"><svg viewBox="30 110 90 70"><use href="#rc-apron"></use><circle cx="80" cy="152" r="16" fill="none" stroke="#5b5a63" stroke-width="3"/></svg></div>';
-    say('<b>망고</b> 앞치마를 살펴본다… '+C.clues.c_stain.t+'<br><span class="muted">수첩에 기록됐어요. 콩순이의 말 중 하나가 수상해졌어요.</span>');
-    setTimeout(function(){if(S.mode==='talk'&&S.tab==='kongsun'){var keep=S.flags.say_kongsun||'';renderTalk();say(keep.replace(/^<div class="say">|<\/div>$/g,''),true)}},3200);
-  }
+  if(!addClue(e.give)){updateAct();return}
+  S.flags[e.give+'_found']=true;
+  cancelTyper();
+  if(e.art)$('#left').innerHTML=e.art;
+  say('<b>망고</b> '+(e.say||'살펴본다…')+' '+C.clues[e.give].t+
+      '<br><span class="muted">수첩에 기록됐어요.</span>');
+  if(e.back)setTimeout(function(){if(S.mode==='talk'){renderTalk()}},3200);
   updateAct();
 }
 
@@ -381,7 +402,8 @@ function examineApron(){
 function cardHTML(id,pressed,clickable){
   var c=C.clues[id],got=!!S.found[id];
   var cls='clue'+(c.testi?' testi':'')+(c.locked&&!got?' locked':'');
-  var inner=clueIcon(c,got)+(got?esc(c.n):(c.locked?'🔒 지문':'???'));
+  /* 잠긴 카드에 무엇이라 적을지는 사건 파일이 정한다(예전엔 「지문」이 박혀 있었다) */
+  var inner=clueIcon(c,got)+(got?esc(c.n):(c.locked?'🔒 '+esc(c.lockName||c.n||'???'):'???'));
   if(clickable)return '<button class="'+cls+'" data-c="'+id+'" aria-pressed="'+(!!pressed)+'"'+(got?'':' disabled')+'>'+inner+'</button>';
   return '<div class="'+cls+'">'+inner+'</div>';
 }
@@ -505,7 +527,8 @@ function say2(html){
 /* ---------- 2단계: 소거 ---------- */
 function renderElim(){
   var h='<div class="chain" id="chain">';
-  h+='<div class="concl small">지금까지: 밖에서 들어온 사람은 없고, 통을 옮긴 사람은 <b>둘 이상</b>이며, 그 시각 안에 있던 사람은 <b>콩이와 콩순이</b>뿐이다.</div>';
+  /* 추리를 통과한 뒤 소거 화면 머리에 붙는 요약 — 사건 파일의 elimIntro */
+  if(C.elimIntro)h+='<div class="concl small">지금까지: '+C.elimIntro+'</div>';
   C.elim.forEach(function(e,i){
     var v=S.elim[e.id],wrong=S.wrongSet&&S.wrongSet.indexOf(i)>=0;
     h+='<button class="link step'+(v!=null?' done':'')+(wrong?' bad':'')+(S.open===i?' open':'')+'" data-s="'+i+'">'+
@@ -616,7 +639,7 @@ function accuse(){
   $('#solve-t').innerHTML='';$('#solve-sheep').innerHTML='';
   var i=0;(function pop(){if(i<star){sp[i].classList.add('on');beep([523+i*130],.14,'triangle',.1);i++;setTimeout(pop,260)}
     else{for(var k=star;k<3;k++)sp[k].classList.add('on');
-      setTimeout(function(){typeHTML($('#solve-t'),C.solve.text,'narr',function(){typeHTML($('#solve-sheep'),C.solve.sheep,'sheep')},14)},200)}})();
+      setTimeout(function(){typeHTML($('#solve-t'),C.solve.text,'narr',function(){typeHTML($('#solve-sheep'),C.solve.sheep,C.solve.voice||'sheep')},14)},200)}})();
 }
 
 /* ================= 버튼 ================= */
@@ -732,6 +755,7 @@ function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle
 
 function refreshTitle(){
   var d=Save.load(), box=$('#resume');
+  var eb=$('#title-eyebrow');if(eb)eb.textContent='시험판 9 · 사건 '+(C.no||1)+(C.title?' 「'+C.title+'」':'');
   applyCover();applyArt();syncFullUI();
   if(!box)return;
   if(d){box.hidden=false;$('#resume-when').textContent=Save.agoText(d.t)}
@@ -772,7 +796,7 @@ function bindTitle(){
 
 /* ================= 화면 버튼 ================= */
 function bindGame(){
-  $('#btn-accept').addEventListener('click',function(){sTap();sPage();show('invest');lamps();updateDot();setMode('scene');toast('아주머니의 증언 '+(C.startClues||[]).length+'장이 수첩에 들어갔어요')});
+  $('#btn-accept').addEventListener('click',function(){sTap();sPage();show('invest');lamps();updateDot();setMode('scene');var n=(C.startClues||[]).length;if(n)toast((C.brief&&C.brief.who?C.brief.who+'의 ':'')+'증언 '+n+'장이 수첩에 들어갔어요')});
   $('#btn-pin').addEventListener('click',function(){sFan();buzz([20,30,20,30,60]);show('s-board')});
   $('#btn-reset').addEventListener('click',function(){sTap();newGame()});
   $('#t-sound').addEventListener('click',function(){setSfx(!A.sfx);if(A.sfx)sTap()});
@@ -795,13 +819,18 @@ function boot(){
   show('s-title');
 }
 
-fetch('data/case-01.json',{cache:'no-cache'})
+/* 어느 사건을 열지: 주소 뒤에 ?case=02 를 붙이면 그 사건이 열린다.
+   아무것도 없으면 사건 1. 저장은 사건별로 나눈다(Save 가 CASE 를 본다). */
+var CASE=(location.search.match(/[?&]case=([0-9]{1,2})/)||[])[1];
+CASE=CASE?('0'+CASE).slice(-2):'01';
+window.MANGO_CASE=CASE;
+fetch('data/case-'+CASE+'.json',{cache:'no-cache'})
   .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
   .then(function(j){C=j;document.title='탐정 망고 · '+(j.title||'첫 사건');
       return probeCaseArt().then(boot,boot)})
   .catch(function(e){
     document.body.innerHTML='<div style="padding:24px;font-family:system-ui;line-height:1.7">'+
-      '<h2>사건 파일을 못 읽었어요</h2><p>data/case-01.json 을 불러오지 못했습니다. '+
+      '<h2>사건 파일을 못 읽었어요</h2><p>data/case-'+CASE+'.json 을 불러오지 못했습니다. '+
       '인터넷 주소(https://…)로 열어야 동작해요. 파일을 컴퓨터에 내려받아 직접 열면 브라우저가 막습니다.</p>'+
       '<p style="color:#888">'+esc(e.message)+'</p></div>';
   });

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """나뉜 파일들을 단일 HTML 하나로 합친다.
 링크 없이 파일 하나만 주고받아야 할 때 쓴다(메일 첨부, 오프라인 시연).
-  python3 build-single.py  ->  dist/mango-single.html
+  python3 build-single.py        ->  dist/mango-single.html      (사건 1)
+  python3 build-single.py 02     ->  dist/mango-single-02.html   (사건 2)
 """
-import json, os, re, pathlib
+import json, os, re, pathlib, sys
+CASE = (sys.argv[1] if len(sys.argv)>1 else '01').zfill(2)
 root = pathlib.Path(__file__).parent
 read = lambda p: (root/p).read_text(encoding='utf-8')
 
 html = read('index.html')
 css  = read('css/style.css')
-case = json.loads(read('data/case-01.json'))
+case = json.loads(read('data/case-%s.json' % CASE))
 audio= read('js/audio.js')
 save = read('js/save.js')
 game = read('js/game.js')
@@ -30,13 +32,15 @@ for fn in ['save','saveNow','load','clear','has','loadPrefs','savePrefs','makeCo
 save = save.replace('SaveMod_SaveMod_','SaveMod_')
 
 # 사건 데이터는 fetch 대신 그대로 박아 넣는다
-game = re.sub(r"fetch\('data/case-01\.json'[\s\S]*?\}\);\s*$",
+game = re.sub(r"fetch\('data/case-'\+CASE\+'\.json'[\s\S]*?\}\);\s*$",
               "C=__CASE__;document.title='탐정 망고 · '+(C.title||'첫 사건');boot();\n", game)
 bundle = "(function(){\n'use strict';\nvar __CASE__=" + json.dumps(case, ensure_ascii=False) + ";\n" \
        + strip(audio) + "\n" + save + "\n" + game + "\n})();"
 
-out = html.replace('<link rel="stylesheet" href="css/style.css">', '<style>\n'+css+'\n</style>')
-out = out.replace('<script type="module" src="js/game.js"></script>', '<script>\n'+bundle+'\n</script>')
+# 주소 뒤의 판 번호(?v=…)가 붙어 있어도 잡히게 정규식으로
+out = re.sub(r'<link rel="stylesheet" href="css/style\.css[^"]*">', lambda m: '<style>\n'+css+'\n</style>', html)
+out = re.sub(r'<script type="module" src="js/game\.js[^"]*"></script>', lambda m: '<script>\n'+bundle+'\n</script>', out)
 (root/'dist').mkdir(exist_ok=True)
-(root/'dist/mango-single.html').write_text(out, encoding='utf-8')
-print('dist/mango-single.html', len(out), '바이트')
+name = 'dist/mango-single%s.html' % ('' if CASE=='01' else '-'+CASE)
+(root/name).write_text(out, encoding='utf-8')
+print(name, len(out), '바이트')
