@@ -4,7 +4,9 @@
    - 소리 설정은 진행과 따로 보관한다(새로 시작해도 유지)
    - 백업 코드: 저장 내용을 문자열로 뽑아 다른 기기에 옮긴다 */
 
-var KEY='mango.save.v1', PREF='mango.pref.v1', VER=1;
+var PREF='mango.pref.v1', VER=1;
+/* 저장 칸은 사건별로 나눈다. 사건 1은 예전 이름을 그대로 써서 이미 하던 저장이 남게 한다. */
+function KEY(){var c=(typeof window!=='undefined'&&window.MANGO_CASE)||'01';return c==='01'?'mango.save.v1':'mango.save.v1.c'+c}
 
 /* 저장할 것만 추린다. 화면에 잠깐 쓰는 값(lens 위치, 열어 둔 단계 따위)은 뺀다. */
 function pack(S){
@@ -12,7 +14,7 @@ function pack(S){
     lamps:S.lamps, found:S.found, flags:S.flags, tab:S.tab,
     steps:S.steps, elim:S.elim, proofs:S.proofs, phase:S.phase,
     tries:S.tries, elimTries:S.elimTries, accErr:S.accErr, rebutErr:S.rebutErr,
-    eyes:{kongi:S._eyes&&S._eyes.kongi, kongsun:S._eyes&&S._eyes.kongsun}};
+    eyes:S._eyes||{}};   /* 인물별 표정 — 예전엔 콩이·콩순이만 박혀 있었다 */
 }
 
 var timer=null;
@@ -20,22 +22,22 @@ function save(S){
   if(!S||S.screen==='s-title')return;          // 표지에서는 저장하지 않는다
   clearTimeout(timer);
   timer=setTimeout(function(){
-    try{localStorage.setItem(KEY,JSON.stringify(pack(S)))}catch(e){}
+    try{localStorage.setItem(KEY(),JSON.stringify(pack(S)))}catch(e){}
   },500);
 }
 function saveNow(S){
   clearTimeout(timer);
-  try{localStorage.setItem(KEY,JSON.stringify(pack(S)))}catch(e){}
+  try{localStorage.setItem(KEY(),JSON.stringify(pack(S)))}catch(e){}
 }
 function load(){
   try{
-    var raw=localStorage.getItem(KEY); if(!raw)return null;
+    var raw=localStorage.getItem(KEY()); if(!raw)return null;
     var d=JSON.parse(raw);
     if(!d||d.v!==VER)return null;              // 판이 다르면 버린다(마이그레이션 자리)
     return d;
   }catch(e){return null}
 }
-function clear(){clearTimeout(timer);try{localStorage.removeItem(KEY)}catch(e){}}
+function clear(){clearTimeout(timer);try{localStorage.removeItem(KEY())}catch(e){}}
 function has(){return !!load()}
 
 /* 소리 설정은 진행과 별개 */
@@ -63,7 +65,7 @@ function applyCode(code){
     for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
     var d=JSON.parse(new TextDecoder().decode(bytes));
     if(!d||d.v!==VER)return {ok:false,why:'이 코드는 다른 판에서 만든 것이에요.'};
-    localStorage.setItem(KEY,JSON.stringify(d));
+    localStorage.setItem(KEY(),JSON.stringify(d));
     return {ok:true};
   }catch(e){return {ok:false,why:'코드를 읽을 수 없어요. 빠진 글자가 없는지 확인해 주세요.'}}
 }
