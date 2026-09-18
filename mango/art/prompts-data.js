@@ -153,5 +153,22 @@ export var GROUPS = [
     { file:"clue-say-wiped.png", label:"증언 · 창턱은 어제 닦았다",
       p:"A rounded speech bubble outline containing a cloth wiping a window ledge with a small shine mark. "+STYLE.icon }
   ]
+},
+
+/* ───────────────────── 6. 사건 2 「찢어진 축제 포스터」 ───────────────────── */
+{
+  title: "6. 사건 2 — 도서관 앞 게시판 (배경 1 + 단서 아이콘 10)",
+  note: "사건 2는 「사건 아닌 사건」이다 — 아무도 찢지 않았고 바람이 찢었다. 그림이 그 결론과 어긋나면 게임이 거짓말을 한다. 특히 ① 젖은 흙에 발자국이 없어야 하고 ② 낙엽과 조각이 같은 한쪽으로만 몰려야 하고 ③ 압정 구멍은 위에만 둘이어야 하고 ④ 옆 게시판 포스터는 「광장」 자리만 네모나게 오려져 있어야 한다. 새 인물은 없다.",
+  items: [
+    { file:"scene-02-board.webp", label:"현장 — 도서관 앞 게시판", size:"1440×720 → make-bg.py 로 2:1 · WebP 200KB 이하",
+      note:"조사 지점 9곳이 이 그림 위에 얹힌다. 좌표는 그림을 받은 뒤 art/spots.html 로 다시 찍는다(결정 17).",
+      p:"A village library entrance seen from the front in the early morning after a night of rain. On the left a stone library wall with a window and a wooden book-return box. In the middle a large wooden notice board on two posts: one festival poster on it is TORN — only the upper part is still attached, and there are exactly TWO drawing-pin holes at its TOP corners and NO pins at the bottom. Scattered on the ground to the RIGHT of the board lie several torn paper scraps, and fallen leaves are heaped ON THE SAME RIGHT SIDE ONLY, as if one steady wind pushed everything one way. Directly in front of the board is a patch of bare wet earth that is completely SMOOTH — absolutely no footprints of any kind anywhere on it. On the right a second smaller notice board holds two intact posters, each with one clean rectangular hole neatly cut out of it with a blade. A bare tree leans slightly to the right, a red postbox and a bicycle rack stand at the edges. EVERY poster and every sign in this picture is BLANK — plain coloured paper with simple shapes and coloured bands only. Do NOT write or paint any letters, words, numbers or lettering of any kind anywhere in the picture, in any language. "+STYLE.paint },
+
+    { file:"c2-icons-A.png", label:"사건 2 아이콘 5장 — 한 장에 나란히", size:"자르기: art/cut-icons.py <파일> c2-pieces,c2-pins,c2-leaves,c2-scatter,c2-mud",
+      p:"Draw FIVE separate small object icons in ONE image, side by side in a single row, evenly spaced, in this order:\n\n(1) ONE single rectangular paper poster lying flat, broken into five pieces that have been pushed back together, the join lines fanning out WIDE toward the bottom like an open fan — clearly not one straight hand-torn line. The poster is BLANK apart from a coloured band across the top and a few plain ruled lines. It is one poster, not a fan of tickets.\n\n(2) A corner of a wooden notice board with exactly TWO small drawing pins at the TOP corners and two empty pin holes below them.\n\n(3) A small heap of fallen autumn leaves all blown to ONE side, leaning the same direction.\n\n(4) Several small torn paper scraps lying in a line, all drifted to ONE side.\n\n(5) A patch of smooth wet brown earth with a few raindrop dimples and NO footprints at all.\n\nDraw each icon SMALL, filling only the middle of its own fifth of the picture, so there is a wide band of empty cream background between them: no icon may touch, overlap or reach into a neighbouring one, and the gap between two icons must be at least as wide as one icon. Put all five in ONE straight horizontal row, never two rows. Do NOT write any letters, words or numbers anywhere, in any language. "+STYLE.icon },
+
+    { file:"c2-icons-B.png", label:"사건 2 아이콘 5장 — 한 장에 나란히 (증언 3장은 말풍선)", size:"자르기: art/cut-icons.py <파일> c2-tape,c2-cut,c2-say-wind,c2-say-pin,c2-say-noon",
+      p:"Draw FIVE separate small object icons in ONE image, side by side in a single row, evenly spaced, in this order:\n\n(1) A small empty cloth pocket turned slightly inside out, with no pins left in it.\n\n(2) A festival poster with ONE clean rectangular hole cut out of its middle with a blade — the cut edges perfectly straight, quite unlike a tear.\n\n(3) A simple speech bubble with a bent tree branch and three curved wind lines inside it.\n\n(4) A simple speech bubble with exactly two drawing pins inside it.\n\n(5) A simple speech bubble with a small sun and an undamaged poster inside it.\n\nDraw each icon SMALL, filling only the middle of its own fifth of the picture, so there is a wide band of empty cream background between them: no icon may touch, overlap or reach into a neighbouring one, and the gap between two icons must be at least as wide as one icon. No letters anywhere. "+STYLE.icon }
+  ]
 }
 ];
