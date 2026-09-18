@@ -5,7 +5,45 @@ import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
         blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js';
 import * as Save from './save.js';
 
-var C=null;                                   // 현재 사건 데이터
+var C=null;
+
+/* ================= 그림 자산 ================= */
+/* data/case-NN.json 이 img 이름을 적으면 img/ 에서 찾아 쓰고,
+   파일이 없으면 지금 쓰는 SVG 그림으로 그대로 돌아간다. 그림을 나중에 넣어도 코드는 그대로. */
+var ART={};                                   // 경로 -> true(있음) / false(없음)
+function artURL(f){return 'img/'+f}
+function artOK(f){return !!(f&&ART[f])}
+function probe(f){return new Promise(function(done){
+  if(!f||f in ART)return done();
+  var im=new Image();
+  im.onload=function(){ART[f]=true;done()};
+  im.onerror=function(){ART[f]=false;done()};
+  im.src=artURL(f)+'?v=1';
+})}
+/* 사건 파일이 선언한 그림을 한 번에 확인한다. 없는 건 조용히 넘어간다. */
+function probeCaseArt(){
+  var list=[];
+  if(C.coverImg)list.push(C.coverImg);
+  if(C.sceneImg)list.push(C.sceneImg);
+  C.suspectOrder.forEach(function(id){
+    var s=C.suspects[id];if(!s.img)return;
+    ['def','fl','sp','ang'].forEach(function(e){list.push(s.img+'-'+e+'.png')});
+  });
+  Object.keys(C.clues).forEach(function(k){if(C.clues[k].iconImg)list.push(C.clues[k].iconImg)});
+  return Promise.all(list.map(probe));
+}
+/* 표정 파일이 없으면 기본 표정으로, 그것도 없으면 SVG 로 */
+function faceFile(s,ex){
+  if(!s.img)return null;
+  var f=s.img+'-'+(ex||'def')+'.png';
+  if(artOK(f))return f;
+  f=s.img+'-def.png';
+  return artOK(f)?f:null;
+}
+function clueIcon(c,got){
+  if(got&&artOK(c.iconImg))return '<img class="cicon" src="'+artURL(c.iconImg)+'" alt="">';
+  return '<svg viewBox="0 0 28 28"><use href="'+(got?c.icon:'#i-lock')+'"></use></svg>';
+}                                   // 현재 사건 데이터
 var $=function(s){return document.querySelector(s)};
 var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
 
@@ -142,9 +180,15 @@ function onAct(){
 
 /* ================= 현장 ================= */
 var LENS_R=40;
+/* 확대경이 <use href="#art"> 로 확대하므로, 그림을 써도 id는 art 그대로 유지한다. */
+function artLayer(){
+  if(artOK(C.sceneImg))
+    return '<g id="art"><image href="'+artURL(C.sceneImg)+'" x="0" y="0" width="720" height="360" preserveAspectRatio="xMidYMid slice"/></g>';
+  return C.sceneSvg;
+}
 function sceneSVG(){return ''+
 '<svg id="scene" viewBox="0 0 720 360"><defs><clipPath id="lc"><circle id="lcc" cx="360" cy="180" r="'+LENS_R+'"/></clipPath></defs>'+
-C.sceneSvg+
+artLayer()+
 '<g clip-path="url(#lc)"><g id="mag"><use href="#art"/></g></g>'+
 '<g id="lens"><circle id="lr1" cx="360" cy="180" r="'+LENS_R+'" fill="none" stroke="#5b5a63" stroke-width="6"/><circle id="lr2" cx="360" cy="180" r="'+LENS_R+'" fill="none" stroke="#e8f4f8" stroke-width="1.8"/><path id="lh" d="M388 208 l26 26" stroke="#7a5233" stroke-width="11" stroke-linecap="round"/></g>'+
 '<g id="found"></g></svg><div class="lenslabel" id="lenslabel"></div>';}
@@ -205,6 +249,8 @@ function rightScene(html){
 /* ================= 심문 ================= */
 function portraitHTML(id){
   var s=C.suspects[id],h='';
+  var f=faceFile(s,s.eyes);
+  if(f)return '<div class="portrait"><img class="pim" src="'+artURL(f)+'" alt=""></div>';
   if(s.sym==='rc'){h='<use href="#rc-head"></use><use href="#rc-eye-'+(s.eyes||'def')+'"></use>';if(s.ribbon)h+='<use href="#rc-ribbon"></use>';if(s.apron)h+='<use href="#rc-apron"></use>'}
   else h='<use href="#'+s.sym+'"></use>';
   return '<div class="portrait"><svg viewBox="0 0 150 '+(s.apron?180:130)+'">'+h+'</svg></div>';
@@ -283,7 +329,7 @@ function examineApron(){
 function cardHTML(id,pressed,clickable){
   var c=C.clues[id],got=!!S.found[id];
   var cls='clue'+(c.testi?' testi':'')+(c.locked&&!got?' locked':'');
-  var inner='<svg viewBox="0 0 28 28"><use href="'+(got?c.icon:'#i-lock')+'"></use></svg>'+(got?esc(c.n):(c.locked?'🔒 지문':'???'));
+  var inner=clueIcon(c,got)+(got?esc(c.n):(c.locked?'🔒 지문':'???'));
   if(clickable)return '<button class="'+cls+'" data-c="'+id+'" aria-pressed="'+(!!pressed)+'"'+(got?'':' disabled')+'>'+inner+'</button>';
   return '<div class="'+cls+'">'+inner+'</div>';
 }
@@ -337,7 +383,7 @@ function renderStepPanel(){
   var i=S.open,c=C.steps[i],st=S.steps[i];
   var h='<div class="card"><div class="who">'+(i+1)+'. '+esc(c.t)+'</div><p style="margin:0;font-size:13px" id="q-live"></p></div>';
   h+='<div class="pick"><div class="pl">근거가 되는 단서 <small>'+st.clues.length+'/'+c.slots+'</small></div><div class="clues">';
-  st.clues.forEach(function(id){h+='<button class="clue picked-c" data-rm="'+id+'"><svg viewBox="0 0 28 28"><use href="'+C.clues[id].icon+'"></use></svg>'+esc(C.clues[id].n)+'<span class="x">빼기</span></button>'});
+  st.clues.forEach(function(id){h+='<button class="clue picked-c" data-rm="'+id+'">'+clueIcon(C.clues[id],true)+esc(C.clues[id].n)+'<span class="x">빼기</span></button>'});
   if(st.clues.length<c.slots)h+='<button class="clue add" id="add-clue">＋<br>단서 고르기</button>';
   h+='</div></div>';
   h+='<div class="pick"><div class="pl">그래서 무엇이 증명되나요?</div>';
@@ -585,6 +631,7 @@ function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle
 
 function refreshTitle(){
   var d=Save.load(), box=$('#resume');
+  applyCover();
   if(!box)return;
   if(d){box.hidden=false;$('#resume-when').textContent=Save.agoText(d.t)}
   else box.hidden=true;
@@ -640,10 +687,18 @@ function boot(){
 
 fetch('data/case-01.json',{cache:'no-cache'})
   .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
-  .then(function(j){C=j;document.title='탐정 망고 · '+(j.title||'첫 사건');boot()})
+  .then(function(j){C=j;document.title='탐정 망고 · '+(j.title||'첫 사건');
+      return probeCaseArt().then(boot,boot)})
   .catch(function(e){
     document.body.innerHTML='<div style="padding:24px;font-family:system-ui;line-height:1.7">'+
       '<h2>사건 파일을 못 읽었어요</h2><p>data/case-01.json 을 불러오지 못했습니다. '+
       '인터넷 주소(https://…)로 열어야 동작해요. 파일을 컴퓨터에 내려받아 직접 열면 브라우저가 막습니다.</p>'+
       '<p style="color:#888">'+esc(e.message)+'</p></div>';
   });
+
+/* 표지 그림이 있으면 첫 화면 배경으로 깔고, 없으면 지금 색 배경 그대로 */
+function applyCover(){
+  var t=$('#s-title');if(!t)return;
+  if(artOK(C&&C.coverImg)){t.classList.add('has-cover');t.style.setProperty('--cover','url("'+artURL(C.coverImg)+'")')}
+  else t.classList.remove('has-cover');
+}
