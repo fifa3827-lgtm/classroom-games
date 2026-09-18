@@ -196,10 +196,18 @@
   image-rendering:auto;filter:drop-shadow(0 3px 0 rgba(74,52,40,.10))}
 .clue img.cicon,.picked-c img.cicon{width:28px;height:28px;object-fit:contain;
   flex:0 0 auto;border-radius:5px}
-#s-title.has-cover{background-image:var(--cover);background-size:cover;
+#s-title.has-cover{background-size:cover;
   background-position:center;background-repeat:no-repeat}
 #s-title.has-cover .card,#s-title.has-cover .resume{
   background:rgba(251,247,238,.93);backdrop-filter:blur(2px)}
+/* 표지 그림은 오른쪽 절반이 비어 있고 밝게(복잡도 6·밝기 186) 그려져 있어,
+   글을 그림 위에 바로 올린다. 막을 씌우지 않는다 — 씌우면 그림이 죽는다.
+   바닥 돌은 어둡고 복잡해서 맨 아래 안내줄에만 옅은 안개를 깐다. */
+#s-title.has-cover{position:relative}
+#s-title.has-cover::after{content:"";position:absolute;left:0;right:0;bottom:0;height:22%;
+  pointer-events:none;
+  background:linear-gradient(to bottom,rgba(251,247,238,0),rgba(251,247,238,.72))}
+#s-title.has-cover>*{position:relative;z-index:1}
 
 /* ===== 망고 그림 ===== */
 .art.img{display:grid;place-items:center;padding:0}
