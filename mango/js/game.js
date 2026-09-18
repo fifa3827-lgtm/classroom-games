@@ -97,7 +97,7 @@ function typeHTML(el,html,voice,done,speed){
 function cancelTyper(el){typers.slice().forEach(function(t){if(!el||t.el===el)t.finish(true)})}
 function skipTypers(){if(typers.length){typers.slice().forEach(function(t){t.finish(true)});return true}return false}
 document.addEventListener('pointerdown',function(e){ // 아무 곳이나 누르면 대사가 바로 끝까지 나옴
-  if(typers.length&&!e.target.closest('.tab,.act,.snd,#t-sound,#t-music'))skipTypers();
+  if(typers.length&&!e.target.closest('.tab,.act,.snd,#t-sound,#t-music,#t-home,#t-full'))skipTypers();
 },true);
 
 
@@ -144,14 +144,27 @@ function fullOff(){
 }
 function isFull(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
 function syncFullUI(){
-  var b=$('#tg-full'),t=$('#full-tip');
-  if(!b)return;
   var can=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
-  b.hidden=!can; if(t)t.hidden=!can||isFull();
-  /* 전체 화면은 켜고 끄는 상태가 아니라 동작이다. aria-pressed 를 주면
-     .snd 규칙이 「눌리지 않음」으로 보고 흐리게+취소선을 그어, 못 쓰는 버튼처럼 보인다. */
-  b.innerHTML='<svg class="bi" viewBox="0 0 28 28"><use href="#i-expand"></use></svg> '+(isFull()?'전체 화면 끄기':'전체 화면');
+  var icon=isFull()?'#i-collapse':'#i-expand';
+  var b=$('#tg-full'),t=$('#full-tip');
+  if(b){
+    b.hidden=!can;
+    /* 전체 화면은 켜고 끄는 상태가 아니라 동작이다. aria-pressed 를 주면
+       .snd 규칙이 「눌리지 않음」으로 보고 흐리게+취소선을 그어, 못 쓰는 버튼처럼 보인다. */
+    b.innerHTML='<svg class="bi" viewBox="0 0 28 28"><use href="'+icon+'"></use></svg> '+(isFull()?'전체 화면 끄기':'전체 화면');
+  }
+  if(t)t.hidden=!can||isFull();
+  /* 위쪽 띠의 것 — 표지를 지나 들어온 뒤에도 언제든 켜고 끌 수 있어야 한다. */
+  var c=$('#t-full');
+  if(c){
+    c.hidden=!can;
+    c.title=isFull()?'전체 화면 끄기':'전체 화면';
+    c.innerHTML='<svg class="bi" viewBox="0 0 28 28"><use href="'+icon+'"></use></svg>';
+  }
 }
+/* 표지로 되돌아가기. show() 는 S.screen 을 먼저 바꾸므로 그 전에 저장해야
+   「이어서 하기」에 지금까지 한 것이 남는다. */
+function toTitle(){touch();show('s-title');refreshTitle()}
 
 /* ================= 수첩 ================= */
 function addClue(id,quiet){
@@ -718,6 +731,8 @@ function bindGame(){
   $('#t-sound').addEventListener('click',function(){setSfx(!A.sfx);if(A.sfx)sTap()});
   $('#t-music').addEventListener('click',function(){wake();setMusic(!A.music)});
   $('#t-lamp').addEventListener('click',lampHint);
+  $('#t-home').addEventListener('click',function(){sTap();toTitle()});
+  $('#t-full').addEventListener('click',function(){wake();sTap();if(isFull())fullOff();else fullOn();setTimeout(syncFullUI,300)});
   document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){sTap();setMode(b.dataset.mode)})});
   $('#act').addEventListener('click',onAct);
 }
