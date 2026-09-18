@@ -100,8 +100,8 @@ def eyes(im):
     return p
 
 
-def head_box(im):
-    """수염을 침식으로 걷어내고 머리 크기를 실측한다."""
+def head_raw(im):
+    """수염을 침식으로 걷어내고 머리 크기를 실측한다 (여백 없음)."""
     al = np.asarray(im.getchannel('A')) > 120
     er = ndimage.binary_erosion(al, np.ones((9, 9)))
     half = int(im.height * 0.62)
@@ -112,7 +112,15 @@ def head_box(im):
     sz = ndimage.sum(top, lab, range(1, n + 1))
     i = int(np.argmax(sz)) + 1
     ys, xs = np.nonzero(lab == i)
-    return (int(xs.min()) - 14, int(ys.min()) - 18, int(xs.max()) + 14, int(ys.max()) + 6)
+    return (int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max()))
+
+
+def head_box(im):
+    """얼굴 그림을 자를 네모 (귀가 잘리지 않게 여백을 둔다)."""
+    r = head_raw(im)
+    if r is None:
+        return None
+    return (r[0] - 14, r[1] - 18, r[2] + 14, r[3] + 6)
 
 
 def save(im, path, w):
@@ -153,10 +161,21 @@ def main():
     cx, cy = W / 2, H * 0.42
     print('기준 칸: %s (눈 간격 %.0f)' % (order[ref_i], D))
 
+    def place(p):
+        c = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        c.paste(p, ((W - p.width) // 2, (H - p.height) // 2))
+        return c
+
+    # 기준 칸을 먼저 정렬해 둔다 (눈 감은 칸이 이걸 보고 머리를 맞춘다)
+    rc = place(pads[ref_i])
+    e0 = eyes(rc)
+    mid0 = ((e0[0][0] + e0[1][0]) / 2, (e0[0][1] + e0[1][1]) / 2)
+    ref_canvas = rc.transform((W, H), Image.AFFINE,
+                              (1, 0, mid0[0] - cx, 0, 1, mid0[1] - cy), resample=Image.BICUBIC)
+
     norm = []
     for i, p in enumerate(pads):
-        canvas = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-        canvas.paste(p, ((W - p.width) // 2, (H - p.height) // 2))
+        canvas = place(p)
         e = eyes(canvas)
         if e:
             d = e[1][0] - e[0][0]
@@ -164,8 +183,19 @@ def main():
             mid = ((e[0][0] + e[1][0]) / 2, (e[0][1] + e[1][1]) / 2)
             print('  %-5s 배율 %.3f  이동 (%+.0f,%+.0f)' % (order[i], s, cx - mid[0], cy - mid[1]))
         else:
+            # 눈을 감은 표정(기쁨 등)은 머리 윤곽으로 맞춘다
+            hr, rr = head_raw(canvas), head_raw(ref_canvas)
+            if hr and rr:
+                s = ((rr[2] - rr[0]) / (hr[2] - hr[0]) + (rr[3] - rr[1]) / (hr[3] - hr[1])) / 2
+                mid = ((hr[0] + hr[2]) / 2, (hr[1] + hr[3]) / 2)
+                rmid = ((rr[0] + rr[2]) / 2, (rr[1] + rr[3]) / 2)
+                print('  %-5s 눈 감김 — 머리 윤곽으로 맞춤 (배율 %.3f)' % (order[i], s))
+                norm.append(canvas.transform((W, H), Image.AFFINE,
+                            (1 / s, 0, mid[0] - rmid[0] / s, 0, 1 / s, mid[1] - rmid[1] / s),
+                            resample=Image.BICUBIC))
+                continue
             s, mid = 1.0, (cx, cy)
-            print('  %-5s 눈 감김 — 기준 위치를 그대로 씁니다' % order[i])
+            print('  %-5s 눈 감김 — 머리도 못 찾아 기준 위치를 그대로 씁니다' % order[i])
         norm.append(canvas.transform((W, H), Image.AFFINE,
                                      (1 / s, 0, mid[0] - cx / s, 0, 1 / s, mid[1] - cy / s),
                                      resample=Image.BICUBIC))
