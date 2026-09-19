@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609190044';
-import * as Save from './save.js?v=2609190044';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191016';
+import * as Save from './save.js?v=2609191016';
 
 var C=null;   // 현재 사건 데이터
 
@@ -144,6 +144,11 @@ function fullOff(){
   try{(document.exitFullscreen||document.webkitExitFullscreen).call(document)}catch(e){}
 }
 function isFull(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
+/* 홈 화면에 추가해서 연 상태인가 (아이폰은 navigator.standalone) */
+function standalone(){
+  try{return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches
+        ||window.matchMedia('(display-mode: fullscreen)').matches}catch(e){return false}
+}
 function syncFullUI(){
   var can=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
   var icon=isFull()?'#i-collapse':'#i-expand';
@@ -155,6 +160,11 @@ function syncFullUI(){
     b.innerHTML='<svg class="bi" viewBox="0 0 28 28"><use href="'+icon+'"></use></svg> '+(isFull()?'전체 화면 끄기':'전체 화면');
   }
   if(t)t.hidden=!can||isFull();
+  /* 아이폰 사파리에는 전체 화면 기능 자체가 없다(아이패드엔 있다). 단추만 숨기면
+     아무 안내도 없이 사라지므로, 대신 「홈 화면에 추가」를 알려 준다.
+     이미 홈 화면에서 연 상태면 주소창이 없으니 안내하지 않는다. */
+  var hm=$('#home-tip');
+  if(hm)hm.hidden=can||standalone();
   /* 위쪽 띠의 것 — 표지를 지나 들어온 뒤에도 언제든 켜고 끌 수 있어야 한다. */
   var c=$('#t-full');
   if(c){
