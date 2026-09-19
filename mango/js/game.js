@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191634';
-import * as Save from './save.js?v=2609191634';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191737';
+import * as Save from './save.js?v=2609191737';
 
 var C=null;   // 현재 사건 데이터
 
@@ -122,12 +122,12 @@ var toastT;function toast(m){var el=$('#toast');el.textContent=m;el.classList.ad
 
 /* ================= 화면 전환 ================= */
 function show(id){
-  ['s-title','s-intro','s-brief','s-solve','s-board'].forEach(function(s){$('#'+s).hidden=(s!==id)});
+  ['s-title','s-cases','s-intro','s-brief','s-solve','s-board'].forEach(function(s){$('#'+s).hidden=(s!==id)});
   var inv=(id==='invest');
   $('#bar').hidden=!inv;$('#bodyx').hidden=!inv;$('#foot').hidden=!inv;
   S.screen=id;
   cancelTyper();
-  if(id==='s-title'||id==='s-intro'||id==='s-brief')setMood('calm');
+  if(id==='s-title'||id==='s-cases'||id==='s-intro'||id==='s-brief')setMood('calm');
   else if(id==='s-solve'||id==='s-board')setMood('resolve');
   if(id==='s-solve'||id==='s-board')Save.clear();     // 사건을 끝냈으면 이어하기는 지운다
   else touch();
@@ -881,10 +881,19 @@ function applyEpilogue(){
     if(nw)nw.innerHTML=b.when||'곧 열려요.';
     var ask=$('#board-ask');
     if(ask)ask.innerHTML=(b.ask||[]).map(function(q){return '<li>'+q+'</li>'}).join('');
+    /* 다음 사건의 열쇠말 — 기기 저장이 날아가도 이 말만 있으면 어디서든 다시 연다 */
+    var nx=null,list=seasonCases();
+    list.forEach(function(c){if(c.no===(C.no||1)+1)nx=c});
+    if(nt&&nx&&nx.key){
+      nw.innerHTML=(b.when||'곧 열려요.')+
+        '<br><span style="display:inline-block;margin-top:6px">사건 파일 <b>열쇠말</b> — '+
+        '<b style="font-size:16px;letter-spacing:.06em;color:var(--brick)">'+esc(nx.key)+'</b></span>'+
+        '<br><span class="muted" style="font-size:11px">다른 기기에서 열 때 <b>사건 목록</b>에 이 말을 넣으면 돼요. 적어 두세요.</span>';
+    }
   }
 }
 function accuse(){
-  sFan();applySolveArt();applyEpilogue();
+  sFan();Save.markDone(CASE);applySolveArt();applyEpilogue();
   var miss=(S.tries-1)+(S.elimTries-1)+S.accErr;   // 제출 실패 횟수
   var star=3;if(miss>=1||S.rebutErr>0||S.lamps<3)star=2;if(miss>=3||S.rebutErr>=2||S.lamps<=0)star=1;
   if(S.proofs.filter(Boolean).length===2&&star<3)star++;
@@ -1044,12 +1053,105 @@ function applyBriefArt(){
   var f=sym+'-def.png';
   if(artOK(f))box.innerHTML='<img class="pim" src="'+artURL(f)+'" alt="">';
 }
+/* ================= 사건 목록 =================
+   사건을 다 보여 주되 순서대로 풀기를 권한다. **막지는 않는다** —
+   기기 저장은 언제든 날아갈 수 있고(공용 태블릿, 아이폰 7일 규칙), 그때 아이가
+   게임을 못 하게 되면 안 된다. 잃는 것은 체크 표시뿐이어야 한다.
+   진짜 진도는 사건마다 주는 열쇠말이 들고 있다 — 그건 기기가 아니라 아이에게 붙는다. */
+var KEYWAIT=null;
+function seasonCases(){
+  if(SEASON&&SEASON.cases)return SEASON.cases;
+  return [{no:C.no||1,id:CASE,title:C.title||'',sub:''}];   // 시즌 표가 없으면 지금 사건만
+}
+function caseState(c,prog,list){
+  if(prog.done[c.id])return 'done';
+  if(c.no===1||prog.open[c.id])return 'open';
+  var prev=null;list.forEach(function(x){if(x.no===c.no-1)prev=x});
+  if(prev&&prog.done[prev.id])return 'open';
+  return 'lock';
+}
+function renderCases(){
+  var box=$('#case-list');if(!box)return;
+  var list=seasonCases(),prog=Save.loadProg(),h='',doneN=0;
+  list.forEach(function(c){
+    var st=caseState(c,prog,list),cur=(c.id===CASE);
+    if(st==='done')doneN++;
+    var badge=c.soon?'<span class="cs soon">준비 중</span>'
+      :(st==='done'?'<span class="cs done">✓ 해결</span>'
+      :(st==='lock'?'<span class="cs lock">🔒 잠김</span>':'<span class="cs open">열림</span>'));
+    h+='<button class="casecard'+(cur?' cur':'')+(st==='lock'||c.soon?' dim':'')+'" data-case="'+c.id+'">'+
+       '<span class="cno">사건 '+c.no+'</span>'+badge+
+       '<b>'+esc(c.title)+'</b><span class="csub">'+esc(c.sub||'')+(cur?' · 지금 열려 있는 사건':'')+'</span></button>';
+  });
+  box.innerHTML=h;
+  var note=$('#case-note');
+  if(note)note.textContent=doneN+' / '+(SEASON&&SEASON.total||list.length)+' 해결 · 기기를 바꿔도 열쇠말로 열 수 있어요';
+  box.querySelectorAll('[data-case]').forEach(function(b){
+    b.addEventListener('click',function(){pickCase(b.dataset.case)});
+  });
+}
+function pickCase(id){
+  sTap();
+  var list=seasonCases(),prog=Save.loadProg(),c=null;
+  list.forEach(function(x){if(x.id===id)c=x});if(!c)return;
+  if(c.soon){toast('아직 준비 중인 사건이에요');return}
+  var st=caseState(c,prog,list);
+  if(st==='lock'){openKeyBox(c);return}
+  gotoCase(id);
+}
+function gotoCase(id){
+  if(id===CASE){show('s-title');refreshTitle();return}   // 지금 사건이면 화면만 돌아간다
+  location.search='?case='+id;                            // 다른 사건은 새로 연다(깨끗한 상태로)
+}
+function openKeyBox(c){
+  KEYWAIT=c;
+  var b=$('#key-box');if(!b)return;
+  b.hidden=false;
+  $('#key-title').textContent='사건 '+c.no+' 「'+c.title+'」';
+  $('#key-msg').textContent='';
+  var i=$('#key-in');if(i){i.value='';setTimeout(function(){try{i.focus()}catch(e){}},50)}
+}
+function normKey(t){return String(t||'').replace(/\s+/g,'').toLowerCase()}
+function tryKey(){
+  var c=KEYWAIT;if(!c)return;
+  var v=normKey($('#key-in')&&$('#key-in').value);
+  if(!v){$('#key-msg').textContent='열쇠말을 넣어 주세요.';return}
+  if(c.key&&normKey(c.key)===v){
+    sFan();Save.markOpen(c.id);
+    $('#key-msg').innerHTML='<b>열렸어요.</b> 사건 파일을 엽니다…';
+    setTimeout(function(){gotoCase(c.id)},700);
+  }else{sNo();$('#key-msg').textContent='그 말이 아니에요. 앞 사건을 풀면 망고가 알려 줘요.'}
+}
+function bindCases(){
+  var b=$('#btn-cases');
+  if(b)b.addEventListener('click',function(){sTap();sPage();renderCases();$('#key-box').hidden=true;show('s-cases')});
+  var bk=$('#cases-back');
+  if(bk)bk.addEventListener('click',function(){sTap();show('s-title');refreshTitle()});
+  var g=$('#key-go');if(g)g.addEventListener('click',function(){sTap();tryKey()});
+  var i=$('#key-in');if(i)i.addEventListener('keydown',function(e){if(e.key==='Enter')tryKey()});
+  var x=$('#key-x');if(x)x.addEventListener('click',function(){sTap();$('#key-box').hidden=true;KEYWAIT=null});
+  /* 열쇠말을 모르는 아이를 막아 세우지 않는다 — 권유였지 문이 아니다 */
+  var any=$('#key-any');
+  if(any)any.addEventListener('click',function(){sTap();if(KEYWAIT)gotoCase(KEYWAIT.id)});
+}
+/* 표지에서 「다음 사건이 열렸다」를 한 줄로 알려 준다 */
+function titleOpenLine(){
+  var el=$('#title-open');if(!el)return;
+  var list=seasonCases(),prog=Save.loadProg(),next=null;
+  list.forEach(function(c){
+    if(c.soon||c.id===CASE)return;
+    var st=caseState(c,prog,list);
+    if(st!=='lock'&&!prog.done[c.id]&&!next)next=c;
+  });
+  if(next){el.hidden=false;el.innerHTML='📁 <b>사건 '+next.no+' 「'+esc(next.title)+'」</b> — 지금 열려 있어요. 아래 <b>사건 목록</b>에서 고르세요'}
+  else el.hidden=true;
+}
 function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle()}
 
 function refreshTitle(){
   var d=Save.load(), box=$('#resume');
   var eb=$('#title-eyebrow');if(eb)eb.textContent='시험판 9 · 사건 '+(C.no||1)+(C.title?' 「'+C.title+'」':'');
-  applyCover();applyArt();syncFullUI();
+  applyCover();applyArt();syncFullUI();titleOpenLine();
   if(!box)return;
   if(d){box.hidden=false;$('#resume-when').textContent=Save.agoText(d.t)}
   else box.hidden=true;
@@ -1060,6 +1162,7 @@ function bindTitle(){
   $('#intro-skip').addEventListener('click',function(){sTap();cancelTyper();var d=INTRO.done;INTRO.done=null;if(d)d()});
   /* 글 위 아무 데나 눌러도 넘어간다 — 단추까지 손을 옮기지 않아도 되게 */
   $('#s-intro .txt').addEventListener('click',function(e){if(!e.target.closest('button'))introNext()});
+  bindCases();
   $('#m-easy').addEventListener('click',function(){start(true)});
   $('#m-hard').addEventListener('click',function(){start(false)});
   var bf=$('#tg-full');
@@ -1107,6 +1210,7 @@ function bindGame(){
 function boot(){
   var p=Save.loadPrefs();
   if(p){A.sfx=!!p.s;A.music=!!p.m}
+  Save.askPersist();
   syncSoundUI();
   fresh();
   bindTitle();bindGame();
@@ -1119,6 +1223,9 @@ function boot(){
 var CASE=(location.search.match(/[?&]case=([0-9]{1,2})/)||[])[1];
 CASE=CASE?('0'+CASE).slice(-2):'01';
 window.MANGO_CASE=CASE;
+var SEASON=null;
+fetch('data/season.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null})
+  .then(function(j){SEASON=j}).catch(function(){});
 fetch('data/case-'+CASE+'.json',{cache:'no-cache'})
   .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
   .then(function(j){C=j;document.title='탐정 망고 · '+(j.title||'첫 사건');

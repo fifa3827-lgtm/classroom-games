@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="탐정 망고">
-<link rel="stylesheet" href="css/style.css?v=2609191634">
+<link rel="stylesheet" href="css/style.css?v=2609191737">
 </head>
 <body>
 
@@ -128,16 +128,43 @@
         <button id="m-easy"><b>처음이에요</b><span>수상한 말에 밑줄 · 틀리면 이유를 바로 알려 줘요</span></button>
         <button id="m-hard"><b>추리게임 해봤어요</b><span>밑줄 없이 직접 찾고, 틀린 이유도 스스로</span></button>
       </div>
+      <p class="muted" id="title-open" hidden style="margin:0;font-size:12px"></p>
       <div class="resume" id="resume" hidden>
         <div><b>하던 사건이 있어요</b> <small id="resume-when"></small></div>
         <div class="row"><button id="btn-resume" class="mini go">이어하기</button><button id="btn-fresh" class="mini">처음부터 새로</button></div>
       </div>
-      <div class="snd"><button id="tg-sfx" aria-pressed="true">🔔 효과음</button><button id="tg-bgm" aria-pressed="true">🎵 음악</button><button id="tg-full" class="wide" hidden><svg class="bi" viewBox="0 0 28 28"><use href="#i-expand"></use></svg> 전체 화면</button><button id="btn-code">🔑 백업 코드</button></div>
+      <div class="snd"><button id="tg-sfx" aria-pressed="true">🔔 효과음</button><button id="tg-bgm" aria-pressed="true">🎵 음악</button><button id="tg-full" class="wide" hidden><svg class="bi" viewBox="0 0 28 28"><use href="#i-expand"></use></svg> 전체 화면</button><button id="btn-code">🔑 백업 코드</button><button id="btn-cases">📁 사건 목록</button></div>
       <div class="codebox" id="code-box" hidden>
         <textarea rows="2" spellcheck="false" placeholder="다른 기기의 코드를 여기에 붙여 넣으세요"></textarea>
         <button id="btn-code-use" class="mini">이 코드로 불러오기</button>
       </div>
       <p class="muted" style="margin:0;font-size:11px">소리를 켜고 하시면 더 재미있어요 · 가로 화면 전용<br><span id="full-tip" hidden>화면을 넓게 쓰려면 <b>전체 화면</b>을 먼저 눌러 주세요 — 버튼이 가려지지 않아요</span><span id="home-tip" hidden>아이폰은 <b>공유 → 홈 화면에 추가</b>로 열면 주소창 없이 꽉 차요</span></p>
+    </div>
+  </section>
+
+  <!-- ===== 사건 목록 — 다 보이되, 순서대로 풀도록 권한다(막지는 않는다) ===== -->
+  <section class="full cases" id="s-cases" hidden>
+    <div class="txt" style="grid-column:1/-1">
+      <div class="eyebrow">시즌 1 · 사건 파일</div>
+      <p class="muted" style="margin:0;font-size:12px">사건을 하나 풀면 다음 사건이 열려요. 기기를 바꿨거나 목록이 초기화됐다면 <b>열쇠말</b>로 열 수 있어요.</p>
+      <div class="casescroll">
+      <div class="caselist" id="case-list"></div>
+      <div class="card keybox" id="key-box" hidden>
+        <div class="who" id="key-title"></div>
+        <p class="muted" style="margin:0 0 6px;font-size:12px">앞 사건을 풀면 <b>열쇠말</b>을 알려 줘요. 다른 기기에서도 그 말을 넣으면 열립니다.</p>
+        <div class="row" style="display:flex;gap:6px;flex-wrap:wrap">
+          <input id="key-in" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="열쇠말">
+          <button class="mini go" id="key-go">열기</button>
+          <button class="mini" id="key-any">그래도 열기</button>
+          <button class="mini" id="key-x">닫기</button>
+        </div>
+        <p class="muted" id="key-msg" style="margin:6px 0 0;font-size:12px"></p>
+      </div>
+      </div>
+      <div class="row" style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+        <span class="muted" style="font-size:11px" id="case-note"></span>
+        <button class="mini" id="cases-back">◂ 표지로</button>
+      </div>
     </div>
   </section>
 
@@ -230,6 +257,6 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script type="module" src="js/game.js?v=2609191634"></script>
+<script type="module" src="js/game.js?v=2609191737"></script>
 </body>
 </html>
