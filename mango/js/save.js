@@ -42,6 +42,30 @@ function load(){
 function clear(){clearTimeout(timer);try{localStorage.removeItem(KEY())}catch(e){}}
 function has(){return !!load()}
 
+/* ---- 시즌 진도 ----
+   푼 사건과 열린 사건만 담는 아주 작은 칸. **사건 저장과 따로 둔다.**
+   「처음부터 새로」는 그 사건 하나를 다시 푸는 것이지 시즌 전체를 지우는 게 아니다.
+   기기 저장은 언제든 날아갈 수 있으므로(아이폰 사파리는 7일 안 들어오면 지운다)
+   이 칸은 「편의」일 뿐이고, 진짜 진도는 사건마다 주는 열쇠말이 들고 있다. */
+var PROG='mango.prog.v1';
+function loadProg(){
+  try{var p=JSON.parse(localStorage.getItem(PROG)||'null');
+    if(!p||typeof p!=='object')p={};
+    p.done=p.done||{};p.open=p.open||{};return p;
+  }catch(e){return {done:{},open:{}}}
+}
+function saveProg(p){try{localStorage.setItem(PROG,JSON.stringify(p))}catch(e){}}
+function markDone(id){var p=loadProg();p.done[id]=1;saveProg(p);return p}
+function markOpen(id){var p=loadProg();p.open[id]=1;saveProg(p);return p}
+/* 브라우저에 「이 자료는 자리가 모자라도 지우지 말아 달라」고 청한다.
+   들어줄지는 브라우저가 정한다. 안 들어줘도 게임은 그대로 돌아간다. */
+function askPersist(){
+  try{
+    if(!navigator.storage||!navigator.storage.persist)return;
+    navigator.storage.persisted().then(function(ok){if(!ok)navigator.storage.persist()});
+  }catch(e){}
+}
+
 /* 소리 설정은 진행과 별개 */
 function loadPrefs(){
   try{var p=JSON.parse(localStorage.getItem(PREF)||'null');return p||null}catch(e){return null}
@@ -82,4 +106,5 @@ function agoText(t){
   return Math.floor(h/24)+'일 전';
 }
 
-export {save, saveNow, load, clear, has, loadPrefs, savePrefs, makeCode, applyCode, agoText};
+export {save, saveNow, load, clear, has, loadPrefs, savePrefs, makeCode, applyCode, agoText,
+        loadProg, saveProg, markDone, markOpen, askPersist};

@@ -367,3 +367,37 @@ img.mjoy{width:82px;height:82px;object-fit:contain;
   .mg-head b{font-size:14px}
   .mg-head .muted,.mg-foot .muted{font-size:10.5px}
 }
+
+/* ---------- 사건 목록 ----------
+   사건을 다 보여 주고, 잠긴 것은 흐리게만 한다(숨기지 않는다 — 앞으로 뭐가 오는지 보여야 기대가 생긴다) */
+#s-cases{grid-template-columns:1fr}
+/* 가운데 정렬 + 자동 여백을 쓰면 내용이 많아질 때 위아래로 잘린다(표지에서 겪은 일).
+   목록은 위에서부터 채우고, 넘치면 스크롤한다. */
+#s-cases .txt{justify-content:flex-start;gap:10px;padding-bottom:2px;overflow:hidden}
+/* 목록만 스크롤하고 「표지로」 단추는 늘 보이게 — 아이가 돌아갈 길을 잃으면 안 된다 */
+#s-cases .casescroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:9px;scrollbar-width:thin}
+#s-cases .txt>:first-child{margin-top:0}
+#s-cases .txt>:last-child{margin-bottom:0}
+.caselist{display:grid;gap:8px;grid-template-columns:1fr}
+@media (min-width:760px){.caselist{grid-template-columns:1fr 1fr}}
+.casecard{display:grid;grid-template-columns:auto auto 1fr;grid-template-areas:"no badge ." "t t t" "s s s";
+  gap:2px 8px;text-align:left;background:var(--panel);border:2.5px solid var(--line);border-radius:10px;
+  padding:8px 11px;box-shadow:var(--sh)}
+.casecard .cno{grid-area:no;font-size:11px;letter-spacing:.14em;color:var(--brick);font-weight:700}
+.casecard .cs{grid-area:badge;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;justify-self:start}
+.casecard .cs.done{background:#e4efdb;color:#4c6b33}
+.casecard .cs.open{background:#fdf0cf;color:#8a6a1f}
+.casecard .cs.lock,.casecard .cs.soon{background:#e6e0d4;color:#6b6152}
+.casecard b{grid-area:t;font-family:"Gaegu",cursive;font-size:17px;line-height:1.25}
+.casecard .csub{grid-area:s;font-size:11.5px;color:var(--soft);line-height:1.4}
+.casecard.cur{border-color:var(--must-d);background:#fffaf0}
+.casecard.dim{opacity:.62}
+.casecard:hover{background:#fffaf0}
+.keybox input{flex:1 1 130px;min-width:0;font:inherit;font-size:14px;padding:5px 8px;
+  border:2px solid var(--line);border-radius:7px;background:#fff}
+@media (max-height:430px){
+  .casecard{padding:5px 9px} .casecard b{font-size:15px} .casecard .csub{display:none}
+  #s-cases .txt{gap:6px}
+  #s-cases .keybox{padding:7px 9px}
+  #s-cases .keybox p{font-size:11px}
+}
