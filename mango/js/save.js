@@ -4,9 +4,11 @@
    - 소리 설정은 진행과 따로 보관한다(새로 시작해도 유지)
    - 백업 코드: 저장 내용을 문자열로 뽑아 다른 기기에 옮긴다 */
 
-var PREF='mango.pref.v1', VER=1;
-/* 저장 칸은 사건별로 나눈다. 사건 1은 예전 이름을 그대로 써서 이미 하던 저장이 남게 한다. */
-function KEY(){var c=(typeof window!=='undefined'&&window.MANGO_CASE)||'01';return c==='01'?'mango.save.v1':'mango.save.v1.c'+c}
+var PREF='mango.pref.v1', VER=2;
+/* 저장 칸은 사건별로 나눈다.
+   v2 — 추리 선택지의 순서를 바꿨다. 옛 저장은 「몇 번째를 골랐다」를 숫자로 들고 있어서
+   그대로 이어하면 엉뚱한 결론이 골라진 채로 돌아온다. 그래서 칸 이름을 새로 판다. */
+function KEY(){var c=(typeof window!=='undefined'&&window.MANGO_CASE)||'01';return 'mango.save.v2'+(c==='01'?'':'.c'+c)}
 
 /* 저장할 것만 추린다. 화면에 잠깐 쓰는 값(lens 위치, 열어 둔 단계 따위)은 뺀다. */
 function pack(S){

@@ -92,6 +92,29 @@ function run(C){
   }));
   if((C.solve?.text||'').length>320)W.push('해결 해설이 깁니다 (5문장 이내 권장)');
 
+  // 6.5 정답 자리 — 정답이 늘 같은 줄에 있으면 읽지 않고도 맞힌다
+  const posOf=list=>(list||[]).map(x=>(x.opts||[]).findIndex(o=>o.ok)).filter(i=>i>=0);
+  const spread=(name,pos)=>{
+    if(pos.length<3)return;
+    const cnt={};pos.forEach(i=>cnt[i]=(cnt[i]||0)+1);
+    const top=Math.max(...Object.values(cnt));
+    if(top===pos.length)E.push(`${name}: 정답이 <b>전부 ${pos[0]+1}번째 줄</b>에 있습니다 — 읽지 않고도 맞힐 수 있습니다`);
+    else if(top/pos.length>=0.7)W.push(`${name}: 정답이 한 자리(${Object.keys(cnt).find(k=>cnt[k]===top)*1+1}번째)에 ${top}/${pos.length}로 몰려 있습니다`);
+  };
+  spread('추리 단계',posOf(C.steps));
+  spread('소거',posOf(C.elim));
+  const accPos=(C.accuse||[]).findIndex(a=>a.ok);
+  if(accPos===0&&(C.accuse||[]).length>2)W.push('지목 후보의 정답이 맨 첫 줄입니다');
+  I.push(`정답 자리 — 추리 ${posOf(C.steps).map(i=>i+1).join('·')} / 소거 ${posOf(C.elim).map(i=>i+1).join('·')} / 지목 ${accPos+1}`);
+
+  // 6.6 추리에 필요한 단서를 정말 모을 수 있는가 (못 모으면 이용자는 영원히 헤맨다)
+  (C.steps||[]).forEach((st,i)=>{
+    const need=st.need||[];
+    const reachable=need.filter(id=>collectable.has(id));
+    if(!reachable.length)E.push(`${i+1}단계: 근거 단서를 하나도 모을 수 없습니다`);
+    else if(st.slots>1&&reachable.length<need.length)E.push(`${i+1}단계: 근거 ${need.length}개 중 ${reachable.length}개만 모을 수 있습니다`);
+  });
+
   I.push(`단서 ${Object.keys(C.clues||{}).length}개 · 현장 지점 ${(C.spots||[]).length}개(미끼 ${(C.spots||[]).filter(s=>s.decoy).length}) · 인물 ${(C.suspectOrder||[]).length}명`);
   I.push(`추리 ${(C.steps||[]).length}단계 · 소거 ${(C.elim||[]).length}명 · 지목 후보 ${(C.accuse||[]).length}명`);
   return {E,W,I};

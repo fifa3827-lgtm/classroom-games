@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191016';
-import * as Save from './save.js?v=2609191016';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191412';
+import * as Save from './save.js?v=2609191412';
 
 var C=null;   // 현재 사건 데이터
 
@@ -26,6 +26,10 @@ function probeCaseArt(){
   MANGO.forEach(function(e){list.push('mango-'+e+'.png');list.push('mango-face-'+e+'.png')});
   if(C.coverImg)list.push(C.coverImg);
   if(C.sceneImg)list.push(C.sceneImg);
+  /* 인트로는 사건마다 다른 그림을 쓸 수 있다 — 사건 파일이 부르는 배경도 미리 확인한다 */
+  if(C.introBg)list.push(C.introBg);
+  ((C.board&&C.board.pins)||[]).forEach(function(p){if(p.img)list.push(p.img)});
+  (C.intro||[]).forEach(function(pg){if(pg.bg)list.push(pg.bg)});
   C.suspectOrder.forEach(function(id){
     var s=C.suspects[id];if(!s.img)return;
     /* 시트에서 분노 칸을 뺐다. 'ang' 을 남기면 없는 파일을 인물마다 두드린다. */ ['def','fl','sp'].forEach(function(e){list.push(s.img+'-'+e+'.png')});
@@ -145,6 +149,10 @@ function fullOff(){
 }
 function isFull(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
 /* 홈 화면에 추가해서 연 상태인가 (아이폰은 navigator.standalone) */
+/* 「홈 화면에 추가」 안내는 폰에서만 뜻이 있다. PC 에 할 말이 아니다. */
+function androidish(){try{return /Android/i.test(navigator.userAgent||'')}catch(e){return false}}
+var TIP_IOS='아이폰은 <b>공유 → 홈 화면에 추가</b>로 열면 주소창 없이 꽉 차요';
+var TIP_AND='<b>홈 화면에 추가</b>해 두면(⋮ 메뉴) 다음부터 이 단추를 누르지 않아도 꽉 찬 화면으로 열려요';
 function standalone(){
   try{return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches
         ||window.matchMedia('(display-mode: fullscreen)').matches}catch(e){return false}
@@ -164,7 +172,18 @@ function syncFullUI(){
      아무 안내도 없이 사라지므로, 대신 「홈 화면에 추가」를 알려 준다.
      이미 홈 화면에서 연 상태면 주소창이 없으니 안내하지 않는다. */
   var hm=$('#home-tip');
-  if(hm)hm.hidden=can||standalone();
+  if(hm){
+    /* 아이폰: 전체 화면 기능이 없으니 대신 설치를 알려 준다.
+       안드로이드: 단추가 있으니 평소엔 조용히 있다가, 전체 화면을 켜서 위 안내가
+       비워진 자리에만 「매번 안 눌러도 된다」를 알려 준다 — 줄이 늘지 않는다.
+       이미 홈 화면에서 연 상태면 둘 다 필요 없다. */
+    var txt=null;
+    if(standalone())txt=null;
+    else if(!can)txt=TIP_IOS;
+    else if(isFull()&&androidish())txt=TIP_AND;
+    hm.hidden=!txt;
+    if(txt&&hm.innerHTML!==txt)hm.innerHTML=txt;
+  }
   /* 위쪽 띠의 것 — 표지를 지나 들어온 뒤에도 언제든 켜고 끌 수 있어야 한다. */
   var c=$('#t-full');
   if(c){
@@ -377,7 +396,9 @@ function updateAct(){
   }
   else if(S.mode==='notes'){a.textContent='수첩 '+count()+'장';a.disabled=true}
   else if(S.mode==='logic'){
-    if(S.phase==='chain'){var d=chainReady();a.textContent=d?'이대로 추리한다':'추론을 채우세요';a.className=d?'act warm':'act';a.disabled=!d}
+    if(S.phase==='chain'){var d=chainReady(),mz=missingSteps();
+      a.textContent=d?'이대로 추리한다':(mz.length?'단서를 더 모아야 해요':'추론을 채우세요');
+      a.className=d?'act warm':'act';a.disabled=!d}
     else if(S.phase==='elim'){var d2=elimReady();a.textContent=d2?'이대로 지운다':'지울 이유를 고르세요';a.className=d2?'act warm':'act';a.disabled=!d2}
     else{a.textContent='지목한다!';a.className='act warm';a.disabled=!S.flags.acc}
   }
@@ -585,6 +606,15 @@ function renderNotes(){
 
 /* ================= 추리 (단서 + 결론을 둘 다 고른다) ================= */
 function stepDone(i){var st=S.steps[i];return st.clues.length===C.steps[i].slots&&st.opt!=null}
+/* 이 단계의 근거 중 아직 수첩에 없는 것. 「틀렸다」와 「아직 못 찾았다」는 다른 말이고,
+   둘을 구별해 주지 않으면 이용자는 맞는 답을 고르고도 어디가 잘못인지 모른 채 헤맨다. */
+function needMissing(i){
+  var c=C.steps[i],need=c.need||[];
+  if(c.slots===1)return need.some(function(id){return S.found[id]})?[]:need.slice();
+  return need.filter(function(id){return !S.found[id]});
+}
+function missingSteps(){var out=[];C.steps.forEach(function(c,i){if(needMissing(i).length)out.push(i)});return out}
+function stepNos(a){return a.map(function(i){return '<b>'+(i+1)+'번</b>'}).join(' · ')}
 function chainReady(){return C.steps.every(function(c,i){return stepDone(i)})}
 function elimReady(){return C.elim.every(function(e){return S.elim[e.id]!=null})}
 
@@ -609,12 +639,14 @@ function renderChain(){
   $('#left').innerHTML='<div class="logicwrap">'+h+'</div>';
   $('#chain').querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){sTap();S.open=+b.dataset.s;renderChain()})});
   if(S.open==null){
-    var n=C.steps.filter(function(c,i){return stepDone(i)}).length;
+    var n=C.steps.filter(function(c,i){return stepDone(i)}).length,miss=missingSteps();
     $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">추리 노트</div>'+
       '<p style="margin:0;font-size:13px">단계를 누르면 망고가 질문을 해요. 질문마다 <b>단서</b>와 <b>그 단서가 증명하는 것</b>을 함께 고르세요.</p>'+
       '<p style="margin:6px 0 0;font-size:13px"><b>규칙 하나.</b> 단서가 <b>말해 주는 것만</b> 고르세요. 그럴듯한 <b>짐작</b>은 답이 아니에요.</p></div>'+
       '<div class="note" style="margin-top:8px"><b>다 채운 뒤 한 번에 채점해요.</b>틀려도 잃는 것은 없고, 몇 번이든 다시 낼 수 있어요. 어려우면 망고가 점점 더 자세히 알려 줍니다.</div>'+
-      '<p class="muted" style="margin-top:8px">'+n+' / '+C.steps.length+' 단계 채움'+(S.tries?' · 추리 제출 '+S.tries+'회':'')+'</p>'+(S.flags.judgeSay||'');
+      '<p class="muted" style="margin-top:8px">'+n+' / '+C.steps.length+' 단계 채움'+(S.tries?' · 추리 제출 '+S.tries+'회':'')+'</p>'+
+      (miss.length?'<div class="note"><b>아직 찾지 못한 단서가 있어요.</b>'+stepNos(miss)+' 단계는 지금 수첩에 있는 것만으로는 채울 수 없어요. <b>현장</b>과 <b>심문</b>을 더 살펴보고 오세요.</div>':'')+
+      (S.flags.judgeSay||'');
   } else renderStepPanel();
   updateAct();
 }
@@ -644,7 +676,6 @@ function addStepClue(id){
 }
 /* 제출 — 여기서만 채점한다 */
 function judgeChain(){
-  S.tries++;
   var wrong=[];
   C.steps.forEach(function(c,i){
     var st=S.steps[i];
@@ -652,6 +683,17 @@ function judgeChain(){
       :(c.need.every(function(n){return st.clues.indexOf(n)>=0}));
     if(!clueOK||!c.opts[st.opt].ok)wrong.push(i);
   });
+  /* 어긋난 까닭이 「아직 못 찾은 단서」라면 그건 추리를 틀린 게 아니다.
+     제출 횟수도 등불도 쓰지 않고, 무엇을 하러 가야 하는지만 알려 준다. */
+  var lack=wrong.filter(function(w){return needMissing(w).length});
+  if(lack.length){
+    sNo();S.lastWrong=null;S.wrongSet=lack;
+    S.flags.judgeSay='<div class="say">'+mface('def')+'<b>망고</b> "잠깐 — 아직 <b>찾지 못한 단서</b>가 있어."<br>'+
+      stepNos(lack)+' 단계는 지금 수첩에 있는 것만으로는 채울 수 없어. <b>현장</b>을 더 살펴보고 오자. '+
+      '<span class="muted">제출 횟수에는 넣지 않을게.</span></div>';
+    S.open=null;renderChain();return;
+  }
+  S.tries++;
   if(!wrong.length){
     sFan();S.wrongSet=null;S.lastWrong=null;S.phase='elim';S.open=null;
     S.flags.judgeSay='';
@@ -742,7 +784,7 @@ function judgeElim(){
 
 /* ---------- 3단계: 지목 ---------- */
 function renderAccuse(){
-  var h='<div class="chain" id="chain"><div class="concl small">밖에서 들어온 사람 없음 · 둘 이상 · 그 시각 안엔 도우미 둘 · 나머지는 전부 지워짐</div>';
+  var h='<div class="chain" id="chain"><div class="concl small">'+(C.concl||'사슬이 가리키는 곳 · 나머지는 전부 지워짐')+'</div>';
   h+='<div class="link"><span class="no">★</span>결정적 증거 <small>(선택 — 별점이 올라요)</small><div class="mini">'+
     '<button class="tag slotbtn" data-p="0">'+(S.proofs[0]?esc(C.clues[S.proofs[0]].n):'＋ 증거')+'</button>'+
     '<button class="tag slotbtn" data-p="1">'+(S.proofs[1]?esc(C.clues[S.proofs[1]].n):'＋ 증거')+'</button></div></div></div>';
@@ -758,7 +800,7 @@ function renderAccuse(){
 function fillProof(clueId){
   closeSheet();var k=+String(S.active)[1];
   if(C.proofs.indexOf(clueId)>=0&&S.proofs.indexOf(clueId)<0){sStamp();setTimeout(sGood,90);S.proofs[k]=clueId}
-  else{sNo();S.flags.judgeSay='<div class="say">그건 「<b>두 사람이</b> 했다」를 몸에 남은 흔적으로 보여 주는 증거가 아니에요.</div>'}
+  else{sNo();S.flags.judgeSay='<div class="say">'+(C.proofNo||'그건 결론을 직접 보여 주는 증거가 아니에요.')+'</div>'}
   S.active=null;renderAccuse();
 }
 function doAccuse(){
@@ -776,9 +818,11 @@ function openTray(kind){
   var d=document.createElement('div');d.className='sheet';d.id='sheet';
   var title={present:'어떤 단서를 들이댈까요?',step:'근거가 될 단서 고르기',proof:'결정적 증거'}[kind];
   var ctx='';
-  if(kind==='step'&&S.open!=null){var c=C.steps[S.open];ctx='<div class="ctx">'+(S.open+1)+'. '+esc(c.t)+' — <b>'+c.q.replace(/<[^>]+>/g,'')+'</b></div>'}
+  if(kind==='step'&&S.open!=null){var c=C.steps[S.open];ctx='<div class="ctx">'+(S.open+1)+'. '+esc(c.t)+' — <b>'+c.q.replace(/<[^>]+>/g,'')+'</b></div>';
+    if(needMissing(S.open).length)ctx+='<div class="ctx" style="color:var(--brick)"><b>이 단계에 필요한 단서가 아직 수첩에 없어요.</b> 현장을 더 조사하고 오세요 — 여기 있는 것만으로는 채워지지 않아요.</div>'}
   if(kind==='present'){var L=null;C.suspects[S.tab].lines.forEach(function(x){if(x.id===S.sel)L=x});if(L)ctx='<div class="ctx">'+esc(C.suspects[S.tab].name)+'의 말: <b>"'+esc(L.t)+'"</b> — 이 말과 어긋나는 단서를 고르세요.</div>'}
-  if(kind==='proof')ctx='<div class="ctx">「두 사람이 했다」를 <b>몸에 남은 흔적</b>으로 직접 보여 주는 단서를 고르세요.</div>';
+  if(kind==='proof'){ctx='<div class="ctx">'+(C.proofAsk||'결론을 <b>직접</b> 보여 주는 단서를 고르세요.')+'</div>';
+    if((C.proofs||[]).some(function(id){return !S.found[id]}))ctx+='<div class="ctx" style="color:var(--brick)">결정적 증거로 쓸 단서를 아직 다 찾지 못했어요. 비워 두고 지목해도 됩니다.</div>'}
   var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div>'+ctx+'<div class="list"><div class="clues">';
   var any=false;
   C.order.forEach(function(id){if(S.found[id]&&!C.clues[id].locked){any=true;h+=cardHTML(id,false,true)}});
@@ -791,8 +835,43 @@ function openTray(kind){
 function closeSheet(){var s=$('#sheet');if(s)s.remove()}
 
 /* ================= 지목 → 해결 ================= */
+/* 해결 화면 끝의 「설명이 안 되는 것」과 연결판. 사건마다 다른 실마리가 남는다 —
+   여기가 사건 1 것으로 고정돼 있으면 두 번째 사건도 같은 발자국 이야기로 끝난다. */
+/* 해결 화면의 인물 그림. 사건 1의 콩순이가 박혀 있어 사건 2에서도 콩순이가 나왔다. */
+function applySolveArt(){
+  var box=document.querySelector('#s-solve .art'),sym=C.solve&&C.solve.art;
+  if(!box||!sym)return;
+  var f=artOK(sym+'-sp.png')?sym+'-sp.png':(artOK(sym+'-def.png')?sym+'-def.png':null);
+  if(f)box.innerHTML='<img class="pim" src="'+artURL(f)+'" alt="">';
+}
+function applyEpilogue(){
+  var e=C.epilogue,n=$('#solve-odd');
+  if(n){
+    if(e&&e.t){n.hidden=false;n.innerHTML='<b>'+(e.head||'…그런데, 설명이 안 되는 게 하나 있어요.')+'</b>'+e.t}
+    else n.hidden=true;
+  }
+  var b=C.board||{},row=$('#board-row');
+  if(row){
+    var pins=b.pins||[],total=b.total||5,h='';
+    pins.forEach(function(p){
+      var art=artOK(p.img)?'<img src="'+artURL(p.img)+'" alt="">':'<svg viewBox="0 0 28 28"><use href="#'+(p.sym||'i-print')+'"></use></svg>';
+      h+='<div class="pinned">'+art+p.t+'<br><span style="color:#8a7355">사건 '+(p.no||'?')+'</span></div>';
+    });
+    for(var k=pins.length;k<total;k++)h+='<div class="slot"></div>';
+    row.innerHTML=h;
+    var c=$('#board-count');
+    if(c)c.innerHTML=pins.length+' / '+total+' · '+total+'장이 모이면 <b>추론</b>할 수 있어요';
+    var say=$('#board-say');
+    if(say){if(b.mango){say.hidden=false;say.innerHTML='<b>망고</b> '+b.mango}else say.hidden=true}
+    var nt=$('#board-next-t'),nw=$('#board-next-w');
+    if(nt)nt.textContent='다음 사건 「'+((C.next&&C.next.title)||'?')+'」';
+    if(nw)nw.innerHTML=b.when||'곧 열려요.';
+    var ask=$('#board-ask');
+    if(ask)ask.innerHTML=(b.ask||[]).map(function(q){return '<li>'+q+'</li>'}).join('');
+  }
+}
 function accuse(){
-  sFan();
+  sFan();applySolveArt();applyEpilogue();
   var miss=(S.tries-1)+(S.elimTries-1)+S.accErr;   // 제출 실패 횟수
   var star=3;if(miss>=1||S.rebutErr>0||S.lamps<3)star=2;if(miss>=3||S.rebutErr>=2||S.lamps<=0)star=1;
   if(S.proofs.filter(Boolean).length===2&&star<3)star++;
@@ -887,10 +966,46 @@ function introArt(who){
   if(f)box.innerHTML='<img class="pim" src="'+artURL(f)+'" alt="">';
   else box.innerHTML='<svg viewBox="0 0 150 130"><use href="#'+(who==='narr'?'mango':(who||'mango'))+'"></use></svg>';
 }
+/* 인트로 화면의 「무대」. 사건마다, 장면마다 배경과 분위기를 갈아 끼운다.
+   사건 1은 표지 그림 위 인물 소개, 사건 2는 밤의 게시판 → 아침 — 같은 화면이 되지 않게. */
+function introFX(pg){
+  return (' '+(pg.fx||'')+' ');
+}
+function introSkin(pg){
+  var el=$('#s-intro');if(!el)return false;
+  var f=pg.bg||C.introBg||C.coverImg;
+  if(artOK(f)){el.classList.add('has-cover');el.style.backgroundImage='url("'+artURL(f)+'")'}
+  else{el.classList.remove('has-cover');el.style.backgroundImage=''}
+  /* 같은 그림이라도 어디를 얼마나 크게 보여 주느냐로 다른 장면이 된다 */
+  el.style.backgroundPosition=pg.bgPos||'';
+  el.style.backgroundSize=pg.bgSize||'';
+  var cine=(pg.style||C.introStyle||'')==='cine';
+  el.classList.toggle('cine',cine);
+  var fx=introFX(pg);
+  ['night','dawn','wind'].forEach(function(k){el.classList.toggle('fx-'+k,fx.indexOf(' '+k+' ')>=0)});
+  windLayer(fx.indexOf(' wind ')>=0);
+  /* 장면이 바뀌면 짧게 어둠에서 올라온다 — 배경 그림은 겹쳐 녹일 수 없으니 컷으로 넘긴다 */
+  el.classList.remove('pgin');void el.offsetWidth;el.classList.add('pgin');
+  return cine;
+}
+/* 바람에 날리는 잎. 사건 2의 밤 장면에서만 켠다 — 「바람」을 말하지 않고 보여 주려고. */
+function windLayer(on){
+  var el=$('#intro-wind');if(!el)return;
+  el.hidden=!on;
+  if(!on||el.childElementCount)return;
+  var h='';
+  for(var i=0;i<9;i++){
+    var top=(4+i*11)%88, dur=(4.4+(i%4)*1.5).toFixed(1), del=(-i*1.4).toFixed(1),
+        sc=(.55+(i%3)*.3).toFixed(2), tone=['#b9762f','#8d5a2b','#c69a3d'][i%3];
+    h+='<i style="top:'+top+'%;background:'+tone+';--sc:'+sc+';animation-duration:'+dur+'s;animation-delay:'+del+'s"></i>';
+  }
+  el.innerHTML=h;
+}
 function introPage(){
   var pg=C.intro[INTRO.i],last=INTRO.i===C.intro.length-1;
   var who=pg.who||'narr';
-  introArt(who);
+  var cine=introSkin(pg);
+  if(!cine)introArt(who);
   $('#intro-day').textContent=pg.day||C.intro[0].day||'';
   var nm={mango:'망고',narr:''}[who];
   if(nm===undefined)nm=(C.suspects&&C.suspects[who]&&C.suspects[who].name)||who;
@@ -1025,9 +1140,11 @@ function applyCover(){
      인라인 style 로 직접 넣으면 문서 기준으로 풀린다. */
   /* 인트로도 같은 그림 위에서 진행한다 — 표지 → 자막 → 브리핑이 한 장면처럼 이어지게 */
   var i=$('#s-intro');
-  if(artOK(C&&C.coverImg)){var u='url("'+artURL(C.coverImg)+'")';
-    t.classList.add('has-cover');t.style.backgroundImage=u;
-    if(i){i.classList.add('has-cover');i.style.backgroundImage=u}}
-  else{t.classList.remove('has-cover');t.style.backgroundImage='';
-    if(i){i.classList.remove('has-cover');i.style.backgroundImage=''}}
+  var ib=(C&&(C.introBg||C.coverImg));
+  if(artOK(C&&C.coverImg)){t.classList.add('has-cover');t.style.backgroundImage='url("'+artURL(C.coverImg)+'")'}
+  else{t.classList.remove('has-cover');t.style.backgroundImage=''}
+  if(i){
+    if(artOK(ib)){i.classList.add('has-cover');i.style.backgroundImage='url("'+artURL(ib)+'")'}
+    else{i.classList.remove('has-cover');i.style.backgroundImage=''}
+  }
 }
