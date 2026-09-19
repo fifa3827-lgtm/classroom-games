@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="탐정 망고">
-<link rel="stylesheet" href="css/style.css?v=2609191016">
+<link rel="stylesheet" href="css/style.css?v=2609191412">
 </head>
 <body>
 
@@ -125,8 +125,8 @@
       <h1>탐정 망고의<br><em>춤추는 대수사선</em></h1>
       <p class="muted" style="margin:0">단서를 모으고, 진술을 무너뜨리고,<br>단서가 <b>무엇을 증명하는지</b> 직접 판단해 범인을 밝히세요.</p>
       <div class="modepick">
-        <button id="m-easy"><b>처음이에요</b><span>수상한 말에 밑줄이 그어집니다</span></button>
-        <button id="m-hard"><b>추리게임 해봤어요</b><span>수상한 말을 직접 찾습니다</span></button>
+        <button id="m-easy"><b>처음이에요</b><span>수상한 말에 밑줄 · 틀리면 이유를 바로 알려 줘요</span></button>
+        <button id="m-hard"><b>추리게임 해봤어요</b><span>밑줄 없이 직접 찾고, 틀린 이유도 스스로</span></button>
       </div>
       <div class="resume" id="resume" hidden>
         <div><b>하던 사건이 있어요</b> <small id="resume-when"></small></div>
@@ -143,6 +143,7 @@
 
   <!-- ===== 인트로(도입 자막) — 사건 파일의 intro 배열을 한 장씩 보여 준다 ===== -->
   <section class="full intro" id="s-intro" hidden>
+    <div class="wind" id="intro-wind" hidden aria-hidden="true"></div>
     <div class="art" id="intro-art"><svg viewBox="0 0 150 130"><use href="#mango"/></svg></div>
     <div class="txt">
       <div class="eyebrow" id="intro-day"></div>
@@ -181,20 +182,21 @@
         <p style="margin:6px 0 0;font-size:13px" id="solve-sheep"></p>
       </div>
       <div class="reward" id="reward"></div>
-      <div class="note"><b>…그런데, 설명이 안 되는 게 하나 있어요.</b>창턱 <b>바깥</b>의 작은 붉은 흙 발자국. 너구리 발이 아니고, 흙은 뒷마당 것도 아니에요. 어젯밤 이후, 누가 광장 쪽에서 와서 급식실 안을 들여다봤어요. 누가, 왜?</div>
+      <div class="note" id="solve-odd"></div>
       <button class="btn" id="btn-pin">📌 연결판에 꽂기</button>
     </div>
   </section>
 
   <section class="full" id="s-board" hidden>
     <div class="art" style="align-items:stretch;flex-direction:column;justify-content:center;gap:8px">
-      <div class="board"><div class="pinned"><svg viewBox="0 0 28 28"><use href="#i-print"/></svg>붉은 흙 발자국<br><span style="color:#8a7355">사건 1</span></div><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div></div>
-      <p class="muted" style="margin:0;text-align:center">1 / 5 · 다섯 장이 모이면 <b>추론</b>할 수 있어요</p>
+      <div class="board" id="board-row"></div>
+      <p class="muted" style="margin:0;text-align:center" id="board-count"></p>
+      <div class="say" id="board-say" hidden></div>
     </div>
     <div class="txt">
-      <div class="card" style="background:#fff8e7;border-color:var(--must-d)"><div class="who">다음 사건 「찢어진 축제 포스터」</div><p style="margin:0">내일 <b>아침 6시</b>에 열려요.</p></div>
+      <div class="card" style="background:#fff8e7;border-color:var(--must-d)"><div class="who" id="board-next-t"></div><p style="margin:0" id="board-next-w"></p></div>
       <div class="card"><b style="font-family:Gaegu,cursive;font-size:15px">여기까지가 시험판입니다</b><p class="muted" style="margin:4px 0 0">만든 사람에게 알려 주세요:</p>
-        <ol style="margin:4px 0 0;padding-left:20px;font-size:13px;line-height:1.8"><li>추리 단계(단서+결론 고르기)가 이해됐나요?</li><li>어디서 제일 헷갈렸나요? 너무 어렵진 않았나요?</li><li>붉은 발자국은 누구 거라고 생각하나요?</li><li>내일 아침에 열리면 열어 볼 것 같나요?</li></ol></div>
+        <ol style="margin:4px 0 0;padding-left:20px;font-size:13px;line-height:1.8" id="board-ask"></ol></div>
       <button class="btn ghost" id="btn-reset">처음부터 다시</button>
     </div>
   </section>
@@ -228,6 +230,6 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script type="module" src="js/game.js?v=2609191016"></script>
+<script type="module" src="js/game.js?v=2609191412"></script>
 </body>
 </html>
