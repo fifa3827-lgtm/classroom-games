@@ -50,53 +50,208 @@ function blip(vc,ch){
 }
 
 /* ---- BGM: 미스터리풍, 화면 분위기별로 변주 ---- */
-var BPM=82,M={timer:null,next:0,step:0,mood:'calm',lastMel:null,padUntil:0};
+/* ================= BGM — 탐정 재즈 =================
+   전에는 D단조 3화음을 정박으로 찍어서, 분위기는 차분했지만 「탐정」이 아니라 동요에 가까웠다.
+   탐정물 느낌은 네 가지에서 온다. (1) 스윙 — 뒷박을 늦춘다. (2) 7·9화음 — 3화음은 너무 착하다.
+   (3) 걸어 다니는 베이스 — 특히 4박의 반음 접근음. (4) 되풀이되는 주제 선율 — 아무 음이나
+   흩뿌리면 귀가 기억할 것이 없다. 조사 중에는 선율을 비우고 분위기만 남긴다(여백도 연출이다). */
+var BPM=92, SW=.12;          // SW: 뒷박(8분의 뒤)을 박의 몇 만큼 늦출지. 0이면 정박
+var M={timer:null,next:0,step:0,mood:'calm',lastMel:null};
 function mtof(m){return 440*Math.pow(2,(m-69)/12)}
-var CH={Dm:[62,65,69],Gm:[67,70,74],A:[69,73,76],Bb:[70,74,77],D:[62,66,69],G:[67,71,74],Em:[64,67,71]};
-var SCALE_MIN=[62,64,65,67,69,70,72,74,76,77,79],SCALE_MAJ=[62,64,66,67,69,71,73,74,76,78,81];
+
+var CH={
+  Dm9  :[62,65,69,72,76], Gm7 :[67,70,74,77],  Gm6:[67,70,74,76],
+  A7   :[69,73,76,79],    A7b9:[69,73,76,79,82],
+  Bb7  :[70,74,77,80],    BbM7:[70,74,77,81],  Em7b5:[64,67,70,74],
+  D69  :[62,66,69,71],    G6  :[67,71,74,76],  DM7:[62,66,69,73]
+};
+/* D 도리안에 b5(Ab)를 섞은 음계. 이 한 음이 「수사물」 색을 낸다 */
+var SCALE_MIN=[62,64,65,67,68,69,70,72,74,76,77,79,80,81];
+var SCALE_MAJ=[62,64,66,67,69,71,73,74,76,78,79,81,83];
+
+/* 주제 선율 — 두 마디. D–F–Ab–A 로 반음씩 기어 올라가는 고전적인 수사물 동기다.
+   p: 마디 안 16분 위치, n: 음, d: 박 길이 */
+var THEME=[
+  [{p:0,n:74,d:.5},{p:2,n:77,d:.5},{p:4,n:80,d:1},{p:8,n:81,d:1.8}],
+  [{p:0,n:79,d:.6},{p:4,n:77,d:.6},{p:8,n:74,d:2}]
+];
+var THEME_MAJ=[
+  [{p:0,n:74,d:.5},{p:2,n:78,d:.5},{p:4,n:81,d:1},{p:8,n:83,d:1.8}],
+  [{p:0,n:81,d:.6},{p:4,n:78,d:.6},{p:8,n:74,d:2}]
+];
+
 var MOODS={
-  calm:  {prog:['Dm','Gm','A','Dm'],bass:[0,8],bassPat:['r','r'],tick:[4,12],mel:.16,melLo:66,melHi:79,hat:false,pad:true,arp:false},
-  invest:{prog:['Dm','Dm','Bb','A'],bass:[0,6,8,14],bassPat:['r','5','r','5'],tick:[4,12],mel:.11,melLo:69,melHi:81,hat:false,pad:true,arp:false},
-  tense: {prog:['Dm','Bb','A','A'],bass:[0,4,8,12],bassPat:['r','5','b6','5'],tick:[4,12],mel:.22,melLo:74,melHi:86,hat:true,pad:true,arp:false},
-  build: {prog:['Dm','Gm','Bb','A'],bass:[0,8],bassPat:['r','r'],tick:[4,12],mel:0,melLo:0,melHi:0,hat:false,pad:true,arp:true},
-  resolve:{prog:['D','G','A','D'],bass:[0,8],bassPat:['r','5'],tick:[],mel:.2,melLo:69,melHi:83,hat:false,pad:true,arp:false,major:true},
+  /* 표지·인트로·브리핑 — 주제 선율이 나오는 자리. 베이스는 두 박에 하나만 */
+  calm:   {prog:['Dm9','BbM7','Em7b5','A7b9'], ride:0, stab:[6,14],    walk:'half', theme:'min', mel:0,   lead:'trumpet'},
+  /* 현장·수첩 — 선율 없이 걸어 다니는 베이스와 브러시만. 생각할 자리를 비워 둔다 */
+  invest: {prog:['Dm9','Dm9','Gm7','A7'],      ride:1, stab:[6],       walk:'full', theme:0,     mel:.10, lead:'clar'},
+  /* 심문 — 화음이 조여든다(Em7b5→A7b9). 컴핑이 잦아지고 선율이 들썩인다 */
+  tense:  {prog:['Em7b5','A7b9','Dm9','Bb7'],  ride:1, stab:[4,10,14], walk:'full', theme:0,     mel:.20, lead:'trumpet'},
+  /* 추리 — 같은 도형이 돌아가는 오스티나토. 머릿속이 돌아가는 소리 */
+  build:  {prog:['Dm9','Gm7','BbM7','A7'],     ride:0, stab:[],        walk:'full', theme:0,     mel:0,   ost:true},
+  /* 해결 — 같은 주제를 장조로. 되풀이된 동기가 여기서 풀린다 */
+  resolve:{prog:['D69','G6','A7','DM7'],       ride:1, stab:[6,14],    walk:'full', theme:'maj', mel:.12, lead:'trumpet', major:true},
   off:null
 };
-function pluck(midi,t,vol,dur){var o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();o.type='triangle';o.frequency.value=mtof(midi);f.type='lowpass';f.frequency.setValueAtTime(1400,t);f.frequency.exponentialRampToValueAtTime(300,t+(dur||.5));
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+(dur||.5));o.connect(f);f.connect(g);g.connect(musG);o.start(t);o.stop(t+(dur||.5)+.05)}
-function vibe(midi,t,vol){var f=mtof(midi);[1,4].forEach(function(h,i){var o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f*h;var v=vol*(i?.12:1);
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+1.4);o.connect(g);g.connect(musG);o.start(t);o.stop(t+1.5)});
-  // 살짝 떨림
+
+/* 콘트라베이스 — 손가락으로 뜯은 소리. 밝은 데서 시작해 금방 어두워진다 */
+function bassPluck(midi,t,vol){
+  var o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+  o.type='triangle';o.frequency.value=mtof(midi);
+  f.type='lowpass';f.Q.value=.7;
+  f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(150,t+.5);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.62);
+  o.connect(f);f.connect(g);g.connect(musG);o.start(t);o.stop(t+.7);
 }
-function pad(chord,t,dur,major){chord.forEach(function(m,i){[-5,5].forEach(function(det){var o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();o.type='sawtooth';o.frequency.value=mtof(m-12);o.detune.value=det;
-  f.type='lowpass';f.frequency.value=major?720:520;f.Q.value=.6;var v=.016;
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.7);g.gain.setValueAtTime(v,t+dur-.6);g.gain.linearRampToValueAtTime(0,t+dur);o.connect(f);f.connect(g);g.connect(musG);o.start(t);o.stop(t+dur+.05)})})}
-function tick(t,vol){var s=ac.createBufferSource();s.buffer=noiseBuf;var f=ac.createBiquadFilter();f.type='highpass';f.frequency.value=3200;var g=ac.createGain();
-  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+.035);s.connect(f);f.connect(g);g.connect(musG);s.start(t);s.stop(t+.06);
-  var o=ac.createOscillator(),g2=ac.createGain();o.type='square';o.frequency.value=2100;g2.gain.setValueAtTime(vol*.5,t);g2.gain.exponentialRampToValueAtTime(.0001,t+.02);o.connect(g2);g2.connect(musG);o.start(t);o.stop(t+.03)}
-function hat(t){var s=ac.createBufferSource();s.buffer=noiseBuf;var f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=7500;var g=ac.createGain();
-  g.gain.setValueAtTime(.014,t);g.gain.exponentialRampToValueAtTime(.0001,t+.03);s.connect(f);f.connect(g);g.connect(musG);s.start(t);s.stop(t+.05)}
-function playStep(step,t){
+/* 4박의 접근음이 재즈처럼 들리게 하는 핵심이다 — 다음 화음의 으뜸음을 반음 옆에서 찝는다 */
+function bassNote(mo,bar,beat){
+  var ch=CH[mo.prog[bar]],root=ch[0]-24,next=CH[mo.prog[(bar+1)%4]][0]-24;
+  if(beat===0)return root;
+  if(beat===1)return root+7;
+  if(beat===2)return root+(ch[1]-ch[0]);
+  return next+(next>=root?-1:1);
+}
+/* 피아노 컴핑 — 으뜸음은 베이스에 맡기고 위쪽만 짧게 던진다 */
+function stab(chord,t,vol){
+  chord.forEach(function(m,i){
+    var o=ac.createOscillator(),g=ac.createGain();
+    o.type='sine';o.frequency.value=mtof(m);
+    var v=vol*(i?.72:1);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.008);
+    g.gain.exponentialRampToValueAtTime(.0001,t+.85);
+    o.connect(g);g.connect(musG);o.start(t);o.stop(t+.9);
+    var o2=ac.createOscillator(),g2=ac.createGain();       // 쇠붙이 배음 한 겹
+    o2.type='sine';o2.frequency.value=mtof(m)*4;
+    g2.gain.setValueAtTime(0,t);g2.gain.linearRampToValueAtTime(v*.08,t+.006);
+    g2.gain.exponentialRampToValueAtTime(.0001,t+.26);
+    o2.connect(g2);g2.connect(musG);o2.start(t);o2.stop(t+.28);
+  });
+}
+/* 약음기 낀 트럼펫 / 클라리넷. 비브라토를 걸어 「부는 사람」이 있는 것처럼 */
+function lead(midi,t,dur,vol,kind){
+  var o=ac.createOscillator(),g=ac.createGain(),bp=ac.createBiquadFilter(),lp=ac.createBiquadFilter();
+  o.type=kind==='clar'?'square':'sawtooth';o.frequency.value=mtof(midi);
+  bp.type='bandpass';bp.frequency.value=kind==='clar'?900:1500;bp.Q.value=kind==='clar'?1.1:2.2;
+  lp.type='lowpass';lp.frequency.value=3200;
+  var lfo=ac.createOscillator(),la=ac.createGain();
+  lfo.frequency.value=5.2;la.gain.value=14;
+  lfo.connect(la);la.connect(o.detune);lfo.start(t);lfo.stop(t+dur+.25);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.06);
+  g.gain.setValueAtTime(vol,t+Math.max(.09,dur-.12));
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur+.14);
+  o.connect(bp);bp.connect(lp);lp.connect(g);g.connect(musG);o.start(t);o.stop(t+dur+.25);
+}
+/* 브러시로 쓸어 주는 심벌. 2·4박만 조금 세게 — 이것이 스윙을 걷게 한다 */
+function brush(t,vol,accent){
+  var s=ac.createBufferSource();s.buffer=noiseBuf;
+  var f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=accent?5200:6800;f.Q.value=.9;
+  var g=ac.createGain();
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.008);
+  g.gain.exponentialRampToValueAtTime(.0001,t+(accent?.17:.09));
+  s.connect(f);f.connect(g);g.connect(musG);s.start(t);s.stop(t+.22);
+}
+function swingOf(pos){return (pos%4===2)?SW*(60/BPM):0}
+
+function playStep(step,t0){
   var mo=MOODS[M.mood];if(!mo)return;
-  var bar=Math.floor(step/16),pos=step%16,chord=CH[mo.prog[bar]],scale=mo.major?SCALE_MAJ:SCALE_MIN,root=chord[0];
-  if(pos===0&&mo.pad)pad(chord,t,60/BPM*4+.3,mo.major);
-  var bi=mo.bass.indexOf(pos);
-  if(bi>=0){var p=mo.bassPat[bi],n=root-24;if(p==='5')n=root-24+7;if(p==='b6')n=root-24+8;pluck(n,t,.11,.55)}
-  if(mo.tick.indexOf(pos)>=0)tick(t,.05);
-  if(mo.hat&&pos%2===0)hat(t);
-  if(mo.arp&&pos%2===0){var seq=[chord[0],chord[1],chord[2],chord[1]+12,chord[0]+12,chord[2],chord[1],chord[0]];pluck(seq[(pos/2)%8],t,.06,.4)}
+  var bar=Math.floor(step/16),pos=step%16,t=t0+swingOf(pos);
+  var ch=CH[mo.prog[bar]],beat=pos/4;
+
+  if(pos%4===0&&(mo.walk==='full'||pos===0||pos===8))bassPluck(bassNote(mo,bar,beat),t,.115);
+  if(mo.ride&&pos%2===0){var ac2=(pos===4||pos===12);brush(t,ac2?.021:.012,ac2)}
+  if(mo.stab.indexOf(pos)>=0)stab(ch.slice(1),t,.03);
+
+  if(mo.theme&&bar<2){
+    var ph=(mo.theme==='maj'?THEME_MAJ:THEME)[bar];
+    ph.forEach(function(nt){if(nt.p===pos)lead(nt.n,t,nt.d*(60/BPM),.05,mo.lead)});
+  }
+  if(mo.ost&&pos%2===0){
+    var seq=[ch[0]+12,ch[2],ch[1]+12,ch[2]];
+    bassPluck(seq[(pos/2)%4],t,.05);
+  }
+  /* 즉흥 한 음. 앞 음에서 멀리 뛰지 않게 골라야 「선」으로 들린다 */
   if(mo.mel&&pos%2===0&&Math.random()<mo.mel){
-    var cands=scale.filter(function(m){return m>=mo.melLo&&m<=mo.melHi});
-    var ct=cands.filter(function(m){return chord.some(function(c){return (m-c)%12===0})});
-    var pool=Math.random()<.6?ct:cands,n2=pool[Math.floor(Math.random()*pool.length)];
-    if(n2===M.lastMel)n2=pool[Math.floor(Math.random()*pool.length)];
-    M.lastMel=n2;vibe(n2,t,.045);
+    var scale=mo.major?SCALE_MAJ:SCALE_MIN;
+    var pool=scale.filter(function(m){return m>=(mo.major?69:69)&&m<=83});
+    if(M.lastMel){var near=pool.filter(function(m){return Math.abs(m-M.lastMel)<=4&&m!==M.lastMel});if(near.length)pool=near}
+    var tone=pool.filter(function(m){return ch.some(function(c){return (m-c)%12===0})});
+    if(tone.length&&Math.random()<.55)pool=tone;
+    var n=pool[Math.floor(Math.random()*pool.length)];
+    M.lastMel=n;lead(n,t,.3,.036,mo.lead);
   }
 }
 function schedule(){if(!ac)return;while(M.next<ac.currentTime+.3){playStep(M.step,M.next);M.next+=60/BPM/4;M.step=(M.step+1)%64}}
-function startMusic(){if(!A.music||!wake())return;if(M.timer)return;M.next=ac.currentTime+.08;M.step=0;M.timer=setInterval(schedule,70)}
-function stopMusic(){if(M.timer){clearInterval(M.timer);M.timer=null}}
-function setMood(m){if(M.mood===m)return;M.mood=m;if(m==='resolve'&&M.timer){M.step=0}}
+function synthOn(){if(M.timer)return;M.next=ac.currentTime+.08;M.step=0;M.timer=setInterval(schedule,70)}
+function synthOff(){if(M.timer){clearInterval(M.timer);M.timer=null}}
+
+/* ================= 녹음된 음원 (있으면 이걸 쓴다) =================
+   합성 음악은 어떤 기기에서도 나오고 파일도 필요 없지만, 사람이 연주한 질감은 못 낸다.
+   audio/ 에 파일이 있으면 그것을 틀고, 없으면 위의 합성으로 돌아간다(책 상담원과 같은 방식).
+   파일을 지워도 게임은 그대로 돌아간다 — 어느 쪽도 없으면 조용할 뿐이다. */
+var FILES={title:'audio/bgm-title.mp3', case:'audio/bgm-case.mp3'};
+var MOODFILE={calm:'title',resolve:'title',invest:'case',tense:'case',build:'case'};
+var TRK={},trkKey=null,trkNode=null,trkGain=null,trkTried=false;
+var TRKVOL=.6;
+/* mp3 는 인코딩할 때 앞뒤에 20~50ms 짜리 빈 구간이 붙는다. 브라우저가 그걸 떼 주기도 하고
+   안 떼 주기도 하는데, 안 떼면 한 바퀴마다 그만큼 박자가 밀려 「덜컥」 소리가 난다.
+   그래서 파일을 믿지 않고 소리가 실제로 시작·끝나는 자리를 직접 찾아 그 사이만 돈다. */
+function edgeTrim(buf){
+  var ch=buf.getChannelData(0),sr=buf.sampleRate,n=ch.length;
+  var lim=Math.min(n,Math.floor(sr*.15)),th=.0025,a=0,b=0,i,k;
+  for(i=0;i<lim;i++){if(Math.abs(ch[i])>th){a=i;break}}
+  for(i=0;i<lim;i++){k=n-1-i;if(Math.abs(ch[k])>th){b=i;break}}
+  return {s:a/sr,e:(n-b)/sr};
+}
+function loadTracks(){
+  if(trkTried||!ac)return;trkTried=true;
+  Object.keys(FILES).forEach(function(k){
+    fetch(FILES[k],{cache:'force-cache'}).then(function(r){
+      if(!r.ok)throw 0;return r.arrayBuffer();
+    }).then(function(ab){
+      return new Promise(function(res,rej){ac.decodeAudioData(ab,res,rej)});
+    }).then(function(buf){
+      buf._cut=edgeTrim(buf);
+      TRK[k]=buf;
+      /* 지금 이 분위기에 해당하는 파일이 뒤늦게 도착했으면 합성에서 조용히 갈아탄다 */
+      if(MOODFILE[M.mood]===k&&A.music)applyMood();
+    }).catch(function(){/* 파일이 없는 건 흔한 일이다 — 조용히 넘어간다 */});
+  });
+}
+function trkStop(fade){
+  if(!trkNode)return;
+  var n=trkNode,g=trkGain,t=ac.currentTime;
+  g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);
+  g.gain.linearRampToValueAtTime(0,t+(fade||.5));
+  try{n.stop(t+(fade||.5)+.05)}catch(e){}
+  trkNode=null;trkGain=null;trkKey=null;
+}
+function trkPlay(k){
+  var buf=TRK[k];if(!buf)return false;
+  if(trkKey===k&&trkNode)return true;
+  trkStop(.5);
+  var s=ac.createBufferSource(),g=ac.createGain(),cut=buf._cut||{s:0,e:buf.duration};
+  s.buffer=buf;s.loop=true;s.loopStart=cut.s;s.loopEnd=cut.e;
+  var t=ac.currentTime;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(TRKVOL,t+.6);
+  s.connect(g);g.connect(musG);s.start(t,cut.s);
+  trkNode=s;trkGain=g;trkKey=k;return true;
+}
+/* 지금 분위기에 맞는 음원이 있으면 음원을, 없으면 합성을 울린다 */
+function applyMood(){
+  if(!ac||!A.music)return;
+  var k=MOODFILE[M.mood];
+  if(k&&TRK[k]){synthOff();trkPlay(k)}
+  else{trkStop(.4);synthOn()}
+}
+function startMusic(){if(!A.music||!wake())return;loadTracks();applyMood()}
+function stopMusic(){synthOff();trkStop(.3)}
+/* 분위기가 바뀌면 갈아탄다. 합성일 때는 마디를 잇고, 음원일 때는 0.5초 겹쳐 넘긴다 */
+function setMood(m){
+  if(M.mood===m)return;M.mood=m;M.lastMel=null;
+  if(m==='resolve'&&M.timer)M.step=0;
+  if(ac&&A.music&&(M.timer||trkNode))applyMood();
+}
 function setMusic(on){A.music=on;if(A.gain)A.gain.setTargetAtTime(on?1:0,ac.currentTime,.15);if(on)startMusic();else stopMusic();if(A.onChange)A.onChange()}
 function setSfx(on){A.sfx=on;if(A.onChange)A.onChange()}
 document.addEventListener('visibilitychange',function(){if(!ac)return;if(document.hidden){ac.suspend()}else if(A.music||A.sfx){ac.resume()}});
