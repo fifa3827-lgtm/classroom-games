@@ -107,6 +107,26 @@ function run(C){
   if(accPos===0&&(C.accuse||[]).length>2)W.push('지목 후보의 정답이 맨 첫 줄입니다');
   I.push(`정답 자리 — 추리 ${posOf(C.steps).map(i=>i+1).join('·')} / 소거 ${posOf(C.elim).map(i=>i+1).join('·')} / 지목 ${accPos+1}`);
 
+  // 6.55 얻을 수 있는 단서인데 「잠김」으로 선언돼 있지 않은가
+  //      (잠김은 「아직 못 얻었다」는 표시다. 주는 단서에 잠김을 달면 얻고도 쓸 수 없다)
+  const given=new Set();
+  Object.values(C.suspects||{}).forEach(s=>{
+    if(s.extra&&s.extra.give)given.add(s.extra.give);
+    (s.lines||[]).forEach(L=>{
+      if(L.gives)given.add(L.gives);
+      Object.values(L.hit||{}).forEach(h=>{if(h.give)given.add(h.give)});
+    });
+  });
+  given.forEach(id=>{
+    if(!C.clues[id])return E.push(`심문이 주는 <code>${id}</code> 가 clues 에 없습니다`);
+    if(C.clues[id].locked)E.push(`<code>${id}</code> 는 심문에서 얻는 단서인데 <b>locked</b> 입니다 — 얻어도 수첩과 선택창에 나타나지 않습니다`);
+  });
+  Object.keys(C.clues||{}).forEach(id=>{
+    if(!C.clues[id].locked)return;
+    const hasSpot=(C.spots||[]).some(s=>s.id===id);
+    if(!hasSpot&&!given.has(id))W.push(`<code>${id}</code> 는 잠겨 있는데 얻을 길(현장 지점·심문)이 없습니다`);
+  });
+
   // 6.6 추리에 필요한 단서를 정말 모을 수 있는가 (못 모으면 이용자는 영원히 헤맨다)
   (C.steps||[]).forEach((st,i)=>{
     const need=st.need||[];
