@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191737';
-import * as Save from './save.js?v=2609191737';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191829';
+import * as Save from './save.js?v=2609191829';
 
 var C=null;   // 현재 사건 데이터
 
@@ -879,6 +879,18 @@ function applyEpilogue(){
     var nt=$('#board-next-t'),nw=$('#board-next-w');
     if(nt)nt.textContent='다음 사건 「'+((C.next&&C.next.title)||'?')+'」';
     if(nw)nw.innerHTML=b.when||'곧 열려요.';
+    /* 사건을 풀고 나면 길이 끊기면 안 된다 — 다음 사건으로 바로 갈 수 있게 한다 */
+    var nb=$('#btn-next-case'),nc=null,lst=seasonCases();
+    lst.forEach(function(x){if(x.no===(C.no||1)+1)nc=x});
+    if(nb){
+      if(nc&&!nc.soon){nb.hidden=false;
+        nb.innerHTML='사건 '+nc.no+' 「'+esc(nc.title)+'」 시작하기 ▸';
+        nb.onclick=function(){sTap();sFan();Save.markOpen(nc.id);gotoCase(nc.id)};
+      }else{nb.hidden=false;nb.className='btn ghost';
+        nb.innerHTML=nc?('사건 '+nc.no+'은 준비 중이에요 · 📁 사건 목록 보기'):'📁 사건 목록 보기';
+        nb.onclick=function(){sTap();renderCases();closeKeyBox();show('s-cases')};
+      }
+    }
     var ask=$('#board-ask');
     if(ask)ask.innerHTML=(b.ask||[]).map(function(q){return '<li>'+q+'</li>'}).join('');
     /* 다음 사건의 열쇠말 — 기기 저장이 날아가도 이 말만 있으면 어디서든 다시 연다 */
@@ -1103,10 +1115,25 @@ function gotoCase(id){
   if(id===CASE){show('s-title');refreshTitle();return}   // 지금 사건이면 화면만 돌아간다
   location.search='?case='+id;                            // 다른 사건은 새로 연다(깨끗한 상태로)
 }
+/* 자판이 올라오면 보이는 영역이 줄어든다. 창을 그 영역 위쪽에 붙여 둔다. */
+function keyFollow(){
+  var b=$('#key-box');if(!b||b.hidden)return;
+  try{var vv=window.visualViewport;if(vv)b.style.top=(vv.offsetTop+10)+'px'}catch(e){}
+}
+function closeKeyBox(){
+  var b=$('#key-box'),k=$('#key-back');
+  if(b){b.hidden=true;b.style.top=''}
+  if(k)k.hidden=true;
+  KEYWAIT=null;
+  try{if(window.visualViewport)window.visualViewport.removeEventListener('resize',keyFollow)}catch(e){}
+}
 function openKeyBox(c){
   KEYWAIT=c;
   var b=$('#key-box');if(!b)return;
-  b.hidden=false;
+  var k=$('#key-back');if(k)k.hidden=false;
+  b.hidden=false;b.style.top='';
+  try{if(window.visualViewport){window.visualViewport.addEventListener('resize',keyFollow);
+    window.visualViewport.addEventListener('scroll',keyFollow)}}catch(e){}
   $('#key-title').textContent='사건 '+c.no+' 「'+c.title+'」';
   $('#key-msg').textContent='';
   var i=$('#key-in');if(i){i.value='';setTimeout(function(){try{i.focus()}catch(e){}},50)}
@@ -1124,27 +1151,43 @@ function tryKey(){
 }
 function bindCases(){
   var b=$('#btn-cases');
-  if(b)b.addEventListener('click',function(){sTap();sPage();renderCases();$('#key-box').hidden=true;show('s-cases')});
+  if(b)b.addEventListener('click',function(){sTap();sPage();renderCases();closeKeyBox();show('s-cases')});
   var bk=$('#cases-back');
-  if(bk)bk.addEventListener('click',function(){sTap();show('s-title');refreshTitle()});
+  if(bk)bk.addEventListener('click',function(){sTap();closeKeyBox();show('s-title');refreshTitle()});
   var g=$('#key-go');if(g)g.addEventListener('click',function(){sTap();tryKey()});
   var i=$('#key-in');if(i)i.addEventListener('keydown',function(e){if(e.key==='Enter')tryKey()});
-  var x=$('#key-x');if(x)x.addEventListener('click',function(){sTap();$('#key-box').hidden=true;KEYWAIT=null});
+  var x=$('#key-x');if(x)x.addEventListener('click',function(){sTap();closeKeyBox()});
+  var kb=$('#key-back');if(kb)kb.addEventListener('click',function(){closeKeyBox()});
   /* 열쇠말을 모르는 아이를 막아 세우지 않는다 — 권유였지 문이 아니다 */
   var any=$('#key-any');
   if(any)any.addEventListener('click',function(){sTap();if(KEYWAIT)gotoCase(KEYWAIT.id)});
 }
-/* 표지에서 「다음 사건이 열렸다」를 한 줄로 알려 준다 */
+/* 표지가 지금 **어느 사건을 열었는지** 먼저 말해 준다.
+   예전에는 「다음에 열린 사건」을 찾아 알렸는데, 사건 2를 연 화면에서 아직 안 푼
+   사건 1을 가리켜 「사건 1이 열려 있어요」라고 떠 버렸다 — 뒤로 가라는 말처럼 읽힌다. */
+/* 조사 고르기 — 「도토리묵를」처럼 어색하게 나오면 아이들이 먼저 알아본다.
+   마지막 한글 글자에 받침이 있으면 앞엣것(을/이/은), 없으면 뒤엣것(를/가/는). */
+function josa(word,withB,noB){
+  var m=String(word||'').match(/[가-힣](?=[^가-힣]*$)/);
+  if(!m)return noB;
+  return ((m[0].charCodeAt(0)-0xAC00)%28)?withB:noB;
+}
 function titleOpenLine(){
   var el=$('#title-open');if(!el)return;
-  var list=seasonCases(),prog=Save.loadProg(),next=null;
-  list.forEach(function(c){
-    if(c.soon||c.id===CASE)return;
-    var st=caseState(c,prog,list);
-    if(st!=='lock'&&!prog.done[c.id]&&!next)next=c;
-  });
-  if(next){el.hidden=false;el.innerHTML='📁 <b>사건 '+next.no+' 「'+esc(next.title)+'」</b> — 지금 열려 있어요. 아래 <b>사건 목록</b>에서 고르세요'}
-  else el.hidden=true;
+  var list=seasonCases(),prog=Save.loadProg(),cur=null,next=null;
+  list.forEach(function(c){if(c.id===CASE)cur=c});
+  /* 지금 사건을 이미 풀었다면, 그때만 「다음」을 권한다 */
+  if(cur&&prog.done[cur.id]){
+    list.forEach(function(c){
+      if(c.soon||c.id===CASE||prog.done[c.id]||next)return;
+      if(c.no>(cur.no||0)&&caseState(c,prog,list)!=='lock')next=c;
+    });
+  }
+  var h='';
+  if(cur)h='📂 <b>사건 '+cur.no+' 「'+esc(cur.title)+'」</b>'+josa(cur.title,'을','를')+' 불러왔어요'+
+    (prog.done[cur.id]?' · <b>해결한 사건</b>':'');
+  if(next)h+='<br>✓ 다음 <b>사건 '+next.no+' 「'+esc(next.title)+'」</b>'+josa(next.title,'이','가')+' 열렸어요 — <b>사건 목록</b>에서 고르세요';
+  if(h){el.hidden=false;el.innerHTML=h}else el.hidden=true;
 }
 function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle()}
 
