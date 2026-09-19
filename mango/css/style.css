@@ -393,11 +393,24 @@ img.mjoy{width:82px;height:82px;object-fit:contain;
 .casecard.cur{border-color:var(--must-d);background:#fffaf0}
 .casecard.dim{opacity:.62}
 .casecard:hover{background:#fffaf0}
-.keybox input{flex:1 1 130px;min-width:0;font:inherit;font-size:14px;padding:5px 8px;
+.keybox input{flex:1 1 130px;min-width:0;font:inherit;font-size:16px;padding:6px 9px;
   border:2px solid var(--line);border-radius:7px;background:#fff}
+/* 표지의 「사건 목록」 — 소리 단추들 틈에 끼어 있어 눈에 안 띄었다. 모드 단추 바로 아래로 올린다 */
+.caseslink{display:flex;gap:7px;align-items:baseline;flex-wrap:wrap;text-align:left;
+  background:#fff8e7;border:2.5px dashed var(--must-d);border-radius:10px;padding:7px 11px;box-shadow:var(--sh)}
+.caseslink b{font-family:"Gaegu",cursive;font-size:15px}
+.caseslink span{font-size:11.5px;color:var(--soft)}
+.caseslink:hover{background:#fff3d6}
+/* 열쇠말 창은 화면 위에 띄운다 — 폰에서 자판이 올라오면 아래쪽 입력칸은 가려진다 */
+#s-cases .keybox{position:fixed;left:50%;transform:translateX(-50%);
+  top:calc(10px + env(safe-area-inset-top,0px));width:min(520px,calc(100vw - 22px));
+  z-index:60;margin:0;box-shadow:0 10px 30px rgba(40,28,20,.35)}
+.keyback{position:fixed;inset:0;background:rgba(30,22,14,.45);z-index:55}
+.keyback[hidden]{display:none}
 @media (max-height:430px){
   .casecard{padding:5px 9px} .casecard b{font-size:15px} .casecard .csub{display:none}
   #s-cases .txt{gap:6px}
-  #s-cases .keybox{padding:7px 9px}
+  #s-cases .keybox{padding:7px 9px;top:6px}
+  #s-cases .keybox p.muted:first-of-type{display:none}
   #s-cases .keybox p{font-size:11px}
 }
