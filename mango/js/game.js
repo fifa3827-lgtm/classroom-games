@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191829';
-import * as Save from './save.js?v=2609191829';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191846';
+import * as Save from './save.js?v=2609191846';
 
 var C=null;   // 현재 사건 데이터
 
@@ -352,7 +352,11 @@ function addClue(id,quiet){
   return true;
 }
 function updateDot(){var d=$('#notes-dot');d.hidden=S.newNotes===0;d.textContent=S.newNotes;var c=$('#t-clue');if(c)c.textContent='🗒 '+count()}
-function count(){return C.order.filter(function(id){return S.found[id]&&!C.clues[id].locked}).length}
+/* 「잠김」은 **아직 얻지 못했다**는 뜻이다. 얻고 나면 잠김이 아니다.
+   이걸 구별하지 않아서, 심문에서 얻은 「콩이 주머니의 압정」(locked 로 선언된 단서)이
+   수첩에도 단서 고르기 창에도 끝내 나타나지 않았다 — 얻었는데 쓸 수 없는 카드였다. */
+function isLocked(id){var c=C.clues[id];return !!(c&&c.locked&&!S.found[id])}
+function count(){return C.order.filter(function(id){return S.found[id]&&!isLocked(id)}).length}
 function lamps(){$('#t-lamp').textContent='💡 '+S.lamps}
 function burn(){S.lamps=Math.max(0,S.lamps-1);lamps()}
 
@@ -371,7 +375,7 @@ function setMode(m){
 function idleReset(){clearTimeout(S.idle);if(!S.easy||S.screen!=='invest')return;S.idle=setTimeout(idleHint,60000)}
 function idleHint(){
   if(S.screen!=='invest')return;var m='';
-  if(S.mode==='scene'){var left=C.spots.filter(function(sp){return !sp.decoy&&!S.found[sp.id]&&!C.clues[sp.id].locked}).length;m=left?'아직 조사하지 않은 곳이 '+left+'곳 있어요. 확대경을 천천히 끌어 보세요':'현장은 다 봤어요. 심문 탭으로 가 보세요'}
+  if(S.mode==='scene'){var left=C.spots.filter(function(sp){return !sp.decoy&&!S.found[sp.id]&&!isLocked(sp.id)}).length;m=left?'아직 조사하지 않은 곳이 '+left+'곳 있어요. 확대경을 천천히 끌어 보세요':'현장은 다 봤어요. 심문 탭으로 가 보세요'}
   else if(S.mode==='talk')m=S.sel?'수첩의 증언 카드도 들이댈 수 있어요':'용의자의 말 중 수첩의 증언과 어긋나는 말을 찾아보세요';
   else if(S.mode==='logic'){
     if(S.phase==='chain'){var i=-1;C.steps.forEach(function(c,k){if(i<0&&!stepDone(k))i=k});
@@ -457,7 +461,7 @@ function inspect(){
   var sp=S.hot;if(!sp)return;sTap();
   if(sp.decoy){sNo();rightScene('<div class="card"><div class="who">'+esc(sp.label)+'</div><p style="margin:0">'+esc(sp.decoy)+'</p></div>');return}
   var c=C.clues[sp.id];
-  if(c.locked){sBad();rightScene('<div class="card"><div class="who">🔒 '+esc(c.n)+'</div><p style="margin:0">'+c.t+'</p></div>');return}
+  if(isLocked(sp.id)){sBad();rightScene('<div class="card"><div class="who">🔒 '+esc(c.n)+'</div><p style="margin:0">'+c.t+'</p></div>');return}
   /* 분석 미니게임이 걸린 지점은 퍼즐을 풀어야 단서를 얻는다 */
   if(sp.mini&&!S.found[sp.id]){openMini(sp);return}
   finishInspect(sp,addClue(sp.id));
@@ -610,7 +614,7 @@ function renderNotes(){
   $('#left').innerHTML='<div style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:6px">'+
     '<div class="card"><div class="who">수첩 <small>'+count()+'장</small></div><div class="clues" id="note-grid"></div></div></div>';
   var g=$('#note-grid'),h='';
-  C.order.forEach(function(id){if(S.found[id]||C.clues[id].locked)h+=cardHTML(id,false,true)});
+  C.order.forEach(function(id){if(S.found[id]||isLocked(id))h+=cardHTML(id,false,true)});
   g.innerHTML=h||'<p class="muted">아직 기록이 없어요. 현장을 조사해 보세요.</p>';
   $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">카드를 누르면 내용을 다시 볼 수 있어요</div><p class="muted" style="margin:0">물증은 흰 카드, 증언은 이중선 카드예요. 둘 다 추리의 근거로 쓸 수 있어요.</p></div>';
   g.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();var c=C.clues[b.dataset.c];
@@ -838,7 +842,7 @@ function openTray(kind){
     if((C.proofs||[]).some(function(id){return !S.found[id]}))ctx+='<div class="ctx" style="color:var(--brick)">결정적 증거로 쓸 단서를 아직 다 찾지 못했어요. 비워 두고 지목해도 됩니다.</div>'}
   var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div>'+ctx+'<div class="list"><div class="clues">';
   var any=false;
-  C.order.forEach(function(id){if(S.found[id]&&!C.clues[id].locked){any=true;h+=cardHTML(id,false,true)}});
+  C.order.forEach(function(id){if(S.found[id]){any=true;h+=cardHTML(id,false,true)}});
   h+='</div>'+(any?'':'<p class="muted">아직 단서가 없어요. 현장을 먼저 조사하세요.</p>')+'</div>';
   d.innerHTML=h;r.appendChild(d);
   $('#sheet-x').addEventListener('click',function(){sTap();S.active=null;closeSheet();if(S.mode==='logic')renderLogic()});

@@ -67,9 +67,7 @@
    "n": "콩이 주머니의 압정",
    "icon": "#i-pin",
    "t": "주머니에 압정이 <b>하나도</b> 남아 있지 않아요. 가진 걸 다 쓴 거예요.",
-   "locked": true,
-   "iconImg": "c2-tape.png",
-   "lockName": "주머니"
+   "iconImg": "c2-tape.png"
   },
   "c_cut": {
    "n": "「광장」만 오려진 포스터",
