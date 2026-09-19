@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191431';
-import * as Save from './save.js?v=2609191431';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191634';
+import * as Save from './save.js?v=2609191634';
 
 var C=null;   // 현재 사건 데이터
 
@@ -508,9 +508,13 @@ function renderTalk(){
   s.lines.forEach(function(L){
     if(L.hidden&&!S.flags[L.id])return;n++;
     var active=L.sus&&(!L.needs||S.flags[L.needs]);
-    var cls='tap'+(active&&S.easy?' sus-on':'')+(S.sel===L.id?' picked':'');
+    /* 한 번 반박에 성공한 말은 다시 할 필요가 없다. 표시를 달아 두고 말은 그대로 남긴다 —
+       지워 버리면 무엇을 밝혀냈는지 되짚을 수 없고, 그냥 두면 같은 일을 또 하게 된다. */
+    var ok=!!S.flags['ok_'+L.id], end=!ok&&!!S.flags['end_'+L.id];
+    var cls='tap'+(active&&S.easy&&!ok&&!end?' sus-on':'')+(S.sel===L.id?' picked':'')+(ok?' ok':'')+(end?' checked':'');
     var isNew=L.hidden&&!S.flags['seen_'+L.id];if(isNew)S.flags['seen_'+L.id]=true;
-    var txt='"'+esc(L.t)+'"'+(isNew?'<span class="new">새로운 말</span>':'');
+    var mk=ok?'<span class="mk ok">✓ 밝혀냄</span>':(end?'<span class="mk">확인함</span>':'');
+    var txt=mk+'"'+esc(L.t)+'"'+(isNew?'<span class="new">새로운 말</span>':'');
     if(intro||isNew){seq.push({id:L.id,html:txt});txt=''}
     h+='<div class="stmt"><span class="n">'+n+'</span><button class="'+cls+(txt?'':' typing')+'" data-l="'+L.id+'" id="ln-'+L.id+'">'+txt+'</button></div>';
   });
@@ -539,6 +543,9 @@ function pickLine(id){
   var s=C.suspects[S.tab],L=null;s.lines.forEach(function(x){if(x.id===id)L=x});if(!L)return;
   if(typers.length)return; // 말하는 중엔 잠시 기다리기 (화면을 누르면 바로 끝남)
   sTap();
+  /* 이미 끝낸 말 — 다시 반박시키지 않고, 그때 오간 이야기를 그대로 다시 보여 준다 */
+  var keep=S.flags['ok_'+id]?S.flags['okSay_'+id]:(S.flags['end_'+id]?S.flags['endSay_'+id]:null);
+  if(keep){S.sel=null;renderTalk();say(keep+'<br><span class="muted">'+(S.flags['ok_'+id]?'이미 반박에 성공한 말이에요. 다시 하지 않아도 돼요.':'이 말은 더 볼 게 없어요.')+'</span>',true);updateAct();return}
   if(L.gives){var got=addClue(L.gives);S.sel=null;renderTalk();say((got?'<b>수첩에 기록</b> — ':'')+C.clues[L.gives].t,true);if(got)toast('증언 카드가 수첩에 추가됐어요');return}
   if(L.flag&&!L.sus){S.flags[L.flag]=true;S.sel=null;renderTalk();say(L.say||'<b>망고</b> "…그래, 한번 보자."');updateAct();return}
   var active=L.sus&&(!L.needs||S.flags[L.needs]);
@@ -553,12 +560,18 @@ function present(clueId){
     sSting();if(hit.eyes)s.eyes=hit.eyes;if(hit.flag)S.flags[hit.flag]=true;if(hit.unlock)S.flags[hit.unlock]=true;
     /* 반박에 성공해야 나오는 단서는 hit.give 로 준다 — 사건 파일이 정한다 */
     var gave=hit.give&&addClue(hit.give);
+    var html='<b>망고</b> "잠깐. 「'+C.clues[clueId].n.replace(/^[^:]+: /,'')+'」 — 이건 어떻게 설명하죠?"<br>'+hit.say+
+        (gave?'<br><span class="muted">→ 새 카드가 수첩에 들어갔어요.</span>':'');
+    S.flags['ok_'+L.id]=1;S.flags['okSay_'+L.id]=html;   // 다음부터는 표시만 보고 넘어간다
     S.sel=null;renderTalk();
-    say('<b>망고</b> "잠깐. 「'+C.clues[clueId].n.replace(/^[^:]+: /,'')+'」 — 이건 어떻게 설명하죠?"<br>'+hit.say+
-        (gave?'<br><span class="muted">→ 새 카드가 수첩에 들어갔어요.</span>':''));
+    say(html);
     if(hit.toast)setTimeout(function(){toast(hit.toast)},1800);
   }else if(hit&&hit.partial){
-    sNo();renderTalk();say(hit.say+'<br><span class="muted">'+(hit.hint||'가까워요. 조금 더 직접 이어지는 단서가 필요해요.')+'</span>');
+    var ph=hit.say+'<br><span class="muted">'+(hit.hint||'가까워요. 조금 더 직접 이어지는 단서가 필요해요.')+'</span>';
+    /* 성공할 수 있는 단서가 아예 없는 말이라면 여기가 끝이다. 계속 두드리게 두지 않는다. */
+    var solvable=Object.keys(L.hit||{}).some(function(k){return !L.hit[k].partial});
+    if(!solvable){S.flags['end_'+L.id]=1;S.flags['endSay_'+L.id]=ph;S.sel=null}
+    sNo();renderTalk();say(ph);
   }else{
     sBad();burn();S.rebutErr++;renderTalk();
     say('<b>'+esc(s.name)+'</b> "그건 저랑 상관없는데요?"'+(S.lamps?'':' <span class="muted">(등불을 다 썼어요)</span>'));
