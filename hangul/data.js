@@ -13,11 +13,11 @@ window.HANGUL_DATA = {
     sheetUrl: "https://script.google.com/macros/s/AKfycbz27sncTlzZYm8c-WyvUx84xdoJKXvmEKnXO9n1jn-rXPUCkGa6NnL-1TnjvPYr_sJThw/exec",  // 구글 시트 「쵸코와 한글 진도 기록」 Apps Script 웹앱 (2026-09-15 배포). 비우면 기기 안에만 저장
     englishHint: true,           // 낱말에 영어 뜻 표시
     questionsPerActivity: 6,     // 활동 하나에 문제 수
-    openSet: 1,                  // 글자판에 열린 범위 (1~4). 선생님 모드에서 조절
+    openSet: 1,                  // 글자판에 열린 범위 (1~5). 선생님 모드에서 조절
     unlockedStages: [1],
     speechRate: 0.85,            // 음성 파일이 없을 때 쓰는 기계 음성 속도
     micEnabled: true,            // 「읽어 보기」에서 아이 목소리 녹음
-    focus: "수 더 미 머 노 서 두 디 다 시 모 거"  // 집중 글자. 읽기 확인표 1회(2026-09-15)에서 ×였던 12자. 선생님 모드에서 비우면 이 기본값으로 돌아온다
+    focus: "미 디 니 두 수 무 구 누 서 거 너 노"  // 집중 글자. 2026-09-21 시트 기록(24회·144문제)에서 실제로 자주 틀린 12자 — ㅜ줄 5 · ㅣ줄 3 · ㅓ줄 3 · ㅗ줄 1. 선생님 모드에서 비우면 이 기본값으로 돌아온다
   },
 
   /* ---------- 소리 ----------
@@ -97,13 +97,16 @@ window.HANGUL_DATA = {
     { id: 1, name: "다섯 자음 · 다섯 모음",
       consonants: ["ㄱ","ㄴ","ㄷ","ㅁ","ㅅ"],
       vowels: ["ㅏ","ㅓ","ㅗ","ㅜ","ㅣ"] },
-    { id: 2, name: "자음 여덟 · 모음 여섯",
+    { id: 2, name: "여섯 자음 · 다섯 모음",
+      consonants: ["ㄱ","ㄴ","ㄷ","ㅁ","ㅅ","ㅂ"],
+      vowels: ["ㅏ","ㅓ","ㅗ","ㅜ","ㅣ"] },
+    { id: 3, name: "자음 여덟 · 모음 여섯",
       consonants: ["ㄱ","ㄴ","ㄷ","ㅁ","ㅅ","ㅂ","ㅈ","ㅎ"],
       vowels: ["ㅏ","ㅓ","ㅗ","ㅜ","ㅡ","ㅣ"] },
-    { id: 3, name: "기본 자음 전부",
+    { id: 4, name: "기본 자음 전부",
       consonants: ["ㄱ","ㄴ","ㄷ","ㄹ","ㅁ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"],
       vowels: ["ㅏ","ㅓ","ㅗ","ㅜ","ㅡ","ㅣ"] },
-    { id: 4, name: "기본 자음 · 모음 전부",
+    { id: 5, name: "기본 자음 · 모음 전부",
       consonants: ["ㄱ","ㄴ","ㄷ","ㄹ","ㅁ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"],
       vowels: ["ㅏ","ㅑ","ㅓ","ㅕ","ㅗ","ㅛ","ㅜ","ㅠ","ㅡ","ㅣ","ㅐ","ㅔ"] }
   ],
@@ -132,28 +135,28 @@ window.HANGUL_DATA = {
   words: [
     { w: "나무", pic: "🌳", en: "tree",     set: 1 },
     { w: "고기", pic: "🥩", en: "meat",     set: 1 },
-    { w: "다리", pic: "🌉", en: "bridge",   set: 3 },
-    { w: "모자", pic: "🧢", en: "hat",      set: 2 },
-    { w: "사자", pic: "🦁", en: "lion",     set: 2 },
+    { w: "다리", pic: "🌉", en: "bridge",   set: 4 },
+    { w: "모자", pic: "🧢", en: "hat",      set: 3 },
+    { w: "사자", pic: "🦁", en: "lion",     set: 3 },
     { w: "나비", pic: "🦋", en: "butterfly", set: 2 },
     { w: "바다", pic: "🌊", en: "sea",      set: 2 },
-    { w: "아기", pic: "👶", en: "baby",     set: 3 },
-    { w: "오리", pic: "🦆", en: "duck",     set: 3 },
-    { w: "하마", pic: "🦛", en: "hippo",    set: 2 },
-    { w: "기차", pic: "🚂", en: "train",    set: 3 },
-    { w: "포도", pic: "🍇", en: "grape",    set: 3 },
-    { w: "가지", pic: "🍆", en: "eggplant", set: 2 },
+    { w: "아기", pic: "👶", en: "baby",     set: 4 },
+    { w: "오리", pic: "🦆", en: "duck",     set: 4 },
+    { w: "하마", pic: "🦛", en: "hippo",    set: 3 },
+    { w: "기차", pic: "🚂", en: "train",    set: 4 },
+    { w: "포도", pic: "🍇", en: "grape",    set: 4 },
+    { w: "가지", pic: "🍆", en: "eggplant", set: 3 },
     { w: "구두", pic: "👞", en: "shoes",    set: 1 },
-    { w: "소리", pic: "🔔", en: "sound",    set: 3 },
-    { w: "머리", pic: "🧠", en: "head",     set: 3 },
-    { w: "치마", pic: "👗", en: "skirt",    set: 3 },
-    { w: "코피", pic: "🩸", en: "nosebleed", set: 3 },
+    { w: "소리", pic: "🔔", en: "sound",    set: 4 },
+    { w: "머리", pic: "🧠", en: "head",     set: 4 },
+    { w: "치마", pic: "👗", en: "skirt",    set: 4 },
+    { w: "코피", pic: "🩸", en: "nosebleed", set: 4 },
     { w: "바나나", pic: "🍌", en: "banana", set: 2 },
-    { w: "너구리", pic: "🦝", en: "raccoon", set: 3 },
-    { w: "도토리", pic: "🌰", en: "acorn",  set: 3 },
+    { w: "너구리", pic: "🦝", en: "raccoon", set: 4 },
+    { w: "도토리", pic: "🌰", en: "acorn",  set: 4 },
     { w: "고구마", pic: "🍠", en: "sweet potato", set: 1 },
-    { w: "어머니", pic: "👩", en: "mother", set: 3 },
-    { w: "아버지", pic: "👨", en: "father", set: 3 }
+    { w: "어머니", pic: "👩", en: "mother", set: 4 },
+    { w: "아버지", pic: "👨", en: "father", set: 4 }
   ],
 
   /* ---------- 활동 ----------
