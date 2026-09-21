@@ -300,6 +300,9 @@
   .plan svg,.wind svg{position:absolute;inset:0;width:100%;height:100%}
   .pl-room{fill:#f6efe0;stroke:var(--line);stroke-width:2.5;stroke-dasharray:0}
   .pl-note{font-size:11px;fill:var(--soft);font-family:inherit}
+  .pl-ground{stroke:var(--line);stroke-width:2.5;stroke-linecap:round}
+  .pl-pin rect{fill:#b07f44;stroke:var(--line);stroke-width:1.6}
+  .pl-pin ellipse{fill:#3a2b1c;opacity:.3}
   .pl-mark{font-size:9.5px;fill:var(--soft);font-family:inherit}
   /* 막을 자리 */
   .pslot{position:absolute;transform:translate(-50%,-50%);min-width:84px;max-width:132px;

@@ -35,13 +35,29 @@ for k, st in enumerate(D.get('steps', [])):
         for x in F.get('extra', []):
             print('   ✗ ' + x['w'] + '  → ' + strip(x['why']))
     elif st.get('board'):
-        B = st['board']
-        print('   판: %s %s~%s  일출 %s' % (B['kind'], B['from'], B['to'], B.get('sunrise', '-')))
-        for e in B['events']:
-            print('   · %s %s' % (e['t'], ('고정 ' + e['fix']) if e.get('fix') else ('조건 ' + ('after ' + e['after'] if e.get('after') else '') + ('before ' + e['before'] if e.get('before') else ''))))
-            if e.get('why'):
-                print('      → ' + strip(e['why']))
+        B = st['board']; kind = B.get('kind', 'timeline')
+        if kind == 'timeline':
+            print('   판(시간표): %s~%s  일출 %s' % (B['from'], B['to'], B.get('sunrise', '-')))
+            for e in B['events']:
+                print('   · %s %s' % (e['t'], ('고정 ' + e['fix']) if e.get('fix') else ('조건 ' + ('after ' + e['after'] if e.get('after') else '') + ('before ' + e['before'] if e.get('before') else ''))))
+                if e.get('why'):
+                    print('      → ' + strip(e['why']))
+        elif kind == 'plan':
+            print('   판(평면도): ' + B.get('title', ''))
+            oks = {sl['ok']: sl['t'] for sl in B['slots']}
+            for sl in B['slots']:
+                print('   자리 「%s」 ← 정답 카드 %s' % (sl['t'], sl['ok']))
+                if sl.get('why'): print('      → ' + strip(sl['why']))
+            for c in B['cards']:
+                print('   카드 「%s」%s' % (c['t'], ('  → ' + oks[c['id']]) if c['id'] in oks else '  (미끼)'))
+                if c.get('why'): print('      ✗ ' + strip(c['why']))
+        elif kind == 'wind':
+            print('   판(바람): ' + B.get('title', ''))
+            for d in B['dirs']:
+                print('   방향 「%s」%s' % (d['t'], '   ← 정답' if d['id'] == B['answer'] else ''))
+                if d.get('why'): print('      ✗ ' + strip(d['why']))
         print('   안내: ' + strip(B.get('ask', '')))
+        print('   다 놓으면: ' + strip(B.get('done', '')))
     for i, o in enumerate(st.get('opts', [])):
         print('  %d) %s%s' % (i + 1, strip(o['t']), '   ← 정답' if o.get('ok') else ''))
         if o.get('why'):
@@ -55,6 +71,6 @@ for e in D.get('elim', []):
         if o.get('why'):
             print('      → ' + strip(o['why']))
 
-print('\n\n■ 지목')
-for a in D.get('accuse', []):
-    print('  · %s%s' % (strip(a['t']), '   ← 정답' if a.get('ok') else ''))
+print('\n\n■ 재현 (순서대로 읽어 자연스러운가)')
+for i, c in enumerate((D.get('replay') or {}).get('cuts', [])):
+    print('  %d. %s' % (i + 1, strip(c['t'])))

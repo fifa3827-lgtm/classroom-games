@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609212308';
-import * as Save from './save.js?v=2609212308';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609220001';
+import * as Save from './save.js?v=2609220001';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -15,7 +15,7 @@ var ART={};                                   // 경로 -> true(있음) / false(
 /* 그림 주소에도 판 번호를 붙인다. 예전에는 ?v=1 로 고정이라, 그림을 고쳐 올려도
    한 번이라도 본 기기는 옛 그림을 영영 들고 있었다(탑 2층의 제미나이 별이 그랬다).
    stamp.py 가 올리기 직전에 이 줄을 갱신한다. */
-var ARTV='2609212308';
+var ARTV='2609220001';
 function artURL(f){return 'img/'+f+'?v='+ARTV}
 function artOK(f){return !!(f&&ART[f])}
 function probe(f){return new Promise(function(done){
@@ -49,6 +49,13 @@ function probeCaseArt(){
     if(C.clues[k].iconImg)list.push(C.clues[k].iconImg);
     if(C.clues[k].photo)list.push(C.clues[k].photo);
   });
+  /* 재현 장면의 인물·배경도 미리 확인한다. 그림이 아직 없는 사건(사건 4를 만드는 동안)에서
+     깨진 그림 아이콘이 뜨지 않게 — 없는 건 그냥 안 그린다. */
+  (((C.replay||{}).cuts)||[]).forEach(function(cut){
+    if(cut.bg)list.push(cut.bg);
+    (cut.figs||[]).forEach(function(f){if(f.img)list.push(f.img)});
+  });
+  if(C.replay&&C.replay.bg)list.push(C.replay.bg);
   return Promise.all(list.map(probe));
 }
 /* 표정 파일이 없으면 기본 표정으로, 그것도 없으면 SVG 로 */
@@ -136,7 +143,7 @@ function fresh(){
    scene.need 에 적힌 단서를 다 얻어야 그 현장이 열린다. */
 function sceneList(){
   if(C.scenes&&C.scenes.length)return C.scenes;
-  return [{id:'_one',label:'현장',img:C.sceneImg,svg:C.sceneSvg,memo:C.memo,spots:C.spots||[]}];
+  return [{id:'_one',label:'현장',img:C.sceneImg,svg:C.sceneSvg,overlay:C.sceneOverlay,memo:C.memo,spots:C.spots||[]}];
 }
 function curScene(){
   var L=sceneList(),f=L[0];
@@ -649,9 +656,13 @@ var LENS_R=40;
 /* 확대경이 <use href="#art"> 로 확대하므로, 그림을 써도 id는 art 그대로 유지한다. */
 function artLayer(){
   var sc=curScene();
+  /* overlay: 배경 그림 **위에** 얹는 SVG 조각(사건 4의 말뚝·밧줄·석회). #art 안에 넣어야
+     확대경이 같이 확대한다. 배경 그림이 없을 때도 얹는다 — 그림 없이 완주 시험을 돌리기 위해. */
+  var ov=sc.overlay||'';
   if(artOK(sc.img))
-    return '<g id="art"><image href="'+artURL(sc.img)+'" x="0" y="0" width="720" height="360" preserveAspectRatio="xMidYMid slice"/></g>';
-  return sc.svg||C.sceneSvg||'<g id="art"><rect width="720" height="360" fill="#e9eadf"/></g>';
+    return '<g id="art"><image href="'+artURL(sc.img)+'" x="0" y="0" width="720" height="360" preserveAspectRatio="xMidYMid slice"/>'+ov+'</g>';
+  if(sc.svg||C.sceneSvg)return sc.svg||C.sceneSvg;
+  return '<g id="art"><rect width="720" height="360" fill="#e9eadf"/>'+ov+'</g>';
 }
 /* 현장이 둘 이상일 때만 현장 단추 줄을 둔다. 잠긴 현장은 이름 대신 자물쇠를 보여 주고,
    눌러 보면 무엇이 있어야 열리는지 말해 준다 — 막힌 곳에서 헤매지 않게. */
@@ -1282,10 +1293,21 @@ function renderPlanStep(i){
   var c=C.steps[i],b=c.board,st=S.steps[i];st.pl=st.pl||{};
   var h='<div class="tlwrap planwrap" id="tlwrap"><div class="tlhd"><b>'+esc(b.title||'평면도')+'</b>'+
         '<span class="muted">'+esc(b.hint||'카드를 자리에 맞춰 놓으세요')+'</span></div>';
-  h+='<div class="plan" id="plan"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet">'+
-     '<rect class="pl-room" x="26" y="20" width="248" height="140" rx="6"/>'+
-     (b.note?'<text class="pl-note" x="150" y="98" text-anchor="middle">'+esc(b.note)+'</text>':'');
+  /* 판의 바탕은 두 가지다 — 방(room)이면 네모, 줄(line)이면 바닥선.
+     현장 그림과 모양이 어긋나면 안 된다(사건 4는 말뚝이 한 줄로 서 있다). */
+  var shape=b.shape||'room';
+  h+='<div class="plan" id="plan"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet">';
+  if(shape==='line'){
+    h+='<line class="pl-ground" x1="18" y1="126" x2="282" y2="126"/>';
+    if(b.note)h+='<text class="pl-note" x="150" y="150" text-anchor="middle">'+esc(b.note)+'</text>';
+  }else{
+    h+='<rect class="pl-room" x="26" y="20" width="248" height="140" rx="6"/>';
+    if(b.note)h+='<text class="pl-note" x="150" y="98" text-anchor="middle">'+esc(b.note)+'</text>';
+  }
   (b.marks||[]).forEach(function(m){
+    /* 말뚝 그림은 바닥선(y=126) 위에 선다 — 글자는 선 아래에 따로 놓는다 */
+    if(m.pin)h+='<g class="pl-pin"><ellipse cx="'+m.x+'" cy="126" rx="7" ry="2.6"/>'+
+      '<rect x="'+(m.x-3)+'" y="102" width="6" height="24" rx="2"/></g>';
     h+='<text class="pl-mark" x="'+m.x+'" y="'+m.y+'" text-anchor="middle">'+esc(m.t)+'</text>';
   });
   h+='</svg>';
@@ -1295,7 +1317,7 @@ function renderPlanStep(i){
     h+='<div class="pslot'+(put?' on':'')+(bad?' bad':'')+'" data-slot="'+sl.id+'" '+
        'style="left:'+sl.x+'%;top:'+sl.y+'%">'+
        '<b>'+esc(sl.t)+'</b>'+
-       '<span class="pput">'+(card?esc(card.t):'여기를 막는 건?')+'</span></div>';
+       '<span class="pput">'+(card?esc(card.t):esc(b.slotAsk||'여기를 막는 건?'))+'</span></div>';
   });
   h+='</div>';
   h+='<div class="tray" id="tray">';
@@ -1591,6 +1613,7 @@ function cutArt(cut,small){
   if(fx.indexOf(' dawn ')>=0)h+='<div class="cutfx dawn"></div>';
   (cut.figs||[]).forEach(function(f){
     if(!artOK(f.img))return;
+    if(!artOK(f.img))return;            /* 아직 없는 그림은 건너뛴다 — 깨진 아이콘보다 빈 자리가 낫다 */
     h+='<img class="cutfig" src="'+artURL(f.img)+'" alt="" style="left:'+f.x+'%;top:'+f.y+'%;height:'+f.s+'%'+(f.flip?';transform:translate(-50%,-50%) scaleX(-1)':'')+'">';
   });
   return h+'</div>';
