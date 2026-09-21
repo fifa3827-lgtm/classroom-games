@@ -27,17 +27,26 @@ function run(C){
   const E=[],W=[],I=[];
   const clue=id=>C.clues[id];
   const has=id=>!!C.clues[id];
+  /* 현장이 여럿인 사건(C.scenes)과 하나인 사건(C.spots)을 같은 목록으로 본다 */
+  const allSpots = (C.scenes&&C.scenes.length) ? C.scenes.reduce((a,sc)=>a.concat(sc.spots||[]),[]) : (C.spots||[]);
   const collectable=new Set();
   (C.startClues||[]).forEach(id=>collectable.add(id));
-  (C.spots||[]).forEach(s=>{if(!s.decoy&&!(clue(s.id)||{}).locked)collectable.add(s.id)});
-  Object.values(C.suspects||{}).forEach(s=>(s.lines||[]).forEach(L=>{
-    if(L.gives)collectable.add(L.gives);
-    if(L.hit)Object.values(L.hit).forEach(h=>{if(h.flag==='c_stain_found')collectable.add('c_stain')});
-  }));
+  allSpots.forEach(s=>{if(!s.decoy&&!(clue(s.id)||{}).locked)collectable.add(s.id)});
+  Object.values(C.clues||{}).forEach(c=>{if(c.follow&&c.follow.give)collectable.add(c.follow.give)});
+  Object.values(C.suspects||{}).forEach(s=>{
+    (s.lines||[]).forEach(L=>{
+      if(L.gives)collectable.add(L.gives);
+      if(L.hit)Object.values(L.hit).forEach(h=>{
+        if(h.give)collectable.add(h.give);
+        if(h.flag==='c_stain_found')collectable.add('c_stain');
+      });
+    });
+    if(s.extra&&s.extra.give)collectable.add(s.extra.give);
+  });
   collectable.add('c_stain');           // 앞치마 살펴보기로 얻는다
 
   // 1. 참조 무결성
-  (C.spots||[]).forEach(s=>{if(!s.decoy&&!has(s.id))E.push(`현장 지점 <code>${s.id}</code> 에 해당하는 단서가 없습니다`)});
+  allSpots.forEach(s=>{if(!s.decoy&&!has(s.id))E.push(`현장 지점 <code>${s.id}</code> 에 해당하는 단서가 없습니다`)});
   (C.order||[]).forEach(id=>{if(!has(id))E.push(`order 의 <code>${id}</code> 가 clues 에 없습니다`)});
   Object.keys(C.clues||{}).forEach(id=>{if(!(C.order||[]).includes(id))W.push(`<code>${id}</code> 가 order 에 빠져 수첩에 안 보일 수 있습니다`)});
   (C.suspectOrder||[]).forEach(id=>{if(!C.suspects[id])E.push(`suspectOrder 의 <code>${id}</code> 가 suspects 에 없습니다`)});
@@ -123,7 +132,7 @@ function run(C){
   });
   Object.keys(C.clues||{}).forEach(id=>{
     if(!C.clues[id].locked)return;
-    const hasSpot=(C.spots||[]).some(s=>s.id===id);
+    const hasSpot=allSpots.some(s=>s.id===id);
     if(!hasSpot&&!given.has(id))W.push(`<code>${id}</code> 는 잠겨 있는데 얻을 길(현장 지점·심문)이 없습니다`);
   });
 
@@ -135,7 +144,44 @@ function run(C){
     else if(st.slots>1&&reachable.length<need.length)E.push(`${i+1}단계: 근거 ${need.length}개 중 ${reachable.length}개만 모을 수 있습니다`);
   });
 
-  I.push(`단서 ${Object.keys(C.clues||{}).length}개 · 현장 지점 ${(C.spots||[]).length}개(미끼 ${(C.spots||[]).filter(s=>s.decoy).length}) · 인물 ${(C.suspectOrder||[]).length}명`);
+  I.push(`단서 ${Object.keys(C.clues||{}).length}개 · 현장 ${(C.scenes||[1]).length}곳 · 조사 지점 ${allSpots.length}개(미끼 ${allSpots.filter(s=>s.decoy).length}) · 인물 ${(C.suspectOrder||[]).length}명`);
+
+  // 12. 얻게 되는 단서는 locked 이면 안 된다 (사건 2의 c_tape 사고)
+  collectable.forEach(id=>{ if(has(id)&&clue(id).locked)
+    E.push(`<code>${id}</code> 는 얻게 되는 단서인데 locked 로 잠겨 있습니다 — 얻어도 수첩에서 눌리지 않습니다`); });
+
+  // 13. 번호 자물쇠: 모든 자릿수와 「순서」가 단서에 나와야 한다 (찍기 방지)
+  const plain=id=>String((clue(id)||{}).t||'').replace(/<[^>]+>/g,'');
+  const allText=Object.keys(C.clues||{}).map(plain).join(' ');
+  allSpots.forEach(sp=>{
+    if(sp.mini!=='lock')return;
+    if(!sp.code)return E.push(`자물쇠 지점 <code>${sp.id}</code> 에 code 가 없습니다`);
+    [...new Set(String(sp.code).split(''))].forEach(ch=>{
+      if(!allText.includes(ch))E.push(`자물쇠 번호의 숫자 <code>${ch}</code> 가 어느 단서에도 나오지 않습니다 — 찍어야 풀립니다`);
+    });
+    if(!/순서/.test(allText))W.push(`자물쇠 번호의 <b>순서</b>를 알려 주는 단서가 안 보입니다`);
+  });
+
+  // 14. 그림자 도구: 정답 시각이 눈금 위에 있어야 한다
+  const mm=t=>{const a=String(t).split(':');return (+a[0])*60+(+a[1])};
+  allSpots.forEach(sp=>{
+    const sh=sp.shadow; if(!sh)return;
+    const f=mm(sh.from),t=mm(sh.to),st=sh.step||5,a=mm(sh.answer);
+    if(a<f||a>t)E.push(`<code>${sp.id}</code>: 정답 시각 ${sh.answer} 가 다이얼 범위 밖입니다`);
+    if((a-f)%st)E.push(`<code>${sp.id}</code>: 정답 시각 ${sh.answer} 가 눈금(${st}분)에 맞지 않습니다`);
+    (sh.marks||[]).forEach(k=>{ if((mm(k.at)-f)%st)E.push(`<code>${sp.id}</code>: 표시 ${k.at} 가 눈금에 맞지 않습니다`) });
+  });
+
+  // 15. 지점·현장의 조건 단서는 얻을 수 있어야 한다
+  allSpots.forEach(sp=>(sp.need||[]).forEach(id=>{
+    if(!has(id))E.push(`조사 지점 <code>${sp.id}</code> 의 조건 단서 <code>${id}</code> 가 없습니다`);
+    else if(!collectable.has(id))E.push(`조사 지점 <code>${sp.id}</code> 의 조건 단서 <code>${id}</code> 를 얻을 방법이 없습니다`);
+    if(!sp.needSay)W.push(`조사 지점 <code>${sp.id}</code> 에 needSay(막혔을 때 안내)가 없습니다`);
+  }));
+  (C.scenes||[]).forEach(sc=>(sc.need||[]).forEach(id=>{
+    if(!collectable.has(id))E.push(`현장 <code>${sc.label||sc.id}</code> 의 조건 단서 <code>${id}</code> 를 얻을 방법이 없습니다`);
+    if(!sc.needSay)W.push(`현장 <code>${sc.label||sc.id}</code> 에 needSay 가 없습니다`);
+  }));
   I.push(`추리 ${(C.steps||[]).length}단계 · 소거 ${(C.elim||[]).length}명 · 지목 후보 ${(C.accuse||[]).length}명`);
   return {E,W,I};
 }

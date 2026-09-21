@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609191846';
-import * as Save from './save.js?v=2609191846';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211119';
+import * as Save from './save.js?v=2609211119';
 
 var C=null;   // 현재 사건 데이터
 
@@ -113,9 +113,36 @@ function fresh(){
   S={screen:'title',mode:'scene',easy:null,lamps:3,found:{},flags:{},tab:C.suspectOrder[0],sel:null,
   lens:{x:360,y:180},hot:null,proofs:[],active:null,rebutErr:0,newNotes:0,idle:null,
   phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,
-  steps:C.steps.map(function(){return {clues:[],opt:null}}),elim:{},_eyes:{}};
+  steps:C.steps.map(function(){return {clues:[],opt:null}}),elim:{},_eyes:{},
+  scene:sceneList()[0].id};
   resetFaces();
 }
+
+/* ================= 현장이 여럿일 때 =================
+   사건 파일이 C.scenes 를 선언하면 현장이 여러 곳이 된다(사건 3의 광장 → 탑 2층).
+   선언하지 않은 사건은 예전처럼 현장 하나로 돈다 — 사건 1·2는 손대지 않아도 그대로다.
+   scene.need 에 적힌 단서를 다 얻어야 그 현장이 열린다. */
+function sceneList(){
+  if(C.scenes&&C.scenes.length)return C.scenes;
+  return [{id:'_one',label:'현장',img:C.sceneImg,svg:C.sceneSvg,memo:C.memo,spots:C.spots||[]}];
+}
+function curScene(){
+  var L=sceneList(),f=L[0];
+  L.forEach(function(s){if(s.id===S.scene)f=s});
+  if(!sceneOpen(f))f=L[0];
+  return f;
+}
+function sceneOpen(sc){return (sc.need||[]).every(function(id){return S.found[id]})}
+function spots(){return curScene().spots||[]}
+/* 현장이 새로 열렸는지 본다 — 열렸으면 그 현장 id 를 돌려준다(알려 주기 위해) */
+function newlyOpen(before){
+  var got=null;
+  sceneList().forEach(function(sc){
+    if(sc.need&&sc.need.length&&!before[sc.id]&&sceneOpen(sc))got=sc;
+  });
+  return got;
+}
+function openMap(){var m={};sceneList().forEach(function(sc){m[sc.id]=sceneOpen(sc)});return m}
 function resetFaces(){C.suspectOrder.forEach(function(id){var x=C.suspects[id];if(x.sym==='rc')x.eyes='def'})}
 
 var toastT;function toast(m){var el=$('#toast');el.textContent=m;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove('on')},2000)}
@@ -200,15 +227,20 @@ function toTitle(){touch();show('s-title');refreshTitle()}
    시간제한도 실패도 없다. 걸린 시간과 시도 횟수는 별점에만 반영한다(결정 4).
    사건 파일이 현장 지점에 mini:"jigsaw" 를 선언하면 「조사하기」가 이 오버레이를 연다.
    맞추면 그 지점의 단서를 얻는다 — 퍼즐이 곧 단서다. */
-var MINI={on:false,give:null,t0:0,moves:0,done:0,total:0};
+var MINI={on:false,give:null,t0:0,moves:0,done:0,total:0,kind:null};
 
 function openMini(sp){
   var c=C.clues[sp.id];
-  MINI={on:true,give:sp.id,t0:Date.now(),moves:0,done:0,total:0};
+  MINI={on:true,give:sp.id,t0:Date.now(),moves:0,done:0,total:0,kind:sp.mini};
   $('#mini-title').textContent=(sp.miniTitle||c.n);
-  $('#mini-tip').textContent=sp.miniTip||'조각을 끌어다 자리에 맞추세요. 가까이 가면 저절로 붙어요.';
+  $('#mini-tip').innerHTML=sp.miniTip||'조각을 끌어다 자리에 맞추세요. 가까이 가면 저절로 붙어요.';
+  $('#mini-hint').textContent={lock:'힌트 보기',shadow:'힌트 보기'}[sp.mini]||'한 조각 놓아 주기';
+  var mb=document.querySelector('#mini .mg-box');
+  if(mb)mb.classList.toggle('tall',sp.mini==='lock'||sp.mini==='shadow');
   $('#mini').hidden=false;
   if(sp.mini==='jigsaw')jigsaw(sp);
+  else if(sp.mini==='lock')lockPad(sp);
+  else if(sp.mini==='shadow')shadowDial(sp);
   updateAct();
 }
 function closeMini(){
@@ -222,10 +254,178 @@ function miniWin(){
   var id=MINI.give;
   setTimeout(function(){
     closeMini();
-    var sp=null;C.spots.forEach(function(x){if(x.id===id)sp=x});
+    var sp=null;spots().forEach(function(x){if(x.id===id)sp=x});
     finishInspect(sp,addClue(id));
     toast('다 맞췄어요 · '+sec+'초');
   },900);
+}
+
+/* ---- 번호 자물쇠 ----
+   sp.code = "3691". 틀려도 벌점이 없다 — 찍어서 맞히는 게임이 아니라
+   단서를 읽었는지 확인하는 자리다. 그래서 「몇 자리가 맞았다」는 알려 주지 않는다.
+   자리마다 ▲▼ 로 숫자를 돌린다(손가락으로 되는 크기). */
+function lockPad(sp){
+  var code=String(sp.code||'0000'),n=code.length;
+  MINI.total=n;MINI.dig=[];for(var i=0;i<n;i++)MINI.dig.push(0);
+  var h='<div class="lockbox"><div class="lockrow" id="lockrow">';
+  for(var k=0;k<n;k++)
+    h+='<div class="dig"><button class="dbtn" data-d="'+k+'" data-v="1" aria-label="올리기">▲</button>'+
+       '<div class="dnum" id="dn-'+k+'">0</div>'+
+       '<button class="dbtn" data-d="'+k+'" data-v="-1" aria-label="내리기">▼</button></div>';
+  h+='</div><button class="btn warm" id="lock-try">돌려 보기</button>'+
+     '<p class="lockmsg" id="lock-msg">자물쇠는 차갑고 단단해요.</p></div>';
+  $('#mini-stage').innerHTML=h;
+  $('#mini-stage').querySelectorAll('[data-d]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var d=+b.dataset.d;MINI.dig[d]=(MINI.dig[d]+ +b.dataset.v+10)%10;MINI.moves++;
+      document.getElementById('dn-'+d).textContent=MINI.dig[d];sTap();
+    });
+  });
+  $('#lock-try').addEventListener('click',function(){
+    var got=MINI.dig.join('');MINI.moves++;
+    var msg=document.getElementById('lock-msg');
+    if(got===code){msg.textContent='철컥. 고리가 벗겨졌어요!';sFan();miniWin()}
+    else{sBad();msg.textContent='꿈쩍도 하지 않아요. 번호를 정한 방법을 다시 떠올려 볼까요?'}
+  });
+}
+function lockHint(){
+  var msg=document.getElementById('lock-msg');if(!msg)return;
+  MINI.hinted=(MINI.hinted||0)+1;MINI.moves+=3;
+  msg.innerHTML='문자판에서 <b>떨어진 숫자</b>가 몇이었는지, 그리고 일지에 적힌 <b>떨어진 날짜 순서</b>를 보세요.';
+}
+
+/* ---- 그림자 도구 ----
+   바늘(시각)을 돌리면 빛과 그림자가 움직인다. 두 가지 무대를 데이터로 받는다.
+     mode "wall"   : 창으로 든 빛이 벽을 지나간다. 정답 시각에 긁힌 글자가 읽힌다.
+     mode "square" : 광장 모형에서 느티나무 그림자 끝이 움직인다. 정답 시각에 우물에 닿는다.
+   다이얼이 일출 뒤부터 시작하는 것 자체가 「해 뜨기 전엔 그림자가 없다」를 손으로 가르친다. */
+function mins(t){var a=String(t).split(':');return (+a[0])*60+(+a[1])}
+function hhmm(m){var h=Math.floor(m/60),x=m%60;return h+'시 '+(x<10?'0':'')+x+'분'}
+function shadowDial(sp){
+  var S0=sp.shadow||{},f=mins(S0.from||'6:00'),t=mins(S0.to||'8:00'),st=S0.step||5;
+  MINI.sh=S0;MINI.f=f;MINI.t=t;MINI.st=st;MINI.ans=mins(S0.answer);
+  MINI.now=f;MINI.total=1;
+  var h='<div class="shbox"><div class="shstage" id="shstage"></div>'+
+    '<div class="shctl"><button class="dbtn" id="sh-b">◀</button>'+
+    '<input type="range" id="sh-r" min="'+f+'" max="'+t+'" step="'+st+'" value="'+f+'" aria-label="시각">'+
+    '<button class="dbtn" id="sh-f">▶</button>'+
+    '<div class="shtime" id="sh-t"></div></div>'+
+    '<p class="lockmsg" id="sh-msg">'+(S0.pre||'')+'</p></div>';
+  $('#mini-stage').innerHTML=h;
+  var r=$('#sh-r');
+  function set(v){
+    v=Math.max(f,Math.min(t,Math.round(v/st)*st));
+    if(v!==MINI.now)MINI.moves++;
+    MINI.now=v;r.value=v;shadowDraw();
+  }
+  r.addEventListener('input',function(){set(+r.value)});
+  $('#sh-b').addEventListener('click',function(){sTap();set(MINI.now-st)});
+  $('#sh-f').addEventListener('click',function(){sTap();set(MINI.now+st)});
+  shadowDraw();
+}
+/* 시각 → 0(가장 이름) ~ 1(가장 늦음) */
+function shPos(){return (MINI.now-MINI.f)/Math.max(1,(MINI.t-MINI.f))}
+function shadowDraw(){
+  var S0=MINI.sh,p=shPos(),hit=(MINI.now===MINI.ans);
+  var el=document.getElementById('shstage');if(!el)return;
+  el.innerHTML=(S0.mode==='square')?shSquare(p,hit,S0):shWall(p,hit,S0);
+  var tl=document.getElementById('sh-t');
+  if(tl)tl.innerHTML='<b>'+hhmm(MINI.now)+'</b>';
+  var msg=document.getElementById('sh-msg');
+  if(msg){
+    if(hit&&S0.mode==='wall')msg.innerHTML='글자가 <b>읽혀요</b> — 「'+esc(S0.reveal||'')+'」';
+    else if(hit)msg.innerHTML='그림자 끝이 <b>우물</b>에 닿았어요. 콩순이 그림과 똑같아요.';
+    else{
+      var m=null;(S0.marks||[]).forEach(function(k){if(mins(k.at)===MINI.now)m=k});
+      msg.innerHTML=m?('그림자 끝이 <b>'+esc(m.t)+'</b>에 있어요.'):(S0.mode==='wall'?'빛은 벽을 천천히 지나가요.':'그림자 끝을 잘 보세요.');
+    }
+  }
+  if(hit&&!MINI.won){MINI.won=true;sFan();setTimeout(miniWin,700)}
+}
+/* 벽 무대 — 창으로 든 빛덩이가 해가 오를수록 벽 위에서 아래로 내려온다 */
+function shWall(p,hit,S0){
+  /* 정답 시각에 빛덩이 한가운데가 글자 줄에 오도록 맞춰 둔다 */
+  var pa=(MINI.ans-MINI.f)/Math.max(1,(MINI.t-MINI.f));
+  var y=92+(p-pa)*180, letters=S0.reveal||'';
+  var g='<svg viewBox="0 0 520 260" class="shsvg">';
+  g+='<rect width="520" height="260" fill="#39322b"/>';
+  for(var r=0;r<5;r++)for(var c=0;c<6;c++)
+    g+='<rect x="'+(8+c*86)+'" y="'+(8+r*50)+'" width="80" height="44" rx="3" fill="#4a4139" stroke="#2e2822" stroke-width="2"/>';
+  /* 긁어 둔 글자 자리 */
+  g+='<text x="260" y="128" text-anchor="middle" font-size="22" font-family="Gaegu" fill="'+(hit?'#ffe9a8':'#4e463d')+'" opacity="'+(hit?1:.5)+'">'+esc(letters)+'</text>';
+  /* 빛덩이 */
+  g+='<g opacity="'+(hit?.95:.7)+'"><polygon points="120,'+y+' 400,'+(y-18)+' 400,'+(y+52)+' 120,'+(y+66)+'" fill="#ffd98a" opacity="'+(hit?.5:.35)+'"/></g>';
+  if(hit)g+='<rect x="100" y="96" width="320" height="52" rx="8" fill="none" stroke="#ffd98a" stroke-width="3"/>';
+  g+='</svg>';return g;
+}
+/* 광장 모형 — **위에서 내려다본 평면도**로 그린다.
+   회화 배경을 깔면 그림 안에 이미 해가 그려 준 그림자가 박혀 있어 앞뒤가 안 맞는다.
+   평면도에는 빛이 없으니 그림자를 얹어도 모순이 없고, 길이를 재기에도 평면도가 맞다.
+   그림자 끝의 자리는 **데이터의 marks 를 그대로 따라간다** — 「7시 10분에 우물」이라고
+   써 놓고 그림에서는 딴 데를 가리키면 안 되니까, 시각→자리를 marks 로 보간한다. */
+var SQ_STATION=[126,286,446,606];   /* 탑 · 벤치 · 우물 · 느티나무 (평면도 기준) */
+var SQ_LABEL=['시계탑','벤치','우물','느티나무'];
+var SQ_Y=176;
+function sqTip(S0){
+  var mk=(S0.marks||[]).map(function(m,i){return {t:mins(m.at),x:SQ_STATION[i]!=null?SQ_STATION[i]:446}});
+  if(!mk.length)return 446;
+  if(MINI.now<=mk[0].t)return Math.max(58,mk[0].x-(mk[0].t-MINI.now)*2.2);
+  for(var i=0;i<mk.length-1;i++){
+    if(MINI.now<=mk[i+1].t){
+      var f=(MINI.now-mk[i].t)/(mk[i+1].t-mk[i].t);
+      return mk[i].x+(mk[i+1].x-mk[i].x)*f;
+    }
+  }
+  var L=mk[mk.length-1];return Math.min(578,L.x+(MINI.now-L.t)*1.4);
+}
+function shSquare(p,hit,S0){
+  var TREE=SQ_STATION[3], tip=sqTip(S0), y=SQ_Y;
+  var g='<svg viewBox="0 0 720 300" class="shsvg">';
+  g+='<rect width="720" height="300" fill="#efe6d3"/>';
+  /* 자갈 바닥 결 — 평면도라는 느낌만 주는 옅은 격자 */
+  g+='<g stroke="#ded1b6" stroke-width="1.5">';
+  for(var x=20;x<720;x+=34)g+='<line x1="'+x+'" y1="96" x2="'+x+'" y2="252"/>';
+  for(var yy=96;yy<=252;yy+=26)g+='<line x1="20" y1="'+yy+'" x2="700" y2="'+yy+'"/>';
+  g+='</g>';
+  g+='<text x="28" y="40" font-family="Gaegu" font-size="19" fill="#5b5040">광장 평면도 — 위에서 본 모습</text>';
+  /* 해와 빛의 방향 */
+  g+='<g><circle cx="676" cy="42" r="15" fill="#f0c35a" stroke="#4a3428" stroke-width="2"/>'+
+     '<text x="676" y="76" font-family="Gaegu" font-size="14" text-anchor="middle" fill="#5b5040">해</text>'+
+     '<path d="M648 42 h-64" stroke="#c9924a" stroke-width="3" stroke-dasharray="7 5"/>'+
+     '<path d="M584 42 l10 -6 v12 z" fill="#c9924a"/>'+
+     '<text x="560" y="36" font-family="Gaegu" font-size="14" text-anchor="end" fill="#a4813f">그림자는 이쪽으로</text></g>';
+  /* 그림자 — 나무에서 왼쪽으로 */
+  g+='<polygon points="'+TREE+','+(y+34)+' '+TREE+','+(y-34)+' '+tip+','+(y-15)+' '+tip+','+(y+15)+'" '+
+     'fill="#8e836c" opacity="'+(hit?.85:.6)+'"/>';
+  /* 표시물 (위에서 본 모습) */
+  g+='<g stroke="#4a3428" stroke-width="2.5">';
+  g+='<rect x="'+(SQ_STATION[0]-30)+'" y="'+(y-30)+'" width="60" height="60" rx="4" fill="#cfc7b4"/>'+
+     '<circle cx="'+SQ_STATION[0]+'" cy="'+y+'" r="15" fill="#a99e88"/>';
+  g+='<rect x="'+(SQ_STATION[1]-34)+'" y="'+(y-10)+'" width="68" height="20" rx="6" fill="#c98a3c"/>';
+  g+='<circle cx="'+SQ_STATION[2]+'" cy="'+y+'" r="26" fill="#cfc7b4"/>'+
+     '<circle cx="'+SQ_STATION[2]+'" cy="'+y+'" r="15" fill="#6d7f88"/>';
+  g+='<circle cx="'+TREE+'" cy="'+y+'" r="40" fill="#c98a3c"/>'+
+     '<circle cx="'+TREE+'" cy="'+y+'" r="11" fill="#6f4d36"/>';
+  g+='</g>';
+  /* 그림자 끝 표시 */
+  g+='<circle cx="'+tip+'" cy="'+y+'" r="'+(hit?13:9)+'" fill="'+(hit?'#b34a3a':'#6b6152')+'"'+
+     (hit?' stroke="#fbf7ee" stroke-width="3"':'')+'/>';
+  /* 이름표 */
+  g+='<g font-size="16" font-family="Gaegu" text-anchor="middle">';
+  SQ_STATION.forEach(function(x,i){
+    var on=hit&&i===2;
+    g+='<rect x="'+(x-40)+'" y="258" width="80" height="26" rx="13" fill="'+(on?'#b34a3a':'#ffffff')+'" stroke="#4a3428" stroke-width="2"/>'+
+       '<text x="'+x+'" y="276" fill="'+(on?'#fff8ea':'#3b2a1a')+'">'+SQ_LABEL[i]+'</text>';
+  });
+  g+='</g></svg>';return g;
+}
+function shadowHint(){
+  var msg=document.getElementById('sh-msg');if(!msg)return;
+  MINI.hinted=(MINI.hinted||0)+1;MINI.moves+=3;
+  var S0=MINI.sh;
+  msg.innerHTML=(S0.mode==='wall')
+    ? '빛이 벽 <b>한가운데</b>를 지날 때를 찾아보세요.'
+    : '해가 오를수록 그림자는 <b>짧아져요.</b> 우물은 벤치보다 나무에 <b>가깝죠.</b>';
 }
 
 /* ---- 찢어진 조각 맞추기 ----
@@ -326,6 +526,8 @@ function scatter(g,pieces,W,H){
 function countMini(){$('#mini-count').textContent=MINI.done+' / '+MINI.total+' 조각';}
 /* 막혔을 때 — 조각 하나를 대신 놓아 준다. 실패는 없고 별점에만 남는다(결정 4). */
 function miniHint(){
+  if(MINI.kind==='lock'){lockHint();return}
+  if(MINI.kind==='shadow'){shadowHint();return}
   var left=[].slice.call(document.querySelectorAll('.jig-piece:not(.snapped)'));
   if(!left.length)return;
   var el=left[0], i=+el.dataset.i;
@@ -347,8 +549,18 @@ function autoPieces(sp){
 /* ================= 수첩 ================= */
 function addClue(id,quiet){
   if(S.found[id])return false;
+  var was=openMap();
   S.found[id]=true;S.newNotes++;updateDot();
   if(!quiet)sFind();
+  /* follow 로 딸려 나오는 단서는 **어디서 얻었든** 따라와야 한다.
+     현장에서 조사할 때만 따라오게 두었더니, 심문의 「일지 보여 달라 하기」로 얻은
+     일지의 일출표가 영영 수첩에 안 들어왔다(사건 3에서 잡았다). */
+  var f=C.clues[id]&&C.clues[id].follow;
+  S._justFollow=null;
+  if(f&&f.give&&!S.found[f.give]){addClue(f.give,true);S._justFollow=f.give}
+  /* 이 단서로 새 현장이 열렸다면 바로 알려 준다 — 열린 줄 모르고 헤매지 않게 */
+  var sc=newlyOpen(was);
+  if(sc){setTimeout(function(){toast('🔓 「'+sc.label+'」에 갈 수 있어요');refreshSceneBar()},1200)}
   return true;
 }
 function updateDot(){var d=$('#notes-dot');d.hidden=S.newNotes===0;d.textContent=S.newNotes;var c=$('#t-clue');if(c)c.textContent='🗒 '+count()}
@@ -356,6 +568,8 @@ function updateDot(){var d=$('#notes-dot');d.hidden=S.newNotes===0;d.textContent
    이걸 구별하지 않아서, 심문에서 얻은 「콩이 주머니의 압정」(locked 로 선언된 단서)이
    수첩에도 단서 고르기 창에도 끝내 나타나지 않았다 — 얻었는데 쓸 수 없는 카드였다. */
 function isLocked(id){var c=C.clues[id];return !!(c&&c.locked&&!S.found[id])}
+/* 지점의 need 가 다 채워졌는가 — 「무엇을 찾아야 하는지 알고 올라가야 한다」 */
+function spotReady(sp){return (sp.need||[]).every(function(id){return S.found[id]})}
 function count(){return C.order.filter(function(id){return S.found[id]&&!isLocked(id)}).length}
 function lamps(){$('#t-lamp').textContent='💡 '+S.lamps}
 function burn(){S.lamps=Math.max(0,S.lamps-1);lamps()}
@@ -375,7 +589,7 @@ function setMode(m){
 function idleReset(){clearTimeout(S.idle);if(!S.easy||S.screen!=='invest')return;S.idle=setTimeout(idleHint,60000)}
 function idleHint(){
   if(S.screen!=='invest')return;var m='';
-  if(S.mode==='scene'){var left=C.spots.filter(function(sp){return !sp.decoy&&!S.found[sp.id]&&!isLocked(sp.id)}).length;m=left?'아직 조사하지 않은 곳이 '+left+'곳 있어요. 확대경을 천천히 끌어 보세요':'현장은 다 봤어요. 심문 탭으로 가 보세요'}
+  if(S.mode==='scene'){var left=spots().filter(function(sp){return !sp.decoy&&!S.found[sp.id]&&!isLocked(sp.id)}).length;m=left?'아직 조사하지 않은 곳이 '+left+'곳 있어요. 확대경을 천천히 끌어 보세요':'현장은 다 봤어요. 심문 탭으로 가 보세요'}
   else if(S.mode==='talk')m=S.sel?'수첩의 증언 카드도 들이댈 수 있어요':'용의자의 말 중 수첩의 증언과 어긋나는 말을 찾아보세요';
   else if(S.mode==='logic'){
     if(S.phase==='chain'){var i=-1;C.steps.forEach(function(c,k){if(i<0&&!stepDone(k))i=k});
@@ -417,9 +631,42 @@ function onAct(){
 var LENS_R=40;
 /* 확대경이 <use href="#art"> 로 확대하므로, 그림을 써도 id는 art 그대로 유지한다. */
 function artLayer(){
-  if(artOK(C.sceneImg))
-    return '<g id="art"><image href="'+artURL(C.sceneImg)+'" x="0" y="0" width="720" height="360" preserveAspectRatio="xMidYMid slice"/></g>';
-  return C.sceneSvg;
+  var sc=curScene();
+  if(artOK(sc.img))
+    return '<g id="art"><image href="'+artURL(sc.img)+'" x="0" y="0" width="720" height="360" preserveAspectRatio="xMidYMid slice"/></g>';
+  return sc.svg||C.sceneSvg||'<g id="art"><rect width="720" height="360" fill="#e9eadf"/></g>';
+}
+/* 현장이 둘 이상일 때만 현장 단추 줄을 둔다. 잠긴 현장은 이름 대신 자물쇠를 보여 주고,
+   눌러 보면 무엇이 있어야 열리는지 말해 준다 — 막힌 곳에서 헤매지 않게. */
+/* 단추 줄만 갈아 끼운다 — 현장 전체를 다시 그리면 오른쪽에 막 띄운 단서 카드가 날아간다 */
+function refreshSceneBar(){
+  var old=$('#scenebar');if(!old||S.mode!=='scene')return;
+  var box=document.createElement('div');box.innerHTML=sceneBar();
+  var neu=box.firstChild;if(!neu)return;
+  old.parentNode.replaceChild(neu,old);
+  bindSceneBar();
+}
+function bindSceneBar(){
+  var bar=$('#scenebar');if(!bar)return;
+  bar.querySelectorAll('[data-sc]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var sc=null;sceneList().forEach(function(x){if(x.id===b.dataset.sc)sc=x});
+      if(!sc)return;
+      if(!sceneOpen(sc)){sBad();toast(String(sc.needSay||'아직 갈 수 없어요').replace(/<[^>]+>/g,''));return}
+      if(sc.id===S.scene)return;
+      sTap();sPage();S.scene=sc.id;S.hot=null;S.lens={x:360,y:180};renderScene();updateAct();
+    });
+  });
+}
+function sceneBar(){
+  var L=sceneList();if(L.length<2)return '';
+  var h='<div class="scenebar" id="scenebar">';
+  L.forEach(function(sc){
+    var open=sceneOpen(sc),on=(sc.id===curScene().id);
+    h+='<button class="sctab'+(on?' on':'')+(open?'':' shut')+'" data-sc="'+sc.id+'">'+
+       (open?'':'🔒 ')+esc(sc.label)+'</button>';
+  });
+  return h+'</div>';
 }
 function sceneSVG(){return ''+
 '<svg id="scene" viewBox="0 0 720 360"><defs><clipPath id="lc"><circle id="lcc" cx="360" cy="180" r="'+LENS_R+'"/></clipPath></defs>'+
@@ -428,7 +675,10 @@ artLayer()+
 '<g id="lens"><circle id="lr1" cx="360" cy="180" r="'+LENS_R+'" fill="none" stroke="#5b5a63" stroke-width="6"/><circle id="lr2" cx="360" cy="180" r="'+LENS_R+'" fill="none" stroke="#e8f4f8" stroke-width="1.8"/><path id="lh" d="M388 208 l26 26" stroke="#7a5233" stroke-width="11" stroke-linecap="round"/></g>'+
 '<g id="found"></g></svg><div class="lenslabel" id="lenslabel"></div>';}
 function renderScene(){
-  $('#left').innerHTML='<div class="scenewrap" id="scenewrap">'+sceneSVG()+'</div>';
+  var bar=sceneBar();
+  $('#left').innerHTML='<div class="scenecol'+(bar?' hasbar':'')+'">'+bar+
+    '<div class="scenewrap" id="scenewrap">'+sceneSVG()+'</div></div>';
+  bindSceneBar();
   drawFound();setLens(S.lens.x,S.lens.y);
   var w=$('#scenewrap'),drag=false;
   w.addEventListener('pointerdown',function(e){drag=true;w.setPointerCapture(e.pointerId);var p=pt(e);setLens(p.x,p.y)});
@@ -444,17 +694,19 @@ function setLens(x,y){
   $('#lh').setAttribute('d','M'+(x+28)+' '+(y+28)+' l26 26');
   $('#mag').setAttribute('transform','translate('+x+','+y+') scale(1.8) translate('+(-x)+','+(-y)+')');
   var best=null,bd=1e9;
-  C.spots.forEach(function(sp){var d=Math.hypot(sp.x-x,sp.y-y);if(d<Math.max(sp.r,26)&&d<bd){bd=d;best=sp}});
+  spots().forEach(function(sp){var d=Math.hypot(sp.x-x,sp.y-y);if(d<Math.max(sp.r,26)&&d<bd){bd=d;best=sp}});
   var changed=(best&&best!==S.hot);S.hot=best;
   var lab=$('#lenslabel');
-  if(best){var nm=best.decoy?best.label:C.clues[best.id].n;lab.textContent=(S.found[best.id]?'✓ ':'')+nm;lab.classList.add('on');
+  if(best){var nm=best.decoy?best.label:C.clues[best.id].n;
+    var mk=S.found[best.id]?'✓ ':((!best.decoy&&!spotReady(best))?'🔒 ':'');
+    lab.textContent=mk+nm;lab.classList.add('on');
     if(changed){sHot();lab.classList.remove('new-hot');void lab.offsetWidth;lab.classList.add('new-hot')}}
   else lab.classList.remove('on');
   updateAct();
 }
 function drawFound(){
   var g=$('#found');if(!g)return;var h='';
-  C.spots.forEach(function(sp){if(!sp.decoy&&S.found[sp.id])h+='<circle cx="'+sp.x+'" cy="'+sp.y+'" r="7" fill="#7d8f5c" stroke="#4a3428" stroke-width="1.6"/><path d="M'+(sp.x-3)+' '+sp.y+' l2 2 l4 -5" stroke="#fff" stroke-width="1.8" fill="none"/>'});
+  spots().forEach(function(sp){if(!sp.decoy&&S.found[sp.id])h+='<circle cx="'+sp.x+'" cy="'+sp.y+'" r="7" fill="#7d8f5c" stroke="#4a3428" stroke-width="1.6"/><path d="M'+(sp.x-3)+' '+sp.y+' l2 2 l4 -5" stroke="#fff" stroke-width="1.8" fill="none"/>'});
   g.innerHTML=h;
 }
 function inspect(){
@@ -462,6 +714,13 @@ function inspect(){
   if(sp.decoy){sNo();rightScene('<div class="card"><div class="who">'+esc(sp.label)+'</div><p style="margin:0">'+esc(sp.decoy)+'</p></div>');return}
   var c=C.clues[sp.id];
   if(isLocked(sp.id)){sBad();rightScene('<div class="card"><div class="who">🔒 '+esc(c.n)+'</div><p style="margin:0">'+c.t+'</p></div>');return}
+  /* 지점별 조건 — 먼저 알아야 할 것이 있는 자리는 그것부터 알려 준다(사건 3의 사다리·모형) */
+  if(!spotReady(sp)&&!S.found[sp.id]){
+    sBad();
+    rightScene('<div class="card"><div class="who">'+mface('def')+'아직은</div><p style="margin:0">'+
+      (sp.needSay||'여기는 아직 살펴볼 수 없어요.')+'</p></div>');
+    return;
+  }
   /* 분석 미니게임이 걸린 지점은 퍼즐을 풀어야 단서를 얻는다 */
   if(sp.mini&&!S.found[sp.id]){openMini(sp);return}
   finishInspect(sp,addClue(sp.id));
@@ -475,7 +734,8 @@ function finishInspect(sp,isNew){
        note: html                       → 설명 아래 덧붙이는 글 */
   var extra='',after=null;
   var f=c.follow;
-  if(f&&f.give&&addClue(f.give,true)){
+  /* 딸려 나온 카드는 addClue 안에서 이미 수첩에 들어갔다. 여기서는 그 장면만 보여 준다. */
+  if(f&&f.give&&isNew&&S._justFollow===f.give){
     extra+='<div class="say" id="sc-follow"><b>'+esc(f.who||'')+'</b> <span></span><br><span class="muted">→ 증언 카드가 수첩에 추가됐어요.</span></div>';
     after=function(){var el=document.querySelector('#sc-follow span');if(el)typeHTML(el,f.say||'',f.voice||'narr')};
   }
@@ -488,7 +748,9 @@ function rightScene(html){
   var base='<p class="muted" style="margin:0 0 8px">확대경을 끌어 살펴보고, 이름표가 뜨면 <b>조사하기</b>를 누르세요. 조사한 곳은 ✓로 표시돼요.</p>';
   $('#rscroll').innerHTML=base+(html||'<div class="card" style="background:#fff8e7"><div class="who">망고의 메모</div><p style="margin:0;font-size:13px" id="sc-memo"></p></div>');
   /* 현장 첫 화면의 망고 메모 — 사건 파일의 memo (없으면 일반 문장) */
-  if(!html)typeHTML($('#sc-memo'),C.memo||'하나씩 확인하자. 단서가 말해 주는 것만 믿는다.',S.flags.memoSaid?null:'mango'),S.flags.memoSaid=true;
+  if(!html){var sc=curScene(),mk='memoSaid_'+sc.id;
+    typeHTML($('#sc-memo'),sc.memo||C.memo||'하나씩 확인하자. 단서가 말해 주는 것만 믿는다.',S.flags[mk]?null:'mango');
+    S.flags[mk]=true;}
   var mm=$('#rscroll').querySelector('.card .who');
   if(mm&&/망고의 메모/.test(mm.textContent))mm.insertAdjacentHTML('afterbegin',mface('def'));
 }
@@ -765,8 +1027,8 @@ function renderElim(){
   if(S.open==null){
     var n=C.elim.filter(function(e){return S.elim[e.id]!=null}).length;
     $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">소거 — 지울 이유를 고르세요</div>'+
-      '<p style="margin:0;font-size:13px">「그럴 사람이 아니다」는 이유가 될 수 없어요. <b>물건이나 몸으로 증명되는</b> 이유만 사람을 지울 수 있습니다.</p></div>'+
-      '<p class="muted" style="margin-top:8px">'+n+' / '+C.elim.length+' 명 지움'+(S.elimTries?' · 제출 '+S.elimTries+'회':'')+'</p>'+(S.flags.judgeSay||'');
+      '<p style="margin:0;font-size:13px">'+(C.elimSay||'「그럴 사람이 아니다」는 이유가 될 수 없어요. <b>물건이나 몸으로 증명되는</b> 이유만 사람을 지울 수 있습니다.')+'</p></div>'+
+      '<p class="muted" style="margin-top:8px">'+n+' / '+C.elim.length+' '+(C.elimUnit||'명')+' 지움'+(S.elimTries?' · 제출 '+S.elimTries+'회':'')+'</p>'+(S.flags.judgeSay||'');
   }else{
     var e=C.elim[S.open],h2='<div class="card"><div class="who">'+esc(e.name)+'</div><p style="margin:0;font-size:13px" id="q-live"></p></div><div class="pick">';
     e.opts.forEach(function(o,k){h2+='<button class="opt'+(S.elim[e.id]===k?' on':'')+'" data-o="'+k+'"><span class="dot"></span><span>'+o.t+'</span></button>'});
@@ -807,7 +1069,7 @@ function renderAccuse(){
     '<button class="tag slotbtn" data-p="1">'+(S.proofs[1]?esc(C.clues[S.proofs[1]].n):'＋ 증거')+'</button></div></div></div>';
   $('#left').innerHTML='<div class="logicwrap">'+h+'</div>';
   $('#chain').querySelectorAll('[data-p]').forEach(function(b){b.addEventListener('click',function(){sTap();S.active='p'+b.dataset.p;openTray('proof')})});
-  var h2='<div class="card" style="background:#fff8e7"><div class="who">범인은 누구입니까?</div><p style="margin:0;font-size:13px">되돌릴 수 없어요. 사슬을 한 번 더 읽어 보세요.</p></div><div class="pick">';
+  var h2='<div class="card" style="background:#fff8e7"><div class="who">'+(C.accuseAsk||'범인은 누구입니까?')+'</div><p style="margin:0;font-size:13px">되돌릴 수 없어요. 사슬을 한 번 더 읽어 보세요.</p></div><div class="pick">';
   C.accuse.forEach(function(a){h2+='<button class="opt acc'+(S.flags.acc===a.id?' on':'')+'" data-a="'+a.id+'"><span class="dot"></span><span>'+esc(a.t)+'</span></button>'});
   h2+='</div>'+(S.flags.judgeSay||'');
   $('#rscroll').innerHTML=h2;
@@ -1255,6 +1517,10 @@ function bindGame(){
 
 /* ================= 부팅 ================= */
 function boot(){
+  /* 시험용 창구 — 주소에 ?dbg=1 을 붙였을 때만 열린다. 평소 놀이에는 없다. */
+  if(/[?&]dbg=1/.test(location.search))
+    window.MANGO_DBG={get S(){return S},get C(){return C},
+      get found(){return Object.keys(S.found)},get scene(){return S.scene}};
   var p=Save.loadPrefs();
   if(p){A.sfx=!!p.s;A.music=!!p.m}
   Save.askPersist();
