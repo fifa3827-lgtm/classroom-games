@@ -292,6 +292,41 @@
     #tl-tip{font-size:11px;margin-top:4px}
   }
 
+  /* ---------- 평면도 판 (사건 1) / 바람 판 (사건 2) ---------- */
+  /* 그림 파일을 쓰지 않는다 — 평면도는 선 몇 개면 되고, 그러면 화면 크기에 맞춰 늘어난다 */
+  .plan,.wind{position:relative;flex:1 1 auto;min-height:140px;
+    background:#fffaf0;border:2.5px solid var(--line);border-radius:10px;
+    box-shadow:2px 3px 0 var(--line);overflow:hidden}
+  .plan svg,.wind svg{position:absolute;inset:0;width:100%;height:100%}
+  .pl-room{fill:#f6efe0;stroke:var(--line);stroke-width:2.5;stroke-dasharray:0}
+  .pl-note{font-size:11px;fill:var(--soft);font-family:inherit}
+  .pl-mark{font-size:9.5px;fill:var(--soft);font-family:inherit}
+  /* 막을 자리 */
+  .pslot{position:absolute;transform:translate(-50%,-50%);min-width:84px;max-width:132px;
+    background:var(--panel);border:2px dashed var(--line);border-radius:9px;padding:4px 7px;
+    text-align:center;line-height:1.25;cursor:pointer;box-shadow:2px 2px 0 var(--line)}
+  .pslot b{display:block;font-size:11px;color:var(--ink)}
+  .pslot .pput{display:block;font-size:10px;color:var(--soft);margin-top:1px;word-break:keep-all}
+  .pslot.on{border-style:solid;background:#eef3e8;border-color:var(--olive)}
+  .pslot.on .pput{color:var(--ink);font-weight:700}
+  .pslot.bad{background:#fff1ec;border-color:var(--brick);animation:shake .35s}
+  /* 바람 */
+  .wd-board{fill:#e8dcc4;stroke:var(--line);stroke-width:2}
+  .wd-pile circle{fill:#e6cf9a;stroke:#b9a06a;stroke-width:1.5;opacity:.85}
+  .wd-arrow line{stroke:var(--teal);stroke-width:4;stroke-linecap:round}
+  .wd-arrow path{fill:var(--teal)}
+  .wdtray{gap:5px}
+  .wdbtn{gap:4px}
+  .wdbtn .wdi{display:inline-block;font-size:13px;line-height:1;color:var(--teal)}
+  .wdbtn.sel{background:#ffe9b3;outline:3px solid var(--must-d);outline-offset:1px}
+  @media (max-height:430px){
+    .plan,.wind{min-height:124px}
+    .pslot{min-width:70px;max-width:108px;padding:3px 5px}
+    .pslot b{font-size:10px}
+    .pslot .pput{font-size:9px}
+    .wdbtn{font-size:10px}
+  }
+
   /* ---------- 재현 (지목을 대신한다) ---------- */
   .replaywrap{width:100%;height:100%;overflow-y:auto;padding:8px 10px;scrollbar-width:thin}
   .rphd{display:flex;align-items:baseline;gap:8px;margin-bottom:7px;flex-wrap:wrap}

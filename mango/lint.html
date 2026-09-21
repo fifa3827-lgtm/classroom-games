@@ -188,7 +188,55 @@ function run(C){
       if(dup.length)E.push(`${n}단계: 낱말이 겹칩니다 — ${[...new Set(dup)].join(', ')}`);
     }
     if(st.board){
-      const B=st.board; if(B.kind!=='timeline')return E.push(`${n}단계: 모르는 판 종류 ${B.kind}`);
+      const B=st.board, KIND=B.kind||'timeline';
+      if(!['timeline','plan','wind'].includes(KIND))return E.push(`${n}단계: 모르는 판 종류 ${KIND}`);
+
+      if(KIND==='plan'){
+        /* 평면도: 자리마다 정답 카드가 하나씩, 정답끼리 겹치지 않고, 미끼가 최소 하나 */
+        const ids=(B.cards||[]).map(x=>x.id);
+        if(!(B.slots||[]).length)E.push(`${n}단계: 막을 자리(slots)가 없습니다`);
+        if(new Set(ids).size!==ids.length)E.push(`${n}단계: 카드 id 가 겹칩니다`);
+        const oks=[];
+        (B.slots||[]).forEach(sl=>{
+          if(!sl.id||!sl.t)E.push(`${n}단계: 자리에 id 나 이름이 없습니다`);
+          if(!ids.includes(sl.ok))E.push(`${n}단계: 자리 「${sl.t}」 의 정답 카드 ${sl.ok} 가 없습니다`);
+          if(oks.includes(sl.ok))E.push(`${n}단계: 카드 ${sl.ok} 가 두 자리의 정답입니다`);
+          oks.push(sl.ok);
+          if(sl.x==null||sl.y==null||sl.x<0||sl.x>100||sl.y<0||sl.y>100)E.push(`${n}단계: 자리 「${sl.t}」 의 좌표가 판 밖입니다`);
+        });
+        (B.cards||[]).forEach(x=>{
+          if(!x.t)E.push(`${n}단계: 이름 없는 카드`);
+          if(!oks.includes(x.id)&&!x.why)E.push(`${n}단계: 미끼 카드 「${x.t}」 에 why 가 없습니다`);
+        });
+        const decoy=(B.cards||[]).filter(x=>!oks.includes(x.id)).length;
+        if(!decoy)W.push(`${n}단계: 미끼 카드가 없습니다 — 카드 수와 자리 수가 같으면 남는 것을 끼우기만 하면 됩니다`);
+        if(!B.ask)W.push(`${n}단계: 평면도 판에 안내문(ask)이 없습니다`);
+        /* 글자 그대로 찍히는 자리 — 태그를 넣으면 화면에 </b> 가 보인다 */
+        [[B.title,'제목'],[B.hint,'한 줄 설명'],[B.note,'방 이름']].forEach(([v,nm])=>{
+          if(v&&tag.test(v))E.push(`${n}단계: 평면도 ${nm}에 HTML 태그가 있습니다`)});
+        (B.slots||[]).forEach(x=>{if(tag.test(x.t||''))E.push(`${n}단계: 자리 이름 「${x.t}」 에 HTML 태그가 있습니다`)});
+        (B.cards||[]).forEach(x=>{if(tag.test(x.t||''))E.push(`${n}단계: 카드 이름 「${x.t}」 에 HTML 태그가 있습니다`)});
+        return;
+      }
+
+      if(KIND==='wind'){
+        const ids=(B.dirs||[]).map(x=>x.id);
+        if(ids.length<3)E.push(`${n}단계: 방향이 ${ids.length}개뿐입니다 (넷 권장)`);
+        if(new Set(ids).size!==ids.length)E.push(`${n}단계: 방향 id 가 겹칩니다`);
+        if(!ids.includes(B.answer))E.push(`${n}단계: 정답 방향 ${B.answer} 가 목록에 없습니다`);
+        (B.dirs||[]).forEach(x=>{
+          if(typeof x.deg!=='number')E.push(`${n}단계: 방향 「${x.t}」 에 각도(deg)가 없습니다`);
+          if(x.id!==B.answer&&!x.why)E.push(`${n}단계: 오답 방향 「${x.t}」 에 why 가 없습니다`);
+        });
+        if(!(B.piles||[]).length)W.push(`${n}단계: 판에 그릴 것(piles)이 없습니다 — 눈으로 볼 게 없으면 찍게 됩니다`);
+        if(!B.ask)W.push(`${n}단계: 바람 판에 안내문(ask)이 없습니다`);
+        [[B.title,'제목'],[B.hint,'한 줄 설명']].forEach(([v,nm])=>{
+          if(v&&tag.test(v))E.push(`${n}단계: 바람 판 ${nm}에 HTML 태그가 있습니다`)});
+        (B.dirs||[]).forEach(x=>{if(tag.test(x.t||''))E.push(`${n}단계: 방향 이름 「${x.t}」 에 HTML 태그가 있습니다`)});
+        (B.piles||[]).forEach(x=>{if(tag.test(x.t||''))E.push(`${n}단계: 더미 이름 「${x.t}」 에 HTML 태그가 있습니다`)});
+        return;
+      }
+
       const mm=t=>{const a=String(t).split(':');return (+a[0])*60+(+a[1])};
       const f=mm(B.from),t=mm(B.to); if(!(f<t))E.push(`${n}단계: 시간표 범위가 이상합니다`);
       if(B.sunrise&&(mm(B.sunrise)<f||mm(B.sunrise)>t))W.push(`${n}단계: 일출이 시간표 밖입니다`);

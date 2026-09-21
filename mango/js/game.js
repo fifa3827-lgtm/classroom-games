@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609212239';
-import * as Save from './save.js?v=2609212239';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609212308';
+import * as Save from './save.js?v=2609212308';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -15,7 +15,7 @@ var ART={};                                   // 경로 -> true(있음) / false(
 /* 그림 주소에도 판 번호를 붙인다. 예전에는 ?v=1 로 고정이라, 그림을 고쳐 올려도
    한 번이라도 본 기기는 옛 그림을 영영 들고 있었다(탑 2층의 제미나이 별이 그랬다).
    stamp.py 가 올리기 직전에 이 줄을 갱신한다. */
-var ARTV='2609212239';
+var ARTV='2609212308';
 function artURL(f){return 'img/'+f+'?v='+ARTV}
 function artOK(f){return !!(f&&ART[f])}
 function probe(f){return new Promise(function(done){
@@ -952,12 +952,52 @@ function renderNotes(){
 }
 
 /* ================= 추리 (단서 + 결론을 둘 다 고른다) ================= */
+/* ---- 손으로 푸는 판 — 종류마다 「다 놓았는가 / 맞았는가 / 왜 틀렸는가」 셋만 대면 된다.
+       새 판을 만들려면 여기에 한 줄 더 넣고 그리는 함수를 하나 쓰면 된다.
+       timeline: 시간 띠 위에 카드 놓기(사건 3) · plan: 평면도 자리에 카드 맞추기(사건 1)
+       wind: 화살표를 돌려 방향 맞추기(사건 2) */
+var BOARDS={
+  timeline:{
+    filled:function(b,st){st.tl=st.tl||{};return b.events.every(function(e){return e.fix||st.tl[e.id]!=null})},
+    ok:function(b,st){st.tl=st.tl||{};return b.events.every(function(e){
+      if(e.fix)return true;var t=st.tl[e.id];if(t==null)return false;
+      if(e.after&&t<mins(e.after))return false;
+      if(e.before&&t>mins(e.before))return false;return true})},
+    why:function(b,st){
+      var bad=b.events.filter(function(e){if(e.fix)return false;var t=st.tl&&st.tl[e.id];
+        if(t==null)return true;
+        if(e.after&&t<mins(e.after))return true;
+        if(e.before&&t>mins(e.before))return true;return false});
+      return bad.length?('「'+esc(bad[0].t)+'」 카드 — '+(bad[0].why||'놓은 자리가 맞지 않아요.')):''}
+  },
+  plan:{
+    filled:function(b,st){st.pl=st.pl||{};return b.slots.every(function(sl){return st.pl[sl.id]})},
+    ok:function(b,st){st.pl=st.pl||{};return b.slots.every(function(sl){return st.pl[sl.id]===sl.ok})},
+    why:function(b,st){
+      st.pl=st.pl||{};
+      for(var k=0;k<b.slots.length;k++){
+        var sl=b.slots[k],put=st.pl[sl.id];
+        if(!put)return '「'+esc(sl.t)+'」에 아직 아무것도 안 놓았어요.';
+        if(put!==sl.ok){
+          var card=b.cards.filter(function(x){return x.id===put})[0]||{};
+          return '「'+esc(sl.t)+'」에 놓은 '+(card.t?'「'+esc(card.t)+'」':'것')+' — '+(card.why||sl.why||'여기를 막는 건 이게 아니에요.');
+        }
+      }
+      return ''}
+  },
+  wind:{
+    filled:function(b,st){return st.wd!=null},
+    ok:function(b,st){return st.wd===b.answer},
+    why:function(b,st){
+      if(st.wd==null)return '화살표를 돌려 바람이 불어온 쪽을 정해 보세요.';
+      var d=b.dirs.filter(function(x){return x.id===st.wd})[0]||{};
+      return d.why||'그 방향이면 두 가지가 같은 쪽으로 쏠리지 않아요.'}
+  }
+};
+function boardK(c){return BOARDS[(c.board&&c.board.kind)||'timeline']||BOARDS.timeline}
 function stepDone(i){
   var c=C.steps[i],st=S.steps[i];
-  if(c.board){                             /* 시간표 같은 판 — 움직이는 카드를 다 놓았는가 */
-    st.tl=st.tl||{};
-    return c.board.events.every(function(e){return e.fix||st.tl[e.id]!=null});
-  }
+  if(c.board)return boardK(c).filled(c.board,st);
   if(c.fill){                              /* 빈칸 문장 — 근거를 다 꽂고 빈칸을 다 채웠는가 */
     st.fill=st.fill||[];
     return st.clues.length===c.slots&&c.fill.blanks.every(function(b,k){return !!st.fill[k]});
@@ -975,15 +1015,7 @@ function blankOK(c,k,w){
   return n(b.ok)===n(w);
 }
 function fillOK(i){var c=C.steps[i],st=S.steps[i];st.fill=st.fill||[];return c.fill.blanks.every(function(b,k){return blankOK(c,k,st.fill[k])})}
-function boardOK(i){
-  var c=C.steps[i],st=S.steps[i];st.tl=st.tl||{};
-  return c.board.events.every(function(e){
-    if(e.fix)return true;var t=st.tl[e.id];if(t==null)return false;
-    if(e.after&&t<mins(e.after))return false;
-    if(e.before&&t>mins(e.before))return false;
-    return true;
-  });
-}
+function boardOK(i){var c=C.steps[i];return boardK(c).ok(c.board,S.steps[i])}
 function clueOK(i){
   var c=C.steps[i],st=S.steps[i];
   if(c.board)return true;                  /* 판 단계는 근거 카드를 따로 꽂지 않는다 */
@@ -1206,6 +1238,12 @@ function addStepClue(id){closeSheet();pickShelf(id)}
    고정 카드(fix)는 처음부터 놓여 있고, 나머지는 아래 쟁반에서 끌어(또는 눌러) 놓는다. */
 var TLD={drag:null};
 function renderBoardStep(i){
+  var k=(C.steps[i].board||{}).kind||'timeline';
+  if(k==='plan')return renderPlanStep(i);
+  if(k==='wind')return renderWindStep(i);
+  return renderTimelineStep(i);
+}
+function renderTimelineStep(i){
   var c=C.steps[i],b=c.board,st=S.steps[i];st.tl=st.tl||{};
   var f=mins(b.from),t=mins(b.to),span=t-f,sun=b.sunrise?mins(b.sunrise):null;
   var pct=function(m){return (m-f)/span*100};
@@ -1234,6 +1272,124 @@ function renderBoardStep(i){
   h+='</div>';
   $('#left').innerHTML=h;
   bindTimeline(i);
+}
+/* ---- 평면도 판 (board.kind === "plan") — 사건 1의 밀실 ----
+   위에서 본 방. 드나들 수 있는 자리마다 「무엇이 막고 있나」를 맞춰 넣는다.
+   셋을 다 막으면 「밖에서 들어온 사람은 없다」가 손으로 완성된다.
+   그림을 새로 그리지 않는다 — 방과 자리는 SVG 로 그린다(평면도는 선 몇 개면 된다). */
+var PLD={pick:null};
+function renderPlanStep(i){
+  var c=C.steps[i],b=c.board,st=S.steps[i];st.pl=st.pl||{};
+  var h='<div class="tlwrap planwrap" id="tlwrap"><div class="tlhd"><b>'+esc(b.title||'평면도')+'</b>'+
+        '<span class="muted">'+esc(b.hint||'카드를 자리에 맞춰 놓으세요')+'</span></div>';
+  h+='<div class="plan" id="plan"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet">'+
+     '<rect class="pl-room" x="26" y="20" width="248" height="140" rx="6"/>'+
+     (b.note?'<text class="pl-note" x="150" y="98" text-anchor="middle">'+esc(b.note)+'</text>':'');
+  (b.marks||[]).forEach(function(m){
+    h+='<text class="pl-mark" x="'+m.x+'" y="'+m.y+'" text-anchor="middle">'+esc(m.t)+'</text>';
+  });
+  h+='</svg>';
+  b.slots.forEach(function(sl){
+    var put=st.pl[sl.id],card=put?(b.cards.filter(function(x){return x.id===put})[0]||{}):null;
+    var bad=put&&put!==sl.ok&&(S.easy||S.wrongSet);
+    h+='<div class="pslot'+(put?' on':'')+(bad?' bad':'')+'" data-slot="'+sl.id+'" '+
+       'style="left:'+sl.x+'%;top:'+sl.y+'%">'+
+       '<b>'+esc(sl.t)+'</b>'+
+       '<span class="pput">'+(card?esc(card.t):'여기를 막는 건?')+'</span></div>';
+  });
+  h+='</div>';
+  h+='<div class="tray" id="tray">';
+  b.cards.forEach(function(x){
+    var used=b.slots.some(function(sl){return st.pl[sl.id]===x.id});
+    if(used)return;
+    h+='<button class="ev mov tray-ev'+(PLD.pick===x.id?' sel':'')+'" data-card="'+x.id+'">'+esc(x.t)+'</button>';
+  });
+  h+='</div>';
+  h+='<p class="muted" id="tl-tip">'+(PLD.pick?'이제 <b>막을 자리</b>를 누르세요':'카드를 누른 뒤 자리를 누르세요. 놓은 카드를 누르면 도로 빠집니다')+'</p>';
+  h+='</div>';
+  $('#left').innerHTML=h;
+  bindPlan(i);
+}
+function bindPlan(i){
+  var c=C.steps[i],b=c.board,st=S.steps[i];
+  $('#left').querySelectorAll('[data-card]').forEach(function(el){
+    el.addEventListener('click',function(){sTap();
+      PLD.pick=(PLD.pick===el.dataset.card)?null:el.dataset.card;
+      renderChain();});
+  });
+  $('#left').querySelectorAll('[data-slot]').forEach(function(el){
+    el.addEventListener('click',function(){
+      var id=el.dataset.slot,sl=b.slots.filter(function(x){return x.id===id})[0];
+      if(st.pl[id]&&!PLD.pick){                     /* 놓은 것을 도로 뺀다 */
+        sTap();delete st.pl[id];S.wrongSet=null;S.flags.judgeSay='';
+        renderChain();return;
+      }
+      if(!PLD.pick){sNo();return toast('먼저 아래에서 카드를 고르세요')}
+      var put=PLD.pick;PLD.pick=null;
+      var was=stepDone(i);
+      st.pl[id]=put;S.wrongSet=null;sStamp();
+      /* 쉬움: 틀린 카드는 도로 튕겨 나오며 망고가 이유를 말한다 — 손으로 「안 된다」를 느끼게 */
+      if(put!==sl.ok&&S.easy){
+        S.flags.judgeSay='<div class="say">'+mface('def')+'<b>망고</b> '+
+          (b.cards.filter(function(x){return x.id===put})[0]||{}).why||sl.why||'여기를 막는 건 그게 아니야.';
+        S.flags.judgeSay+='</div>';
+        renderChain();
+        setTimeout(function(){delete st.pl[id];sNo();renderChain()},900);
+        return;
+      }
+      S.flags.judgeSay='';
+      renderChain();autoNext(i,was);
+    });
+  });
+}
+
+/* ---- 바람 판 (board.kind === "wind") — 사건 2 ----
+   위에서 본 게시판 둘레. 낙엽 더미와 흩어진 조각이 어느 쪽에 쌓였는지 그려 두고,
+   화살표를 돌려 바람이 불어온 쪽을 정한다. 한쪽만 설명하는 방향은 틀린다. */
+function renderWindStep(i){
+  var c=C.steps[i],b=c.board,st=S.steps[i];
+  var cur=b.dirs.filter(function(d){return d.id===st.wd})[0]||null;
+  var h='<div class="tlwrap windwrap" id="tlwrap"><div class="tlhd"><b>'+esc(b.title||'간밤의 바람')+'</b>'+
+        '<span class="muted">'+esc(b.hint||'화살표를 돌려 보세요')+'</span></div>';
+  h+='<div class="wind" id="wind"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet">'+
+     '<rect class="pl-room" x="20" y="16" width="260" height="148" rx="6"/>'+
+     '<rect class="wd-board" x="118" y="30" width="64" height="16" rx="3"/>'+
+     '<text class="pl-mark" x="150" y="26" text-anchor="middle">게시판</text>';
+  (b.piles||[]).forEach(function(pl){
+    h+='<g class="wd-pile"><circle cx="'+pl.x+'" cy="'+pl.y+'" r="'+(pl.r||16)+'"/>'+
+       '<text class="pl-mark" x="'+pl.x+'" y="'+(pl.y+(pl.r||16)+11)+'" text-anchor="middle">'+esc(pl.t)+'</text></g>';
+  });
+  if(cur)h+='<g class="wd-arrow" transform="translate(150,104) rotate('+cur.deg+')">'+
+     '<line x1="0" y1="-52" x2="0" y2="40"/>'+
+     '<path d="M-9 30 L0 46 L9 30 Z"/></g>';
+  h+='</svg></div>';
+  h+='<div class="tray wdtray" id="tray">';
+  b.dirs.forEach(function(d){
+    h+='<button class="ev mov tray-ev wdbtn'+(st.wd===d.id?' sel':'')+'" data-dir="'+d.id+'">'+
+       '<span class="wdi" style="transform:rotate('+d.deg+'deg)">↓</span>'+esc(d.t)+'</button>';
+  });
+  h+='</div>';
+  h+='<p class="muted" id="tl-tip">'+(b.tip||'바람이 불어온 쪽을 고르세요. 낙엽과 조각이 <b>둘 다</b> 설명돼야 해요')+'</p>';
+  h+='</div>';
+  $('#left').innerHTML=h;
+  $('#left').querySelectorAll('[data-dir]').forEach(function(el){
+    el.addEventListener('click',function(){
+      sTap();
+      st.wd=el.dataset.dir;S.wrongSet=null;sStamp();
+      if(st.wd!==b.answer&&S.easy){
+        /* 쉬움: 틀린 방향은 화살표를 보여 준 뒤 도로 풀린다 — 왜 아닌지 눈으로 보고 다시 고른다 */
+        var d=b.dirs.filter(function(x){return x.id===st.wd})[0]||{};
+        S.flags.judgeSay='<div class="say">'+mface('def')+'<b>망고</b> '+(d.why||'그 방향은 둘 중 하나밖에 설명 못 해.')+'</div>';
+        renderChain();
+        setTimeout(function(){st.wd=null;sNo();renderChain()},1400);
+        return;
+      }
+      S.flags.judgeSay='';
+      /* 한 번 누르면 끝나는 판은 **저절로 넘어가지 않는다.** 고른 순간 화면이 튀면
+         화살표가 그려진 것을 볼 틈도, 마음을 바꿀 틈도 없다. 단계 칩으로 직접 넘어간다. */
+      renderChain();
+    });
+  });
 }
 function bindTimeline(i){
   var c=C.steps[i],b=c.board,st=S.steps[i],rail=$('#rail');if(!rail)return;
@@ -1335,10 +1491,7 @@ function judgeChain(){
 function helpLv(nFail){if(S.easy)return 2;if(nFail>=3)return 2;if(nFail>=2)return 1;return 0}
 function whyWrongStep(w){
   var c=C.steps[w],st=S.steps[w];
-  if(c.board){
-    var bad=c.board.events.filter(function(e){return !e.fix&&!(function(){var t=st.tl&&st.tl[e.id];if(t==null)return false;if(e.after&&t<mins(e.after))return false;if(e.before&&t>mins(e.before))return false;return true})()});
-    return bad.length?('「'+esc(bad[0].t)+'」 카드 — '+(bad[0].why||'놓은 자리가 맞지 않아요.')):'';
-  }
+  if(c.board)return boardK(c).why(c.board,st);
   if(!clueOK(w))return c.whyClue;
   if(c.fill){
     for(var k=0;k<c.fill.blanks.length;k++){
