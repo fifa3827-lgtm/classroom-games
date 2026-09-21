@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211531';
-import * as Save from './save.js?v=2609211531';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211746';
+import * as Save from './save.js?v=2609211746';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -12,14 +12,18 @@ var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
 /* data/case-NN.json 이 img 이름을 적으면 img/ 에서 찾아 쓰고,
    파일이 없으면 지금 쓰는 SVG 그림으로 그대로 돌아간다. 그림을 나중에 넣어도 코드는 그대로. */
 var ART={};                                   // 경로 -> true(있음) / false(없음)
-function artURL(f){return 'img/'+f}
+/* 그림 주소에도 판 번호를 붙인다. 예전에는 ?v=1 로 고정이라, 그림을 고쳐 올려도
+   한 번이라도 본 기기는 옛 그림을 영영 들고 있었다(탑 2층의 제미나이 별이 그랬다).
+   stamp.py 가 올리기 직전에 이 줄을 갱신한다. */
+var ARTV='2609211746';
+function artURL(f){return 'img/'+f+'?v='+ARTV}
 function artOK(f){return !!(f&&ART[f])}
 function probe(f){return new Promise(function(done){
   if(!f||f in ART)return done();
   var im=new Image();
   im.onload=function(){ART[f]=true;done()};
   im.onerror=function(){ART[f]=false;done()};
-  im.src=artURL(f)+'?v=1';
+  im.src=artURL(f);
 })}
 /* 사건 파일이 선언한 그림을 한 번에 확인한다. 없는 건 조용히 넘어간다. */
 function probeCaseArt(){
@@ -119,7 +123,7 @@ document.addEventListener('pointerdown',function(e){ // 아무 곳이나 누르�
 var S;
 function fresh(){
   S={screen:'title',mode:'scene',easy:null,lamps:3,found:{},flags:{},tab:C.suspectOrder[0],sel:null,
-  lens:{x:360,y:180},hot:null,active:null,rebutErr:0,newNotes:0,idle:null,
+  lens:{x:360,y:180},hot:null,active:null,tsel:null,rebutErr:0,newNotes:0,idle:null,
   phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,rep:[],repTries:0,
   steps:C.steps.map(function(){return {clues:[],opt:null}}),elim:{},_eyes:{},
   scene:sceneList()[0].id,big:BIGPREF,slot:null};
@@ -272,7 +276,7 @@ function miniWin(){
 }
 
 /* ---- 번호 자물쇠 ----
-   sp.code = "3691". 틀려도 벌점이 없다 — 찍어서 맞히는 게임이 아니라
+   sp.code = "1897"(탑이 세워진 해). 틀려도 벌점이 없다 — 찍어서 맞히는 게임이 아니라
    단서를 읽었는지 확인하는 자리다. 그래서 「몇 자리가 맞았다」는 알려 주지 않는다.
    자리마다 ▲▼ 로 숫자를 돌린다(손가락으로 되는 크기). */
 function lockPad(sp){
@@ -728,7 +732,10 @@ function setLens(x,y){
   spots().forEach(function(sp){var d=Math.hypot(sp.x-x,sp.y-y);if(d<Math.max(sp.r,26)&&d<bd){bd=d;best=sp}});
   var changed=(best&&best!==S.hot);S.hot=best;
   var lab=$('#lenslabel');
-  if(best){var nm=best.decoy?best.label:C.clues[best.id].n;
+  /* 확대경 이름표는 **그림에 보이는 것**의 이름이다.
+     사건 3의 참새 둥지는 그림에 없다 — 보이는 건 사다리고, 올라가야 둥지가 나온다.
+     그래서 지점이 스스로 이름표를 대면 단서 이름보다 그것을 쓴다. */
+  if(best){var nm=best.decoy?best.label:(best.label||C.clues[best.id].n);
     var mk=S.found[best.id]?'✓ ':((!best.decoy&&!spotReady(best))?'🔒 ':'');
     lab.textContent=mk+nm;lab.classList.add('on');
     if(changed){sHot();lab.classList.remove('new-hot');void lab.offsetWidth;lab.classList.add('new-hot')}}
@@ -1507,16 +1514,59 @@ function openTray(kind){
   var title={present:'어떤 단서를 들이댈까요?',step:'근거가 될 단서 고르기'}[kind];
   var ctx='';
   if(kind==='step'&&S.open!=null){var c=C.steps[S.open];ctx='<div class="ctx">'+(S.open+1)+'. '+esc(c.t)+' — <b>'+c.q.replace(/<[^>]+>/g,'')+'</b></div>';
-    if(needMissing(S.open).length)ctx+='<div class="ctx" style="color:var(--brick)"><b>이 단계에 필요한 단서가 아직 수첩에 없어요.</b> 현장을 더 조사하고 오세요 — 여기 있는 것만으로는 채워지지 않아요.</div>'}
-  if(kind==='present'){var L=null;C.suspects[S.tab].lines.forEach(function(x){if(x.id===S.sel)L=x});if(L)ctx='<div class="ctx">'+esc(C.suspects[S.tab].name)+'의 말: <b>"'+esc(L.t)+'"</b> — 이 말과 어긋나는 단서를 고르세요.</div>'}
-  var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div>'+ctx+'<div class="list"><div class="clues">';
+    if(needMissing(S.open).length)ctx+='<div class="ctx bad"><b>이 단계에 필요한 단서가 아직 수첩에 없어요.</b> 현장을 더 조사하고 오세요 — 여기 있는 것만으로는 채워지지 않아요.</div>'}
+  if(kind==='present'){var L=null;C.suspects[S.tab].lines.forEach(function(x){if(x.id===S.sel)L=x});
+    if(L)ctx='<div class="ctx"><span class="lead"><b>'+esc(C.suspects[S.tab].name)+'</b>의 말<br></span>'+
+      '<span class="quo">"'+esc(L.t)+'"</span>'+
+      '<span class="lead"><br>이 말과 <b>어긋나는</b> 단서를 고르세요.</span></div>'}
+  var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div>'+ctx+
+        '<div class="list"><div class="clues">';
   var any=false;
   C.order.forEach(function(id){if(S.found[id]){any=true;h+=cardHTML(id,false,true)}});
-  h+='</div>'+(any?'':'<p class="muted">아직 단서가 없어요. 현장을 먼저 조사하세요.</p>')+'</div>';
+  h+='</div>'+(any?'':'<p class="muted">아직 단서가 없어요. 현장을 먼저 조사하세요.</p>')+
+     '<div id="traydet" class="traydet"><p class="muted taway">카드를 누르면 <b>무슨 내용이었는지</b> 보여 줘요. 읽어 보고 맞다 싶으면 그때 들이대세요.</p></div>'+
+     '</div><div class="trayfoot" id="trayfoot" hidden></div>';
   d.innerHTML=h;r.appendChild(d);
-  $('#sheet-x').addEventListener('click',function(){sTap();S.active=null;closeSheet();if(S.mode==='logic')renderLogic()});
-  if(kind==='step'){var ex=document.createElement('p');ex.className='muted';ex.style.padding='0 12px';ex.innerHTML='필요 없는 단서를 넣으면 제출할 때 어긋납니다.';d.querySelector('.list').appendChild(ex)}
-  d.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();if(kind==='present')present(b.dataset.c);else if(kind==='step')addStepClue(b.dataset.c)})});
+  $('#sheet-x').addEventListener('click',function(){sTap();S.active=null;S.tsel=null;closeSheet();if(S.mode==='logic')renderLogic()});
+
+  /* 예전에는 카드를 누르는 순간 곧바로 들이댔다. 무슨 단서였는지 다시 볼 길이 없어서
+     이름만 보고 찍게 되고, 잘못 누르면 그대로 한 번을 날렸다.
+     이제 한 번 눌러 **내용을 읽고**, 아래 단추로 확정한다. 수첩과 같은 모양으로 보여 준다. */
+  function showDet(id){
+    S.tsel=id;
+    var c=C.clues[id],box=$('#traydet');
+    var pic=(c.photo&&artOK(c.photo))?'<img class="cluephoto" src="'+artURL(c.photo)+'" alt="">':'';
+    /* 제목 줄에 아이콘을 넣으면 크게 들어가 글자를 밀어낸다 — 수첩과 같이 이름만 쓴다 */
+    box.innerHTML='<div class="card detcard'+(c.testi?' testi':'')+'">'+
+      '<div class="who">'+esc(c.n)+'<small class="kind">'+(c.testi?'증언':'물증')+'</small></div>'+pic+
+      '<p class="dett">'+c.t+'</p></div>';
+    /* 고르는 화면과 읽는 화면을 나눈다. 둘을 한 화면에 쌓으면 작은 화면에서 글이 단추에 가린다.
+       단추는 **스크롤 영역 밖**에 둔다 — 안에 두면 짧은 화면에서 글 위에 겹친다. */
+    var ft=$('#trayfoot');
+    ft.hidden=false;
+    ft.innerHTML='<button class="act ghost" id="tray-back">← 다른 단서</button>'+
+      '<button class="act warm" id="tray-ok">'+(kind==='present'?'이 단서를 들이댄다':'근거로 넣는다')+'</button>';
+    d.classList.add('reading');
+    $('#tray-ok').addEventListener('click',function(){
+      sTap();var pick=S.tsel;S.tsel=null;
+      if(kind==='present')present(pick);else if(kind==='step')addStepClue(pick);
+    });
+    $('#tray-back').addEventListener('click',function(){
+      sTap();S.tsel=null;d.classList.remove('reading');
+      $('#trayfoot').hidden=true;$('#trayfoot').innerHTML='';
+      d.querySelectorAll('[data-c]').forEach(function(x){x.setAttribute('aria-pressed','false')});
+      box.innerHTML='<p class="muted taway">카드를 누르면 <b>무슨 내용이었는지</b> 보여 줘요.</p>';
+      var LL=document.querySelector('.sheet .list');if(LL)LL.scrollTop=0;
+    });
+    var L=document.querySelector('.sheet .list');if(L)L.scrollTop=0;
+  }
+  d.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){
+    sTap();
+    d.querySelectorAll('[data-c]').forEach(function(x){x.setAttribute('aria-pressed','false')});
+    b.setAttribute('aria-pressed','true');
+    showDet(b.dataset.c);
+  })});
+  if(kind==='step'){var ex=document.createElement('p');ex.className='muted taway';ex.innerHTML='필요 없는 단서를 넣으면 제출할 때 어긋납니다.';$('#traydet').appendChild(ex)}
 }
 function closeSheet(){var s=$('#sheet');if(s)s.remove()}
 
@@ -1942,7 +1992,14 @@ function boot(){
     window.MANGO_DBG={get S(){return S},get C(){return C},
       get found(){return Object.keys(S.found)},get scene(){return S.scene}};
   var p=Save.loadPrefs();
-  if(p){A.sfx=!!p.s;A.music=!!p.m}
+  /* 저장된 설정에 소리 칸이 **없으면 켜 둔 것으로 본다.**
+     예전에 「크게 보기」가 설정을 통째로 덮어써서 소리 칸이 지워진 적이 있는데,
+     그때 !!undefined 를 false 로 읽는 바람에 그 기기는 영영 조용해졌다.
+     없는 것은 「끔」이 아니라 「아직 고른 적 없음」이다. */
+  if(p){
+    if(typeof p.s==='boolean')A.sfx=p.s;
+    if(typeof p.m==='boolean')A.music=p.m;
+  }
   /* 크게 보기 기본값 — 휴대폰·태블릿처럼 화면이 작으면 켜고, 넓은 데스크톱은 그대로 둔다.
      한 번이라도 사용자가 단추를 누르면 그 선택이 저장되어 이 판단보다 우선한다. */
   BIGPREF=(p&&typeof p.big==='boolean') ? p.big

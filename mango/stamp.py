@@ -14,3 +14,5 @@ def stamp(path, pattern, repl):
 stamp('index.html', r'(href="css/style\.css)(\?v=[^"]*)?"', r'\1?v=%s"' % v)
 stamp('index.html', r'(src="js/game\.js)(\?v=[^"]*)?"', r'\1?v=%s"' % v)
 stamp('js/game.js', r"(from '\./(?:audio|save)\.js)(\?v=[^']*)?'", r"\1?v=%s'" % v)
+# 그림 주소의 판 번호. 이걸 안 올리면 고쳐 올린 그림이 기기에 안 내려간다.
+stamp('js/game.js', r"(var ARTV=')[^']*(')", r"\g<1>%s\2" % v)

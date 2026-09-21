@@ -217,7 +217,28 @@ function run(C){
     [...new Set(String(sp.code).split(''))].forEach(ch=>{
       if(!allText.includes(ch))E.push(`자물쇠 번호의 숫자 <code>${ch}</code> 가 어느 단서에도 나오지 않습니다 — 찍어야 풀립니다`);
     });
-    if(!/순서/.test(allText))W.push(`자물쇠 번호의 <b>순서</b>를 알려 주는 단서가 안 보입니다`);
+    /* 번호가 단서에 **그대로** 적혀 있으면 순서를 따로 알려 줄 필요가 없다
+       (사건 3의 밑돌에 새겨진 연도처럼). 그게 아니면 순서를 짚어 주는 단서가 있어야 한다. */
+    if(!allText.includes(String(sp.code))&&!/순서/.test(allText))
+      W.push(`자물쇠 번호의 <b>순서</b>를 알려 주는 단서가 안 보입니다`);
+    /* 번호가 통째로 적힌 단서 하나만으로 열리면 추리가 없다 — 「그게 번호다」를 알려 주는
+       두 번째 자리(진술·일지 등)가 있어야 한다. */
+    const saysIt=Object.values(C.suspects||{}).some(su=>
+      (su.lines||[]).some(L=>Object.values(L.hit||{}).some(h=>/번호/.test(h.say||''))));
+    if(allText.includes(String(sp.code))&&!saysIt)
+      W.push(`자물쇠 번호가 단서에 그대로 적혀 있는데, <b>그것이 번호라는 것</b>을 알려 주는 진술이 없습니다 — 읽기만 하면 열립니다`);
+  });
+
+  // 13.5 확대경 이름표가 답을 미리 말하지 않는가
+  //      확대경은 **아직 조사하지 않은 것** 위에 떠 있다. 그런데 이름표에 단서 이름을 쓰면
+  //      「열린 탑 문」「맞춘 포스터」처럼 조사한 뒤의 결과를 미리 읽어 주게 된다.
+  //      퍼즐이 걸린 지점과 잠긴 지점은 지점이 스스로 이름표(label)를 대야 한다.
+  allSpots.forEach(sp=>{
+    if(sp.decoy||sp.label)return;
+    const nm=(C.clues[sp.id]||{}).n||'';
+    if(sp.mini)E.push(`퍼즐이 걸린 <code>${sp.id}</code> 에 이름표(label)가 없습니다 — 확대경이 「${nm}」이라고 답을 먼저 말합니다`);
+    else if(/^(열린|맞춘|풀린|찾은)/.test(nm)||/시각$/.test(nm))
+      W.push(`<code>${sp.id}</code> 의 확대경 이름표 「${nm}」이 조사 결과를 미리 말하는 것 같습니다 — label 을 따로 주세요`);
   });
 
   // 14. 그림자 도구: 정답 시각이 눈금 위에 있어야 한다

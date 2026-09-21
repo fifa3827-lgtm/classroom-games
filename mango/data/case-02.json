@@ -161,7 +161,8 @@
    ],
    "miniTitle": "찢어진 포스터 맞추기",
    "miniTip": "조각을 끌어 점선 자리에 맞추세요. 가까이 가면 저절로 붙어요. 다 맞추면 찢긴 선이 보여요.",
-   "art": "<rect x=\"0\" y=\"0\" width=\"210\" height=\"150\" fill=\"#fffaf0\"/><rect x=\"0\" y=\"0\" width=\"210\" height=\"26\" fill=\"#b34a3a\"/><text x=\"105\" y=\"19\" text-anchor=\"middle\" font-size=\"15\" fill=\"#fbf7ee\" font-family=\"Gaegu\">도토리 축제</text><circle cx=\"34\" cy=\"60\" r=\"17\" fill=\"#d6a83c\"/><rect x=\"31\" y=\"60\" width=\"6\" height=\"22\" fill=\"#6f4d36\"/><rect x=\"62\" y=\"44\" width=\"86\" height=\"22\" rx=\"4\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.6\"/><text x=\"105\" y=\"60\" text-anchor=\"middle\" font-size=\"14\" fill=\"#3b2a1a\" font-family=\"Gaegu\">광장</text><path d=\"M62 78 h124 M62 90 h108 M62 102 h124 M14 104 h172 M14 116 h140\" stroke=\"#b7a894\" stroke-width=\"4\" stroke-linecap=\"round\"/><text x=\"105\" y=\"140\" text-anchor=\"middle\" font-size=\"12\" fill=\"#7a6656\" font-family=\"Gowun Dodum\">모두 오세요</text>"
+   "art": "<rect x=\"0\" y=\"0\" width=\"210\" height=\"150\" fill=\"#fffaf0\"/><rect x=\"0\" y=\"0\" width=\"210\" height=\"26\" fill=\"#b34a3a\"/><text x=\"105\" y=\"19\" text-anchor=\"middle\" font-size=\"15\" fill=\"#fbf7ee\" font-family=\"Gaegu\">도토리 축제</text><circle cx=\"34\" cy=\"60\" r=\"17\" fill=\"#d6a83c\"/><rect x=\"31\" y=\"60\" width=\"6\" height=\"22\" fill=\"#6f4d36\"/><rect x=\"62\" y=\"44\" width=\"86\" height=\"22\" rx=\"4\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.6\"/><text x=\"105\" y=\"60\" text-anchor=\"middle\" font-size=\"14\" fill=\"#3b2a1a\" font-family=\"Gaegu\">광장</text><path d=\"M62 78 h124 M62 90 h108 M62 102 h124 M14 104 h172 M14 116 h140\" stroke=\"#b7a894\" stroke-width=\"4\" stroke-linecap=\"round\"/><text x=\"105\" y=\"140\" text-anchor=\"middle\" font-size=\"12\" fill=\"#7a6656\" font-family=\"Gowun Dodum\">모두 오세요</text>",
+   "label": "흩어진 포스터 조각"
   },
   {
    "id": "c_pins",
@@ -635,13 +636,7 @@
    }
   ],
   "mango": "붉은 발자국은 <b>광장 쪽에서</b> 왔었지. 그리고 이번엔 <b>「광장」</b>이라는 글자가 사라졌어. …두 번이면 우연이 아닐지도 몰라.",
-  "when": "모레 <b>아침 6시</b>에 열려요.",
-  "ask": [
-   "조각 맞추기 퍼즐이 손가락으로 할 만했나요?",
-   "「아무도 찢지 않았다」가 납득됐나요?",
-   "사건 1과 다른 사건처럼 느껴졌나요?",
-   "어디서 제일 헷갈렸나요?"
-  ]
+  "when": "모레 <b>아침 6시</b>에 열려요."
  },
  "concl": "손으로 찢긴 게 아님 · 위만 고정 · 한 방향 바람 · 선 사람 없음 · 남는 답은 하나",
  "replay": {
