@@ -29,16 +29,16 @@ body{background:var(--bg);color:var(--ink);font-family:"Gowun Dodum","Apple SD G
 .slotbar button.on{background:var(--brown);border-color:var(--brown);color:#fff}
 .itemgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
 .item{position:relative;border:2px solid var(--line);border-radius:16px;background:var(--card);padding:8px 4px 6px;display:grid;place-items:center;gap:2px}
-.item svg{width:62px;height:62px}
+.item svg,.item .th{width:62px;height:62px;object-fit:contain}
 .item .nm{font-family:"Gowun Dodum",sans-serif;font-size:13px;color:var(--muted);line-height:1.2;text-align:center}
 .item.have{border-color:var(--brown)}
 .item.wearing{border-color:var(--mint-deep);background:var(--mint);box-shadow:0 0 0 3px var(--mint) inset}
 .item.locked{opacity:.45}
-.item.locked svg{filter:grayscale(1)}
+.item.locked svg,.item.locked .th{filter:grayscale(1)}
 .item .lock{position:absolute;right:6px;top:6px;font-size:14px}
 .collectbar{font-family:"Gowun Dodum",sans-serif;color:var(--muted);text-align:center;font-size:15px}
 .prize{display:grid;place-items:center;gap:4px;padding:10px 14px;border:2px dashed var(--brown);border-radius:18px;background:var(--cream)}
-.prize svg{width:76px;height:76px}
+.prize svg,.prize .th{width:76px;height:76px;object-fit:contain}
 .prize .t{font-family:"Jua","Gowun Dodum",sans-serif;color:var(--acc,var(--brown));font-size:18px}
 .screen{display:none;flex-direction:column;gap:16px;flex:1}
 .screen.on{display:flex}
@@ -433,19 +433,19 @@ function chocoSVG(mood){
     + mouth
     + '<path d="M29 55L13 50M29 62L12 62M91 55L107 50M91 62L108 62" stroke="'+LINE+'" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>'
     /* 꾸미기 — 안경·목도리·모자·손에 든 것은 맨 앞에 */
-    + wornLayers(['face','neck','hat','hand'])
+    + '<g transform="'+WEAR_INV+'">' + wornLayers(['neck','hat','face','hand']) + '</g>'
     + '</svg>';
 }
 /* 그림 쵸코는 SVG 쵸코와 눈 위치가 조금 다르다. 꾸민 물건을 눈 기준으로 맞춘다.
    (SVG 눈 가운데 60,55 · 사이 30) → (그림 눈 가운데 56,47.2 · 사이 28.7) */
-const WEAR_T = 'translate(56,47.2) scale(0.957) translate(-60,-55)';
+const WEAR_INV = 'translate(60,55) scale(1.0449) translate(-56,-47.2)';
 function renderChoco(el, mood){
   el.dataset.mood = mood;
   el.innerHTML = useImages
     ? '<svg class="lay" viewBox="0 0 120 120" aria-hidden="true">' + bgLayer() + '</svg>'
       + '<img src="choco/'+mood+'.png" alt="">'
-      + '<svg class="lay" viewBox="0 0 120 120" aria-hidden="true"><g transform="'+WEAR_T+'">'
-      + wornLayers(['face','neck','hat','hand']) + '</g></svg>'
+      + '<svg class="lay" viewBox="0 0 120 120" aria-hidden="true">'
+      + wornLayers(['neck','hat','face','hand']) + '</svg>'
     : chocoSVG(mood);
 }
 function animate(el, cls){ el.classList.remove('wiggle','jump'); void el.offsetWidth; el.classList.add(cls); }
@@ -566,70 +566,40 @@ const SLOTS = [
   { id:'bg',    name:'배경' }
 ];
 const ITEMS = [
-  { id:'h1', slot:'hat',  vb:'20 14 80 26', name:'빨간 모자',
-    svg:'<path d="M37 22q23-28 46 0z" fill="#E4572E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<rect x="24" y="20" width="72" height="9" rx="4.5" fill="#C7401C" stroke="#2E2A28" stroke-width="2"/>' },
-  { id:'h2', slot:'hat',  vb:'26 0 68 32', name:'왕관',
-    svg:'<path d="M32 26 L40 8 L52 20 L60 4 L68 20 L80 8 L88 26 Z" fill="#E8B84B" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<circle cx="46" cy="18" r="3" fill="#F4A9A9"/><circle cx="74" cy="18" r="3" fill="#A8DFC9"/>' },
-  { id:'h3', slot:'hat',  vb:'12 14 96 24', name:'밀짚모자',
-    svg:'<ellipse cx="60" cy="28" rx="44" ry="10" fill="#E9CF8E" stroke="#2E2A28" stroke-width="2"/>'
-       +'<path d="M40 27q20-24 40 0z" fill="#E9CF8E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<rect x="41" y="20" width="38" height="6" rx="3" fill="#A4502A"/>' },
-  { id:'h4', slot:'hat',  vb:'24 -2 72 42', name:'털모자',
-    svg:'<path d="M34 28q26-24 52 0z" fill="#7FB3E8" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<rect x="30" y="26" width="60" height="9" rx="4.5" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/>'
-       +'<circle cx="60" cy="6" r="7" fill="#FFFDF9" stroke="#2E2A28" stroke-width="2"/>' },
-  { id:'f1', slot:'face', vb:'28 38 64 34', name:'동그란 안경',
-    svg:'<circle cx="46" cy="55" r="13" fill="none" stroke="#3A3130" stroke-width="3"/>'
-       +'<circle cx="74" cy="55" r="13" fill="none" stroke="#3A3130" stroke-width="3"/>'
-       +'<path d="M59 55h2" stroke="#3A3130" stroke-width="3"/>' },
-  { id:'f2', slot:'face', vb:'28 40 64 26', name:'선글라스',
-    svg:'<rect x="32" y="46" width="24" height="17" rx="6" fill="#3A3130"/>'
-       +'<rect x="64" y="46" width="24" height="17" rx="6" fill="#3A3130"/>'
-       +'<path d="M56 53h8" stroke="#3A3130" stroke-width="4"/>' },
-  { id:'n1', slot:'neck', vb:'30 76 62 38', name:'빨간 목도리',
-    svg:'<path d="M34 84q26 14 52 0v9q-26 14-52 0z" fill="#E4572E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<path d="M79 92q7 11 4 22l-10-2q4-10 0-19z" fill="#E4572E" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>' },
-  { id:'n2', slot:'neck', vb:'40 76 40 24', name:'나비넥타이',
-    svg:'<path d="M60 88 L44 80 L44 96 Z" fill="#E8B84B" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<path d="M60 88 L76 80 L76 96 Z" fill="#E8B84B" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<circle cx="60" cy="88" r="5" fill="#C99B2E" stroke="#2E2A28" stroke-width="2"/>' },
-  { id:'n3', slot:'neck', vb:'32 78 56 32', name:'파란 스카프',
-    svg:'<path d="M36 83q24 13 48 0v7q-24 13-48 0z" fill="#7FB3E8" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>'
-       +'<path d="M58 90l-4 16h12l-4-16z" fill="#7FB3E8" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>' },
-  { id:'d1', slot:'hand', vb:'84 12 34 40', name:'풍선',
-    svg:'<path d="M101 44q0 14-6 14" stroke="#2E2A28" stroke-width="1.6" fill="none"/>'
-       +'<ellipse cx="101" cy="30" rx="13" ry="15" fill="#F4A9A9" stroke="#2E2A28" stroke-width="2"/>'
-       +'<path d="M101 45l-3 4h6z" fill="#F4A9A9" stroke="#2E2A28" stroke-width="1.6" stroke-linejoin="round"/>' },
-  { id:'d2', slot:'hand', vb:'88 6 38 42', name:'별 지팡이',
-    svg:'<path d="M96 62 L106 30" stroke="#C99B2E" stroke-width="4" stroke-linecap="round"/>'
-       +'<path d="M107 10 L111 22 L123 24 L114 32 L117 44 L107 37 L97 44 L100 32 L91 24 L103 22 Z" fill="#E8B84B" stroke="#2E2A28" stroke-width="2" stroke-linejoin="round"/>' },
-  { id:'d3', slot:'hand', vb:'0 12 30 56', name:'꽃',
-    svg:'<path d="M18 64 L14 38" stroke="#6BA87C" stroke-width="3.4" stroke-linecap="round"/>'
-       +'<path d="M16 52q-9-3-10-10q8 1 11 8z" fill="#6BA87C"/>'
-       +'<circle cx="8" cy="30" r="7" fill="#F4A9A9"/><circle cx="20" cy="30" r="7" fill="#F4A9A9"/>'
-       +'<circle cx="14" cy="22" r="7" fill="#F4A9A9"/><circle cx="14" cy="34" r="7" fill="#F4A9A9"/>'
-       +'<circle cx="14" cy="29" r="5" fill="#E8B84B"/>' },
-  { id:'b1', slot:'bg', vb:'0 0 120 120', name:'하늘',
-    svg:'<rect width="120" height="120" fill="#CFE6F7"/><circle cx="24" cy="24" r="12" fill="#FFF3B0"/>'
-       +'<ellipse cx="88" cy="30" rx="20" ry="9" fill="#FFFDF9"/><ellipse cx="74" cy="34" rx="13" ry="7" fill="#FFFDF9"/>' },
-  { id:'b2', slot:'bg', vb:'0 0 120 120', name:'노을',
-    svg:'<rect width="120" height="120" fill="#F8C9A0"/><rect y="70" width="120" height="50" fill="#EFA06B"/>'
-       +'<circle cx="60" cy="70" r="18" fill="#F4795B"/>' },
-  { id:'b3', slot:'bg', vb:'0 0 120 120', name:'숲',
-    svg:'<rect width="120" height="120" fill="#DCEEDC"/>'
-       +'<path d="M18 74 L30 40 L42 74Z" fill="#6BA87C"/><path d="M78 74 L90 44 L102 74Z" fill="#6BA87C"/>'
-       +'<rect y="74" width="120" height="46" fill="#BFDDBF"/>' },
-  { id:'b4', slot:'bg', vb:'0 0 120 120', name:'밤하늘',
-    svg:'<rect width="120" height="120" fill="#3B3F63"/><circle cx="92" cy="24" r="11" fill="#F3E7B0"/>'
-       +'<circle cx="20" cy="18" r="2.4" fill="#FFF"/><circle cx="40" cy="32" r="1.8" fill="#FFF"/>'
-       +'<circle cx="64" cy="14" r="2" fill="#FFF"/><circle cx="14" cy="46" r="1.8" fill="#FFF"/>'
-       +'<circle cx="104" cy="56" r="2" fill="#FFF"/>' },
-  { id:'b5', slot:'bg', vb:'0 0 120 120', name:'바다',
-    svg:'<rect width="120" height="120" fill="#BFE6EA"/><rect y="66" width="120" height="54" fill="#6FC5D6"/>'
-       +'<path d="M0 66q15-7 30 0t30 0t30 0t30 0v8H0z" fill="#8FD6E3"/>'
-       +'<circle cx="26" cy="22" r="10" fill="#FFF3B0"/>' }
+  { id:'h1', slot:'hat', name:'빨간 모자',
+    svg:'<image href="items/h1.png" x="34" y="2" width="52" height="40.6"/>' },
+  { id:'h2', slot:'hat', name:'왕관',
+    svg:'<image href="items/h2.png" x="34" y="4" width="52" height="37.0"/>' },
+  { id:'h3', slot:'hat', name:'밀짚모자',
+    svg:'<image href="items/h3.png" x="19" y="8" width="82" height="41.8"/>' },
+  { id:'h4', slot:'hat', name:'털모자',
+    svg:'<image href="items/h4.png" x="38" y="4" width="44" height="43.1"/>' },
+  { id:'f1', slot:'face', name:'동그란 안경',
+    svg:'<image href="items/f1.png" x="27" y="34" width="59" height="24.7"/>' },
+  { id:'f2', slot:'face', name:'선글라스',
+    svg:'<image href="items/f2.png" x="27" y="37" width="59" height="22.3"/>' },
+  { id:'n1', slot:'neck', name:'빨간 목도리',
+    svg:'<image href="items/n1.png" x="39" y="68" width="42" height="38.6"/>' },
+  { id:'n2', slot:'neck', name:'나비넥타이',
+    svg:'<image href="items/n2.png" x="38" y="68" width="44" height="23.1"/>' },
+  { id:'n3', slot:'neck', name:'파란 스카프',
+    svg:'<image href="items/n3.png" x="40" y="67" width="40" height="35.2"/>' },
+  { id:'d1', slot:'hand', name:'풍선',
+    svg:'<image href="items/d1.png" x="84" y="10" width="22" height="51.0"/>' },
+  { id:'d2', slot:'hand', name:'별 지팡이',
+    svg:'<image href="items/d2.png" x="86" y="10" width="22" height="49.2"/>' },
+  { id:'d3', slot:'hand', name:'꽃',
+    svg:'<image href="items/d3.png" x="4" y="38" width="22" height="46.2"/>' },
+  { id:'b1', slot:'bg', name:'하늘',
+    svg:'<image href="items/b1.png" x="0" y="0" width="120" height="120"/>' },
+  { id:'b2', slot:'bg', name:'노을',
+    svg:'<image href="items/b2.png" x="0" y="0" width="120" height="120"/>' },
+  { id:'b3', slot:'bg', name:'숲',
+    svg:'<image href="items/b3.png" x="0" y="0" width="120" height="120"/>' },
+  { id:'b4', slot:'bg', name:'밤하늘',
+    svg:'<image href="items/b4.png" x="0" y="0" width="120" height="120"/>' },
+  { id:'b5', slot:'bg', name:'바다',
+    svg:'<image href="items/b5.png" x="0" y="0" width="120" height="120"/>' }
 ];
 const ITEM_BY_ID = {}; ITEMS.forEach(function(it){ ITEM_BY_ID[it.id]=it; });
 function dressState(){ if(!store.dress) store.dress = { owned:[], worn:{} }; return store.dress; }
@@ -659,7 +629,7 @@ function awardItem(){
   return it;
 }
 function itemThumb(it){
-  return '<svg viewBox="' + (it.vb || '0 0 120 120') + '" aria-hidden="true">' + it.svg + '</svg>';
+  return '<img class="th" src="items/' + it.id + '.png" alt="">';
 }
 let dressSlot = 'hat';
 function renderDress(){
