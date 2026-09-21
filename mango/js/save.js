@@ -55,7 +55,8 @@ function loadProg(){
   }catch(e){return {done:{},open:{}}}
 }
 function saveProg(p){try{localStorage.setItem(PROG,JSON.stringify(p))}catch(e){}}
-function markDone(id){var p=loadProg();p.done[id]=1;saveProg(p);return p}
+/* 해결한 사건은 별점(1~3)을 남긴다. 다시 풀어 더 잘하면 올라가고, 못해도 내려가지 않는다. */
+function markDone(id,star){var p=loadProg();var s=Math.max(1,Math.min(3,star||1));p.done[id]=Math.max(p.done[id]||0,s);saveProg(p);return p}
 function markOpen(id){var p=loadProg();p.open[id]=1;saveProg(p);return p}
 /* 브라우저에 「이 자료는 자리가 모자라도 지우지 말아 달라」고 청한다.
    들어줄지는 브라우저가 정한다. 안 들어줘도 게임은 그대로 돌아간다. */

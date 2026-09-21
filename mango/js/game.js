@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211239';
-import * as Save from './save.js?v=2609211239';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211425';
+import * as Save from './save.js?v=2609211425';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -23,7 +23,7 @@ function probe(f){return new Promise(function(done){
 })}
 /* 사건 파일이 선언한 그림을 한 번에 확인한다. 없는 건 조용히 넘어간다. */
 function probeCaseArt(){
-  var list=['mango-full.png'];
+  var list=['mango-full.png','cork.png'];
   MANGO.forEach(function(e){list.push('mango-'+e+'.png');list.push('mango-face-'+e+'.png')});
   if(C.coverImg)list.push(C.coverImg);
   if(C.sceneImg)list.push(C.sceneImg);
@@ -41,7 +41,10 @@ function probeCaseArt(){
   });
   /* 의뢰인은 용의자 목록에 없어서 위 반복문이 지나친다. 따로 넣어야 그림이 뜬다. */
   if(C.brief&&C.brief.sym)list.push(C.brief.sym+'-def.png');
-  Object.keys(C.clues).forEach(function(k){if(C.clues[k].iconImg)list.push(C.clues[k].iconImg)});
+  Object.keys(C.clues).forEach(function(k){
+    if(C.clues[k].iconImg)list.push(C.clues[k].iconImg);
+    if(C.clues[k].photo)list.push(C.clues[k].photo);
+  });
   return Promise.all(list.map(probe));
 }
 /* 표정 파일이 없으면 기본 표정으로, 그것도 없으면 SVG 로 */
@@ -119,7 +122,7 @@ function fresh(){
   lens:{x:360,y:180},hot:null,proofs:[],active:null,rebutErr:0,newNotes:0,idle:null,
   phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,
   steps:C.steps.map(function(){return {clues:[],opt:null}}),elim:{},_eyes:{},
-  scene:sceneList()[0].id,big:BIGPREF};
+  scene:sceneList()[0].id,big:BIGPREF,slot:null};
   resetFaces();
 }
 
@@ -706,7 +709,8 @@ function renderScene(){
   var w=$('#scenewrap'),drag=false;
   w.addEventListener('pointerdown',function(e){
     /* 확대경을 다시 잡으면 아래 띠는 비켜 준다 — 가려진 자리를 조사할 수 있게 */
-    var bc=$('#bigcard');if(bc&&!bc.hidden&&!e.target.closest('.bigcard')){bc.hidden=true;return}
+    var bc=$('#bigcard');
+    if(bc&&!bc.hidden&&!(e.target.closest&&e.target.closest('.bigcard'))){S._cardOff=true;bc.hidden=true;return}
     drag=true;w.setPointerCapture(e.pointerId);var p=pt(e);setLens(p.x,p.y)});
   w.addEventListener('pointermove',function(e){if(drag){var p=pt(e);setLens(p.x,p.y)}});
   w.addEventListener('pointerup',function(){drag=false});
@@ -766,7 +770,12 @@ function finishInspect(sp,isNew){
     after=function(){var el=document.querySelector('#sc-follow span');if(el)typeHTML(el,f.say||'',f.voice||'narr')};
   }
   if(c.note)extra+=c.note;
-  rightScene('<div class="card"><div class="who">'+(isNew?mface('sp'):mface('def'))+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div><p style="margin:0" id="sc-desc"></p></div>'+extra);
+  /* photo: 그 단서의 「진짜 사진」. 128px 아이콘만으로는 무엇을 봤는지 안 보이는 단서가 있다
+     (사건 3의 망치 집 참새 둥지 — 그림은 있는데 화면 어디에도 안 나왔다).
+     카드 **안**, 설명 앞에 넣어야 글이 사진 옆으로 흐른다. */
+  var photo=(c.photo&&artOK(c.photo))
+    ? '<div class="cluephoto"><img src="'+artURL(c.photo)+'" alt="'+esc(c.n)+'"></div>' : '';
+  rightScene('<div class="card"><div class="who">'+(isNew?mface('sp'):mface('def'))+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div>'+photo+'<p style="margin:0" id="sc-desc"></p></div>'+extra);
   typeHTML($('#sc-desc'),c.t,isNew?'mango':null,function(){if(after)after();mirrorBig()});
   mirrorBig();
   if(count()>=8&&!S.flags.hint8){S.flags.hint8=true;toast('단서가 많이 모였어요. 심문과 추리 탭도 써 보세요')}
@@ -775,7 +784,7 @@ function finishInspect(sp,isNew){
    내용을 두 벌로 만들지 않고 오른쪽 칸에 그린 것을 그대로 옮긴다. */
 function mirrorBig(){
   var box=$('#bigcard');if(!box)return;
-  if(!S.big||!S._hasCard){box.hidden=true;return}
+  if(!S.big||!S._hasCard||S._cardOff){box.hidden=true;return}
   var src=$('#rscroll');if(!src)return;
   var card=src.querySelector('.card');
   if(!card){box.hidden=true;return}
@@ -783,7 +792,7 @@ function mirrorBig(){
   var inn=box.querySelector('.bigin');
   var n=card;while(n){inn.appendChild(n.cloneNode(true));n=n.nextElementSibling}
   box.hidden=false;
-  var x=$('#bigx');if(x)x.addEventListener('click',function(){sTap();box.hidden=true});
+  var x=$('#bigx');if(x)x.addEventListener('click',function(){sTap();S._cardOff=true;box.hidden=true});
   /* 글자가 한 자씩 찍히는 중이면 따라 그린다 — 안 그러면 띠에 반쪽 글이 멈춰 있다 */
   clearTimeout(MIRT);
   if(typers.length)MIRT=setTimeout(mirrorBig,120);
@@ -794,6 +803,7 @@ function rightScene(html){
      다만 그 현장에 **처음 들어왔을 때 한 번은** 띄운다. 크게 보기에서는 오른쪽 칸이
      접혀 있어서, 안 띄우면 무엇을 하라는 안내를 아예 못 보게 된다. */
   S._hasCard=!!html||!S.flags['memoSaid_'+curScene().id];
+  if(html)S._cardOff=false;   /* 새 단서가 오면 접어 둔 띠를 다시 연다 */
   var base='<p class="muted" style="margin:0 0 8px">확대경을 끌어 살펴보고, 이름표가 뜨면 <b>조사하기</b>를 누르세요. 조사한 곳은 ✓로 표시돼요.</p>';
   $('#rscroll').innerHTML=base+(html||'<div class="card" style="background:#fff8e7"><div class="who">망고의 메모</div><p style="margin:0;font-size:13px" id="sc-memo"></p></div>');
   /* 현장 첫 화면의 망고 메모 — 사건 파일의 memo (없으면 일반 문장) */
@@ -934,7 +944,39 @@ function renderNotes(){
 }
 
 /* ================= 추리 (단서 + 결론을 둘 다 고른다) ================= */
-function stepDone(i){var st=S.steps[i];return st.clues.length===C.steps[i].slots&&st.opt!=null}
+function stepDone(i){
+  var c=C.steps[i],st=S.steps[i];
+  if(c.board){                             /* 시간표 같은 판 — 움직이는 카드를 다 놓았는가 */
+    st.tl=st.tl||{};
+    return c.board.events.every(function(e){return e.fix||st.tl[e.id]!=null});
+  }
+  if(c.fill){                              /* 빈칸 문장 — 근거를 다 꽂고 빈칸을 다 채웠는가 */
+    st.fill=st.fill||[];
+    return st.clues.length===c.slots&&c.fill.blanks.every(function(b,k){return !!st.fill[k]});
+  }
+  return st.clues.length===c.slots&&st.opt!=null;
+}
+/* 빈칸 하나가 맞는가 — 낱말이 같으면 맞다(붙여 쓰기·띄어쓰기 차이는 눈감아 준다) */
+function blankOK(c,k,w){
+  if(!w)return false;var ok=c.fill.blanks[k].ok;
+  var n=function(x){return String(x).replace(/\s+/g,'')};
+  return n(ok)===n(w);
+}
+function fillOK(i){var c=C.steps[i],st=S.steps[i];st.fill=st.fill||[];return c.fill.blanks.every(function(b,k){return blankOK(c,k,st.fill[k])})}
+function boardOK(i){
+  var c=C.steps[i],st=S.steps[i];st.tl=st.tl||{};
+  return c.board.events.every(function(e){
+    if(e.fix)return true;var t=st.tl[e.id];if(t==null)return false;
+    if(e.after&&t<mins(e.after))return false;
+    if(e.before&&t>mins(e.before))return false;
+    return true;
+  });
+}
+function clueOK(i){
+  var c=C.steps[i],st=S.steps[i];
+  if(c.board)return true;                  /* 판 단계는 근거 카드를 따로 꽂지 않는다 */
+  return (c.slots===1)?(c.need.indexOf(st.clues[0])>=0):(c.need.every(function(n){return st.clues.indexOf(n)>=0}));
+}
 /* 이 단계의 근거 중 아직 수첩에 없는 것. 「틀렸다」와 「아직 못 찾았다」는 다른 말이고,
    둘을 구별해 주지 않으면 이용자는 맞는 답을 고르고도 어디가 잘못인지 모른 채 헤맨다. */
 function needMissing(i){
@@ -954,63 +996,294 @@ function renderLogic(){
   return renderAccuse();
 }
 
-/* ---------- 1단계: 추론 사슬 ---------- */
+/* ---------- 1단계: 추론 사슬 ----------
+   추리는 **고르는 것이 아니라 만드는 것**이어야 한다(2026-09-21 결정).
+   왼쪽: 코르크판. 단서 카드가 핀으로 꽂혀 있고, 카드를 누르면 빨간 실이 당겨져 「그래서?」에 모인다.
+   오른쪽: 물음과 **빈칸 문장**. 카드에서 나온 낱말을 빈칸에 꽂아 결론을 직접 쓴다.
+   사건 파일이 board 를 주면(사건 3의 시간표) 왼쪽이 그 판으로 바뀐다 — 손으로 푸는 추리 한 판. */
+function curStep(){
+  if(S.open==null||!C.steps[S.open]){
+    var f=-1;C.steps.forEach(function(c,k){if(f<0&&!stepDone(k))f=k});
+    S.open=(f<0?0:f);
+  }
+  return S.open;
+}
 function renderChain(){
-  var h='<div class="chain" id="chain">';
-  C.steps.forEach(function(c,i){
-    var st=S.steps[i],done=stepDone(i),wrong=S.wrongSet&&S.wrongSet.indexOf(i)>=0;
-    h+='<button class="link step'+(done?' done':'')+(wrong?' bad':'')+(S.open===i?' open':'')+'" data-s="'+i+'">'+
-      '<span class="no">'+(i+1)+'</span><b>'+c.t+'</b>'+
-      '<div class="mini">'+(st.clues.length?st.clues.map(function(id){return '<span class="tag">'+esc(C.clues[id].n)+'</span>'}).join(''):'<span class="tag empty">단서 —</span>')+
-      (st.opt!=null?'<span class="tag opt">'+c.opts[st.opt].t.replace(/<[^>]+>/g,'')+'</span>':'<span class="tag empty">결론 —</span>')+'</div></button>';
-  });
-  h+='</div>';
-  $('#left').innerHTML='<div class="logicwrap">'+h+'</div>';
-  $('#chain').querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){sTap();S.open=+b.dataset.s;renderChain()})});
-  if(S.open==null){
-    var n=C.steps.filter(function(c,i){return stepDone(i)}).length,miss=missingSteps();
-    $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">추리 노트</div>'+
-      '<p style="margin:0;font-size:13px">단계를 누르면 망고가 질문을 해요. 질문마다 <b>단서</b>와 <b>그 단서가 증명하는 것</b>을 함께 고르세요.</p>'+
-      '<p style="margin:6px 0 0;font-size:13px"><b>규칙 하나.</b> 단서가 <b>말해 주는 것만</b> 고르세요. 그럴듯한 <b>짐작</b>은 답이 아니에요.</p></div>'+
-      '<div class="note" style="margin-top:8px"><b>다 채운 뒤 한 번에 채점해요.</b>틀려도 잃는 것은 없고, 몇 번이든 다시 낼 수 있어요. 어려우면 망고가 점점 더 자세히 알려 줍니다.</div>'+
-      '<p class="muted" style="margin-top:8px">'+n+' / '+C.steps.length+' 단계 채움'+(S.tries?' · 추리 제출 '+S.tries+'회':'')+'</p>'+
-      (miss.length?'<div class="note"><b>아직 찾지 못한 단서가 있어요.</b>'+stepNos(miss)+' 단계는 지금 수첩에 있는 것만으로는 채울 수 없어요. <b>현장</b>과 <b>심문</b>을 더 살펴보고 오세요.</div>':'')+
-      (S.flags.judgeSay||'');
-  } else renderStepPanel();
+  var i=curStep(),c=C.steps[i];
+  if(c.board)renderBoardStep(i);else renderCork();
+  renderStepPanel();
   updateAct();
 }
-function renderStepPanel(){
-  var i=S.open,c=C.steps[i],st=S.steps[i];
-  var h='<div class="card"><div class="who">'+(i+1)+'. '+esc(c.t)+'</div><p style="margin:0;font-size:13px" id="q-live"></p></div>';
-  h+='<div class="pick"><div class="pl">근거가 되는 단서 <small>'+st.clues.length+'/'+c.slots+'</small></div><div class="clues">';
-  st.clues.forEach(function(id){h+='<button class="clue picked-c" data-rm="'+id+'">'+clueIcon(C.clues[id],true)+esc(C.clues[id].n)+'<span class="x">빼기</span></button>'});
-  if(st.clues.length<c.slots)h+='<button class="clue add" id="add-clue">＋<br>단서 고르기</button>';
-  h+='</div></div>';
-  h+='<div class="pick"><div class="pl">그래서 무엇이 증명되나요?</div>';
-  c.opts.forEach(function(o,k){h+='<button class="opt'+(st.opt===k?' on':'')+'" data-o="'+k+'"><span class="dot"></span><span>'+o.t+'</span></button>'});
+/* 카드 자리 — 격자에 살짝 비뚤게. 같은 카드는 늘 같은 자리(흔들리면 손이 헷갈린다) */
+function seedRand(n){var x=Math.sin(n*9301+49297)*233280;return x-Math.floor(x)}
+function corkLayout(ids){
+  /* 칸 수는 실제 판 너비로 정한다 — 카드 한 장에 최소 92px, 안 그러면 작은 화면에서 서로 겹친다 */
+  var pane=($('#left')||{}).clientWidth||720;
+  var cols=Math.max(3,Math.min(5,Math.floor((pane-16)/94)));
+  var rows=Math.ceil(ids.length/cols);
+  var W=720,cw=W/cols,ch=104;
+  var out=ids.map(function(id,k){
+    var r=Math.floor(k/cols),c=k%cols,j=seedRand(k+1),j2=seedRand(k+11);
+    return {id:id,x:cw*c+cw/2+(j-.5)*10,y:26+ch*r+ch/2+(j2-.5)*8,rot:(j-.5)*6};
+  });
+  out.cols=cols;out.rows=rows;out.H=26+ch*rows+34;
+  return out;
+}
+function renderCork(){
+  var i=curStep(),st=S.steps[i],c=C.steps[i];
+  var ids=C.order.filter(function(id){return S.found[id]});
+  var L=corkLayout(ids),H=Math.max(300,L.H),cardW=(100/L.cols)-2.2;
+  var used={};S.steps.forEach(function(x,k){if(k!==i)x.clues.forEach(function(id){used[id]=(used[id]||[]).concat(k+1)})});
+  var h='<div class="corkwrap" id="corkwrap"><div class="cork" id="cork" style="height:'+H+'px">';
+  h+='<svg class="strings" viewBox="0 0 720 '+H+'" preserveAspectRatio="none" id="strings"></svg>';
+  L.forEach(function(p){
+    var cl=C.clues[p.id],on=st.clues.indexOf(p.id)>=0;
+    h+='<button class="pcard'+(cl.testi?' testi':'')+(on?' on':'')+'" data-pick="'+p.id+'" '+
+       'style="left:'+(p.x/720*100)+'%;top:'+p.y+'px;width:'+cardW.toFixed(1)+'%;transform:translate(-50%,-50%) rotate('+p.rot.toFixed(1)+'deg)">'+
+       '<span class="pin"></span>'+clueIcon(cl,true)+'<span class="pn">'+esc(cl.n)+'</span>'+
+       (used[p.id]?'<span class="usedno">'+used[p.id].join('·')+'번</span>':'')+'</button>';
+  });
   h+='</div>';
-  h+='<button class="btn ghost" id="step-close" style="margin-top:8px">단계 목록으로</button>';
+  /* 실이 모이는 자리 — 「그래서?」. 판이 길어 스크롤돼도 늘 보이게 바닥에 붙여 둔다. */
+  var full=st.clues.length>=c.slots;
+  h+='<div class="knot'+(full?' full':'')+'" id="knot"><b>'+(full?'그래서?':'근거 '+st.clues.length+'/'+c.slots)+'</b>'+
+     '<small>'+(full?'오른쪽 빈칸을 채워 봐':'카드를 눌러 실을 이어')+'</small></div>';
+  h+='</div>';
+  if(!ids.length)h='<div class="logicwrap"><p class="muted">아직 모은 단서가 없어요. 현장과 심문을 먼저 살펴보세요.</p></div>';
+  $('#left').innerHTML=h;
+  $('#left').querySelectorAll('[data-pick]').forEach(function(b){b.addEventListener('click',function(){pickShelf(b.dataset.pick)})});
+  var cw=$('#corkwrap');if(cw)cw.addEventListener('scroll',drawStrings,{passive:true});
+  drawStrings();
+}
+/* 실 — 꽂은 카드에서 매듭까지. 화면 크기가 바뀌어도 다시 그린다. */
+function drawStrings(){
+  var svg=$('#strings'),cork=$('#cork'),knot=$('#knot');if(!svg||!cork||!knot)return;
+  var i=curStep(),st=S.steps[i];
+  var R=cork.getBoundingClientRect(),K=knot.getBoundingClientRect();
+  var sx=720/R.width,sy=+svg.getAttribute('viewBox').split(' ')[3]/R.height;
+  var kx=(K.left+K.width/2-R.left)*sx,ky=(K.top+K.height/2-R.top)*sy;
+  var d='';
+  st.clues.forEach(function(id){
+    var el=cork.querySelector('[data-pick="'+id+'"]');if(!el)return;
+    var B=el.getBoundingClientRect();
+    var x=(B.left+B.width/2-R.left)*sx,y=(B.top+6-R.top)*sy;      /* 핀에서 출발 */
+    var mx=(x+kx)/2,my=(y+ky)/2+22;                                /* 살짝 처진 실 */
+    d+='<path d="M'+x+' '+y+' Q'+mx+' '+my+' '+kx+' '+ky+'" class="thread-sh"/>'+
+       '<path d="M'+x+' '+y+' Q'+mx+' '+my+' '+kx+' '+ky+'" class="thread"/>';
+  });
+  svg.innerHTML=d;
+}
+window.addEventListener('resize',function(){if(S&&S.mode==='logic'&&S.phase==='chain')drawStrings()});
+function pickShelf(id){
+  var i=curStep(),c=C.steps[i],st=S.steps[i];
+  if(st.clues.indexOf(id)>=0){          /* 다시 누르면 뺀다 */
+    sNo();st.clues=st.clues.filter(function(x){return x!==id});S.wrongSet=null;
+    S.flags.pickSay='';renderChain();return;
+  }
+  if(st.clues.length>=c.slots)st.clues.shift();   /* 꽉 찼으면 가장 먼저 넣은 걸 밀어낸다 */
+  st.clues.push(id);S.wrongSet=null;sStamp();
+  S.flags.pickSay='';
+  if(S.easy&&(c.need||[]).indexOf(id)<0)
+    S.flags.pickSay='<div class="say">'+mface('def')+'<b>망고</b> "음… 「'+esc(C.clues[id].n)+'」'+
+      josa(C.clues[id].n,'은','는')+' <b>이 물음</b>과는 이어지지 않는 것 같아. 다시 눌러서 빼도 돼."</div>';
+  renderChain();
+}
+
+/* ---- 오른쪽: 물음 + 빈칸 문장 ---- */
+function wordBank(c,i){
+  /* 낱말 순서는 단계마다 고정 — 매번 섞이면 손이 헷갈린다 */
+  var ws=c.fill.blanks.map(function(b){return b.ok}).concat((c.fill.extra||[]).map(function(x){return x.w}));
+  return ws.map(function(w,k){return {w:w,r:seedRand(k*7+i*13+3)}}).sort(function(a,b){return a.r-b.r}).map(function(x){return x.w});
+}
+function fillHTML(c,st){
+  var parts=c.fill.t.split(/(\[\d+\])/);
+  var h='<div class="fillbox">';
+  parts.forEach(function(p){
+    var m=/^\[(\d+)\]$/.exec(p);
+    if(!m){h+=esc(p);return}
+    var k=+m[1],w=st.fill[k],sel=(S.slot===k);
+    h+='<button class="blank'+(w?' has':' empty')+(sel?' sel':'')+'" data-bk="'+k+'">'+(w?esc(w):'&nbsp;')+'</button>';
+  });
+  return h+'</div>';
+}
+function renderStepPanel(){
+  var i=curStep(),c=C.steps[i],st=S.steps[i];
+  st.fill=st.fill||[];
+  var h='<div class="stepchips" id="stepchips">';
+  C.steps.forEach(function(x,k){
+    var done=stepDone(k),wrong=S.wrongSet&&S.wrongSet.indexOf(k)>=0;
+    h+='<button class="schip'+(k===i?' on':'')+(done?' done':'')+(wrong?' bad':'')+'" data-s="'+k+'" aria-label="'+(k+1)+'단계 '+esc(x.t)+'">'+(done?'✓':(k+1))+'</button>';
+  });
+  h+='</div>';
+  h+='<div class="card"><div class="who">'+(i+1)+'. '+esc(c.t)+'</div><p style="margin:0;font-size:13px" id="q-live"></p></div>';
+  if(c.board){
+    h+='<div class="note" style="margin-top:8px">'+(c.board.ask||'')+'</div>';
+    if(stepDone(i)&&boardOK(i)&&c.board.done)h+='<div class="say">'+mface('joy')+'<b>망고</b> '+c.board.done+'</div>';
+    h+=(S.flags.pickSay||'');
+  }else if(c.fill){
+    var full=st.clues.length>=c.slots;
+    h+='<div class="pick"><div class="pl">근거 <small>'+st.clues.length+' / '+c.slots+' · 왼쪽 판에서 카드를 눌러 실을 이으세요</small></div>';
+    h+='<div class="clues slots">';
+    st.clues.forEach(function(id){h+='<button class="clue picked-c" data-rm="'+id+'">'+clueIcon(C.clues[id],true)+esc(C.clues[id].n)+'<span class="x">빼기</span></button>'});
+    for(var k=st.clues.length;k<c.slots;k++)h+='<div class="clue slot">비어 있음</div>';
+    h+='</div></div>';
+    h+=(S.flags.pickSay||'');
+    h+='<div class="pick"><div class="pl">그래서 — 빈칸을 채워 결론을 써 봐</div>'+fillHTML(c,st);
+    h+='<div class="bank" id="bank">';
+    var usedW={};st.fill.forEach(function(w){if(w)usedW[w]=1});
+    wordBank(c,i).forEach(function(w){h+='<button class="word'+(usedW[w]?' gone':'')+'" data-w="'+esc(w)+'"'+(usedW[w]?' disabled':'')+'>'+esc(w)+'</button>'});
+    h+='</div></div>';
+    h+=(S.flags.wordSay||'');
+  }else{
+    h+='<div class="pick"><div class="pl">근거가 되는 단서 <small>'+st.clues.length+' / '+c.slots+'</small></div><div class="clues slots">';
+    st.clues.forEach(function(id){h+='<button class="clue picked-c" data-rm="'+id+'">'+clueIcon(C.clues[id],true)+esc(C.clues[id].n)+'<span class="x">빼기</span></button>'});
+    for(var k2=st.clues.length;k2<c.slots;k2++)h+='<div class="clue slot">비어 있음</div>';
+    h+='</div></div>'+(S.flags.pickSay||'');
+    h+='<div class="pick"><div class="pl">그래서 무엇이 증명되나요?</div>';
+    c.opts.forEach(function(o,k){h+='<button class="opt'+(st.opt===k?' on':'')+'" data-o="'+k+'"><span class="dot"></span><span>'+o.t+'</span></button>'});
+    h+='</div>';
+  }
+  var n=C.steps.filter(function(x,k){return stepDone(k)}).length,miss=missingSteps();
+  h+='<p class="muted" style="margin-top:8px">'+n+' / '+C.steps.length+' 단계 채움'+(S.tries?' · 추리 제출 '+S.tries+'회':'')+'</p>';
+  if(miss.length)h+='<div class="note"><b>아직 찾지 못한 단서가 있어요.</b>'+stepNos(miss)+' 단계는 지금 수첩에 있는 것만으로는 채울 수 없어요. <b>현장</b>과 <b>심문</b>을 더 살펴보고 오세요.</div>';
+  h+=(S.flags.judgeSay||'');
   $('#rscroll').innerHTML=h;$('#rscroll').scrollTop=0;
   typeHTML($('#q-live'),c.q,'mango');
-  var a=$('#add-clue');if(a)a.addEventListener('click',function(){sTap();openTray('step')});
-  $('#rscroll').querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){sNo();var id=b.dataset.rm;st.clues=st.clues.filter(function(x){return x!==id});S.wrongSet=null;renderChain()})});
-  $('#rscroll').querySelectorAll('[data-o]').forEach(function(b){b.addEventListener('click',function(){sStamp();st.opt=+b.dataset.o;S.wrongSet=null;renderChain()})});
-  $('#step-close').addEventListener('click',function(){sTap();S.open=null;renderChain()});
+  $('#stepchips').querySelectorAll('[data-s]').forEach(function(b){
+    b.addEventListener('click',function(){sTap();sPage();S.open=+b.dataset.s;S.slot=null;S.flags.pickSay='';S.flags.wordSay='';renderChain()})});
+  $('#rscroll').querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){
+    sNo();var id=b.dataset.rm;st.clues=st.clues.filter(function(x){return x!==id});S.wrongSet=null;S.flags.pickSay='';renderChain()})});
+  $('#rscroll').querySelectorAll('[data-o]').forEach(function(b){b.addEventListener('click',function(){
+    var was=stepDone(i);sStamp();st.opt=+b.dataset.o;S.wrongSet=null;renderChain();autoNext(i,was)})});
+  /* 빈칸 — 누르면 그 칸을 고른다. 낱말이 들어 있으면 빼서 돌려 놓는다. */
+  $('#rscroll').querySelectorAll('[data-bk]').forEach(function(b){b.addEventListener('click',function(){
+    var k=+b.dataset.bk;
+    if(st.fill[k]){sNo();st.fill[k]=null;S.slot=k;S.wrongSet=null;S.flags.wordSay='';renderStepPanel();return}
+    sTap();S.slot=k;renderStepPanel();
+  })});
+  /* 낱말 — 고른 칸(없으면 첫 빈칸)에 꽂는다 */
+  $('#rscroll').querySelectorAll('[data-w]').forEach(function(b){b.addEventListener('click',function(){
+    var w=b.dataset.w,k=S.slot;
+    if(k==null||st.fill[k]){k=-1;c.fill.blanks.forEach(function(x,j){if(k<0&&!st.fill[j])k=j})}
+    if(k<0){sNo();toast('빈칸이 다 찼어요. 빈칸을 눌러 비운 뒤 넣으세요');return}
+    var was=stepDone(i);
+    st.fill[k]=w;S.wrongSet=null;sStamp();
+    S.flags.wordSay='';
+    if(S.easy&&!blankOK(c,k,w))
+      S.flags.wordSay='<div class="say">'+mface('def')+'<b>망고</b> "'+whyWord(c,k,w)+'"</div>';
+    /* 다음 빈칸으로 손을 옮겨 둔다 */
+    S.slot=-1;c.fill.blanks.forEach(function(x,j){if(S.slot<0&&!st.fill[j])S.slot=j});if(S.slot<0)S.slot=null;
+    renderStepPanel();autoNext(i,was);
+  })});
+  updateAct();   /* 빈칸만 바뀌어도 제출 단추가 살아나야 한다 */
 }
-function addStepClue(id){
-  closeSheet();var c=C.steps[S.open],st=S.steps[S.open];
-  if(st.clues.indexOf(id)>=0){sNo();return renderChain()}
-  if(st.clues.length>=c.slots)st.clues.pop();
-  st.clues.push(id);S.wrongSet=null;sStamp();renderChain();
+/* 방금 다 채운 단계라면 다음 빈 단계로 저절로 — 칩을 누르러 갈 일이 없다 */
+function autoNext(i,was){
+  if(was||!stepDone(i))return;
+  var nx=-1;C.steps.forEach(function(x,k){if(nx<0&&k!==i&&!stepDone(k))nx=k});
+  if(nx<0)return;
+  setTimeout(function(){
+    if(S.screen==='invest'&&S.mode==='logic'&&S.phase==='chain'&&S.open===i){
+      sPage();S.open=nx;S.slot=null;S.flags.pickSay='';S.flags.wordSay='';renderChain();
+    }},900);
+}
+function addStepClue(id){closeSheet();pickShelf(id)}
+
+/* ---- 왼쪽: 시간표 판 (사건 파일의 board.kind === "timeline") ----
+   시간 띠 위에 카드를 놓는다. 해 뜨기 전은 어둡게 칠해 두어 「그림자가 없다」를 눈으로 보여 준다.
+   고정 카드(fix)는 처음부터 놓여 있고, 나머지는 아래 쟁반에서 끌어(또는 눌러) 놓는다. */
+var TLD={drag:null};
+function renderBoardStep(i){
+  var c=C.steps[i],b=c.board,st=S.steps[i];st.tl=st.tl||{};
+  var f=mins(b.from),t=mins(b.to),span=t-f,sun=b.sunrise?mins(b.sunrise):null;
+  var pct=function(m){return (m-f)/span*100};
+  var pctC=function(m){return Math.max(7,Math.min(93,pct(m)))};   /* 카드가 가장자리에서 잘리지 않게 */
+  var h='<div class="tlwrap" id="tlwrap"><div class="tlhd"><b>그날 아침 시간표</b><span class="muted">카드를 시간 위에 놓아 보세요</span></div>';
+  h+='<div class="rail" id="rail">';
+  if(sun!=null)h+='<div class="night" style="width:'+pct(sun)+'%"></div><div class="sunmark" style="left:'+pct(sun)+'%"><i></i><span>일출 '+esc(b.sunrise)+'</span></div>';
+  for(var m=Math.ceil(f/60)*60;m<=t;m+=60)h+='<div class="tick" style="left:'+pct(m)+'%"><span>'+(m/60)+'시</span></div>';
+  var lane=0;
+  b.events.forEach(function(e){
+    var tm=e.fix?mins(e.fix):st.tl[e.id];
+    if(tm==null)return;
+    var bad=!e.fix&&((e.after&&tm<mins(e.after))||(e.before&&tm>mins(e.before)));
+    h+='<div class="ev'+(e.fix?' fix':' mov')+(bad&&(S.easy||S.wrongSet)?' bad':'')+'" data-ev="'+e.id+'" style="left:'+pctC(tm)+'%;top:'+(10+(lane%4)*38)+'px">'+
+       '<span class="who w-'+(e.who||'x')+'"></span>'+esc(e.t)+(e.fix?'':'<small>'+hhmm(tm)+'</small>')+'</div>';
+    lane++;
+  });
+  h+='</div>';
+  h+='<div class="tray" id="tray">';
+  b.events.forEach(function(e){
+    if(e.fix||st.tl[e.id]!=null)return;
+    h+='<button class="ev mov tray-ev" data-ev="'+e.id+'"><span class="who w-'+(e.who||'x')+'"></span>'+esc(e.t)+'</button>';
+  });
+  h+='</div>';
+  h+='<p class="muted" id="tl-tip">'+(TLD.pick?'이제 <b>시간 띠</b>를 눌러 놓을 자리를 고르세요':'카드를 누른 뒤 시간 띠를 누르거나, 카드를 끌어다 놓으세요')+'</p>';
+  h+='</div>';
+  $('#left').innerHTML=h;
+  bindTimeline(i);
+}
+function bindTimeline(i){
+  var c=C.steps[i],b=c.board,st=S.steps[i],rail=$('#rail');if(!rail)return;
+  var f=mins(b.from),t=mins(b.to),stp=b.step||5;
+  function place(id,clientX){
+    var R=rail.getBoundingClientRect();
+    var m=f+(clientX-R.left)/R.width*(t-f);m=Math.round(m/stp)*stp;m=Math.max(f,Math.min(t,m));
+    var e=b.events.filter(function(x){return x.id===id})[0];if(!e||e.fix)return;
+    var was=stepDone(i);
+    st.tl[id]=m;S.wrongSet=null;sStamp();TLD.pick=null;
+    S.flags.pickSay='';
+    var bad=(e.after&&m<mins(e.after))||(e.before&&m>mins(e.before));
+    if(bad&&S.easy){
+      /* 쉬움: 카드가 미끄러져 돌아온다 — 손으로 「안 된다」를 느끼게 */
+      S.flags.pickSay='<div class="say">'+mface('def')+'<b>망고</b> "'+(e.why||'거기는 아니야.')+'"</div>';
+      renderChain();
+      var el=$('#rail [data-ev="'+id+'"]');if(el){el.classList.add('slide');setTimeout(function(){delete st.tl[id];renderChain()},900)}
+      return;
+    }
+    renderChain();autoNext(i,was);
+  }
+  /* 누르기 방식 */
+  $('#left').querySelectorAll('.tray-ev').forEach(function(el){
+    el.addEventListener('click',function(){sTap();TLD.pick=el.dataset.ev;renderBoardStep(i);
+      $('#left').querySelectorAll('.tray-ev').forEach(function(x){x.classList.toggle('sel',x.dataset.ev===TLD.pick)})});
+  });
+  rail.addEventListener('click',function(e){
+    if(TLD.drag)return;
+    var ev=e.target.closest('[data-ev]');
+    if(ev&&ev.classList.contains('mov')){TLD.pick=ev.dataset.ev;$('#tl-tip').innerHTML='이제 <b>시간 띠</b>를 눌러 옮길 자리를 고르세요';return}
+    if(TLD.pick)place(TLD.pick,e.clientX);
+  });
+  /* 끌기 방식 */
+  $('#left').querySelectorAll('.ev.mov').forEach(function(el){
+    el.addEventListener('pointerdown',function(e){
+      TLD.drag={id:el.dataset.ev,x0:e.clientX,y0:e.clientY,moved:false};el.setPointerCapture(e.pointerId);
+      el.classList.add('lift');
+    });
+    el.addEventListener('pointermove',function(e){
+      var d=TLD.drag;if(!d||d.id!==el.dataset.ev)return;
+      if(Math.hypot(e.clientX-d.x0,e.clientY-d.y0)>6)d.moved=true;
+      if(d.moved)el.style.transform='translate('+(e.clientX-d.x0)+'px,'+(e.clientY-d.y0)+'px)';
+    });
+    el.addEventListener('pointerup',function(e){
+      var d=TLD.drag;if(!d||d.id!==el.dataset.ev)return;
+      el.classList.remove('lift');el.style.transform='';
+      var R=rail.getBoundingClientRect(),inRail=e.clientY>=R.top-20&&e.clientY<=R.bottom+20&&e.clientX>=R.left&&e.clientX<=R.right;
+      var moved=d.moved;TLD.drag=null;
+      if(moved&&inRail){place(el.dataset.ev,e.clientX);}
+      else if(moved){/* 띠 밖에 놓으면 쟁반으로 돌아간다 */ if(st.tl[el.dataset.ev]!=null){delete st.tl[el.dataset.ev];S.wrongSet=null;renderChain()} }
+    });
+  });
 }
 /* 제출 — 여기서만 채점한다 */
 function judgeChain(){
   var wrong=[];
   C.steps.forEach(function(c,i){
-    var st=S.steps[i];
-    var clueOK=(c.slots===1)?(c.need.indexOf(st.clues[0])>=0)
-      :(c.need.every(function(n){return st.clues.indexOf(n)>=0}));
-    if(!clueOK||!c.opts[st.opt].ok)wrong.push(i);
+    var st=S.steps[i],ok;
+    if(c.board)ok=boardOK(i);
+    else if(c.fill)ok=clueOK(i)&&fillOK(i);
+    else ok=clueOK(i)&&c.opts[st.opt].ok;
+    if(!ok)wrong.push(i);
   });
   /* 어긋난 까닭이 「아직 못 찾은 단서」라면 그건 추리를 틀린 게 아니다.
      제출 횟수도 등불도 쓰지 않고, 무엇을 하러 가야 하는지만 알려 준다. */
@@ -1020,7 +1293,7 @@ function judgeChain(){
     S.flags.judgeSay='<div class="say">'+mface('def')+'<b>망고</b> "잠깐 — 아직 <b>찾지 못한 단서</b>가 있어."<br>'+
       stepNos(lack)+' 단계는 지금 수첩에 있는 것만으로는 채울 수 없어. <b>현장</b>을 더 살펴보고 오자. '+
       '<span class="muted">제출 횟수에는 넣지 않을게.</span></div>';
-    S.open=null;renderChain();return;
+    S.open=lack[0];renderChain();return;
   }
   S.tries++;
   if(!wrong.length){
@@ -1044,15 +1317,34 @@ function judgeChain(){
   }else{
     S.flags.judgeSay='<div class="say">'+head+'<br><span class="muted">막히면 위쪽 💡 등불을 눌러 물어봐도 돼요. 다시 제출해도 잃는 건 없어요.</span></div>';
   }
-  S.open=null;renderChain();
+  S.open=wrong[0];renderChain();     /* 어긋난 첫 단계로 바로 데려간다 */
 }
 /* 도움 수위: 쉬움은 항상 최대, 보통도 두 번 틀리면 위치, 세 번이면 이유까지 */
 function helpLv(nFail){if(S.easy)return 2;if(nFail>=3)return 2;if(nFail>=2)return 1;return 0}
 function whyWrongStep(w){
   var c=C.steps[w],st=S.steps[w];
-  var clueOK=(c.slots===1)?(c.need.indexOf(st.clues[0])>=0):(c.need.every(function(n){return st.clues.indexOf(n)>=0}));
-  if(!clueOK)return c.whyClue;
+  if(c.board){
+    var bad=c.board.events.filter(function(e){return !e.fix&&!(function(){var t=st.tl&&st.tl[e.id];if(t==null)return false;if(e.after&&t<mins(e.after))return false;if(e.before&&t>mins(e.before))return false;return true})()});
+    return bad.length?('「'+esc(bad[0].t)+'」 카드 — '+(bad[0].why||'놓은 자리가 맞지 않아요.')):'';
+  }
+  if(!clueOK(w))return c.whyClue;
+  if(c.fill){
+    for(var k=0;k<c.fill.blanks.length;k++){
+      var w2=(st.fill||[])[k];
+      if(!blankOK(c,k,w2))return whyWord(c,k,w2);
+    }
+    return '';
+  }
   return c.opts[st.opt].why||'그 결론은 이 단서만으로는 나오지 않아요.';
+}
+/* 빈칸에 넣은 낱말이 왜 아닌가 — 딴 데 들어갈 말이면 자리 이야기, 아예 아닌 말이면 데이터의 why */
+function whyWord(c,k,w){
+  if(!w)return '빈칸이 비어 있어요.';
+  var ex=(c.fill.extra||[]).filter(function(x){return x.w===w})[0];
+  if(ex)return ex.why;
+  var other=c.fill.blanks.some(function(b,j){return j!==k&&blankOK(c,j,w)});
+  if(other)return '「'+esc(w)+'」는 이 문장에 들어가는 말이지만 <b>자리</b>가 달라요.';
+  return '「'+esc(w)+'」는 이 물음과 이어지지 않아요.';
 }
 function say2(html){
   var el=$('#rscroll');if(!el)return;
@@ -1207,8 +1499,16 @@ function applyEpilogue(){
         nb.onclick=function(){sTap();renderCases();closeKeyBox();show('s-cases')};
       }
     }
-    var ask=$('#board-ask');
-    if(ask)ask.innerHTML=(b.ask||[]).map(function(q){return '<li>'+q+'</li>'}).join('');
+    /* 이 사건의 기록 — 별점은 진도에 남아 사건 목록에서도 보인다 */
+    var rec=$('#board-rec');
+    if(rec){
+      var st=S.star||caseStar();
+      rec.innerHTML='<span class="recstar">'+starStr(st)+'</span>'+
+        '<span class="chip">추리 제출 '+Math.max(1,S.tries)+'회</span>'+
+        '<span class="chip">소거 제출 '+Math.max(1,S.elimTries)+'회</span>'+
+        '<span class="chip">등불 '+S.lamps+'/3</span>'+
+        (S.proofs.filter(Boolean).length?'<span class="chip">결정적 증거 '+S.proofs.filter(Boolean).length+'</span>':'');
+    }
     /* 다음 사건의 열쇠말 — 기기 저장이 날아가도 이 말만 있으면 어디서든 다시 연다 */
     var nx=null,list=seasonCases();
     list.forEach(function(c){if(c.no===(C.no||1)+1)nx=c});
@@ -1220,12 +1520,16 @@ function applyEpilogue(){
     }
   }
 }
-function accuse(){
-  sFan();Save.markDone(CASE);applySolveArt();applyEpilogue();
+function caseStar(){
   var miss=(S.tries-1)+(S.elimTries-1)+S.accErr;   // 제출 실패 횟수
   var star=3;if(miss>=1||S.rebutErr>0||S.lamps<3)star=2;if(miss>=3||S.rebutErr>=2||S.lamps<=0)star=1;
   if(S.proofs.filter(Boolean).length===2&&star<3)star++;
-  star=Math.max(1,Math.min(3,star));
+  return Math.max(1,Math.min(3,star));
+}
+function starStr(n){var h='';for(var i=0;i<3;i++)h+=(i<n?'★':'☆');return h}
+function accuse(){
+  var star=caseStar();
+  sFan();Save.markDone(CASE,star);S.star=star;applySolveArt();applyEpilogue();
   var coin=star===3?120:(star===2?100:80);
   $('#reward').innerHTML='<span class="chip">🪙 +'+coin+'</span><span class="chip">⭐ 명성 +3</span><span class="chip">📖 도감 +3</span>'+(S.proofs.filter(Boolean).length?'<span class="chip">결정적 증거 '+S.proofs.filter(Boolean).length+'</span>':'');
   show('s-solve');
@@ -1404,8 +1708,9 @@ function renderCases(){
   list.forEach(function(c){
     var st=caseState(c,prog,list),cur=(c.id===CASE);
     if(st==='done')doneN++;
+    var stars=(st==='done'&&prog.done[c.id]>1)?starStr(prog.done[c.id]):(st==='done'?'✓':'');
     var badge=c.soon?'<span class="cs soon">준비 중</span>'
-      :(st==='done'?'<span class="cs done">✓ 해결</span>'
+      :(st==='done'?'<span class="cs done">'+(prog.done[c.id]>1?'<span class="cstar">'+starStr(prog.done[c.id])+'</span>':'✓ 해결')+'</span>'
       :(st==='lock'?'<span class="cs lock">🔒 잠김</span>':'<span class="cs open">열림</span>'));
     h+='<button class="casecard'+(cur?' cur':'')+(st==='lock'||c.soon?' dim':'')+'" data-case="'+c.id+'">'+
        '<span class="cno">사건 '+c.no+'</span>'+badge+
@@ -1509,7 +1814,7 @@ function newGame(){fresh();Save.clear();updateDot();show('s-title');refreshTitle
 
 function refreshTitle(){
   var d=Save.load(), box=$('#resume');
-  var eb=$('#title-eyebrow');if(eb)eb.textContent='시험판 9 · 사건 '+(C.no||1)+(C.title?' 「'+C.title+'」':'');
+  var eb=$('#title-eyebrow');if(eb)eb.textContent='사건 '+(C.no||1)+(C.title?' 「'+C.title+'」':'');
   applyCover();applyArt();syncFullUI();titleOpenLine();
   if(!box)return;
   if(d){box.hidden=false;$('#resume-when').textContent=Save.agoText(d.t)}
@@ -1612,7 +1917,8 @@ function setArt(sel,file,alt){
   box.innerHTML='<img src="'+artURL(file)+'" alt="'+(alt||'')+'">';
 }
 function applyArt(){
-  setArt('#s-title','mango-full.png','탐정 망고');
+  /* 표지의 망고 — 밝은 셀 화풍(mango-joy)을 먼저 쓴다. 회화풍 전신(mango-full)은 어둡고 결이 달라 뒤로 밀었다. */
+  setArt('#s-title',artOK('mango-joy.png')?'mango-joy.png':'mango-full.png','탐정 망고');
   var j=mangoFile('joy','bust');
   if(j&&!document.querySelector('#s-solve .mjoy')){
     var st=$('#stars');

@@ -155,6 +155,112 @@
   .tag.empty{background:transparent;border-style:dashed;color:var(--soft)}
   .tag.slotbtn{background:#fff8e7;border-color:var(--must-d);font-weight:700;padding:3px 10px;font-size:11px}
   .concl.small{font-size:12.5px;font-family:"Gowun Dodum",sans-serif;font-weight:400;line-height:1.6;text-align:left;color:var(--ink);background:#fff8e7;border-color:var(--must-d)}
+  /* ---------- 추리: 코르크판 ----------
+     단서 카드가 핀으로 꽂혀 있고, 누르면 빨간 실이 「그래서?」 매듭에 모인다. */
+  .corkwrap{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;padding:6px 6px 8px;scrollbar-width:thin;position:relative}
+  .cork{position:relative;width:100%;border:3px solid #6b4a2a;border-radius:8px;
+    background:url(../img/cork.png) repeat;background-size:200px 200px;
+    box-shadow:inset 0 0 0 4px #8b6a44,inset 0 0 28px rgba(60,35,10,.35),2px 3px 0 var(--line)}
+  .strings{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+  .thread{fill:none;stroke:#b3342a;stroke-width:3;stroke-linecap:round}
+  .thread-sh{fill:none;stroke:rgba(60,30,10,.35);stroke-width:5;stroke-linecap:round;transform:translate(1px,2px)}
+  .pcard{position:absolute;width:19%;max-width:132px;min-height:84px;background:#fffaf0;border:2px solid var(--line);
+    border-radius:6px;padding:16px 5px 7px;text-align:center;font-size:10.5px;line-height:1.25;color:var(--ink);
+    box-shadow:2px 3px 0 rgba(60,35,10,.55);cursor:pointer;z-index:1;
+    display:flex;flex-direction:column;align-items:center;gap:3px;transition:transform .12s,box-shadow .12s}
+  .pcard.testi{background:#fff8e7;border-style:double;border-width:3px}
+  .pcard svg{width:22px;height:22px}
+  .pcard .cicon{width:30px;height:30px}
+  .pcard .pn{display:block}
+  .pcard .pin{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#e8756a,#b3342a 60%,#7a1f18);border:1.5px solid #4a2018;
+    box-shadow:1px 2px 0 rgba(60,35,10,.5);z-index:3}
+  .pcard.on{background:#ffe9b3;border-color:var(--brown);z-index:4;
+    box-shadow:0 0 0 3px var(--must),3px 6px 0 rgba(60,35,10,.55)}
+  .pcard .usedno{position:absolute;top:-6px;right:-5px;background:var(--teal);color:#fff8ea;border:2px solid var(--line);
+    border-radius:999px;font-size:9.5px;padding:0 5px;line-height:15px;z-index:5}
+  .knot{position:sticky;bottom:6px;width:max-content;margin:-46px auto 0;transform:none;z-index:3;
+    background:#fff8e7;border:2.5px solid var(--line);border-radius:999px;padding:5px 16px;text-align:center;
+    box-shadow:2px 3px 0 rgba(60,35,10,.55);min-width:150px}
+  .knot b{display:block;font-family:"Gaegu",cursive;font-size:15px;line-height:1.1}
+  .knot small{display:block;font-size:10.5px;color:var(--soft)}
+  .knot.full{background:var(--must);border-color:var(--brown)}
+  .knot.full small{color:var(--ink)}
+
+  /* ---------- 추리: 빈칸 문장 ---------- */
+  .fillbox{background:#fff8e7;border:2.5px solid var(--must-d);border-radius:10px;padding:9px 11px;
+    font-size:14px;line-height:2.05;box-shadow:2px 3px 0 var(--line)}
+  .blank{display:inline-block;min-width:54px;padding:0 6px;margin:0 2px;vertical-align:baseline;
+    border:0;border-bottom:2.5px solid var(--line);border-radius:0;background:none;
+    font:inherit;font-weight:700;color:var(--brick);line-height:1.5;cursor:pointer}
+  .blank.empty{border-bottom-style:dashed;background:rgba(232,178,92,.18);border-radius:6px 6px 0 0}
+  .blank.sel{background:rgba(232,178,92,.55);border-radius:6px 6px 0 0;outline:2px solid var(--must-d);outline-offset:1px}
+  .bank{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .word{background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:3px 11px;
+    font-size:13px;font-weight:700;box-shadow:1px 2px 0 var(--line);color:var(--ink)}
+  .word:active{transform:translate(1px,2px);box-shadow:0 0 0 var(--line)}
+  .word.gone{opacity:.3;box-shadow:none;text-decoration:line-through}
+
+  /* ---------- 추리: 시간표 판 ---------- */
+  .tlwrap{width:100%;height:100%;overflow-y:auto;padding:8px 10px;scrollbar-width:thin}
+  .tlhd{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .tlhd b{font-family:"Gaegu",cursive;font-size:16px}
+  .rail{position:relative;height:190px;background:#fffaf0;border:2.5px solid var(--line);border-radius:10px;
+    box-shadow:2px 3px 0 var(--line);overflow:hidden;touch-action:none}
+  .rail .night{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#3b3a55 0,#5d5678 70%,rgba(93,86,120,0));pointer-events:none}
+  .rail .sunmark{position:absolute;top:0;bottom:0;border-left:2px solid #d9a441;pointer-events:none}
+  .rail .sunmark i{position:absolute;top:6px;left:-11px;width:22px;height:22px;border-radius:50%;background:#f0c35a;border:2px solid var(--line)}
+  .rail .sunmark span{position:absolute;bottom:4px;left:4px;font-size:10.5px;color:#a4813f;white-space:nowrap}
+  .rail .tick{position:absolute;top:0;bottom:0;border-left:1.5px dashed #b9a894;pointer-events:none}
+  .rail .tick span{position:absolute;bottom:4px;left:4px;font-size:11px;color:var(--soft);white-space:nowrap}
+  .ev{position:absolute;transform:translateX(-50%);background:var(--panel);border:2px solid var(--line);border-radius:8px;
+    padding:4px 9px;font-size:11.5px;font-weight:700;box-shadow:2px 2px 0 var(--line);white-space:nowrap;color:var(--ink);
+    display:inline-flex;align-items:center;gap:5px;line-height:1.3;user-select:none}
+  .ev small{font-weight:400;color:var(--soft);font-size:10px;margin-left:2px}
+  .ev.fix{background:#f4f7ef;border-color:var(--olive);cursor:default}
+  .ev.mov{cursor:grab}
+  .ev.lift{z-index:6;box-shadow:4px 6px 0 var(--line);cursor:grabbing}
+  .ev.bad{background:#fff1ec;border-color:var(--brick);animation:shake .35s}
+  .ev.slide{transition:transform .8s cubic-bezier(.5,-.3,.6,1.3),opacity .8s;transform:translate(-50%,120px);opacity:0}
+  .ev .who{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line);background:#c98a3c;flex:0 0 auto}
+  .ev .w-owl{background:#a99e88}.ev .w-bell{background:#6d7f88}.ev .w-mori{background:#8b6a44}
+  .ev .w-doto{background:#c98a3c}.ev .w-kongsun{background:#9aa27a}
+  .tray{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;min-height:34px}
+  .tray .ev{position:static;transform:none}
+  .tray .ev.sel{background:#ffe9b3;outline:3px solid var(--must-d);outline-offset:1px}
+  #tl-tip{margin:6px 0 0}
+
+  /* 사건 목록·연결판의 별점 */
+  .cstar,.recstar{font-family:"Gaegu",cursive;letter-spacing:.06em;color:#c9924a}
+  .recstar{font-size:22px;line-height:1;margin-right:6px}
+  .recrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+
+  /* ---------- 추리: 왼쪽에 펼쳐 둔 수첩 ---------- */
+  .shelfwrap{padding:8px 8px 10px 12px}
+  .shelfhd{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .shelfhd b{font-family:"Gaegu",cursive;font-size:16px}
+  .shelfhd .muted{font-size:11.5px}
+  .clues.shelf{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+  .clues.shelf .clue{cursor:pointer;position:relative;min-height:62px;font-size:11px}
+  .clues.shelf .clue.on{background:var(--must);border-color:var(--brown);transform:translateY(-3px);
+    box-shadow:2px 5px 0 var(--line)}
+  .clues.shelf .clue .usedno{position:absolute;top:-6px;right:-4px;background:var(--teal);color:#fff8ea;
+    border:2px solid var(--line);border-radius:999px;font-size:9.5px;padding:0 5px;line-height:15px}
+  /* 단계 번호 칩 — 「목록으로」 왕복을 없앤다 */
+  .stepchips{display:flex;gap:5px;margin-bottom:8px}
+  .schip{width:30px;height:30px;border:2.5px solid var(--line);border-radius:50%;background:var(--panel);
+    font-family:"Gaegu",cursive;font-weight:700;font-size:15px;line-height:1;box-shadow:var(--sh)}
+  .schip.done{background:#e4efdb;border-color:var(--olive)}
+  .schip.on{background:var(--must);outline:3px solid var(--must-d);outline-offset:1px}
+  .schip.bad{background:#fff1ec;border-color:var(--brick)}
+  /* 비어 있는 근거 칸 */
+  .clues.slots{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
+  .clue.slot{border-style:dashed;box-shadow:none;color:var(--soft);background:#f6f1e6;font-size:10.5px}
+  @media (max-height:470px){
+    .clues.shelf{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:5px}
+    .clues.shelf .clue{min-height:54px;font-size:10px}
+    .schip{width:26px;height:26px;font-size:14px}
+  }
   .pick{margin-top:8px}
   .pl{font-family:"Gaegu",cursive;font-weight:700;font-size:14px;margin-bottom:4px}
   .pl small{font-family:"Gowun Dodum",sans-serif;font-weight:400;color:var(--soft);font-size:11px}
@@ -409,6 +515,16 @@ img.mjoy{width:82px;height:82px;object-fit:contain;
 .body.big .scenecol.hasbar .scenewrap{max-height:100%}
 /* 높이가 먼저 정해지게 해서 그림 좌우에 빈 띠가 생기지 않게 한다 */
 .body.big .scenewrap{width:auto;height:100%;max-width:100%}
+/* 단서 카드 안의 진짜 사진 */
+.cluephoto{margin:4px 0 8px;border:2.5px solid var(--line);border-radius:10px;overflow:hidden;
+  background:#fffaf0;box-shadow:var(--sh);display:flex;justify-content:center}
+.card::after{content:"";display:block;clear:both}
+.cluephoto img{display:block;width:100%;max-width:300px;height:auto}
+/* 크게 보기의 아래 띠에서는 사진을 글 옆에 붙여 한눈에 들어오게 한다 */
+.bigcard .cluephoto{float:right;margin:0 0 6px 10px;width:32%;max-width:150px}
+.bigcard .cluephoto img{width:100%;max-width:none}
+.bigcard::after{content:"";display:block;clear:both}
+@media (max-height:400px){.bigcard .cluephoto{width:26%;max-width:120px}}
 .bigcard{position:absolute;left:0;right:0;bottom:0;max-height:48%;overflow-y:auto;
   background:rgba(251,247,238,.965);border-top:2.5px solid var(--line);
   padding:8px 10px 10px;font-size:13px;line-height:1.55;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}

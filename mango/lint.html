@@ -55,6 +55,7 @@ function run(C){
   (C.steps||[]).forEach((st,i)=>{
     const n=i+1;
     if(!st.need||!st.need.length)E.push(`${n}단계: 정답 단서(need)가 없습니다`);
+    if(!st.opts)return;   /* 빈칸·판 단계는 16번 규칙이 본다 */
     (st.need||[]).forEach(id=>{
       if(!has(id))E.push(`${n}단계: 단서 <code>${id}</code> 가 없습니다`);
       else if(!collectable.has(id))E.push(`${n}단계: <code>${id}</code> 는 게임 안에서 모을 수 없습니다`);
@@ -114,7 +115,7 @@ function run(C){
   spread('소거',posOf(C.elim));
   const accPos=(C.accuse||[]).findIndex(a=>a.ok);
   if(accPos===0&&(C.accuse||[]).length>2)W.push('지목 후보의 정답이 맨 첫 줄입니다');
-  I.push(`정답 자리 — 추리 ${posOf(C.steps).map(i=>i+1).join('·')} / 소거 ${posOf(C.elim).map(i=>i+1).join('·')} / 지목 ${accPos+1}`);
+  I.push(`정답 자리 — 추리 ${posOf(C.steps).length?posOf(C.steps).map(i=>i+1).join('·'):'(빈칸 문장)'} / 소거 ${posOf(C.elim).map(i=>i+1).join('·')} / 지목 ${accPos+1}`);
 
   // 6.55 얻을 수 있는 단서인데 「잠김」으로 선언돼 있지 않은가
   //      (잠김은 「아직 못 얻었다」는 표시다. 주는 단서에 잠김을 달면 얻고도 쓸 수 없다)
@@ -161,12 +162,50 @@ function run(C){
   Object.keys(C.clues||{}).forEach(id=>{if(tag.test(clue(id).n||''))E.push(`단서 이름 <code>${id}</code> 에 HTML 태그가 있습니다`)});
   (C.scenes||[]).forEach(sc=>{if(tag.test(sc.label||''))E.push(`현장 이름 「${sc.label}」 에 HTML 태그가 있습니다`)});
 
+  const plain=id=>String((clue(id)||{}).t||'').replace(/<[^>]+>/g,'');
+  // 16. 빈칸 문장 — 답 낱말은 근거 단서 본문에서 나와야 한다(찍기 방지), 오답 낱말마다 why
+  (C.steps||[]).forEach((st,i)=>{
+    const n=i+1, kinds=['fill','board','opts'].filter(k=>st[k]);
+    if(kinds.length!==1)E.push(`${n}단계: fill·board·opts 중 하나만 있어야 합니다 (지금 ${kinds.join(',')||'없음'})`);
+    if(st.fill){
+      const F=st.fill, nb=(F.blanks||[]).length;
+      for(let k=0;k<nb;k++) if(!F.t.includes('['+k+']'))E.push(`${n}단계: 문장에 [${k}] 빈칸이 없습니다`);
+      const extraTok=(F.t.match(/\[(\d+)\]/g)||[]).map(x=>+x.slice(1,-1)).filter(x=>x>=nb);
+      if(extraTok.length)E.push(`${n}단계: 문장에 정의되지 않은 빈칸 [${extraTok.join(',')}]`);
+      const evid=(st.need||[]).map(id=>plain(id)).join(' ')+' '+String(st.q||'').replace(/<[^>]+>/g,'');
+      (F.blanks||[]).forEach((b,k)=>{
+        if(!b.ok)return E.push(`${n}단계: 빈칸 ${k} 에 정답 낱말(ok)이 없습니다`);
+        if(!b.infer){ const key=b.stem||b.ok; if(!evid.includes(key))E.push(`${n}단계: 빈칸 ${k} 의 답 「${b.ok}」 이 근거 단서 본문에 없습니다 — 카드에서 나온 말이어야 합니다 (infer:true 가 아니라면)`); }
+      });
+      if(!(F.extra||[]).length)W.push(`${n}단계: 오답 낱말(extra)이 없어 빈칸이 자동으로 채워집니다`);
+      (F.extra||[]).forEach(x=>{ if(!x.w)E.push(`${n}단계: extra 에 낱말(w)이 없습니다`); if(!x.why)E.push(`${n}단계: 오답 낱말 「${x.w}」 에 why 가 없습니다`); });
+      const all=(F.blanks||[]).map(b=>b.ok).concat((F.extra||[]).map(x=>x.w));
+      const dup=all.filter((w,j)=>all.indexOf(w)!==j);
+      if(dup.length)E.push(`${n}단계: 낱말이 겹칩니다 — ${[...new Set(dup)].join(', ')}`);
+    }
+    if(st.board){
+      const B=st.board; if(B.kind!=='timeline')return E.push(`${n}단계: 모르는 판 종류 ${B.kind}`);
+      const mm=t=>{const a=String(t).split(':');return (+a[0])*60+(+a[1])};
+      const f=mm(B.from),t=mm(B.to); if(!(f<t))E.push(`${n}단계: 시간표 범위가 이상합니다`);
+      if(B.sunrise&&(mm(B.sunrise)<f||mm(B.sunrise)>t))W.push(`${n}단계: 일출이 시간표 밖입니다`);
+      let mov=0;
+      (B.events||[]).forEach(e=>{
+        if(!e.t)E.push(`${n}단계: 이름 없는 시간표 카드`);
+        if(e.fix){ if(mm(e.fix)<f||mm(e.fix)>t)E.push(`${n}단계: 고정 카드 「${e.t}」 가 범위 밖`); return; }
+        mov++;
+        if(!e.after&&!e.before)E.push(`${n}단계: 움직이는 카드 「${e.t}」 에 조건(after/before)이 없습니다 — 아무 데나 놓아도 맞게 됩니다`);
+        if(!e.why)E.push(`${n}단계: 카드 「${e.t}」 에 why 가 없습니다`);
+      });
+      if(!mov)E.push(`${n}단계: 움직일 카드가 없습니다`);
+      if(!B.ask)W.push(`${n}단계: 시간표 판에 안내문(ask)이 없습니다`);
+    }
+  });
+
   // 12. 얻게 되는 단서는 locked 이면 안 된다 (사건 2의 c_tape 사고)
   collectable.forEach(id=>{ if(has(id)&&clue(id).locked)
     E.push(`<code>${id}</code> 는 얻게 되는 단서인데 locked 로 잠겨 있습니다 — 얻어도 수첩에서 눌리지 않습니다`); });
 
   // 13. 번호 자물쇠: 모든 자릿수와 「순서」가 단서에 나와야 한다 (찍기 방지)
-  const plain=id=>String((clue(id)||{}).t||'').replace(/<[^>]+>/g,'');
   const allText=Object.keys(C.clues||{}).map(plain).join(' ');
   allSpots.forEach(sp=>{
     if(sp.mini!=='lock')return;
