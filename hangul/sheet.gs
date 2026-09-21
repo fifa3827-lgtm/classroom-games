@@ -105,13 +105,15 @@ function buildDashboard() {
   s.getRange("B12:G12").merge().setValue("활동별");
   s.getRange("B13").setFormula("=IFERROR(QUERY(기록!$A$2:$I,\"select D, count(D), max(E), avg(E), sum(F), sum(G) \"&$T$1&\"group by D order by count(D) desc label D '활동', count(D) '횟수', max(E) '최고 별', avg(E) '평균 별', sum(F) '첫시도 정답', sum(G) '문제 수'\",0),\"아직 기록이 없어요\")");
 
-  // 집중 글자 — 낱말 안에 들어 있어도 세도록 글자를 그대로 찾는다
-  s.getRange("I12:K12").merge().setValue("집중 글자 · 읽기 확인에서 ×였던 12자");
+  // 집중 글자 — 아래 「자주 틀린 글자」와 같은 방식으로 '나온 횟수'를 센다.
+  // ISNUMBER(SEARCH(..))는 그 글자가 든 기록이 몇 건인지를 세어, 한 활동에서 두 번 틀려도 1이었다.
+  // LEN - LEN(SUBSTITUTE(..))로 글자가 나온 횟수 자체를 센다.
+  s.getRange("I12:K12").merge().setValue("집중 글자 12자 · 선생님이 정한 글자");
   s.getRange("I13:K13").setValues([["글자", "틀린 횟수", "마지막으로 틀린 날"]]);
   FOCUS.forEach(function (ch, i) {
     var r = 14 + i;
     s.getRange(r, 9).setValue(ch);
-    s.getRange(r, 10).setFormula('=SUMPRODUCT(' + W + '*ISNUMBER(SEARCH(I' + r + ',기록!$H$2:$H)))');
+    s.getRange(r, 10).setFormula('=SUMPRODUCT(' + W + '*(LEN(기록!$H$2:$H)-LEN(SUBSTITUTE(기록!$H$2:$H,I' + r + ',""))))');
     s.getRange(r, 11).setFormula('=IFERROR(MAX(FILTER(기록!$B$2:$B,' + W + '*ISNUMBER(SEARCH(I' + r + ',기록!$H$2:$H)))),"-")');
   });
   s.getRange("I26:K26").merge().setValue("틀린 횟수가 0에 가까워지면 그 글자는 익힌 것입니다.");
