@@ -146,6 +146,21 @@ function run(C){
 
   I.push(`단서 ${Object.keys(C.clues||{}).length}개 · 현장 ${(C.scenes||[1]).length}곳 · 조사 지점 ${allSpots.length}개(미끼 ${allSpots.filter(s=>s.decoy).length}) · 인물 ${(C.suspectOrder||[]).length}명`);
 
+  // 11-b. 화면에 글자 그대로 나가는 자리에 HTML 태그가 있으면 안 된다
+  //       (사건 3에서 용의자 진술에 <b> 가 들어가 화면에 태그가 그대로 찍혔다)
+  const tag=/<[^>]+>/;
+  Object.values(C.suspects||{}).forEach(sp=>(sp.lines||[]).forEach(L=>{
+    if(tag.test(L.t||''))E.push(`진술 <code>${L.id}</code> 에 HTML 태그가 있습니다 — 화면에 태그가 그대로 보입니다`);
+  }));
+  allSpots.forEach(s=>{
+    if(tag.test(s.label||''))E.push(`미끼 이름 <code>${s.id}</code> 에 HTML 태그가 있습니다`);
+    if(typeof s.decoy==='string'&&tag.test(s.decoy))E.push(`미끼 설명 <code>${s.id}</code> 에 HTML 태그가 있습니다`);
+  });
+  (C.accuse||[]).forEach(a=>{if(tag.test(a.t||''))E.push(`지목 후보 <code>${a.id}</code> 에 HTML 태그가 있습니다`)});
+  (C.elim||[]).forEach(e=>{if(tag.test(e.name||''))E.push(`소거 이름 「${e.name}」 에 HTML 태그가 있습니다`)});
+  Object.keys(C.clues||{}).forEach(id=>{if(tag.test(clue(id).n||''))E.push(`단서 이름 <code>${id}</code> 에 HTML 태그가 있습니다`)});
+  (C.scenes||[]).forEach(sc=>{if(tag.test(sc.label||''))E.push(`현장 이름 「${sc.label}」 에 HTML 태그가 있습니다`)});
+
   // 12. 얻게 되는 단서는 locked 이면 안 된다 (사건 2의 c_tape 사고)
   collectable.forEach(id=>{ if(has(id)&&clue(id).locked)
     E.push(`<code>${id}</code> 는 얻게 되는 단서인데 locked 로 잠겨 있습니다 — 얻어도 수첩에서 눌리지 않습니다`); });

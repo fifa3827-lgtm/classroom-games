@@ -387,6 +387,38 @@ img.mjoy{width:82px;height:82px;object-fit:contain;
 .shtime{font-family:"Gaegu",cursive;font-size:20px;line-height:1;min-width:78px;text-align:right;flex:0 0 auto;white-space:nowrap}
 
 /* ---- 현장이 여럿일 때의 단추 줄 ---- */
+/* ---------- 현장 크게 보기 ----------
+   휴대폰 가로에서 현장 그림이 화면의 3할밖에 안 된다는 말이 많았다.
+   켜면 오른쪽 글 칸을 접고 위아래 띠를 얇게 해서 그림이 화면을 거의 다 쓴다.
+   조사한 단서는 그림 아래에 띠로 겹쳐 보여 준다. */
+.body{position:relative}
+.body.big{grid-template-columns:1fr}
+.body.big .right{display:none}
+.bigapp .bar{padding-top:2px;padding-bottom:2px}
+.bigapp .bar .chip{padding:0 8px;font-size:11px}
+.bigapp .foot{padding-top:3px;padding-bottom:calc(3px + env(safe-area-inset-bottom,0px));gap:5px}
+.bigapp .tab{padding:4px 4px;font-size:14px}
+.bigapp .act{padding:4px 8px;font-size:15px}
+.bigapp .left{padding:5px}
+/* 크게 보기에서는 현장 단추 줄을 그림 위에 얹어 세로 공간을 되찾는다 */
+.scenecol{position:relative}
+.body.big .scenebar{position:absolute;top:7px;left:8px;right:8px;z-index:4;margin:0}
+.body.big .sctab{background:rgba(251,247,238,.93)}
+.body.big .sctab.on{background:var(--must)}
+.body.big .sctab.grow.on{background:var(--teal);color:#fff8ea}
+.body.big .scenecol.hasbar .scenewrap{max-height:100%}
+/* 높이가 먼저 정해지게 해서 그림 좌우에 빈 띠가 생기지 않게 한다 */
+.body.big .scenewrap{width:auto;height:100%;max-width:100%}
+.bigcard{position:absolute;left:0;right:0;bottom:0;max-height:48%;overflow-y:auto;
+  background:rgba(251,247,238,.965);border-top:2.5px solid var(--line);
+  padding:8px 10px 10px;font-size:13px;line-height:1.55;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.bigcard .card{background:none;border:0;box-shadow:none;padding:0}
+.bigcard .say,.bigcard .note{margin-top:6px}
+.bigx{position:sticky;top:0;float:right;width:26px;height:26px;border:2px solid var(--line);
+  border-radius:50%;background:var(--panel);font-size:12px;line-height:1;z-index:2}
+.sctab.grow{margin-left:auto;background:var(--cream)}
+.sctab.grow.on{background:var(--teal);color:#fff8ea}
+
 .scenecol{display:flex;flex-direction:column;align-items:center;justify-content:center;
   width:100%;height:100%;min-height:0;overflow:hidden}
 .scenecol.hasbar .scenewrap{max-height:calc(100% - 34px)}

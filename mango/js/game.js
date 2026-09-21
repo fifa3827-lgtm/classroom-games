@@ -2,10 +2,11 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211119';
-import * as Save from './save.js?v=2609211119';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211239';
+import * as Save from './save.js?v=2609211239';
 
 var C=null;   // 현재 사건 데이터
+var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
 
 /* ================= 그림 자산 ================= */
 /* data/case-NN.json 이 img 이름을 적으면 img/ 에서 찾아 쓰고,
@@ -26,6 +27,10 @@ function probeCaseArt(){
   MANGO.forEach(function(e){list.push('mango-'+e+'.png');list.push('mango-face-'+e+'.png')});
   if(C.coverImg)list.push(C.coverImg);
   if(C.sceneImg)list.push(C.sceneImg);
+  /* 현장이 여럿인 사건은 현장마다 배경이 다르다. 여기에 안 넣었더니
+     사건 3의 탑 2층이 빈 화면으로 떴다 — 그림이 없는 줄 알고 넘어간 것이다. */
+  (C.scenes||[]).forEach(function(sc){if(sc.img)list.push(sc.img)});
+  if(C.solve&&C.solve.bg)list.push(C.solve.bg);
   /* 인트로는 사건마다 다른 그림을 쓸 수 있다 — 사건 파일이 부르는 배경도 미리 확인한다 */
   if(C.introBg)list.push(C.introBg);
   ((C.board&&C.board.pins)||[]).forEach(function(p){if(p.img)list.push(p.img)});
@@ -114,7 +119,7 @@ function fresh(){
   lens:{x:360,y:180},hot:null,proofs:[],active:null,rebutErr:0,newNotes:0,idle:null,
   phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,
   steps:C.steps.map(function(){return {clues:[],opt:null}}),elim:{},_eyes:{},
-  scene:sceneList()[0].id};
+  scene:sceneList()[0].id,big:BIGPREF};
   resetFaces();
 }
 
@@ -144,6 +149,9 @@ function newlyOpen(before){
 }
 function openMap(){var m={};sceneList().forEach(function(sc){m[sc.id]=sceneOpen(sc)});return m}
 function resetFaces(){C.suspectOrder.forEach(function(id){var x=C.suspects[id];if(x.sym==='rc')x.eyes='def'})}
+
+/* 설정은 한 칸에 모여 있다. 통째로 덮어쓰면 소리 설정이 날아가므로 항상 합쳐서 저장한다. */
+function putPref(patch){try{var p=Save.loadPrefs()||{};Object.keys(patch).forEach(function(k){p[k]=patch[k]});Save.savePrefs(p)}catch(e){}}
 
 var toastT;function toast(m){var el=$('#toast');el.textContent=m;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){el.classList.remove('on')},2000)}
 
@@ -582,6 +590,7 @@ function setMode(m){
   if(m==='notes'){S.newNotes=0;updateDot()}
   closeSheet();cancelTyper();
   setMood({scene:'invest',talk:'tense',notes:'invest',logic:'build'}[m]);
+  applyBig();
   ({scene:renderScene,talk:renderTalk,notes:renderNotes,logic:renderLogic})[m]();
   updateAct();idleReset();
 }
@@ -648,6 +657,8 @@ function refreshSceneBar(){
 }
 function bindSceneBar(){
   var bar=$('#scenebar');if(!bar)return;
+  var gb=$('#scene-big');
+  if(gb)gb.addEventListener('click',function(){sTap();setBig(!S.big);renderScene()});
   bar.querySelectorAll('[data-sc]').forEach(function(b){
     b.addEventListener('click',function(){
       var sc=null;sceneList().forEach(function(x){if(x.id===b.dataset.sc)sc=x});
@@ -659,14 +670,25 @@ function bindSceneBar(){
   });
 }
 function sceneBar(){
-  var L=sceneList();if(L.length<2)return '';
+  var L=sceneList();
   var h='<div class="scenebar" id="scenebar">';
-  L.forEach(function(sc){
+  if(L.length>1)L.forEach(function(sc){
     var open=sceneOpen(sc),on=(sc.id===curScene().id);
     h+='<button class="sctab'+(on?' on':'')+(open?'':' shut')+'" data-sc="'+sc.id+'">'+
        (open?'':'🔒 ')+esc(sc.label)+'</button>';
   });
+  /* 현장을 크게 보기 — 휴대폰에서 그림이 너무 작다는 말이 많았다.
+     켜면 오른쪽 글 칸을 접고 위아래 띠도 얇아져서 그림이 훨씬 커진다. */
+  h+='<button class="sctab grow'+(S.big?' on':'')+'" id="scene-big">'+(S.big?'⤡ 작게':'⤢ 크게 보기')+'</button>';
   return h+'</div>';
+}
+function setBig(v){S.big=!!v;putPref({big:S.big});applyBig()}
+/* 크게 보기는 **현장에서만** 쓴다. 심문·수첩·추리는 오른쪽 칸이 곧 내용이라 접으면 안 된다. */
+function applyBig(){
+  var on=!!(S.big&&S.mode==='scene');
+  var b=document.querySelector('.body'),a=document.querySelector('.app');
+  if(b)b.classList.toggle('big',on);
+  if(a)a.classList.toggle('bigapp',on);
 }
 function sceneSVG(){return ''+
 '<svg id="scene" viewBox="0 0 720 360"><defs><clipPath id="lc"><circle id="lcc" cx="360" cy="180" r="'+LENS_R+'"/></clipPath></defs>'+
@@ -677,11 +699,15 @@ artLayer()+
 function renderScene(){
   var bar=sceneBar();
   $('#left').innerHTML='<div class="scenecol'+(bar?' hasbar':'')+'">'+bar+
-    '<div class="scenewrap" id="scenewrap">'+sceneSVG()+'</div></div>';
+    '<div class="scenewrap" id="scenewrap">'+sceneSVG()+
+    '<div class="bigcard" id="bigcard" hidden></div></div></div>';
   bindSceneBar();
   drawFound();setLens(S.lens.x,S.lens.y);
   var w=$('#scenewrap'),drag=false;
-  w.addEventListener('pointerdown',function(e){drag=true;w.setPointerCapture(e.pointerId);var p=pt(e);setLens(p.x,p.y)});
+  w.addEventListener('pointerdown',function(e){
+    /* 확대경을 다시 잡으면 아래 띠는 비켜 준다 — 가려진 자리를 조사할 수 있게 */
+    var bc=$('#bigcard');if(bc&&!bc.hidden&&!e.target.closest('.bigcard')){bc.hidden=true;return}
+    drag=true;w.setPointerCapture(e.pointerId);var p=pt(e);setLens(p.x,p.y)});
   w.addEventListener('pointermove',function(e){if(drag){var p=pt(e);setLens(p.x,p.y)}});
   w.addEventListener('pointerup',function(){drag=false});
   rightScene(null);
@@ -741,10 +767,33 @@ function finishInspect(sp,isNew){
   }
   if(c.note)extra+=c.note;
   rightScene('<div class="card"><div class="who">'+(isNew?mface('sp'):mface('def'))+esc(c.n)+(isNew?' <small style="color:var(--olive)">수첩에 기록</small>':' <small>이미 기록됨</small>')+'</div><p style="margin:0" id="sc-desc"></p></div>'+extra);
-  typeHTML($('#sc-desc'),c.t,isNew?'mango':null,after);
+  typeHTML($('#sc-desc'),c.t,isNew?'mango':null,function(){if(after)after();mirrorBig()});
+  mirrorBig();
   if(count()>=8&&!S.flags.hint8){S.flags.hint8=true;toast('단서가 많이 모였어요. 심문과 추리 탭도 써 보세요')}
 }
+/* 크게 보기에서는 오른쪽 칸이 접히므로, 같은 내용을 그림 아래 띠에 겹쳐 보여 준다.
+   내용을 두 벌로 만들지 않고 오른쪽 칸에 그린 것을 그대로 옮긴다. */
+function mirrorBig(){
+  var box=$('#bigcard');if(!box)return;
+  if(!S.big||!S._hasCard){box.hidden=true;return}
+  var src=$('#rscroll');if(!src)return;
+  var card=src.querySelector('.card');
+  if(!card){box.hidden=true;return}
+  box.innerHTML='<button class="bigx" id="bigx" aria-label="닫기">✕</button><div class="bigin"></div>';
+  var inn=box.querySelector('.bigin');
+  var n=card;while(n){inn.appendChild(n.cloneNode(true));n=n.nextElementSibling}
+  box.hidden=false;
+  var x=$('#bigx');if(x)x.addEventListener('click',function(){sTap();box.hidden=true});
+  /* 글자가 한 자씩 찍히는 중이면 따라 그린다 — 안 그러면 띠에 반쪽 글이 멈춰 있다 */
+  clearTimeout(MIRT);
+  if(typers.length)MIRT=setTimeout(mirrorBig,120);
+}
+var MIRT=null;
 function rightScene(html){
+  /* 기본 「망고의 메모」는 띠로 띄우지 않는다 — 확대경 길을 막는다.
+     다만 그 현장에 **처음 들어왔을 때 한 번은** 띄운다. 크게 보기에서는 오른쪽 칸이
+     접혀 있어서, 안 띄우면 무엇을 하라는 안내를 아예 못 보게 된다. */
+  S._hasCard=!!html||!S.flags['memoSaid_'+curScene().id];
   var base='<p class="muted" style="margin:0 0 8px">확대경을 끌어 살펴보고, 이름표가 뜨면 <b>조사하기</b>를 누르세요. 조사한 곳은 ✓로 표시돼요.</p>';
   $('#rscroll').innerHTML=base+(html||'<div class="card" style="background:#fff8e7"><div class="who">망고의 메모</div><p style="margin:0;font-size:13px" id="sc-memo"></p></div>');
   /* 현장 첫 화면의 망고 메모 — 사건 파일의 memo (없으면 일반 문장) */
@@ -753,6 +802,7 @@ function rightScene(html){
     S.flags[mk]=true;}
   var mm=$('#rscroll').querySelector('.card .who');
   if(mm&&/망고의 메모/.test(mm.textContent))mm.insertAdjacentHTML('afterbegin',mface('def'));
+  setTimeout(mirrorBig,30);
 }
 
 /* ================= 심문 ================= */
@@ -1233,7 +1283,7 @@ function syncSoundUI(){
   if(c)c.setAttribute('aria-pressed',String(A.sfx));
   if(d)d.setAttribute('aria-pressed',String(A.music));
 }
-A.onChange=function(){Save.savePrefs({s:A.sfx,m:A.music});syncSoundUI()};
+A.onChange=function(){putPref({s:A.sfx,m:A.music});syncSoundUI()};
 
 /* ================= 시작 ================= */
 function start(easy){
@@ -1523,6 +1573,10 @@ function boot(){
       get found(){return Object.keys(S.found)},get scene(){return S.scene}};
   var p=Save.loadPrefs();
   if(p){A.sfx=!!p.s;A.music=!!p.m}
+  /* 크게 보기 기본값 — 휴대폰·태블릿처럼 화면이 작으면 켜고, 넓은 데스크톱은 그대로 둔다.
+     한 번이라도 사용자가 단추를 누르면 그 선택이 저장되어 이 판단보다 우선한다. */
+  BIGPREF=(p&&typeof p.big==='boolean') ? p.big
+        : (window.innerHeight<520||window.innerWidth<900);
   Save.askPersist();
   syncSoundUI();
   fresh();
