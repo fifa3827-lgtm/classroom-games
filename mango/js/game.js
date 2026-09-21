@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211425';
-import * as Save from './save.js?v=2609211425';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211513';
+import * as Save from './save.js?v=2609211513';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -120,7 +120,7 @@ var S;
 function fresh(){
   S={screen:'title',mode:'scene',easy:null,lamps:3,found:{},flags:{},tab:C.suspectOrder[0],sel:null,
   lens:{x:360,y:180},hot:null,proofs:[],active:null,rebutErr:0,newNotes:0,idle:null,
-  phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,
+  phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,rep:[],repTries:0,
   steps:C.steps.map(function(){return {clues:[],opt:null}}),elim:{},_eyes:{},
   scene:sceneList()[0].id,big:BIGPREF,slot:null};
   resetFaces();
@@ -630,13 +630,14 @@ function updateAct(){
       a.textContent=d?'이대로 추리한다':(mz.length?'단서를 더 모아야 해요':'추론을 채우세요');
       a.className=d?'act warm':'act';a.disabled=!d}
     else if(S.phase==='elim'){var d2=elimReady();a.textContent=d2?'이대로 지운다':'지울 이유를 고르세요';a.className=d2?'act warm':'act';a.disabled=!d2}
-    else{a.textContent='지목한다!';a.className='act warm';a.disabled=!S.flags.acc}
+    else if(S.playing){a.textContent='재현하는 중…';a.className='act';a.disabled=true}
+    else{var rr=replayReady();a.textContent=rr?'이대로 재현한다':'네 장면을 순서대로 눌러요';a.className=rr?'act warm':'act';a.disabled=!rr}
   }
 }
 function onAct(){
   if(S.mode==='scene')inspect();
   else if(S.mode==='talk'){var s=C.suspects[S.tab],ex=extraAction(s);if(ex)doExtra(ex);else openTray('present')}
-  else if(S.mode==='logic'){if(S.phase==='chain')judgeChain();else if(S.phase==='elim')judgeElim();else doAccuse()}
+  else if(S.mode==='logic'){if(S.phase==='chain')judgeChain();else if(S.phase==='elim')judgeElim();else judgeReplay()}
 }
 
 /* ================= 현장 ================= */
@@ -958,9 +959,13 @@ function stepDone(i){
 }
 /* 빈칸 하나가 맞는가 — 낱말이 같으면 맞다(붙여 쓰기·띄어쓰기 차이는 눈감아 준다) */
 function blankOK(c,k,w){
-  if(!w)return false;var ok=c.fill.blanks[k].ok;
+  if(!w)return false;
   var n=function(x){return String(x).replace(/\s+/g,'')};
-  return n(ok)===n(w);
+  var b=c.fill.blanks[k];
+  /* grp 가 같은 빈칸끼리는 **순서가 바뀌어도 맞다** — 「콩이와 콩순이」,「낙엽도 조각도」처럼
+     문장에서 자리를 서로 바꿔도 뜻이 같은 자리들. 낱말 칩은 한 번 쓰면 사라지므로 겹칠 수 없다. */
+  if(b.grp)return c.fill.blanks.some(function(x){return x.grp===b.grp&&n(x.ok)===n(w)});
+  return n(b.ok)===n(w);
 }
 function fillOK(i){var c=C.steps[i],st=S.steps[i];st.fill=st.fill||[];return c.fill.blanks.every(function(b,k){return blankOK(c,k,st.fill[k])})}
 function boardOK(i){
@@ -993,7 +998,7 @@ function renderLogic(){
   cancelTyper();
   if(S.phase==='chain')return renderChain();
   if(S.phase==='elim')return renderElim();
-  return renderAccuse();
+  return renderReplay();
 }
 
 /* ---------- 1단계: 추론 사슬 ----------
@@ -1343,7 +1348,7 @@ function whyWord(c,k,w){
   var ex=(c.fill.extra||[]).filter(function(x){return x.w===w})[0];
   if(ex)return ex.why;
   var other=c.fill.blanks.some(function(b,j){return j!==k&&blankOK(c,j,w)});
-  if(other)return '「'+esc(w)+'」는 이 문장에 들어가는 말이지만 <b>자리</b>가 달라요.';
+  if(other)return '「'+esc(w)+'」'+josa(w,'은','는')+' 이 문장에 들어가는 말이지만 <b>자리</b>가 달라요.';
   return '「'+esc(w)+'」는 이 물음과 이어지지 않아요.';
 }
 function say2(html){
@@ -1387,7 +1392,7 @@ function judgeElim(){
   var wrong=[];
   C.elim.forEach(function(e,i){if(!e.opts[S.elim[e.id]].ok)wrong.push(i)});
   if(!wrong.length){
-    sFan();S.wrongSet=null;S.lastWrong=null;S.phase='accuse';S.open=null;S.flags.judgeSay='';renderLogic();
+    sFan();S.wrongSet=null;S.lastWrong=null;S.phase='replay';S.open=null;S.flags.judgeSay='';S.rep=[];renderLogic();
     say2('<b>망고</b> "남은 건 하나뿐이야. …말해 봐."');
     return;
   }
@@ -1404,35 +1409,97 @@ function judgeElim(){
 }
 
 /* ---------- 3단계: 지목 ---------- */
-function renderAccuse(){
-  var h='<div class="chain" id="chain"><div class="concl small">'+(C.concl||'사슬이 가리키는 곳 · 나머지는 전부 지워짐')+'</div>';
-  h+='<div class="link"><span class="no">★</span>결정적 증거 <small>(선택 — 별점이 올라요)</small><div class="mini">'+
-    '<button class="tag slotbtn" data-p="0">'+(S.proofs[0]?esc(C.clues[S.proofs[0]].n):'＋ 증거')+'</button>'+
-    '<button class="tag slotbtn" data-p="1">'+(S.proofs[1]?esc(C.clues[S.proofs[1]].n):'＋ 증거')+'</button></div></div></div>';
-  $('#left').innerHTML='<div class="logicwrap">'+h+'</div>';
-  $('#chain').querySelectorAll('[data-p]').forEach(function(b){b.addEventListener('click',function(){sTap();S.active='p'+b.dataset.p;openTray('proof')})});
-  var h2='<div class="card" style="background:#fff8e7"><div class="who">'+(C.accuseAsk||'범인은 누구입니까?')+'</div><p style="margin:0;font-size:13px">되돌릴 수 없어요. 사슬을 한 번 더 읽어 보세요.</p></div><div class="pick">';
-  C.accuse.forEach(function(a){h2+='<button class="opt acc'+(S.flags.acc===a.id?' on':'')+'" data-a="'+a.id+'"><span class="dot"></span><span>'+esc(a.t)+'</span></button>'});
-  h2+='</div>'+(S.flags.judgeSay||'');
+/* ---------- 3단계: 재현 ----------
+   예전에는 「범인은 누구입니까?」 목록에서 이름을 골랐다. 추리 마지막 단계에서 이미 답이 나오므로
+   같은 답을 한 번 더 고르는 셈이었다 — 지루하고, 배우는 것도 없었다(2026-09-21 사용자 지적).
+   이제는 **그날 있었던 일을 네 장면으로 늘어놓는다.** 순서가 곧 답이고, 맞히면 장면이 이어져 재생된다. */
+function replayCuts(){return (C.replay&&C.replay.cuts)||[]}
+function replayReady(){return S.rep.length===replayCuts().length}
+/* 섞는 순서는 사건마다 고정 — 다시 들어와도 같아야 손이 헷갈리지 않는다 */
+function replayOrder(){
+  var n=replayCuts().length,a=[];for(var i=0;i<n;i++)a.push(i);
+  return a.map(function(i){return {i:i,r:seedRand(i*13+(C.no||1)*29+5)}})
+          .sort(function(x,y){return x.r-y.r}).map(function(x){return x.i});
+}
+function cutArt(cut,small){
+  var bg=cut.bg||(C.replay&&C.replay.bg)||C.sceneImg;
+  var h='<div class="cutart'+(small?' sm':'')+'">';
+  if(artOK(bg))h+='<div class="cutbg" style="background-image:url(\''+artURL(bg)+'\');background-position:'+(cut.bgPos||'50% 50%')+';background-size:'+(cut.zoom||140)+'% auto"></div>';
+  else h+='<div class="cutbg plain"></div>';
+  var fx=' '+(cut.fx||'')+' ';
+  if(fx.indexOf(' night ')>=0)h+='<div class="cutfx night"></div>';
+  if(fx.indexOf(' dawn ')>=0)h+='<div class="cutfx dawn"></div>';
+  (cut.figs||[]).forEach(function(f){
+    if(!artOK(f.img))return;
+    h+='<img class="cutfig" src="'+artURL(f.img)+'" alt="" style="left:'+f.x+'%;top:'+f.y+'%;height:'+f.s+'%'+(f.flip?';transform:translate(-50%,-50%) scaleX(-1)':'')+'">';
+  });
+  return h+'</div>';
+}
+function renderReplay(){
+  var cuts=replayCuts(),ord=replayOrder();
+  var h='<div class="replaywrap"><div class="rphd"><b>사건 재현</b><span class="muted">일어난 순서대로 누르세요</span>'+
+        (S.rep.length?'<button class="mini" id="rp-clear">다시</button>':'')+'</div>';
+  h+='<div class="cuts">';
+  ord.forEach(function(i){
+    var pos=S.rep.indexOf(i);
+    h+='<button class="cutcard'+(pos>=0?' on':'')+(S.flags.repBad&&S.flags.repBad.indexOf(i)>=0?' bad':'')+'" data-cut="'+i+'">'+
+       cutArt(cuts[i],true)+
+       '<span class="cutno">'+(pos>=0?(pos+1):'')+'</span>'+
+       '<span class="cutt">'+cuts[i].t+'</span></button>';
+  });
+  h+='</div></div>';
+  $('#left').innerHTML=h;
+  $('#left').querySelectorAll('[data-cut]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var i=+b.dataset.cut,at=S.rep.indexOf(i);
+      if(at>=0){sNo();S.rep.splice(at,1)}else{sStamp();S.rep.push(i)}
+      S.flags.repBad=null;renderReplay();
+    });
+  });
+  var cl=$('#rp-clear');if(cl)cl.addEventListener('click',function(){sTap();S.rep=[];S.flags.repBad=null;renderReplay()});
+  var h2='<div class="card" style="background:#fff8e7"><div class="who">'+mface('def')+'마지막이야</div>'+
+    '<p style="margin:0;font-size:13px">'+((C.replay&&C.replay.ask)||'무슨 일이 있었는지 순서대로 늘어놓아 봐.')+'</p></div>';
+  if(C.concl)h2+='<div class="concl small" style="margin-top:8px">'+C.concl+'</div>';
+  h2+='<p class="muted" style="margin-top:8px">'+S.rep.length+' / '+cuts.length+' 장면'+(S.repTries?' · 재현 '+S.repTries+'회':'')+'</p>';
+  h2+=(S.flags.judgeSay||'');
   $('#rscroll').innerHTML=h2;
-  $('#rscroll').querySelectorAll('[data-a]').forEach(function(b){b.addEventListener('click',function(){sTap();S.flags.acc=b.dataset.a;renderAccuse()})});
   updateAct();
 }
-function fillProof(clueId){
-  closeSheet();var k=+String(S.active)[1];
-  if(C.proofs.indexOf(clueId)>=0&&S.proofs.indexOf(clueId)<0){sStamp();setTimeout(sGood,90);S.proofs[k]=clueId}
-  else{sNo();S.flags.judgeSay='<div class="say">'+(C.proofNo||'그건 결론을 직접 보여 주는 증거가 아니에요.')+'</div>'}
-  S.active=null;renderAccuse();
+function judgeReplay(){
+  var cuts=replayCuts();
+  S.repTries++;
+  var bad=[];S.rep.forEach(function(v,k){if(v!==k)bad.push(v)});
+  if(!bad.length){
+    sFan();S.flags.judgeSay='';S.flags.repBad=null;playReplay();return;
+  }
+  sBad();if(S.repTries>1)burn();
+  S.flags.repBad=bad;
+  /* 어디가 어긋났는지 — 첫 번째로 자리가 틀린 장면만 짚어 준다. 전부 알려 주면 풀 게 없다. */
+  var first=-1;S.rep.forEach(function(v,k){if(first<0&&v!==k)first=k});
+  var lv=helpLv(S.repTries);
+  var head=mface('fl')+'<b>망고</b> "순서가 조금 어긋났어."';
+  if(lv>=2)S.flags.judgeSay='<div class="say">'+head+'<br><b>'+(first+1)+'번째</b>에 놓은 「'+esc(cuts[S.rep[first]].t.replace(/<[^>]+>/g,'').slice(0,18))+'…」 — 이게 정말 그때 일어난 일일까?</div>';
+  else if(lv>=1)S.flags.judgeSay='<div class="say">'+head+' <span class="muted">빨간 장면을 다시 봐. 한 번 더 어긋나면 어디인지 짚어 줄게.</span></div>';
+  else S.flags.judgeSay='<div class="say">'+head+'<br><span class="muted">시각과 원인을 생각해 봐. 다시 놓아도 잃는 건 없어.</span></div>';
+  S.rep=[];renderReplay();
 }
-function doAccuse(){
-  var pick=C.accuse.filter(function(a){return a.id===S.flags.acc})[0];
-  if(!pick)return;
-  if(!pick.ok){sBad();burn();S.accErr++;
-    S.flags.judgeSay='<div class="say"><b>망고</b> "…그건 우리가 <b>지운</b> 사람이야. 사슬을 다시 읽어 보자."</div>';
-    S.flags.acc=null;renderAccuse();return}
-  accuse();
+/* 맞혔다 — 네 장면을 차례로 크게 보여 준 뒤 해결 화면으로 */
+function playReplay(){
+  var cuts=replayCuts(),i=0;
+  S.playing=true;setMood('resolve');
+  function frame(){
+    if(i>=cuts.length){S.playing=false;setTimeout(accuse,500);return}
+    var c=cuts[i];
+    $('#left').innerHTML='<div class="replaywrap playing"><div class="bigcut">'+cutArt(c)+
+      '<div class="cutcap"><span class="n">'+(i+1)+'</span>'+c.t+'</div></div></div>';
+    $('#rscroll').innerHTML='<div class="card" style="background:#fff8e7"><div class="who">'+mface('joy')+'그날 아침은 이랬다</div>'+
+      '<p style="margin:0;font-size:13px">'+(i+1)+' / '+cuts.length+'</p></div>';
+    sPage();beep([392+i*98],.16,'triangle',.09);
+    i++;setTimeout(frame,1900);
+  }
+  frame();
+  updateAct();
 }
-
 /* ================= 트레이 ================= */
 function openTray(kind){
   var r=$('#right');var old=$('#sheet');if(old)old.remove();
@@ -1451,7 +1518,7 @@ function openTray(kind){
   d.innerHTML=h;r.appendChild(d);
   $('#sheet-x').addEventListener('click',function(){sTap();S.active=null;closeSheet();if(S.mode==='logic')renderLogic()});
   if(kind==='step'||kind==='proof'){var ex=document.createElement('p');ex.className='muted';ex.style.padding='0 12px';ex.innerHTML='필요 없는 단서를 넣으면 제출할 때 어긋납니다.';d.querySelector('.list').appendChild(ex)}
-  d.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();if(kind==='present')present(b.dataset.c);else if(kind==='step')addStepClue(b.dataset.c);else fillProof(b.dataset.c)})});
+  d.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();if(kind==='present')present(b.dataset.c);else if(kind==='step')addStepClue(b.dataset.c)})});
 }
 function closeSheet(){var s=$('#sheet');if(s)s.remove()}
 
@@ -1507,7 +1574,7 @@ function applyEpilogue(){
         '<span class="chip">추리 제출 '+Math.max(1,S.tries)+'회</span>'+
         '<span class="chip">소거 제출 '+Math.max(1,S.elimTries)+'회</span>'+
         '<span class="chip">등불 '+S.lamps+'/3</span>'+
-        (S.proofs.filter(Boolean).length?'<span class="chip">결정적 증거 '+S.proofs.filter(Boolean).length+'</span>':'');
+        '<span class="chip">재현 '+Math.max(1,S.repTries)+'회</span>';
     }
     /* 다음 사건의 열쇠말 — 기기 저장이 날아가도 이 말만 있으면 어디서든 다시 연다 */
     var nx=null,list=seasonCases();
@@ -1521,9 +1588,9 @@ function applyEpilogue(){
   }
 }
 function caseStar(){
-  var miss=(S.tries-1)+(S.elimTries-1)+S.accErr;   // 제출 실패 횟수
+  var miss=(S.tries-1)+(S.elimTries-1)+Math.max(0,S.repTries-1);   // 제출 실패 횟수
   var star=3;if(miss>=1||S.rebutErr>0||S.lamps<3)star=2;if(miss>=3||S.rebutErr>=2||S.lamps<=0)star=1;
-  if(S.proofs.filter(Boolean).length===2&&star<3)star++;
+  if(S.repTries===1&&star<3)star++;          // 재현을 한 번에 맞히면 한 칸 올려 준다
   return Math.max(1,Math.min(3,star));
 }
 function starStr(n){var h='';for(var i=0;i<3;i++)h+=(i<n?'★':'☆');return h}
@@ -1572,7 +1639,7 @@ function restore(d){
   fresh();
   S.screen='invest';S.mode=d.mode||'scene';S.easy=d.easy;S.lamps=(d.lamps==null?3:d.lamps);
   S.found=d.found||{};S.flags=d.flags||{};S.tab=d.tab||C.suspectOrder[0];
-  S.steps=d.steps||S.steps;S.elim=d.elim||{};S.proofs=d.proofs||[];
+  S.steps=d.steps||S.steps;S.elim=d.elim||{};S.proofs=d.proofs||[];S.rep=d.rep||[];S.repTries=d.repTries||0;
   S.phase=d.phase||'chain';S.tries=d.tries||0;S.elimTries=d.elimTries||0;
   S.accErr=d.accErr||0;S.rebutErr=d.rebutErr||0;
   if(d.eyes)C.suspectOrder.forEach(function(id){if(d.eyes[id])C.suspects[id].eyes=d.eyes[id]});

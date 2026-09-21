@@ -230,6 +230,57 @@
   .tray .ev.sel{background:#ffe9b3;outline:3px solid var(--must-d);outline-offset:1px}
   #tl-tip{margin:6px 0 0}
 
+  /* ---------- 재현 (지목을 대신한다) ---------- */
+  .replaywrap{width:100%;height:100%;overflow-y:auto;padding:8px 10px;scrollbar-width:thin}
+  .rphd{display:flex;align-items:baseline;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+  .rphd b{font-family:"Gaegu",cursive;font-size:16px}
+  .rphd .mini{margin-left:auto;border:2px solid var(--line);border-radius:999px;background:var(--panel);
+    padding:1px 10px;font-size:11.5px;font-weight:700}
+  .cuts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cutcard{position:relative;background:var(--panel);border:2.5px solid var(--line);border-radius:10px;
+    overflow:hidden;box-shadow:var(--sh);text-align:left;color:var(--ink);padding:0;display:block}
+  .cutcard.on{border-color:var(--brown);box-shadow:0 0 0 3px var(--must),var(--sh)}
+  .cutcard.bad{border-color:var(--brick);animation:shake .35s}
+  .cutt{display:block;padding:5px 8px 6px;font-size:11.5px;line-height:1.45}
+  .cutno{position:absolute;top:6px;left:6px;z-index:3;width:24px;height:24px;border-radius:50%;
+    background:var(--must);border:2.5px solid var(--line);font-family:"Gaegu",cursive;font-weight:700;
+    font-size:15px;line-height:20px;text-align:center;box-shadow:1px 2px 0 var(--line)}
+  .cutcard:not(.on) .cutno{background:rgba(255,255,255,.75);border-style:dashed;box-shadow:none}
+  /* 한 컷 — 배경을 확대해 잘라 쓰고 그 위에 인물·물건을 얹는다. 새 그림을 그리지 않는다. */
+  .cutart{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#e7eee0;
+    border-bottom:2.5px solid var(--line)}
+  .cutart.sm{aspect-ratio:2/1}
+  .cutbg{position:absolute;inset:0;background-repeat:no-repeat}
+  .cutbg.plain{background:linear-gradient(160deg,#e7eee0,#cfc7b4)}
+  .cutfx{position:absolute;inset:0;pointer-events:none}
+  .cutfx.night{background:linear-gradient(180deg,rgba(28,32,66,.62),rgba(28,32,66,.42));mix-blend-mode:multiply}
+  .cutfx.dawn{background:linear-gradient(180deg,rgba(255,196,128,.30),rgba(255,150,120,.12))}
+  .cutfig{position:absolute;transform:translate(-50%,-50%);width:auto;
+    filter:drop-shadow(2px 3px 2px rgba(60,35,10,.4))}
+  .bigcut{border:3px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--sh);background:var(--panel)}
+  .bigcut .cutart{aspect-ratio:16/7}
+  .cutcap{padding:8px 12px;font-size:14px;line-height:1.6;background:#fff8e7}
+  .cutcap .n{display:inline-block;width:22px;height:22px;border-radius:50%;background:var(--must);
+    border:2px solid var(--line);font-family:"Gaegu",cursive;font-weight:700;font-size:14px;line-height:19px;
+    text-align:center;margin-right:7px;vertical-align:-3px}
+  .replaywrap.playing{display:flex;align-items:center;justify-content:center;padding:10px}
+  .replaywrap.playing .bigcut{width:100%;animation:cutin .5s}
+  @keyframes cutin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+  /* 작은 화면에서도 네 장면이 **한눈에** 들어와야 순서를 견줄 수 있다 */
+  @media (max-height:470px){
+    .replaywrap{padding:6px 8px}
+    .rphd{margin-bottom:4px}.rphd b{font-size:14px}
+    .cuts{gap:5px}
+    .cutart.sm{aspect-ratio:12/5}
+    .cutt{font-size:10px;padding:3px 6px 4px;line-height:1.35;
+      display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .cutno{width:20px;height:20px;font-size:12.5px;line-height:16px;top:4px;left:4px}
+  }
+  @media (max-height:400px){
+    .cutart.sm{aspect-ratio:14/5}
+    .cutt{-webkit-line-clamp:2}
+  }
+
   /* 사건 목록·연결판의 별점 */
   .cstar,.recstar{font-family:"Gaegu",cursive;letter-spacing:.06em;color:#c9924a}
   .recstar{font-size:22px;line-height:1;margin-right:6px}

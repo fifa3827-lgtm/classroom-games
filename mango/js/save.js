@@ -14,7 +14,7 @@ function KEY(){var c=(typeof window!=='undefined'&&window.MANGO_CASE)||'01';retu
 function pack(S){
   return {v:VER, t:Date.now(), screen:S.screen, mode:S.mode, easy:S.easy,
     lamps:S.lamps, found:S.found, flags:S.flags, tab:S.tab,
-    steps:S.steps, elim:S.elim, proofs:S.proofs, phase:S.phase,
+    steps:S.steps, elim:S.elim, proofs:S.proofs, rep:S.rep, repTries:S.repTries, phase:S.phase,
     tries:S.tries, elimTries:S.elimTries, accErr:S.accErr, rebutErr:S.rebutErr,
     eyes:S._eyes||{}};   /* 인물별 표정 — 예전엔 콩이·콩순이만 박혀 있었다 */
 }
