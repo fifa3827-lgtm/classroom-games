@@ -16,7 +16,7 @@ var BROWN = "#8B5A3C", CREAM = "#FBF7F0", SAND = "#F4E6D6", LINE = "#E3DACB",
     FONT = "Nanum Gothic";
 
 // 집중 글자 — 읽기 확인표에서 ×였던 글자. data.js의 config.focus와 같게 맞춘다.
-var FOCUS = ["수", "더", "미", "머", "노", "서", "두", "디", "다", "시", "모", "거"];
+var FOCUS = ["미", "디", "니", "두", "수", "무", "구", "누", "서", "거", "너", "노"];  // 2026-09-21 갱신 — data.js의 focus와 같아야 한다
 
 function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
