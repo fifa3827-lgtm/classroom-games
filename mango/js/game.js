@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211513';
-import * as Save from './save.js?v=2609211513';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609211531';
+import * as Save from './save.js?v=2609211531';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -119,7 +119,7 @@ document.addEventListener('pointerdown',function(e){ // 아무 곳이나 누르�
 var S;
 function fresh(){
   S={screen:'title',mode:'scene',easy:null,lamps:3,found:{},flags:{},tab:C.suspectOrder[0],sel:null,
-  lens:{x:360,y:180},hot:null,proofs:[],active:null,rebutErr:0,newNotes:0,idle:null,
+  lens:{x:360,y:180},hot:null,active:null,rebutErr:0,newNotes:0,idle:null,
   phase:'chain',open:null,tries:0,elimTries:0,wrongSet:null,lastWrong:null,accErr:0,rep:[],repTries:0,
   steps:C.steps.map(function(){return {clues:[],opt:null}}),elim:{},_eyes:{},
   scene:sceneList()[0].id,big:BIGPREF,slot:null};
@@ -1504,20 +1504,18 @@ function playReplay(){
 function openTray(kind){
   var r=$('#right');var old=$('#sheet');if(old)old.remove();
   var d=document.createElement('div');d.className='sheet';d.id='sheet';
-  var title={present:'어떤 단서를 들이댈까요?',step:'근거가 될 단서 고르기',proof:'결정적 증거'}[kind];
+  var title={present:'어떤 단서를 들이댈까요?',step:'근거가 될 단서 고르기'}[kind];
   var ctx='';
   if(kind==='step'&&S.open!=null){var c=C.steps[S.open];ctx='<div class="ctx">'+(S.open+1)+'. '+esc(c.t)+' — <b>'+c.q.replace(/<[^>]+>/g,'')+'</b></div>';
     if(needMissing(S.open).length)ctx+='<div class="ctx" style="color:var(--brick)"><b>이 단계에 필요한 단서가 아직 수첩에 없어요.</b> 현장을 더 조사하고 오세요 — 여기 있는 것만으로는 채워지지 않아요.</div>'}
   if(kind==='present'){var L=null;C.suspects[S.tab].lines.forEach(function(x){if(x.id===S.sel)L=x});if(L)ctx='<div class="ctx">'+esc(C.suspects[S.tab].name)+'의 말: <b>"'+esc(L.t)+'"</b> — 이 말과 어긋나는 단서를 고르세요.</div>'}
-  if(kind==='proof'){ctx='<div class="ctx">'+(C.proofAsk||'결론을 <b>직접</b> 보여 주는 단서를 고르세요.')+'</div>';
-    if((C.proofs||[]).some(function(id){return !S.found[id]}))ctx+='<div class="ctx" style="color:var(--brick)">결정적 증거로 쓸 단서를 아직 다 찾지 못했어요. 비워 두고 지목해도 됩니다.</div>'}
   var h='<div class="hd"><span>'+title+'</span><button id="sheet-x">닫기</button></div>'+ctx+'<div class="list"><div class="clues">';
   var any=false;
   C.order.forEach(function(id){if(S.found[id]){any=true;h+=cardHTML(id,false,true)}});
   h+='</div>'+(any?'':'<p class="muted">아직 단서가 없어요. 현장을 먼저 조사하세요.</p>')+'</div>';
   d.innerHTML=h;r.appendChild(d);
   $('#sheet-x').addEventListener('click',function(){sTap();S.active=null;closeSheet();if(S.mode==='logic')renderLogic()});
-  if(kind==='step'||kind==='proof'){var ex=document.createElement('p');ex.className='muted';ex.style.padding='0 12px';ex.innerHTML='필요 없는 단서를 넣으면 제출할 때 어긋납니다.';d.querySelector('.list').appendChild(ex)}
+  if(kind==='step'){var ex=document.createElement('p');ex.className='muted';ex.style.padding='0 12px';ex.innerHTML='필요 없는 단서를 넣으면 제출할 때 어긋납니다.';d.querySelector('.list').appendChild(ex)}
   d.querySelectorAll('[data-c]').forEach(function(b){b.addEventListener('click',function(){sTap();if(kind==='present')present(b.dataset.c);else if(kind==='step')addStepClue(b.dataset.c)})});
 }
 function closeSheet(){var s=$('#sheet');if(s)s.remove()}
@@ -1598,7 +1596,7 @@ function accuse(){
   var star=caseStar();
   sFan();Save.markDone(CASE,star);S.star=star;applySolveArt();applyEpilogue();
   var coin=star===3?120:(star===2?100:80);
-  $('#reward').innerHTML='<span class="chip">🪙 +'+coin+'</span><span class="chip">⭐ 명성 +3</span><span class="chip">📖 도감 +3</span>'+(S.proofs.filter(Boolean).length?'<span class="chip">결정적 증거 '+S.proofs.filter(Boolean).length+'</span>':'');
+  $('#reward').innerHTML='<span class="chip">🪙 +'+coin+'</span><span class="chip">⭐ 명성 +3</span><span class="chip">📖 도감 +3</span>';
   show('s-solve');
   var sp=document.querySelectorAll('#stars span');sp.forEach(function(e,i){e.className='';e.textContent=i<star?'★':'☆';e.style.opacity=i<star?'':'.35'});
   $('#solve-t').innerHTML='';$('#solve-sheep').innerHTML='';
@@ -1612,7 +1610,7 @@ function lampHint(){
   if(S.screen!=='invest')return;
   if(S.lamps<=0){sNo();return toast('등불을 다 썼어요')}
   if(S.mode!=='logic'){sNo();return toast('등불은 추리 탭에서 쓸 수 있어요')}
-  if(S.phase==='accuse')return toast('이제 답을 고르기만 하면 돼요');
+  if(S.phase==='replay')return toast('재현은 틀릴 때마다 힌트가 늘어나요');
   var list=S.phase==='chain'?C.steps:C.elim;
   if(S.lastWrong&&S.lastWrong.length){
     burn();sFind();S.wrongSet=S.lastWrong.slice();
@@ -1639,7 +1637,7 @@ function restore(d){
   fresh();
   S.screen='invest';S.mode=d.mode||'scene';S.easy=d.easy;S.lamps=(d.lamps==null?3:d.lamps);
   S.found=d.found||{};S.flags=d.flags||{};S.tab=d.tab||C.suspectOrder[0];
-  S.steps=d.steps||S.steps;S.elim=d.elim||{};S.proofs=d.proofs||[];S.rep=d.rep||[];S.repTries=d.repTries||0;
+  S.steps=d.steps||S.steps;S.elim=d.elim||{};S.rep=d.rep||[];S.repTries=d.repTries||0;
   S.phase=d.phase||'chain';S.tries=d.tries||0;S.elimTries=d.elimTries||0;
   S.accErr=d.accErr||0;S.rebutErr=d.rebutErr||0;
   if(d.eyes)C.suspectOrder.forEach(function(id){if(d.eyes[id])C.suspects[id].eyes=d.eyes[id]});

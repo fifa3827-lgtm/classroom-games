@@ -75,9 +75,6 @@ function run(C){
     if(ok.length!==1)E.push(`소거 「${e.name}」: 정답이 ${ok.length}개입니다`);
     (e.opts||[]).forEach((o,k)=>{if(!o.ok&&!o.why)E.push(`소거 「${e.name}」 ${k+1}번 오답: 설명(why)이 없습니다`)});
   });
-  const culprits=(C.accuse||[]).filter(a=>a.ok);
-  if(culprits.length!==1)E.push(`지목 정답이 ${culprits.length}개입니다 (정확히 1개)`);
-  if((C.accuse||[]).length<3)W.push('지목 후보가 너무 적습니다');
   const elimNames=(C.elim||[]).map(e=>e.id);
   if(!elimNames.includes('solo'))W.push('「둘 중 한 명만」 같은 단독범 가설을 소거 대상에 두면 공범 논리가 분명해집니다');
 
@@ -86,14 +83,24 @@ function run(C){
   if(odd.length!==1)E.push(`「이상한 단서」(odd)가 ${odd.length}개입니다 (사건마다 정확히 1개)`);
   odd.forEach(id=>{
     const inStep=(C.steps||[]).some(s=>(s.need||[]).includes(id));
-    const inProof=(C.proofs||[]).includes(id);
-    if(inStep||inProof)E.push(`이상한 단서 <code>${id}</code> 가 사건 해결에 쓰이고 있습니다 (쓰이면 안 됩니다)`);
+    if(inStep)E.push(`이상한 단서 <code>${id}</code> 가 사건 해결에 쓰이고 있습니다 (쓰이면 안 됩니다)`);
   });
 
-  // 5. 결정적 증거
-  (C.proofs||[]).forEach(id=>{
-    if(!has(id))E.push(`proofs 의 <code>${id}</code> 가 없습니다`);
-    else if(!collectable.has(id))E.push(`결정적 증거 <code>${id}</code> 를 모을 수 없습니다`);
+  // 5. 재현 — 사건을 순서대로 다시 세우는 마지막 활동
+  //    (지목은 없앴다. 추리에서 이미 나온 답을 또 고르게 하는 활동이었다.)
+  const cuts=(C.replay&&C.replay.cuts)||[];
+  if(!cuts.length)E.push('재현(replay.cuts)이 없습니다 — 마지막 활동이 비어 있습니다');
+  else if(cuts.length<3||cuts.length>5)W.push(`재현 장면이 ${cuts.length}개입니다 (4개 안팎이 알맞습니다)`);
+  const cutIds=new Set();
+  cuts.forEach((c,k)=>{
+    if(!c.id)E.push(`재현 ${k+1}번째 장면에 id 가 없습니다`);
+    else if(cutIds.has(c.id))E.push(`재현 장면 id <code>${c.id}</code> 가 겹칩니다`);
+    cutIds.add(c.id);
+    if(!(c.t||'').trim())E.push(`재현 ${k+1}번째 장면에 설명이 없습니다`);
+    (c.figs||[]).forEach(f=>{
+      if(!f.img)E.push(`재현 ${k+1}번째 장면의 인물에 그림이 없습니다`);
+      if(f.x<0||f.x>100||f.y<0||f.y>100)E.push(`재현 ${k+1}번째 장면의 <code>${f.img}</code> 가 화면 밖(${f.x},${f.y})입니다`);
+    });
   });
 
   // 6. 읽기 부담
@@ -113,9 +120,7 @@ function run(C){
   };
   spread('추리 단계',posOf(C.steps));
   spread('소거',posOf(C.elim));
-  const accPos=(C.accuse||[]).findIndex(a=>a.ok);
-  if(accPos===0&&(C.accuse||[]).length>2)W.push('지목 후보의 정답이 맨 첫 줄입니다');
-  I.push(`정답 자리 — 추리 ${posOf(C.steps).length?posOf(C.steps).map(i=>i+1).join('·'):'(빈칸 문장)'} / 소거 ${posOf(C.elim).map(i=>i+1).join('·')} / 지목 ${accPos+1}`);
+  I.push(`정답 자리 — 추리 ${posOf(C.steps).length?posOf(C.steps).map(i=>i+1).join('·'):'(빈칸 문장)'} / 소거 ${posOf(C.elim).map(i=>i+1).join('·')}`);
 
   // 6.55 얻을 수 있는 단서인데 「잠김」으로 선언돼 있지 않은가
   //      (잠김은 「아직 못 얻었다」는 표시다. 주는 단서에 잠김을 달면 얻고도 쓸 수 없다)
@@ -157,7 +162,6 @@ function run(C){
     if(tag.test(s.label||''))E.push(`미끼 이름 <code>${s.id}</code> 에 HTML 태그가 있습니다`);
     if(typeof s.decoy==='string'&&tag.test(s.decoy))E.push(`미끼 설명 <code>${s.id}</code> 에 HTML 태그가 있습니다`);
   });
-  (C.accuse||[]).forEach(a=>{if(tag.test(a.t||''))E.push(`지목 후보 <code>${a.id}</code> 에 HTML 태그가 있습니다`)});
   (C.elim||[]).forEach(e=>{if(tag.test(e.name||''))E.push(`소거 이름 「${e.name}」 에 HTML 태그가 있습니다`)});
   Object.keys(C.clues||{}).forEach(id=>{if(tag.test(clue(id).n||''))E.push(`단서 이름 <code>${id}</code> 에 HTML 태그가 있습니다`)});
   (C.scenes||[]).forEach(sc=>{if(tag.test(sc.label||''))E.push(`현장 이름 「${sc.label}」 에 HTML 태그가 있습니다`)});
@@ -236,7 +240,7 @@ function run(C){
     if(!collectable.has(id))E.push(`현장 <code>${sc.label||sc.id}</code> 의 조건 단서 <code>${id}</code> 를 얻을 방법이 없습니다`);
     if(!sc.needSay)W.push(`현장 <code>${sc.label||sc.id}</code> 에 needSay 가 없습니다`);
   }));
-  I.push(`추리 ${(C.steps||[]).length}단계 · 소거 ${(C.elim||[]).length}명 · 지목 후보 ${(C.accuse||[]).length}명`);
+  I.push(`추리 ${(C.steps||[]).length}단계 · 소거 ${(C.elim||[]).length}${C.elimUnit||'명'} · 재현 ${((C.replay&&C.replay.cuts)||[]).length}장면`);
   return {E,W,I};
 }
 function render(r,name){
