@@ -244,10 +244,15 @@
   .word.gone{opacity:.3;box-shadow:none;text-decoration:line-through}
 
   /* ---------- 추리: 시간표 판 ---------- */
-  .tlwrap{width:100%;height:100%;overflow-y:auto;padding:8px 10px;scrollbar-width:thin}
+  /* 판이 칸보다 길면 **놓아야 할 카드**가 아래로 잘려 나간다. 스크롤은 되지만 아이는
+     그런 게 있는 줄 모른다 — 사건 3 2단계에서 도토·콩순이 카드를 못 찾는 일이 있었다.
+     그래서 세로로 쌓되, 시간 띠만 줄어들고 **쟁반과 안내는 절대 안 줄어들게** 한다. */
+  .tlwrap{width:100%;height:100%;overflow-y:auto;padding:8px 10px;scrollbar-width:thin;
+    display:flex;flex-direction:column;--laneh:38px;--lanetop:10px}
   .tlhd{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;flex-wrap:wrap}
   .tlhd b{font-family:"Gaegu",cursive;font-size:16px}
-  .rail{position:relative;height:190px;background:#fffaf0;border:2.5px solid var(--line);border-radius:10px;
+  .rail{position:relative;flex:1 1 auto;min-height:150px;max-height:230px;
+    background:#fffaf0;border:2.5px solid var(--line);border-radius:10px;
     box-shadow:2px 3px 0 var(--line);overflow:hidden;touch-action:none}
   .rail .night{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#3b3a55 0,#5d5678 70%,rgba(93,86,120,0));pointer-events:none}
   .rail .sunmark{position:absolute;top:0;bottom:0;border-left:2px solid #d9a441;pointer-events:none}
@@ -267,10 +272,25 @@
   .ev .who{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line);background:#c98a3c;flex:0 0 auto}
   .ev .w-owl{background:#a99e88}.ev .w-bell{background:#6d7f88}.ev .w-mori{background:#8b6a44}
   .ev .w-doto{background:#c98a3c}.ev .w-kongsun{background:#9aa27a}
+  .tlhd,.tray,#tl-tip{flex:0 0 auto}
   .tray{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;min-height:34px}
+  /* 쟁반이 「여기서 꺼내 놓는 곳」으로 읽히게 — 빈 칸처럼 테를 두른다 */
+  .tray:not(:empty){border:2px dashed var(--line);border-radius:10px;background:#fbf6ea;padding:6px;gap:7px}
   .tray .ev{position:static;transform:none}
   .tray .ev.sel{background:#ffe9b3;outline:3px solid var(--must-d);outline-offset:1px}
   #tl-tip{margin:6px 0 0}
+  /* 낮은 화면: 줄 간격과 글자를 줄여 다섯 줄이 들어가게 한다 */
+  @media (max-height:430px){
+    .tlwrap{--laneh:30px;--lanetop:7px;padding:6px 8px}
+    .tlhd{margin-bottom:4px}
+    .tlhd b{font-size:14px}
+    .tlhd .muted{font-size:10.5px}
+    .rail{min-height:132px}
+    .ev{font-size:10.5px;padding:3px 7px}
+    .ev .who{width:11px;height:11px}
+    .tray{margin-top:6px;min-height:30px;padding:5px}
+    #tl-tip{font-size:11px;margin-top:4px}
+  }
 
   /* ---------- 재현 (지목을 대신한다) ---------- */
   .replaywrap{width:100%;height:100%;overflow-y:auto;padding:8px 10px;scrollbar-width:thin}
