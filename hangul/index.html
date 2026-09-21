@@ -58,6 +58,9 @@ button:focus-visible{outline:3px solid var(--brown);outline-offset:3px}
 /* 쵸코 */
 .choco{width:120px;height:120px;flex:none;position:relative}
 .choco svg,.choco img{width:100%;height:100%;display:block}
+.choco .lay{position:absolute;inset:0;pointer-events:none}
+/* 그림 쵸코일 때 배경·그림·물건이 이 순서로 겹쳐야 한다. img를 흐름에 두면 절대배치한 배경이 그림을 덮는다 */
+.choco>img,.today.dress .chip>img{position:absolute;inset:0}
 .choco.big{width:170px;height:170px}
 .choco.sm{width:64px;height:64px}
 .bob{animation:bob 3s ease-in-out infinite}
@@ -76,6 +79,14 @@ button:focus-visible{outline:3px solid var(--brown);outline-offset:3px}
 .today .label{font-size:14px;color:var(--brown);font-family:"Jua",sans-serif}
 .today .title{font-size:23px;font-family:"Jua",sans-serif}
 .today .go{margin-left:auto}
+.today.dress{background:linear-gradient(135deg,var(--peach),#FFE6DA);margin-top:-4px}
+.today.dress .chip{width:56px;height:56px;border-radius:50%;background:var(--card);display:grid;place-items:center;flex:none;box-shadow:0 3px 0 rgba(139,90,60,.12);overflow:hidden;position:relative}
+.today.dress .chip svg,.today.dress .chip img{width:100%;height:100%;display:block}
+.today.dress .chip .lay{position:absolute;inset:0;pointer-events:none}
+.today.dress .title{font-size:20px}
+.today.dress .bar{display:block;width:140px;max-width:100%;height:8px;border-radius:999px;background:rgba(255,255,255,.75);margin-top:7px;overflow:hidden}
+.today.dress .bar i{display:block;height:100%;border-radius:999px;background:var(--brown);transition:width .3s}
+.today.dress.done{background:linear-gradient(135deg,var(--mint),#DCF5EA)}
 .stage{border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
 .stage.mint{background:var(--mint)} .stage.peach{background:var(--peach)} .stage.lavender{background:var(--lavender)} .stage.yellow{background:var(--yellow)}
 .stage-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -246,15 +257,16 @@ table.log td,table.log th{padding:6px 4px;border-bottom:1px solid var(--line);te
       </span>
       <span class="go btn small">가자</span>
     </button>
-    <div id="stages"></div>
-    <button class="today" id="dressCard">
-      <span class="icon">🎀</span>
+    <button class="today dress" id="dressCard">
+      <span class="chip" id="dressMini"></span>
       <span>
-        <span class="label">모은 물건</span><br>
-        <span class="title" id="dressCount">쵸코 꾸미기</span>
+        <span class="label">쵸코 꾸미기</span><br>
+        <span class="title" id="dressCount">모은 물건 0 / 17</span>
+        <span class="bar"><i id="dressBar"></i></span>
       </span>
-      <span class="go btn small">가자</span>
+      <span class="go btn small">꾸미기</span>
     </button>
+    <div id="stages"></div>
     <div class="teachfoot">
       <a href="worksheets/1단계학습지.pdf" target="_blank" rel="noopener">🖨️ 1단계 학습지</a>
       <a href="worksheets/읽기확인표.pdf" target="_blank" rel="noopener">📋 읽기 확인표</a>
@@ -399,7 +411,7 @@ function chocoSVG(mood){
       + '<ellipse cx="73" cy="110" rx="10" ry="7" fill="'+WHITE+'" stroke="'+LINE+'" stroke-width="2"/>';
   return '<svg viewBox="0 0 120 120" aria-hidden="true">'
     /* 꾸미기 — 배경은 맨 뒤에 */
-    + wornLayers(['bg'])
+    + bgLayer()
     /* 금색 줄무늬 꼬리 */
     + '<path d="M92 100q24-6 16-30" stroke="'+GOLD+'" stroke-width="11" fill="none" stroke-linecap="round"/>'
     + '<path d="M99 96l4 3M105 88l5 2M108 79l5 1" stroke="'+GOLD_D+'" stroke-width="3.5" stroke-linecap="round"/>'
@@ -424,9 +436,17 @@ function chocoSVG(mood){
     + wornLayers(['face','neck','hat','hand'])
     + '</svg>';
 }
+/* 그림 쵸코는 SVG 쵸코와 눈 위치가 조금 다르다. 꾸민 물건을 눈 기준으로 맞춘다.
+   (SVG 눈 가운데 60,55 · 사이 30) → (그림 눈 가운데 56,47.2 · 사이 28.7) */
+const WEAR_T = 'translate(56,47.2) scale(0.957) translate(-60,-55)';
 function renderChoco(el, mood){
   el.dataset.mood = mood;
-  el.innerHTML = useImages ? '<img src="choco/'+mood+'.png" alt="">' : chocoSVG(mood);
+  el.innerHTML = useImages
+    ? '<svg class="lay" viewBox="0 0 120 120" aria-hidden="true">' + bgLayer() + '</svg>'
+      + '<img src="choco/'+mood+'.png" alt="">'
+      + '<svg class="lay" viewBox="0 0 120 120" aria-hidden="true"><g transform="'+WEAR_T+'">'
+      + wornLayers(['face','neck','hat','hand']) + '</g></svg>'
+    : chocoSVG(mood);
 }
 function animate(el, cls){ el.classList.remove('wiggle','jump'); void el.offsetWidth; el.classList.add(cls); }
 
@@ -614,6 +634,15 @@ const ITEMS = [
 const ITEM_BY_ID = {}; ITEMS.forEach(function(it){ ITEM_BY_ID[it.id]=it; });
 function dressState(){ if(!store.dress) store.dress = { owned:[], worn:{} }; return store.dress; }
 function ownsItem(id){ return dressState().owned.indexOf(id) >= 0; }
+/* 배경은 네모로 각지면 상자처럼 보인다. 모서리를 둥글려 액자처럼 만든다 */
+let bgClipN = 0;
+function bgLayer(){
+  const b = wornLayers(['bg']);
+  if(!b) return '';
+  const id = 'bgclip' + (++bgClipN);
+  return '<defs><clipPath id="'+id+'"><rect width="120" height="120" rx="15" ry="15"/></clipPath></defs>'
+       + '<g clip-path="url(#'+id+')">' + b + '</g>';
+}
 function wornLayers(slots){
   const w = dressState().worn;
   return slots.map(function(sl){ const it = ITEM_BY_ID[w[sl]]; return (it && ownsItem(it.id)) ? it.svg : ''; }).join('');
@@ -679,8 +708,11 @@ function renderHome(){
   $('#todayIcon').textContent = nl.icon;
   $('#todayTitle').textContent = nl.title;
   $('#todayCard').onclick = ()=>{ sfx.tap(); startLesson(nl); };
-  const dn = dressState().owned.length;
-  $('#dressCount').textContent = dn ? ('쵸코 꾸미기 · ' + dn + '/' + ITEMS.length) : '쵸코 꾸미기';
+  const dn = dressState().owned.length, dall = ITEMS.length;
+  $('#dressCount').textContent = '모은 물건 ' + dn + ' / ' + dall;
+  $('#dressBar').style.width = Math.round(dn/dall*100) + '%';
+  $('#dressCard').classList.toggle('done', dn===dall);
+  renderChoco($('#dressMini'), dn===dall ? 'cheer' : 'happy');
   $('#dressCard').onclick = ()=>{ sfx.tap(); renderDress(); show('dress'); };
   const wrap = $('#stages');
   wrap.innerHTML='';
