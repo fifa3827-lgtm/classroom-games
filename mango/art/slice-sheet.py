@@ -28,7 +28,11 @@ from PIL import Image, ImageFilter
 from scipy import ndimage
 
 BG_TOL      = 18      # 배경색으로 볼 색 차이
-POCKET_MAX  = 8000    # 이보다 작은 「갇힌 배경」은 지운다 (몸통 안쪽 흰색은 이보다 크다)
+POCKET_MAX  = 0       # 갇힌 배경 주머니를 지울 크기 한도. **0 = 아예 안 지운다.**
+                      # 8000으로 두었더니 눈의 흰자가 통째로 뚫렸다 — 흰자는 배경
+                      # 크림색과 색 차이가 3~8밖에 안 나서 색으로는 구별이 안 된다.
+                      # 팔과 몸 사이 같은 진짜 틈은 크림색으로 남지만, 눈이 뚫리는
+                      # 것보다 낫다. 틈이 거슬리면 그 그림만 손으로 지운다.
 MIN_FIGURE  = 20000   # 칸 하나로 볼 최소 크기
 SPECKLE     = 300     # 이보다 작은 조각은 잡티로 보고 버린다
 MARK_MIN    = 40      # 땀방울·「!」로 볼 최소 크기 (이하는 계단 자국)
@@ -47,7 +51,7 @@ def cut_background(im):
     border = set(lab[0].tolist()) | set(lab[-1].tolist()) | set(lab[:, 0].tolist()) | set(lab[:, -1].tolist())
     kill = np.zeros(n + 1, bool)
     for i in range(1, n + 1):
-        kill[i] = (i in border) or (sz[i - 1] <= POCKET_MAX)
+        kill[i] = (i in border) or (POCKET_MAX and sz[i - 1] <= POCKET_MAX)
     kill[0] = False
     alpha = np.where(kill[lab], 0, 255).astype(np.uint8)
     out = im.convert('RGBA')
