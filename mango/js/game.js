@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609221205';
-import * as Save from './save.js?v=2609221205';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609221322';
+import * as Save from './save.js?v=2609221322';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -15,7 +15,7 @@ var ART={};                                   // 경로 -> true(있음) / false(
 /* 그림 주소에도 판 번호를 붙인다. 예전에는 ?v=1 로 고정이라, 그림을 고쳐 올려도
    한 번이라도 본 기기는 옛 그림을 영영 들고 있었다(탑 2층의 제미나이 별이 그랬다).
    stamp.py 가 올리기 직전에 이 줄을 갱신한다. */
-var ARTV='2609221205';
+var ARTV='2609221322';
 function artURL(f){return 'img/'+f+'?v='+ARTV}
 function artOK(f){return !!(f&&ART[f])}
 function probe(f){return new Promise(function(done){
@@ -1003,6 +1003,18 @@ var BOARDS={
       if(st.wd==null)return '화살표를 돌려 바람이 불어온 쪽을 정해 보세요.';
       var d=b.dirs.filter(function(x){return x.id===st.wd})[0]||{};
       return d.why||'그 방향이면 두 가지가 같은 쪽으로 쏠리지 않아요.'}
+  },
+  /* 자국 따라가기(사건 5) — 바닥의 젖은 자국을 **큰 것부터** 차례로 눌러 길을 잇는다.
+     물 자국은 걸을수록 작아진다. 그래서 순서는 크기가 말해 주고, 이어진 길이 답이다. */
+  trail:{
+    filled:function(b,st){st.tr=st.tr||[];return st.tr.length===b.order.length},
+    ok:function(b,st){st.tr=st.tr||[];return st.tr.length===b.order.length&&st.tr.every(function(id,k){return id===b.order[k]})},
+    why:function(b,st){
+      st.tr=st.tr||[];
+      if(st.tr.length<b.order.length)return '아직 안 이은 자국이 있어요. 큰 것부터 차례로 다 이어 보세요.';
+      for(var k=0;k<b.order.length;k++)if(st.tr[k]!==b.order[k])
+        return (k+1)+'번째부터 어긋나요 — '+(b.why||'물 자국은 걸을수록 작아져요. 큰 것 다음엔 그다음으로 큰 것이에요.');
+      return ''}
   }
 };
 function boardK(c){return BOARDS[(c.board&&c.board.kind)||'timeline']||BOARDS.timeline}
@@ -1252,6 +1264,7 @@ function renderBoardStep(i){
   var k=(C.steps[i].board||{}).kind||'timeline';
   if(k==='plan')return renderPlanStep(i);
   if(k==='wind')return renderWindStep(i);
+  if(k==='trail')return renderTrailStep(i);
   return renderTimelineStep(i);
 }
 function renderTimelineStep(i){
@@ -1357,6 +1370,73 @@ function bindPlan(i){
         S.flags.judgeSay+='</div>';
         renderChain();
         setTimeout(function(){delete st.pl[id];sNo();renderChain()},900);
+        return;
+      }
+      S.flags.judgeSay='';
+      renderChain();autoNext(i,was);
+    });
+  });
+}
+
+/* ---- 자국 판 (board.kind === "trail") — 사건 5의 도서관 바닥 ----
+   위에서 본 방에 젖은 자국이 흩어져 있다. 자국은 걸을수록 작아지므로 **큰 것부터**
+   차례로 누르면 걸어간 길이 실처럼 이어진다. 그림 파일은 안 쓴다 — 방·자리·자국 전부 SVG. */
+function renderTrailStep(i){
+  var c=C.steps[i],b=c.board,st=S.steps[i];st.tr=st.tr||[];
+  var h='<div class="tlwrap planwrap trailwrap" id="tlwrap"><div class="tlhd"><b>'+esc(b.title||'바닥의 자국')+'</b>'+
+        '<span class="muted">'+esc(b.hint||'큰 자국부터 차례로 누르세요')+'</span></div>';
+  h+='<div class="plan trail" id="plan"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet">';
+  h+='<rect class="pl-room" x="14" y="14" width="272" height="152" rx="6"/>';
+  h+=(b.walls||'');                                   /* 문·탁자·서가 같은 붙박이(SVG 조각) */
+  (b.places||[]).forEach(function(m){
+    h+='<text class="pl-mark" x="'+m.x+'" y="'+m.y+'" text-anchor="middle">'+esc(m.t)+'</text>';
+  });
+  /* 이은 길 — 누른 순서대로 실을 긋는다 */
+  var pts=st.tr.map(function(id){var m=b.marks.filter(function(x){return x.id===id})[0];return m?m.x+','+m.y:null}).filter(Boolean);
+  if(pts.length>1)h+='<polyline class="tr-path" points="'+pts.join(' ')+'"/>';
+  b.marks.forEach(function(m){
+    var at=st.tr.indexOf(m.id);
+    var wrong=at>=0&&b.order[at]!==m.id&&(S.easy||S.wrongSet);
+    var r=m.r||6;
+    h+='<g class="tr-mark'+(at>=0?' on':'')+(wrong?' bad':'')+'" data-mark="'+m.id+'" transform="translate('+m.x+' '+m.y+')">'+
+       '<ellipse class="tr-hit" rx="'+(r+9)+'" ry="'+(r+7)+'"/>'+
+       (m.kind==='boot'
+         /* 장화 자국(미끼) — 네모난 굽. 물갈퀴와 한눈에 갈린다 */
+         ?'<rect class="tr-wet tr-boot" x="'+(-r*0.55).toFixed(1)+'" y="'+(-r*0.8).toFixed(1)+'" width="'+(r*1.1).toFixed(1)+'" height="'+(r*1.6).toFixed(1)+'" rx="3"/>'+
+          '<path class="tr-toe" d="M'+(-r*0.4).toFixed(1)+' '+(r*0.3).toFixed(1)+' h'+(r*0.8).toFixed(1)+'"/>'
+         :'<ellipse class="tr-wet" rx="'+r+'" ry="'+(r*0.72).toFixed(1)+'"/>'+
+          /* 물갈퀴 발 — 자국 안의 작은 세 갈래 */
+          '<path class="tr-toe" d="M'+(-r*0.45).toFixed(1)+' 1 L0 '+(-r*0.5).toFixed(1)+' L'+(r*0.45).toFixed(1)+' 1 M0 '+(-r*0.5).toFixed(1)+' L0 '+(r*0.35).toFixed(1)+'"/>')+
+       (at>=0?'<circle class="tr-no" r="7" cx="'+(r*0.8+4).toFixed(1)+'" cy="'+(-r*0.8-2).toFixed(1)+'"/><text class="tr-not" x="'+(r*0.8+4).toFixed(1)+'" y="'+(-r*0.8+1.5).toFixed(1)+'" text-anchor="middle">'+(at+1)+'</text>':'')+
+       '</g>';
+  });
+  h+='</svg></div>';
+  h+='<p class="muted" id="tl-tip">'+(st.tr.length?('이은 자국 <b>'+st.tr.length+' / '+b.order.length+'</b> · 마지막 것을 다시 누르면 도로 풀려요'):'제일 <b>큰</b> 자국부터 누르세요. 물 자국은 걸을수록 작아져요')+'</p>';
+  h+='</div>';
+  $('#left').innerHTML=h;
+  bindTrail(i);
+}
+function bindTrail(i){
+  var c=C.steps[i],b=c.board,st=S.steps[i];
+  $('#left').querySelectorAll('[data-mark]').forEach(function(el){
+    el.addEventListener('click',function(){
+      var id=el.dataset.mark,at=st.tr.indexOf(id);
+      if(at>=0){
+        if(at===st.tr.length-1){sTap();st.tr.pop();S.wrongSet=null;S.flags.judgeSay='';renderChain()}
+        else{sNo();toast('마지막에 이은 자국부터 풀 수 있어요')}
+        return;
+      }
+      if(st.tr.length>=b.order.length){sNo();return toast('자국은 다 이었어요. 틀린 게 있으면 마지막 것부터 풀어요')}
+      var was=stepDone(i),k=st.tr.length;
+      st.tr.push(id);S.wrongSet=null;sStamp();
+      /* 쉬움: 순서가 틀리면 실이 도로 풀리며 망고가 이유를 말한다 */
+      if(b.order[k]!==id&&S.easy){
+        var m=b.marks.filter(function(x){return x.id===id})[0]||{},want=b.marks.filter(function(x){return x.id===b.order[k]})[0]||{};
+        var msg=b.order.indexOf(id)<0?'그건 이 발자국이 아니야 — 모양을 봐.':
+                (m.r||0)>(want.r||0)?'그건 벌써 지난 자국이야 — 더 작은 게 다음이지.':'더 <b>큰</b> 자국이 아직 남아 있어. 물 자국은 걸을수록 작아지니까.';
+        S.flags.judgeSay='<div class="say">'+mface('def')+'<b>망고</b> '+(m.why||msg)+'</div>';
+        renderChain();
+        setTimeout(function(){st.tr.pop();sNo();renderChain()},1100);
         return;
       }
       S.flags.judgeSay='';
@@ -1747,6 +1827,101 @@ function openTray(kind){
 function closeSheet(){var s=$('#sheet');if(s)s.remove()}
 
 /* ================= 지목 → 해결 ================= */
+/* ================= 연결판 추론 이벤트 =================
+   한 막(다섯 편)이 끝나면 꽂힌 단서 다섯 장으로 물음 하나에 답한다. 사건 5의 물음은
+   「이 흙은 어디 흙인가?」 — 마을 지도에서 자리를 짚는다. 틀려도 벌칙은 없고, 관련 카드가
+   반짝이며 망고가 왜 아닌지 말해 준다. 맞히면 도구를 얻고 진도에 남는다(시즌 것).
+   지도는 데이터(places)로 그리므로 사건 10의 마지막 추론도 같은 화면을 쓴다. */
+var INF={open:false,pick:null,wrong:{}};
+function inferData(){return C.board&&C.board.infer}
+function inferDone(){var inf=inferData();if(!inf)return null;var p=Save.loadProg();return (p.infer||{})[inf.id]||null}
+function renderInferButton(){
+  var box=$('#board-infer'),inf=inferData();if(!box)return;
+  var pins=(C.board&&C.board.pins)||[],total=(C.board&&C.board.total)||5;
+  if(!inf||pins.length<total){box.innerHTML='';return}
+  var done=inferDone();
+  if(done){
+    var pl=(inf.map.places||[]).filter(function(x){return x.id===done})[0]||{};
+    box.innerHTML='<div class="infdone"><b>'+esc(inf.title||'추론')+' 완료</b> — '+(inf.q||'')+' → <b>'+esc(pl.t||done)+'</b>'+
+      (inf.reward?'<span class="tool">🔍 '+esc(inf.reward.t)+'</span>':'')+
+      '<button class="mini" id="inf-again">다시 보기</button></div>';
+    $('#inf-again').onclick=function(){sTap();openInfer(true)};
+  }else{
+    box.innerHTML='<button class="btn infbtn" id="inf-go">🧵 '+esc(inf.title||'추론')+' — '+(inf.q||'')+'</button>';
+    $('#inf-go').onclick=function(){sTap();openInfer(false)};
+  }
+}
+function villageMap(inf,solved){
+  /* 마을 지도 — 강은 아래, 광장은 가운데. 자리는 데이터의 x·y(%) 로 찍는다. */
+  var h='<svg class="vmap" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">'+
+    '<rect x="0" y="0" width="400" height="240" fill="#e9e4cf"/>'+
+    '<path d="M0 205 C60 190 120 222 190 210 S330 196 400 214 L400 240 L0 240 Z" fill="#a9c6d3"/>'+      /* 강 */
+    '<path d="M0 205 C60 190 120 222 190 210 S330 196 400 214" fill="none" stroke="#7fa3b3" stroke-width="2"/>'+
+    '<path d="M40 60 L120 60 L120 110 L40 110 Z" fill="#d8cfb4" stroke="#b9a883" stroke-width="1.2"/>'+    /* 학교 터 */
+    '<ellipse cx="205" cy="128" rx="78" ry="46" fill="#d5cdb2" stroke="#b9a883" stroke-width="1.2"/>'+       /* 광장 돌바닥 */
+    '<path d="M120 85 L205 128 M205 128 L300 120 M205 128 L205 200 M205 128 L150 128" fill="none" stroke="#c9bd9e" stroke-width="5" stroke-linecap="round"/>'+ /* 길 */
+    '<circle cx="262" cy="104" r="17" fill="#8fa66a"/><circle cx="262" cy="104" r="6" fill="#b8865a"/>'+     /* 느티나무 */
+    '<rect x="150" y="98" width="12" height="30" fill="#cbb48c" stroke="#8a6a44" stroke-width="1.2"/>'+     /* 시계탑 */
+    '<rect x="300" y="98" width="46" height="30" rx="2" fill="#e3d2a6" stroke="#8a6a44" stroke-width="1.2"/>'+ /* 도서관 */
+    '<rect x="52" y="70" width="60" height="30" rx="2" fill="#e8d9bf" stroke="#8a6a44" stroke-width="1.2"/>';  /* 급식실 */
+  (inf.map.places||[]).forEach(function(pl){
+    var x=pl.x*4,y=pl.y*2.4,on=INF.pick===pl.id,bad=INF.wrong[pl.id],ok=solved&&pl.id===inf.answer;
+    h+='<g class="vm-pl'+(on?' on':'')+(bad?' bad':'')+(ok?' ok':'')+'" data-place="'+pl.id+'" transform="translate('+x+' '+y+')">'+
+       '<circle class="vm-hit" r="22"/><circle class="vm-dot" r="8"/>'+
+       (ok?'<text class="vm-chk" y="4" text-anchor="middle">✓</text>':'')+
+       '<text class="vm-t" y="22" text-anchor="middle">'+esc(pl.t)+'</text></g>';
+  });
+  return h+'</svg>';
+}
+function openInfer(review){
+  var inf=inferData();if(!inf)return;
+  INF.open=true;INF.pick=null;INF.wrong={};
+  var done=inferDone();
+  var old=$('#infer');if(old)old.remove();
+  var d=document.createElement('div');d.id='infer';d.className='inferwrap';
+  var pins=(C.board&&C.board.pins)||[];
+  var h='<div class="infcard"><div class="infhd"><b>'+esc(inf.title||'추론')+'</b><button class="mini" id="inf-x">닫기</button></div>'+
+    '<p class="infq">'+inf.q+'</p>'+
+    '<div class="infpins">'+pins.map(function(p,k){
+      var art=artOK(p.img)?'<img src="'+artURL(p.img)+'" alt="">':'<svg viewBox="0 0 28 28"><use href="#'+(p.sym||'i-print')+'"></use></svg>';
+      return '<div class="ipin" data-pin="'+(k+1)+'">'+art+'<span>'+esc(p.t)+'</span></div>'}).join('')+'</div>'+
+    '<div class="infmap" id="infmap">'+villageMap(inf,!!done)+'</div>'+
+    '<div class="say infsay" id="infsay">'+mface('def')+'<b>망고</b> '+(done?inf.say:(inf.hint||'지도에서 자리를 골라 봐.'))+'</div>'+
+    (done&&inf.reward?'<div class="infreward">🔍 <b>'+esc(inf.reward.t)+'</b> — '+esc(inf.reward.desc||'')+'</div>':'')+
+    '</div>';
+  d.innerHTML=h;
+  $('#s-board').appendChild(d);
+  $('#inf-x').onclick=function(){sTap();closeInfer()};
+  if(!done)bindInferMap();
+}
+function closeInfer(){INF.open=false;var d=$('#infer');if(d)d.remove();renderInferButton()}
+function bindInferMap(){
+  var inf=inferData();
+  $('#infmap').querySelectorAll('[data-place]').forEach(function(el){
+    el.addEventListener('click',function(){
+      var id=el.dataset.place;
+      if(id===inf.answer){
+        sGood();
+        Save.markInfer(inf.id,id,inf.reward&&inf.reward.id);
+        INF.pick=id;
+        $('#infmap').innerHTML=villageMap(inf,true);
+        $('#infsay').innerHTML=mface('joy')+'<b>망고</b> '+inf.say;
+        if(inf.reward){var r=document.createElement('div');r.className='infreward';
+          r.innerHTML='🔍 <b>'+esc(inf.reward.t)+'</b> — '+esc(inf.reward.desc||'');$('#infsay').after(r)}
+        renderInferButton();
+        return;
+      }
+      /* 틀림 — 벌칙 없음. 왜 아닌지 말하고, 관련 카드를 반짝인다 */
+      sNo();INF.wrong[id]=1;INF.pick=id;
+      var w=(inf.wrong||{})[id]||{};
+      $('#infmap').innerHTML=villageMap(inf,false);bindInferMap();
+      $('#infsay').innerHTML=mface('fl')+'<b>망고</b> '+(w.why||'거기는 아니야.');
+      document.querySelectorAll('#infer .ipin').forEach(function(p){p.classList.remove('blink')});
+      (w.blink||[]).forEach(function(n){var p=document.querySelector('#infer .ipin[data-pin="'+n+'"]');if(p)p.classList.add('blink')});
+    });
+  });
+}
+
 /* 해결 화면 끝의 「설명이 안 되는 것」과 연결판. 사건마다 다른 실마리가 남는다 —
    여기가 사건 1 것으로 고정돼 있으면 두 번째 사건도 같은 발자국 이야기로 끝난다. */
 /* 해결 화면의 인물 그림. 사건 1의 콩순이가 박혀 있어 사건 2에서도 콩순이가 나왔다. */
@@ -1777,6 +1952,7 @@ function applyEpilogue(){
     if(c)c.innerHTML=pins.length+' / '+total+' · '+total+'장이 모이면 <b>추론</b>할 수 있어요';
     var say=$('#board-say');
     if(say){if(b.mango){say.hidden=false;say.innerHTML='<b>망고</b> '+b.mango}else say.hidden=true}
+    renderInferButton();
     var nt=$('#board-next-t'),nw=$('#board-next-w');
     if(nt)nt.textContent='다음 사건 「'+((C.next&&C.next.title)||'?')+'」';
     if(nw)nw.innerHTML=b.when||'곧 열려요.';

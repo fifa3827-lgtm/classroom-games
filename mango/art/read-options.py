@@ -56,6 +56,14 @@ for k, st in enumerate(D.get('steps', [])):
             for d in B['dirs']:
                 print('   방향 「%s」%s' % (d['t'], '   ← 정답' if d['id'] == B['answer'] else ''))
                 if d.get('why'): print('      ✗ ' + strip(d['why']))
+        elif kind == 'trail':
+            print('   판(자국): ' + B.get('title', ''))
+            by = {m['id']: m for m in B['marks']}
+            print('   순서: ' + ' → '.join('%s(r%s)' % (i, by[i]['r']) for i in B['order']))
+            for m in B['marks']:
+                if m['id'] not in B['order']:
+                    print('   미끼 %s(%s)  ✗ %s' % (m['id'], m.get('kind', ''), strip(m.get('why'))))
+            print('   틀렸을 때: ' + strip(B.get('why', '')))
         print('   안내: ' + strip(B.get('ask', '')))
         print('   다 놓으면: ' + strip(B.get('done', '')))
     for i, o in enumerate(st.get('opts', [])):
@@ -74,3 +82,17 @@ for e in D.get('elim', []):
 print('\n\n■ 재현 (순서대로 읽어 자연스러운가)')
 for i, c in enumerate((D.get('replay') or {}).get('cuts', [])):
     print('  %d. %s' % (i + 1, strip(c['t'])))
+
+inf = (D.get('board') or {}).get('infer')
+if inf:
+    print('\n\n■ 연결판 추론 「%s」 (막이 끝날 때 한 번)' % inf.get('title', ''))
+    print('  물음: ' + strip(inf['q']))
+    print('  힌트: ' + strip(inf.get('hint', '')))
+    for pl in inf['map']['places']:
+        ok = pl['id'] == inf['answer']
+        w = (inf.get('wrong') or {}).get(pl['id'], {})
+        print('  · %s%s' % (pl['t'], '   ← 정답' if ok else ''))
+        if not ok: print('      ✗ ' + strip(w.get('why', '(why 없음)')) + '  (반짝: %s)' % w.get('blink'))
+    print('  맞히면: ' + strip(inf.get('say', '')))
+    if inf.get('reward'): print('  보상: %s — %s' % (inf['reward']['t'], inf['reward'].get('desc', '')))
+

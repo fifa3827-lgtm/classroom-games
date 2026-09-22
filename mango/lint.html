@@ -201,7 +201,7 @@ function run(C){
     }
     if(st.board){
       const B=st.board, KIND=B.kind||'timeline';
-      if(!['timeline','plan','wind'].includes(KIND))return E.push(`${n}단계: 모르는 판 종류 ${KIND}`);
+      if(!['timeline','plan','wind','trail'].includes(KIND))return E.push(`${n}단계: 모르는 판 종류 ${KIND}`);
 
       if(KIND==='plan'){
         /* 평면도: 자리마다 정답 카드가 하나씩, 정답끼리 겹치지 않고, 미끼가 최소 하나 */
@@ -231,6 +231,29 @@ function run(C){
         return;
       }
 
+      if(KIND==='trail'){
+        /* 자국 판: 순서에 든 자국은 전부 있어야 하고, **크기가 큰 것부터 작은 것 순**이어야 한다
+           (아이가 보는 규칙이 「큰 것부터」이므로 데이터가 그 규칙을 어기면 풀 수 없는 판이 된다).
+           미끼 자국(순서 밖)은 하나 이상, 그리고 why 가 있어야 한다. */
+        const ms=B.marks||[], ids=ms.map(x=>x.id), byId={}; ms.forEach(x=>byId[x.id]=x);
+        if(ms.length<3)E.push(`${n}단계: 자국이 ${ms.length}개뿐입니다`);
+        if(new Set(ids).size!==ids.length)E.push(`${n}단계: 자국 id 가 겹칩니다`);
+        if(!(B.order||[]).length)E.push(`${n}단계: 정답 순서(order)가 없습니다`);
+        (B.order||[]).forEach(id=>{if(!byId[id])E.push(`${n}단계: 순서의 ${id} 가 자국 목록에 없습니다`)});
+        for(let k=1;k<(B.order||[]).length;k++){
+          const a=byId[B.order[k-1]],b=byId[B.order[k]];
+          if(a&&b&&!(a.r>b.r))E.push(`${n}단계: 순서 ${k}→${k+1} 에서 자국이 작아지지 않습니다 (${a.r} → ${b.r}) — 「큰 것부터」 규칙과 어긋납니다`);
+        }
+        const decoys=ms.filter(x=>!(B.order||[]).includes(x.id));
+        if(!decoys.length)W.push(`${n}단계: 미끼 자국이 없습니다 — 순서 밖 자국(장화 등)이 하나는 있어야 「모양 보기」가 생깁니다`);
+        decoys.forEach(x=>{if(!x.why)E.push(`${n}단계: 미끼 자국 ${x.id} 에 why 가 없습니다`)});
+        ms.forEach(x=>{if(!(x.x>=14&&x.x<=286&&x.y>=14&&x.y<=166))E.push(`${n}단계: 자국 ${x.id} 가 방 밖에 있습니다 (${x.x},${x.y})`)});
+        if(!B.ask)W.push(`${n}단계: 자국 판에 안내문(ask)이 없습니다`);
+        if(!B.done)W.push(`${n}단계: 자국 판에 다 이었을 때의 말(done)이 없습니다`);
+        [[B.title,'제목'],[B.hint,'한 줄 설명']].forEach(([v,nm])=>{if(v&&tag.test(v))E.push(`${n}단계: 자국 판 ${nm}에 HTML 태그가 있습니다`)});
+        (B.places||[]).forEach(x=>{if(tag.test(x.t||''))E.push(`${n}단계: 자리 이름 「${x.t}」 에 HTML 태그가 있습니다`)});
+        return;
+      }
       if(KIND==='wind'){
         const ids=(B.dirs||[]).map(x=>x.id);
         if(ids.length<3)E.push(`${n}단계: 방향이 ${ids.length}개뿐입니다 (넷 권장)`);

@@ -58,6 +58,8 @@ function saveProg(p){try{localStorage.setItem(PROG,JSON.stringify(p))}catch(e){}
 /* 해결한 사건은 별점(1~3)을 남긴다. 다시 풀어 더 잘하면 올라가고, 못해도 내려가지 않는다. */
 function markDone(id,star){var p=loadProg();var s=Math.max(1,Math.min(3,star||1));p.done[id]=Math.max(p.done[id]||0,s);saveProg(p);return p}
 function markOpen(id){var p=loadProg();p.open[id]=1;saveProg(p);return p}
+/* 연결판 추론 — 막이 끝날 때 한 번 푸는 물음. 답과 얻은 도구를 진도에 남긴다(사건마다가 아니라 시즌 것이다). */
+function markInfer(id,answer,tool){var p=loadProg();p.infer=p.infer||{};p.tools=p.tools||[];p.infer[id]=answer;if(tool&&p.tools.indexOf(tool)<0)p.tools.push(tool);saveProg(p);return p}
 /* 브라우저에 「이 자료는 자리가 모자라도 지우지 말아 달라」고 청한다.
    들어줄지는 브라우저가 정한다. 안 들어줘도 게임은 그대로 돌아간다. */
 function askPersist(){
@@ -108,4 +110,4 @@ function agoText(t){
 }
 
 export {save, saveNow, load, clear, has, loadPrefs, savePrefs, makeCode, applyCode, agoText,
-        loadProg, saveProg, markDone, markOpen, askPersist};
+        loadProg, saveProg, markDone, markOpen, markInfer, askPersist};

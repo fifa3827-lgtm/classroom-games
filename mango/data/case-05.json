@@ -1,0 +1,966 @@
+{
+ "id": "case-05",
+ "no": 5,
+ "title": "도서관의 비 오는 날",
+ "coverImg": "cover-01.webp",
+ "sceneImg": "scene-05-library.webp",
+ "introStyle": "cine",
+ "introBg": "scene-05-library.webp",
+ "intro": [
+  {
+   "who": "narr",
+   "day": "축제까지 16일",
+   "bg": "scene-05-library.webp",
+   "bgPos": "50% 50%",
+   "bgSize": "180%",
+   "t": "축제까지 열여섯 밤. 어제 오후 세 시, 도토리 마을에 <b>갑자기 비</b>가 쏟아졌습니다. 우산 없는 사람들이 도서관 처마로 뛰어들었지요."
+  },
+  {
+   "who": "narr",
+   "day": "축제까지 16일",
+   "bg": "scene-05-library.webp",
+   "fx": "dawn",
+   "t": "그리고 오늘 아침, 사서 모리가 반납함을 비우다 멈췄습니다. 큰 그림책 한 권이 <b>없습니다</b>. 바닥엔 — 마른 흙 한 줌."
+  }
+ ],
+ "brief": {
+  "who": "모리",
+  "role": "두더지 · 도서관 사서",
+  "sym": "mori",
+  "text": "\"탐정님… 도토가 어제 낮에 반납함에 넣었다는 <b>『구름 도감』</b>이 없어요. 아침에 반납함을 비웠는데 다른 책은 다 있고 그것만… 큰 책이라 잃어버릴 수가 없는데.\"",
+  "mango": "\"비 오는 날 없어진 책이라. …비가 <b>시계</b>야, 모리. 젖은 건 비 온 뒤, 마른 건 비 오기 전. 뭐가 젖었고 뭐가 말랐는지부터 보자.\"",
+  "note": "모리의 말은 <b>수첩</b>에 증언 카드로 기록됩니다."
+ },
+ "memo": "책이 반납함에서 사라졌다. <b>비가 시계다</b> — 젖은 것은 비 온 뒤, 마른 것은 비 오기 전. 뭐가 젖었고 뭐가 말랐나.",
+ "startClues": [
+  "t_mori"
+ ],
+ "clues": {
+  "t_mori": {
+   "n": "모리: 아침에 비웠는데 없다",
+   "icon": "#i-talk",
+   "testi": true,
+   "t": "\"아침 8시에 반납함을 비웠어요. 다른 책은 다 있는데 도토가 넣었다는 <b>『구름 도감』</b>만… 큰 책이라 잃어버릴 수가 없는데.\""
+  },
+  "c_box": {
+   "n": "문 옆 반납함",
+   "icon": "#i-door",
+   "iconImg": "c5-box.png",
+   "t": "문 옆 반납함이에요. <b>뚜껑은 젖었는데 안은 말라</b> 있어요 — 다섯 권 다 <b>말라</b> 있죠. 뚜껑 안쪽에 큰 책이 끼어 <b>반쯤 열려 있던</b> 자국과, 그걸 <b>뽑아낼 때 긁힌</b> 자국이 있어요. 바닥엔 뭔가 <b>부슬부슬한 것</b>이 흘렀고요."
+  },
+  "c_soil": {
+   "n": "반납함의 마른 흙",
+   "icon": "#i-crumb",
+   "iconImg": "c5-soil.png",
+   "odd": true,
+   "t": "반납함 바닥의 <b>붉은 흙</b> 한 줌. <b>바싹 말라</b> 있어요. 어제 온 손님들은 다 <b>젖은</b> 흙을 묻혀 왔는데, 이건 마른 채예요 — <b>비 오기 전에</b> 들어간 흙이에요. 풀뿌리와 <b>느티나무 잎 부스러기</b>가 섞였고, 사건 1 창턱의 붉은 흙과 같은 빛이에요."
+  },
+  "c_floor": {
+   "n": "바닥의 젖은 자국",
+   "icon": "#i-print",
+   "iconImg": "c5-floor.png",
+   "t": "바닥에 <b>물갈퀴</b> 발자국이 젖은 채 남았어요. 문에서 탁자로, 탁자에서 다시 문 쪽으로. <b>갈수록 작아져요</b> — 걸을수록 발이 마르니까요. 제일 작은 자국은 <b>반납함 앞</b>에 있어요."
+  },
+  "c_table": {
+   "n": "열람 탁자",
+   "icon": "#i-tub",
+   "iconImg": "c5-table.png",
+   "t": "열람 탁자예요. 의자 하나가 <b>젖어</b> 있고, 탁자엔 다른 그림책이 펼쳐진 채예요. 젖은 의자 위에 <b>흰 것</b>이 하나 붙어 있어요.",
+   "follow": {
+    "give": "c_feather",
+    "who": "망고",
+    "voice": "mango",
+    "say": "흰 것? …깃털이네."
+   }
+  },
+  "c_feather": {
+   "n": "의자 위의 흰 깃털",
+   "icon": "#i-strap",
+   "iconImg": "c5-feather.png",
+   "t": "젖은 의자에 붙어 있던 <b>흰 깃털</b>. 물기가 있어요. 이 마을에서 흰 깃털은 <b>오리</b>예요."
+  },
+  "c_paper": {
+   "n": "문 앞의 젖은 신문",
+   "icon": "#i-door",
+   "iconImg": "c5-paper.png",
+   "t": "문턱 밖에 <b>오후 신문</b>이 흠뻑 젖어 있어요. 오후 신문은 늘 <b>2시 반</b>에 마른 채로 와요. 그러니 비는 <b>2시 반 뒤</b>에 온 거예요."
+  },
+  "c_web": {
+   "n": "문 앞 진흙의 발자국",
+   "icon": "#i-print",
+   "iconImg": "c5-web.png",
+   "t": "문턱 밖 젖은 진흙에 <b>물갈퀴</b> 발자국이 찍혔어요. <b>반납함 바로 앞</b>에서 시작해 <b>강가</b> 쪽 길로 가요. 젖은 진흙에 찍혔으니 <b>비 온 뒤</b>예요."
+  },
+  "c_boots": {
+   "n": "문가의 장화 자국",
+   "icon": "#i-print",
+   "iconImg": "c5-boots.png",
+   "t": "문가 안쪽에 <b>큰 장화</b> 자국 두 걸음. <b>젖은 갈색 진흙</b>이에요 — 광장 공사 흙. 두 걸음에서 <b>끝나요</b>. 더 안으로는 안 들어왔어요."
+  },
+  "t_rain": {
+   "n": "모리: 비는 3시에",
+   "icon": "#i-talk",
+   "testi": true,
+   "t": "\"창밖을 봤어요. 시계가 <b>3시</b>였어요. <b>4시 반</b>쯤 그쳤고요.\""
+  },
+  "t_doto": {
+   "n": "도토: 12시에 넣었다",
+   "icon": "#i-talk",
+   "testi": true,
+   "t": "\"<b>12시</b>에 반납함에 넣었어. 크고 두꺼워서 뚜껑이 안 닫히고 <b>반쯤 삐져나왔지</b>. 그땐 해가 쨍쨍했고.\""
+  },
+  "t_bear": {
+   "n": "반장 곰: 문가에만 있었다",
+   "icon": "#i-talk",
+   "testi": true,
+   "t": "\"3시 넘어 비 피하러 들어왔소. 장화가 진흙투성이라 <b>문가에만</b> 서 있다 갔소. 반납함? 손도 안 댔소.\""
+  },
+  "t_duck_in": {
+   "n": "오리: 3시쯤 뛰어들어왔다",
+   "icon": "#i-talk",
+   "testi": true,
+   "t": "\"<b>3시</b>쯤 비 피하러 뛰어들어왔어요. <b>흠뻑 젖어서요</b>. 탁자에서 그림책 보다가…\""
+  },
+  "t_duck": {
+   "n": "오리: 우산 대신 썼다",
+   "icon": "#i-talk",
+   "testi": true,
+   "photo": "c5-book.png",
+   "t": "\"…아, 그 책이요? 비 오는데 <b>우산</b> 대신 뭐라도 써야죠. 문 옆에 반쯤 나와 있길래. <b>집</b>에 있어요, 좀 젖었지만.\""
+  }
+ },
+ "order": [
+  "t_mori",
+  "c_box",
+  "c_soil",
+  "c_floor",
+  "c_table",
+  "c_feather",
+  "c_paper",
+  "c_web",
+  "c_boots",
+  "t_rain",
+  "t_doto",
+  "t_bear",
+  "t_duck_in",
+  "t_duck"
+ ],
+ "scenes": [
+  {
+   "id": "lib",
+   "label": "도서관",
+   "img": "scene-05-library.webp",
+   "overlay": "<rect x=\"0\" y=\"0\" width=\"720\" height=\"215\" fill=\"#efe6cf\"/><rect x=\"0\" y=\"215\" width=\"720\" height=\"145\" fill=\"#d9bf90\"/><line x1=\"0\" y1=\"232\" x2=\"720\" y2=\"232\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"250\" x2=\"720\" y2=\"250\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"268\" x2=\"720\" y2=\"268\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"286\" x2=\"720\" y2=\"286\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"304\" x2=\"720\" y2=\"304\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"322\" x2=\"720\" y2=\"322\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"340\" x2=\"720\" y2=\"340\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"358\" x2=\"720\" y2=\"358\" stroke=\"#c4a677\" stroke-width=\"1.2\"/><line x1=\"0\" y1=\"215\" x2=\"720\" y2=\"215\" stroke=\"#8a6a44\" stroke-width=\"2.4\"/><rect x=\"262\" y=\"52\" width=\"124\" height=\"104\" rx=\"4\" fill=\"#b9c4cc\" stroke=\"#6b4f2e\" stroke-width=\"3\"/><g stroke=\"#e8eef2\" stroke-width=\"1.4\" opacity=\".8\"><line x1=\"299\" y1=\"77\" x2=\"296\" y2=\"91\"/><line x1=\"336\" y1=\"130\" x2=\"333\" y2=\"144\"/><line x1=\"373\" y1=\"87\" x2=\"370\" y2=\"101\"/><line x1=\"294\" y1=\"140\" x2=\"291\" y2=\"154\"/><line x1=\"331\" y1=\"97\" x2=\"328\" y2=\"111\"/><line x1=\"368\" y1=\"150\" x2=\"365\" y2=\"164\"/><line x1=\"289\" y1=\"107\" x2=\"286\" y2=\"121\"/><line x1=\"326\" y1=\"64\" x2=\"323\" y2=\"78\"/><line x1=\"363\" y1=\"117\" x2=\"360\" y2=\"131\"/><line x1=\"284\" y1=\"74\" x2=\"281\" y2=\"88\"/><line x1=\"321\" y1=\"127\" x2=\"318\" y2=\"141\"/><line x1=\"358\" y1=\"84\" x2=\"355\" y2=\"98\"/><line x1=\"279\" y1=\"137\" x2=\"276\" y2=\"151\"/><line x1=\"316\" y1=\"94\" x2=\"313\" y2=\"108\"/><line x1=\"353\" y1=\"147\" x2=\"350\" y2=\"161\"/><line x1=\"274\" y1=\"104\" x2=\"271\" y2=\"118\"/><line x1=\"311\" y1=\"61\" x2=\"308\" y2=\"75\"/><line x1=\"348\" y1=\"114\" x2=\"345\" y2=\"128\"/><line x1=\"269\" y1=\"71\" x2=\"266\" y2=\"85\"/><line x1=\"306\" y1=\"124\" x2=\"303\" y2=\"138\"/><line x1=\"343\" y1=\"81\" x2=\"340\" y2=\"95\"/><line x1=\"380\" y1=\"134\" x2=\"377\" y2=\"148\"/></g><path d=\"M324 52 v104 M262 104 h124\" stroke=\"#6b4f2e\" stroke-width=\"3\"/><rect x=\"520\" y=\"34\" width=\"180\" height=\"200\" fill=\"#a9803f\" stroke=\"#4a3428\" stroke-width=\"2.4\"/><rect x=\"526\" y=\"40\" width=\"168\" height=\"34\" fill=\"#c9a25a\" stroke=\"#4a3428\" stroke-width=\"1.6\"/><rect x=\"526\" y=\"88\" width=\"168\" height=\"34\" fill=\"#c9a25a\" stroke=\"#4a3428\" stroke-width=\"1.6\"/><rect x=\"526\" y=\"136\" width=\"168\" height=\"34\" fill=\"#c9a25a\" stroke=\"#4a3428\" stroke-width=\"1.6\"/><rect x=\"526\" y=\"184\" width=\"168\" height=\"34\" fill=\"#c9a25a\" stroke=\"#4a3428\" stroke-width=\"1.6\"/><rect x=\"530\" y=\"42\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"542\" y=\"42\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"558\" y=\"42\" width=\"9\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"569\" y=\"42\" width=\"16\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"587\" y=\"42\" width=\"11\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"600\" y=\"42\" width=\"13\" height=\"30\" fill=\"#8a6a44\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"615\" y=\"42\" width=\"9\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"626\" y=\"42\" width=\"15\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"643\" y=\"42\" width=\"12\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"657\" y=\"42\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"669\" y=\"42\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"685\" y=\"42\" width=\"7\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"530\" y=\"90\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"542\" y=\"90\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"558\" y=\"90\" width=\"9\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"569\" y=\"90\" width=\"16\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"587\" y=\"90\" width=\"11\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"600\" y=\"90\" width=\"13\" height=\"30\" fill=\"#8a6a44\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"615\" y=\"90\" width=\"9\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"626\" y=\"90\" width=\"15\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"643\" y=\"90\" width=\"12\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"657\" y=\"90\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"669\" y=\"90\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"685\" y=\"90\" width=\"7\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"530\" y=\"138\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"542\" y=\"138\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"558\" y=\"138\" width=\"9\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"569\" y=\"138\" width=\"16\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"587\" y=\"138\" width=\"11\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"600\" y=\"138\" width=\"13\" height=\"30\" fill=\"#8a6a44\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"615\" y=\"138\" width=\"9\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"626\" y=\"138\" width=\"15\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"643\" y=\"138\" width=\"12\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"657\" y=\"138\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"669\" y=\"138\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"685\" y=\"138\" width=\"7\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"530\" y=\"186\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"542\" y=\"186\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"558\" y=\"186\" width=\"9\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"569\" y=\"186\" width=\"16\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"587\" y=\"186\" width=\"11\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"600\" y=\"186\" width=\"13\" height=\"30\" fill=\"#8a6a44\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"615\" y=\"186\" width=\"9\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"626\" y=\"186\" width=\"15\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"643\" y=\"186\" width=\"12\" height=\"30\" fill=\"#7d8f5c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"657\" y=\"186\" width=\"10\" height=\"30\" fill=\"#b34a3a\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"669\" y=\"186\" width=\"14\" height=\"30\" fill=\"#3f7c86\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"685\" y=\"186\" width=\"7\" height=\"30\" fill=\"#d6a83c\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><rect x=\"548\" y=\"238\" width=\"120\" height=\"14\" rx=\"3\" fill=\"#b8874a\" stroke=\"#4a3428\" stroke-width=\"2\"/><rect x=\"556\" y=\"252\" width=\"8\" height=\"40\" fill=\"#8a6a44\"/><rect x=\"652\" y=\"252\" width=\"8\" height=\"40\" fill=\"#8a6a44\"/><rect x=\"560\" y=\"226\" width=\"26\" height=\"12\" rx=\"2\" fill=\"#f6efe0\" stroke=\"#4a3428\" stroke-width=\"1.4\"/><rect x=\"600\" y=\"222\" width=\"18\" height=\"16\" rx=\"2\" fill=\"#6b4f2e\" stroke=\"#4a3428\" stroke-width=\"1.4\"/><rect x=\"0\" y=\"40\" width=\"96\" height=\"250\" fill=\"#9aa5ad\"/><g stroke=\"#e8eef2\" stroke-width=\"1.4\" opacity=\".85\"><line x1=\"57\" y1=\"79\" x2=\"54\" y2=\"93\"/><line x1=\"4\" y1=\"132\" x2=\"1\" y2=\"146\"/><line x1=\"41\" y1=\"185\" x2=\"38\" y2=\"199\"/><line x1=\"78\" y1=\"238\" x2=\"75\" y2=\"252\"/><line x1=\"25\" y1=\"51\" x2=\"22\" y2=\"65\"/><line x1=\"62\" y1=\"104\" x2=\"59\" y2=\"118\"/><line x1=\"9\" y1=\"157\" x2=\"6\" y2=\"171\"/><line x1=\"46\" y1=\"210\" x2=\"43\" y2=\"224\"/><line x1=\"83\" y1=\"263\" x2=\"80\" y2=\"277\"/><line x1=\"30\" y1=\"76\" x2=\"27\" y2=\"90\"/><line x1=\"67\" y1=\"129\" x2=\"64\" y2=\"143\"/><line x1=\"14\" y1=\"182\" x2=\"11\" y2=\"196\"/><line x1=\"51\" y1=\"235\" x2=\"48\" y2=\"249\"/><line x1=\"88\" y1=\"48\" x2=\"85\" y2=\"62\"/><line x1=\"35\" y1=\"101\" x2=\"32\" y2=\"115\"/><line x1=\"72\" y1=\"154\" x2=\"69\" y2=\"168\"/><line x1=\"19\" y1=\"207\" x2=\"16\" y2=\"221\"/><line x1=\"56\" y1=\"260\" x2=\"53\" y2=\"274\"/><line x1=\"3\" y1=\"73\" x2=\"0\" y2=\"87\"/><line x1=\"40\" y1=\"126\" x2=\"37\" y2=\"140\"/><line x1=\"77\" y1=\"179\" x2=\"74\" y2=\"193\"/><line x1=\"24\" y1=\"232\" x2=\"21\" y2=\"246\"/><line x1=\"61\" y1=\"45\" x2=\"58\" y2=\"59\"/><line x1=\"8\" y1=\"98\" x2=\"5\" y2=\"112\"/><line x1=\"45\" y1=\"151\" x2=\"42\" y2=\"165\"/><line x1=\"82\" y1=\"204\" x2=\"79\" y2=\"218\"/><line x1=\"29\" y1=\"257\" x2=\"26\" y2=\"271\"/><line x1=\"66\" y1=\"70\" x2=\"63\" y2=\"84\"/><line x1=\"13\" y1=\"123\" x2=\"10\" y2=\"137\"/><line x1=\"50\" y1=\"176\" x2=\"47\" y2=\"190\"/></g><path d=\"M96 40 L128 62 L128 262 L96 290 Z\" fill=\"#b8874a\" stroke=\"#4a3428\" stroke-width=\"2.4\"/><circle cx=\"118\" cy=\"168\" r=\"3\" fill=\"#4a3428\"/><rect x=\"0\" y=\"286\" width=\"100\" height=\"74\" fill=\"#8a7a5a\"/><path d=\"M0 286 h100\" stroke=\"#4a3428\" stroke-width=\"2.4\"/><g transform=\"translate(70 300) rotate(-20)\" fill=\"#5a4a34\" opacity=\".8\"><ellipse rx=\"4\" ry=\"6\"/><path d=\"M-4 -2 L0 -7 L4 -2\" stroke=\"#5a4a34\" stroke-width=\"1.6\" fill=\"none\"/></g><g transform=\"translate(52 314) rotate(-28)\" fill=\"#5a4a34\" opacity=\".8\"><ellipse rx=\"4\" ry=\"6\"/><path d=\"M-4 -2 L0 -7 L4 -2\" stroke=\"#5a4a34\" stroke-width=\"1.6\" fill=\"none\"/></g><g transform=\"translate(34 330) rotate(-32)\" fill=\"#5a4a34\" opacity=\".8\"><ellipse rx=\"4\" ry=\"6\"/><path d=\"M-4 -2 L0 -7 L4 -2\" stroke=\"#5a4a34\" stroke-width=\"1.6\" fill=\"none\"/></g><g transform=\"translate(16 346) rotate(-36)\" fill=\"#5a4a34\" opacity=\".8\"><ellipse rx=\"4\" ry=\"6\"/><path d=\"M-4 -2 L0 -7 L4 -2\" stroke=\"#5a4a34\" stroke-width=\"1.6\" fill=\"none\"/></g><g transform=\"translate(58 334) rotate(-12)\"><rect x=\"-14\" y=\"-9\" width=\"28\" height=\"18\" rx=\"1.5\" fill=\"#d8d3c4\" stroke=\"#4a3428\" stroke-width=\"1.6\"/><path d=\"M-10 -4 h20 M-10 0 h20 M-10 4 h13\" stroke=\"#8a8478\" stroke-width=\"1.2\"/></g><rect x=\"104\" y=\"252\" width=\"66\" height=\"50\" rx=\"3\" fill=\"#a8763e\" stroke=\"#4a3428\" stroke-width=\"2.4\"/><path d=\"M104 252 L137 232 L203 232 L170 252 Z\" fill=\"#c9a25a\" stroke=\"#4a3428\" stroke-width=\"2.2\"/><rect x=\"112\" y=\"262\" width=\"50\" height=\"6\" rx=\"1\" fill=\"#f6efe0\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><text x=\"137\" y=\"286\" text-anchor=\"middle\" font-size=\"9\" fill=\"#f6efe0\" font-family=\"sans-serif\">반납</text><g fill=\"#a5573a\" opacity=\".85\"><ellipse cx=\"128\" cy=\"306\" rx=\"6\" ry=\"2.4\"/><circle cx=\"121\" cy=\"309\" r=\"1.4\"/><circle cx=\"136\" cy=\"309\" r=\"1.2\"/><circle cx=\"131\" cy=\"303\" r=\"1\"/></g><rect x=\"330\" y=\"248\" width=\"150\" height=\"14\" rx=\"3\" fill=\"#b8874a\" stroke=\"#4a3428\" stroke-width=\"2.2\"/><rect x=\"340\" y=\"262\" width=\"8\" height=\"42\" fill=\"#8a6a44\"/><rect x=\"462\" y=\"262\" width=\"8\" height=\"42\" fill=\"#8a6a44\"/><rect x=\"356\" y=\"236\" width=\"40\" height=\"12\" rx=\"2\" fill=\"#f6efe0\" stroke=\"#4a3428\" stroke-width=\"1.4\"/><path d=\"M376 236 v12\" stroke=\"#4a3428\" stroke-width=\"1.2\"/><g stroke=\"#4a3428\" stroke-width=\"2\" fill=\"#c9a25a\"><rect x=\"300\" y=\"256\" width=\"24\" height=\"10\" rx=\"2\"/><rect x=\"302\" y=\"266\" width=\"4\" height=\"30\"/><rect x=\"318\" y=\"266\" width=\"4\" height=\"30\"/><rect x=\"486\" y=\"256\" width=\"24\" height=\"10\" rx=\"2\"/><rect x=\"488\" y=\"266\" width=\"4\" height=\"30\"/><rect x=\"504\" y=\"266\" width=\"4\" height=\"30\"/></g><ellipse cx=\"498\" cy=\"261\" rx=\"9\" ry=\"3\" fill=\"#8fb7c9\" opacity=\".6\"/><path d=\"M494 250 q6 -8 12 -2 q-4 6 -12 2 z\" fill=\"#fbfbf7\" stroke=\"#8a8478\" stroke-width=\"1\"/><g transform=\"translate(150 322) rotate(30)\"><ellipse rx=\"11.0\" ry=\"7.7\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-5.0 1 L0 -5.5 L5.0 1 M0 -5.5 L0 3.8\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(210 332) rotate(25)\"><ellipse rx=\"10.0\" ry=\"7.0\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-4.5 1 L0 -5.0 L4.5 1 M0 -5.0 L0 3.5\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(272 322) rotate(15)\"><ellipse rx=\"9.0\" ry=\"6.3\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-4.0 1 L0 -4.5 L4.0 1 M0 -4.5 L0 3.1\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(318 300) rotate(5)\"><ellipse rx=\"8.0\" ry=\"5.6\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-3.6 1 L0 -4.0 L3.6 1 M0 -4.0 L0 2.8\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(300 334) rotate(-150)\"><ellipse rx=\"7.0\" ry=\"4.9\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-3.1 1 L0 -3.5 L3.1 1 M0 -3.5 L0 2.4\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(236 342) rotate(-160)\"><ellipse rx=\"6.0\" ry=\"4.2\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-2.7 1 L0 -3.0 L2.7 1 M0 -3.0 L0 2.1\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(178 330) rotate(-165)\"><ellipse rx=\"5.0\" ry=\"3.5\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-2.2 1 L0 -2.5 L2.2 1 M0 -2.5 L0 1.8\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(136 318) rotate(-170)\"><ellipse rx=\"4.5\" ry=\"3.1\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-2.0 1 L0 -2.2 L2.0 1 M0 -2.2 L0 1.6\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g transform=\"translate(108 326) rotate(-175)\"><ellipse rx=\"4.0\" ry=\"2.8\" fill=\"#8fb7c9\" fill-opacity=\".55\" stroke=\"#4f7f96\" stroke-width=\"1.2\"/><path d=\"M-1.8 1 L0 -2.0 L1.8 1 M0 -2.0 L0 1.4\" stroke=\"#2f5a6e\" stroke-width=\"1.1\" fill=\"none\" opacity=\".75\"/></g><g fill=\"#6b4a2a\" opacity=\".75\"><rect x=\"140\" y=\"336\" width=\"10\" height=\"16\" rx=\"3\" transform=\"rotate(12 145 344)\"/><rect x=\"160\" y=\"344\" width=\"10\" height=\"16\" rx=\"3\" transform=\"rotate(8 165 352)\"/></g>",
+   "memo": "책이 반납함에서 사라졌다. <b>비가 시계다</b> — 젖은 것은 비 온 뒤, 마른 것은 비 오기 전. 뭐가 젖었고 뭐가 말랐나.",
+   "spots": [
+    {
+     "id": "c_box",
+     "x": 137,
+     "y": 266,
+     "r": 26,
+     "label": "문 옆 반납함"
+    },
+    {
+     "id": "c_soil",
+     "x": 128,
+     "y": 306,
+     "r": 12,
+     "need": [
+      "c_box"
+     ],
+     "label": "반납함 옆 바닥",
+     "needSay": "바닥에 뭔가 흘렀어요. 반납함을 먼저 봐야 이게 어디서 나온 건지 알겠어요."
+    },
+    {
+     "id": "c_floor",
+     "x": 230,
+     "y": 326,
+     "r": 34,
+     "label": "바닥의 젖은 자국"
+    },
+    {
+     "id": "c_table",
+     "x": 405,
+     "y": 258,
+     "r": 34,
+     "label": "열람 탁자"
+    },
+    {
+     "id": "c_feather",
+     "x": 500,
+     "y": 256,
+     "r": 12,
+     "need": [
+      "c_table"
+     ],
+     "label": "의자 위의 흰 것",
+     "needSay": "의자에 뭔가 붙어 있어요. 탁자를 먼저 살펴보면 왜 여기 있는지 알겠어요."
+    },
+    {
+     "id": "c_paper",
+     "x": 58,
+     "y": 334,
+     "r": 16,
+     "label": "문턱 밖의 신문"
+    },
+    {
+     "id": "c_web",
+     "x": 44,
+     "y": 318,
+     "r": 20,
+     "label": "문턱 밖 진흙"
+    },
+    {
+     "id": "c_boots",
+     "x": 152,
+     "y": 346,
+     "r": 16,
+     "label": "문가의 진흙 자국"
+    },
+    {
+     "label": "서가",
+     "x": 610,
+     "y": 134,
+     "r": 44,
+     "decoy": "서가예요. 『구름 도감』 자리만 비어 있고 나머지는 제자리. 여기서 없어진 건 아니에요."
+    },
+    {
+     "label": "사서 책상",
+     "x": 608,
+     "y": 238,
+     "r": 26,
+     "decoy": "모리의 책상. 대출 장부와 도장. 장부엔 『구름 도감』이 「반납 대기」로 적혀 있어요."
+    },
+    {
+     "label": "창문",
+     "x": 324,
+     "y": 104,
+     "r": 36,
+     "decoy": "창밖은 비가 그쳐 물웅덩이만 남았어요. 이 창은 안 열려요."
+    }
+   ]
+  }
+ ],
+ "suspects": {
+  "mori": {
+   "name": "모리",
+   "role": "두더지 · 도서관 사서",
+   "sym": "mori",
+   "eyes": "def",
+   "img": "mori",
+   "lines": [
+    {
+     "id": "m0",
+     "t": "비는 3시에 왔어요. 4시 반쯤 그쳤고요.",
+     "gives": "t_rain"
+    },
+    {
+     "id": "m1",
+     "t": "반납함은 아침에 제가 비웠어요. 밤새 아무도 안 열었고요.",
+     "sus": false
+    },
+    {
+     "id": "m2",
+     "t": "흙이요? …글쎄요. 손님들 신발에서 떨어졌겠죠.",
+     "sus": false
+    }
+   ]
+  },
+  "duck": {
+   "name": "오리",
+   "role": "오리 · 강가에 산다",
+   "sym": "duck",
+   "eyes": "def",
+   "img": "duck",
+   "lines": [
+    {
+     "id": "o1",
+     "t": "저요? 책은 안 빌렸는데요.",
+     "sus": true,
+     "hit": {
+      "c_feather": {
+       "eyes": "sp",
+       "say": "<b>오리</b> \"깃털… 아, 그 탁자에 앉긴 했어요. 비 피하느라. 빌린 건 아니에요.\"",
+       "flag": "o1",
+       "unlock": "o3",
+       "toast": "오리가 도서관에 있었다는 걸 인정했어요"
+      },
+      "c_floor": {
+       "partial": true,
+       "say": "<b>오리</b> \"젖은 자국이야 비 오는 날 누구나 남기죠.\"",
+       "hint": "자국의 주인을 정하는 건 발 모양이 아니라 <b>몸에서 떨어진 것</b>이에요."
+      }
+     }
+    },
+    {
+     "id": "o2",
+     "t": "그냥 문으로 나갔어요. 빈손으로요.",
+     "sus": true,
+     "hit": {
+      "c_web": {
+       "eyes": "fl",
+       "say": "<b>오리</b> \"…아, 그 책이요? 비 오는데 우산 대신 뭐라도 써야죠. 문 옆에 반쯤 나와 있길래 — 집에 있어요. 좀 젖었지만.\"",
+       "flag": "o2",
+       "give": "t_duck",
+       "toast": "책은 오리 집에 있어요"
+      },
+      "c_boots": {
+       "partial": true,
+       "say": "<b>오리</b> \"장화요? 저는 맨발인데요.\"",
+       "hint": "오리 발자국이 <b>어디서 시작하는지</b>를 보세요."
+      }
+     }
+    },
+    {
+     "id": "o3",
+     "t": "3시쯤 비 피하러 뛰어들어왔어요. 흠뻑 젖어서요. 탁자에서 그림책 보다가…",
+     "sus": false,
+     "hidden": true,
+     "gives": "t_duck_in"
+    }
+   ]
+  },
+  "doto": {
+   "name": "도토",
+   "role": "다람쥐 · 느티나무에 산다",
+   "sym": "doto",
+   "eyes": "def",
+   "img": "doto",
+   "lines": [
+    {
+     "id": "d0",
+     "t": "12시에 반납함에 넣었어. 커서 반쯤 삐져나왔지.",
+     "gives": "t_doto"
+    },
+    {
+     "id": "d1",
+     "t": "비 올 땐 나무 구멍에 있었어. 젖는 거 싫어.",
+     "sus": false
+    }
+   ]
+  },
+  "bear": {
+   "name": "반장 곰",
+   "role": "곰 · 무대 공사 반장",
+   "sym": "bear",
+   "eyes": "def",
+   "img": "bear",
+   "lines": [
+    {
+     "id": "b0",
+     "t": "3시 넘어 비 피하러 들어왔소. 문가에만 서 있다 갔소.",
+     "gives": "t_bear"
+    },
+    {
+     "id": "b1",
+     "t": "흙? 내 장화에서 떨어졌나 보오. 미안하오.",
+     "sus": true,
+     "hit": {
+      "c_soil": {
+       "eyes": "fl",
+       "say": "<b>반장 곰</b> \"…마른 흙이라고? 내 장화 흙은 비에 젖은 진흙이었소. 그럼 내 것이 아니구려. 휴.\"",
+       "flag": "b1",
+       "toast": "마른 흙은 곰의 것이 아니에요"
+      },
+      "c_boots": {
+       "partial": true,
+       "say": "<b>반장 곰</b> \"그러게, 내 장화 자국이오. 미안하오.\"",
+       "hint": "곰의 장화 흙과 반납함의 흙이 <b>같은 흙</b>인지 — 젖었는지 말랐는지를 보세요."
+      }
+     }
+    }
+   ]
+  }
+ },
+ "suspectOrder": [
+  "mori",
+  "duck",
+  "doto",
+  "bear"
+ ],
+ "steps": [
+  {
+   "t": "책은 언제까지 있었나",
+   "q": "『구름 도감』은 <b>언제까지</b> 반납함에 있었을까?",
+   "slots": 2,
+   "need": [
+    "t_doto",
+    "c_box"
+   ],
+   "whyClue": "누가 <b>언제</b> 넣었는지와, 반납함 <b>뚜껑</b>이 어떤 상태였는지.",
+   "fill": {
+    "t": "도토는 [0]에 넣었고, 뚜껑은 책에 걸려 반쯤 열린 채 [1]. 그러니 비가 올 때 책은 아직 [2].",
+    "blanks": [
+     {
+      "ok": "12시"
+     },
+     {
+      "ok": "젖었다",
+      "stem": "젖었"
+     },
+     {
+      "ok": "거기 있었다",
+      "infer": true
+     }
+    ],
+    "extra": [
+     {
+      "w": "8시",
+      "why": "8시는 모리가 반납함을 비운 시각이에요. 넣은 건 12시."
+     },
+     {
+      "w": "말라 있다",
+      "why": "안의 책은 말라 있었지만 뚜껑은 젖었어요. 열린 채 비를 맞은 거죠."
+     },
+     {
+      "w": "없어졌다",
+      "why": "뚜껑이 책에 걸려 열린 채 젖었어요. 비가 올 때 책은 아직 거기 있었던 거예요."
+     }
+    ]
+   }
+  },
+  {
+   "t": "비는 언제 왔나",
+   "q": "비는 <b>언제</b> 왔을까? 그 뒤에 들어온 손님은 어떤 상태였을까?",
+   "slots": 2,
+   "need": [
+    "c_paper",
+    "t_rain"
+   ],
+   "whyClue": "문 앞에 <b>젖은 채 남은 것</b>과, 창밖을 본 사람의 말.",
+   "fill": {
+    "t": "[0]에 마른 채 온 신문이 흠뻑 젖었다. 비는 [1]에 왔다. 그 뒤에 들어온 손님은 [2] 있었다.",
+    "blanks": [
+     {
+      "ok": "2시 반"
+     },
+     {
+      "ok": "3시"
+     },
+     {
+      "ok": "젖어",
+      "infer": true
+     }
+    ],
+    "extra": [
+     {
+      "w": "12시",
+      "why": "12시는 도토가 책을 넣은 시각이에요. 신문은 2시 반에 와요."
+     },
+     {
+      "w": "4시 반",
+      "why": "4시 반은 비가 그친 시각이에요."
+     },
+     {
+      "w": "말라",
+      "why": "비 온 뒤에 들어온 손님이 말라 있을 리 없죠."
+     }
+    ]
+   }
+  },
+  {
+   "t": "젖은 자국을 따라가면",
+   "q": "바닥의 젖은 자국을 <b>큰 것부터</b> 이어 보자. 물 자국은 걸을수록 작아지니까.",
+   "slots": 3,
+   "need": [
+    "c_floor",
+    "c_table",
+    "c_box"
+   ],
+   "whyClue": "바닥 자국, 탁자, 반납함 — <b>셋을 다</b> 본 뒤에 이을 수 있어요.",
+   "board": {
+    "kind": "trail",
+    "title": "도서관 바닥 — 젖은 자국",
+    "hint": "큰 자국부터 차례로 누르세요",
+    "walls": "<rect class=\"tr-door\" x=\"14\" y=\"128\" width=\"8\" height=\"30\"/><rect class=\"tr-wall\" x=\"30\" y=\"96\" width=\"30\" height=\"22\" rx=\"2\"/><rect class=\"tr-wall\" x=\"118\" y=\"60\" width=\"64\" height=\"20\" rx=\"2\"/><rect class=\"tr-wall\" x=\"212\" y=\"20\" width=\"70\" height=\"14\" rx=\"2\"/><rect class=\"tr-wall\" x=\"206\" y=\"118\" width=\"54\" height=\"16\" rx=\"2\"/>",
+    "places": [
+     {
+      "x": 30,
+      "y": 124,
+      "t": "문"
+     },
+     {
+      "x": 45,
+      "y": 92,
+      "t": "반납함"
+     },
+     {
+      "x": 150,
+      "y": 56,
+      "t": "탁자"
+     },
+     {
+      "x": 247,
+      "y": 46,
+      "t": "서가"
+     },
+     {
+      "x": 233,
+      "y": 146,
+      "t": "책상"
+     }
+    ],
+    "marks": [
+     {
+      "id": "m1",
+      "x": 40,
+      "y": 146,
+      "r": 13
+     },
+     {
+      "id": "m2",
+      "x": 80,
+      "y": 122,
+      "r": 11
+     },
+     {
+      "id": "m3",
+      "x": 118,
+      "y": 104,
+      "r": 9.5
+     },
+     {
+      "id": "m4",
+      "x": 152,
+      "y": 92,
+      "r": 8
+     },
+     {
+      "id": "m5",
+      "x": 116,
+      "y": 130,
+      "r": 6.5
+     },
+     {
+      "id": "m6",
+      "x": 66,
+      "y": 126,
+      "r": 5
+     },
+     {
+      "id": "b1",
+      "x": 26,
+      "y": 112,
+      "r": 8,
+      "kind": "boot",
+      "why": "그건 <b>장화</b> 자국이야 — 곰이 문가에 서 있던 자리. 물갈퀴가 아니지."
+     },
+     {
+      "id": "b2",
+      "x": 44,
+      "y": 100,
+      "r": 8,
+      "kind": "boot",
+      "why": "장화 자국은 문가 두 걸음에서 끝나. 오리 발이 아니야."
+     }
+    ],
+    "order": [
+     "m1",
+     "m2",
+     "m3",
+     "m4",
+     "m5",
+     "m6"
+    ],
+    "why": "물 자국은 걸을수록 작아져. 큰 것 다음엔 그다음으로 큰 것.",
+    "ask": "물갈퀴 자국을 <b>큰 것부터</b> 차례로 눌러 봐. 어디로 갔는지 실처럼 이어질 거야.",
+    "done": "문으로 들어와 <b>탁자</b>에 앉았다가, 나가는 길에 <b>반납함</b> 앞에서 자국이 끝난다. — 빈손으로 나갔다면 반납함 앞에 왜 멈췄을까?"
+   }
+  },
+  {
+   "t": "누구의 발인가",
+   "q": "그 젖은 발의 주인은 <b>누구</b>일까? 그리고 어디로 갔을까?",
+   "slots": 2,
+   "need": [
+    "c_feather",
+    "c_web"
+   ],
+   "whyClue": "몸에서 <b>떨어진 것</b>과, 문 밖으로 이어진 <b>발자국</b>.",
+   "fill": {
+    "t": "문 앞의 발자국은 [0] 발이고, 젖은 의자엔 흰 [1]이 남았다. 발자국은 반납함 앞에서 [2] 쪽으로 간다.",
+    "blanks": [
+     {
+      "ok": "물갈퀴"
+     },
+     {
+      "ok": "깃털"
+     },
+     {
+      "ok": "강가"
+     }
+    ],
+    "extra": [
+     {
+      "w": "장화",
+      "why": "장화 자국은 문가 안쪽 두 걸음뿐이에요. 밖으로 이어진 건 물갈퀴예요."
+     },
+     {
+      "w": "털뭉치",
+      "why": "의자에 남은 건 깃털이에요. 흰 깃털."
+     },
+     {
+      "w": "광장",
+      "why": "문 앞 발자국은 강가 쪽 길로 갔어요."
+     }
+    ]
+   }
+  },
+  {
+   "t": "그래서",
+   "q": "그래서 『구름 도감』을 가져간 건 누구이고, 왜?",
+   "slots": 3,
+   "need": [
+    "t_duck",
+    "c_web",
+    "c_feather"
+   ],
+   "whyClue": "<b>누구</b>인지 말해 주는 것 둘과, <b>왜</b>인지 말해 주는 본인의 말.",
+   "fill": {
+    "t": "책을 가져간 건 [0]다. 훔친 게 아니라 비를 막을 [1] 대신 썼다. 책은 오리 [2]에 있다.",
+    "blanks": [
+     {
+      "ok": "오리"
+     },
+     {
+      "ok": "우산"
+     },
+     {
+      "ok": "집"
+     }
+    ],
+    "extra": [
+     {
+      "w": "곰",
+      "why": "곰의 장화 자국은 문가에서 끝나요. 반납함까지 안 갔죠."
+     },
+     {
+      "w": "방석",
+      "why": "비 오는 날 문 밖으로 나가며 가져갔어요. 우산 대신이죠."
+     },
+     {
+      "w": "서가",
+      "why": "오리가 집에 있다고 했어요. 서가엔 자리만 비어 있고요."
+     }
+    ]
+   }
+  }
+ ],
+ "elimIntro": "비가 올 때 책은 <b>아직 반납함에</b> 있었다 · 비는 <b>3시</b> · 젖은 자국은 문→탁자→<b>반납함</b> · 발은 <b>물갈퀴</b>, 의자엔 <b>흰 깃털</b>",
+ "elimUnit": "가지",
+ "elim": [
+  {
+   "id": "e_mori",
+   "name": "모리",
+   "sym": "mori",
+   "q": "사서인 모리가 책을 딴 데 뒀을 수도 있지 않을까?",
+   "opts": [
+    {
+     "t": "모리는 <b>성실한 사서</b>니까.",
+     "why": "성격은 근거가 아니에요. 남아 있는 것으로 지워요."
+    },
+    {
+     "t": "바닥과 문 앞의 젖은 자국은 <b>물갈퀴</b> 발이다. 모리는 실내화로 안에만 있었다.",
+     "ok": true
+    },
+    {
+     "t": "모리가 <b>못 봤다</b>고 했으니까.",
+     "why": "본인 말은 근거가 아니에요."
+    }
+   ]
+  },
+  {
+   "id": "e_doto",
+   "name": "도토",
+   "sym": "doto",
+   "q": "책을 넣은 도토가 도로 가져갔을 수도?",
+   "opts": [
+    {
+     "t": "도토가 넣은 12시엔 <b>해가 쨍쨍</b>했고, 젖은 자국에 <b>다람쥐 발</b>은 없다.",
+     "ok": true
+    },
+    {
+     "t": "도토는 <b>젖는 걸 싫어</b>하니까.",
+     "why": "성격은 근거가 아니에요."
+    },
+    {
+     "t": "도토가 <b>나무 구멍에 있었다</b>니까.",
+     "why": "본인 말은 근거가 아니에요."
+    }
+   ]
+  },
+  {
+   "id": "e_bear",
+   "name": "반장 곰",
+   "sym": "bear",
+   "q": "비 피하러 들어온 반장 곰이 가져갔을 수도?",
+   "opts": [
+    {
+     "t": "곰은 지난 사건의 <b>의뢰인</b>이었으니까.",
+     "why": "지난 사건은 근거가 아니에요. 이번에 남은 것으로 지워요."
+    },
+    {
+     "t": "곰은 <b>정직한 사람</b>이니까.",
+     "why": "성격은 근거가 아니에요."
+    },
+    {
+     "t": "곰의 장화 자국은 문가 <b>두 걸음에서 끝난다</b>. 반납함까지 가지 않았다.",
+     "ok": true
+    }
+   ]
+  },
+  {
+   "id": "e_wind",
+   "name": "바람",
+   "sym": "mango",
+   "q": "반쯤 삐져나온 책이 바람에 날아간 건 아닐까?",
+   "opts": [
+    {
+     "t": "어제는 <b>바람이 없었으니까</b>.",
+     "why": "있었는지 없었는지는 아무도 몰라요. 남은 것으로 지워요."
+    },
+    {
+     "t": "『구름 도감』은 <b>두껍고 무거워</b> 바람에 안 날린다. 뚜껑엔 <b>뽑아낸</b> 긁힌 자국이 있다.",
+     "ok": true
+    },
+    {
+     "t": "바람은 <b>사건 2</b>였으니까.",
+     "why": "지난 사건과 이번은 달라요."
+    }
+   ]
+  }
+ ],
+ "concl": "비가 올 때 책은 아직 있었다 · 비는 3시 · 자국은 반납함 앞에서 끝난다 · 물갈퀴와 흰 깃털",
+ "solve": {
+  "text": "어제 세 시, 비가 쏟아지자 오리가 흠뻑 젖은 채 도서관으로 뛰어들었습니다. 탁자에서 그림책을 보다 비가 잦아들 즈음 집에 가려는데 — 우산이 없었지요. 문 옆 반납함에 큰 책이 <b>반쯤 삐져나와</b> 있었고, 오리는 그걸 뽑아 <b>머리에 쓰고</b> 강가로 갔습니다. 훔친 게 아니라 <b>우산 대신</b> 쓴 거예요. 책은 오리 집에 있습니다 — 좀 젖었지만요.",
+  "sheep": "<b>모리:</b> \"…책은 말리면 돼요. 그, 오리한테 다음엔 우산을 빌려 가라고 해 주세요. 도서관에 우산도 있어요.\"",
+  "voice": "mori",
+  "art": "duck",
+  "reward": {
+   "coin": {
+    "1": 90,
+    "2": 110,
+    "3": 130
+   },
+   "fame": 3,
+   "dex": 3
+  }
+ },
+ "epilogue": {
+  "head": "…그런데, 설명이 안 되는 게 하나 있어요.",
+  "t": "반납함 바닥의 <b>마른 흙</b>. 어제 온 손님들은 다 젖은 흙을 묻혀 왔어요 — 곰의 장화 진흙처럼요. 그런데 이 흙은 <b>바싹 말라</b> 있어요. 비 오기 전에 들어간 흙이에요. 붉은 흙에 풀뿌리, <b>느티나무 잎 부스러기</b>. 사건 1의 창턱 발자국과 같은 붉은빛. <b>도서관 반납함에, 왜 광장 흙이?</b>"
+ },
+ "board": {
+  "total": 5,
+  "pins": [
+   {
+    "img": "clue-print.png",
+    "sym": "i-print",
+    "t": "붉은 흙 발자국",
+    "no": 1
+   },
+   {
+    "img": "c2-cut.png",
+    "sym": "i-print",
+    "t": "오려진 「광장」",
+    "no": 2
+   },
+   {
+    "img": "c3-wax.png",
+    "sym": "i-crumb",
+    "t": "쪽지 위의 촛농",
+    "no": 3
+   },
+   {
+    "img": "c4-span.png",
+    "sym": "i-crumb",
+    "t": "한 뼘 옮겨진 말뚝",
+    "no": 4
+   },
+   {
+    "img": "c5-soil.png",
+    "sym": "i-crumb",
+    "t": "반납함의 마른 흙",
+    "no": 5
+   }
+  ],
+  "mango": "다섯 장이 모였어. 붉은 흙 발자국, 오려진 「광장」, 촛농, 한 뼘 옮겨진 말뚝, 그리고 <b>마른 흙</b>. …이제 물을 수 있겠어 — <b>이 흙은 어디 흙이지?</b>",
+  "when": "추론을 마치면 <b>2막</b>이 열려요.",
+  "infer": {
+   "id": "inf1",
+   "title": "추론 1",
+   "q": "반납함 바닥의 <b>마른 흙</b> — 이 흙은 어디서 왔을까?",
+   "hint": "꽂힌 다섯 장을 다시 읽어 봐. 흙이 나온 카드가 셋이야. 마을 지도에서 자리를 골라.",
+   "map": {
+    "places": [
+     {
+      "id": "lunch",
+      "t": "급식실",
+      "x": 20,
+      "y": 36
+     },
+     {
+      "id": "tower",
+      "t": "시계탑",
+      "x": 39,
+      "y": 50
+     },
+     {
+      "id": "stage",
+      "t": "광장 돌바닥",
+      "x": 52,
+      "y": 60
+     },
+     {
+      "id": "tree",
+      "t": "느티나무 아래",
+      "x": 65,
+      "y": 44
+     },
+     {
+      "id": "lib",
+      "t": "도서관",
+      "x": 81,
+      "y": 48
+     },
+     {
+      "id": "river",
+      "t": "강가",
+      "x": 30,
+      "y": 84
+     }
+    ]
+   },
+   "answer": "tree",
+   "wrong": {
+    "lunch": {
+     "why": "사건 1의 붉은 발자국은 급식실로 <b>들어온</b> 것이었어. 흙은 거기서 온 게 아니라 거기로 간 거야.",
+     "blink": [
+      1
+     ]
+    },
+    "tower": {
+     "why": "탑 앞은 돌바닥이야. 흙이 없어. 쪽지가 붙었을 뿐이지.",
+     "blink": [
+      3
+     ]
+    },
+    "stage": {
+     "why": "무대 자리도 돌바닥이야. 광장에서 흙이 드러난 곳은 한 군데뿐인데 — 말뚝이 옮겨진 쪽을 봐.",
+     "blink": [
+      4
+     ]
+    },
+    "lib": {
+     "why": "도서관 흙이면 마를 리가 없지. 비 오는 날 문이 열렸다 닫혔다 했는걸.",
+     "blink": [
+      5
+     ]
+    },
+    "river": {
+     "why": "강가 흙은 모래야. 이 흙은 붉고 부슬부슬하고 풀뿌리가 섞였어.",
+     "blink": [
+      5
+     ]
+    }
+   },
+   "say": "붉은 흙 발자국은 <b>광장 쪽</b>에서 왔고, 말뚝이 옮겨진 건 <b>느티나무 쪽</b>이었고, 이 마른 흙엔 <b>느티나무 잎</b>이 섞여 있어. 광장에서 흙이 드러난 곳은 그 나무 아래뿐이야. …도서관 반납함에 <b>느티나무 아래 흙</b>이라.",
+   "reward": {
+    "id": "prints",
+    "t": "발자국 감정",
+    "desc": "발자국의 주인을 알아보는 눈. 다음 사건부터 발자국 지점에서 누구 발인지 바로 읽을 수 있어요."
+   }
+  }
+ },
+ "next": {
+  "title": "열쇠는 어디에"
+ },
+ "replay": {
+  "ask": "어제 낮부터 오늘 아침까지 무슨 일이 있었는지 <b>일어난 순서대로</b> 눌러 봐.",
+  "bg": "scene-05-library.webp",
+  "cuts": [
+   {
+    "id": "r1",
+    "t": "어제 낮 12시, 해가 쨍쨍. 도토가 <b>『구름 도감』</b>을 반납함에 넣었다 — 커서 뚜껑이 반쯤 열린 채.",
+    "bgPos": "20% 70%",
+    "zoom": 170,
+    "figs": [
+     {
+      "img": "doto-def.png",
+      "x": 34,
+      "y": 64,
+      "s": 70
+     },
+     {
+      "img": "c5-book.png",
+      "x": 66,
+      "y": 76,
+      "s": 30
+     }
+    ]
+   },
+   {
+    "id": "r2",
+    "t": "3시, 비. 오리가 <b>흠뻑 젖은 채</b> 뛰어들어와 탁자에 앉았다. 곰은 문가에 서 있다 갔다.",
+    "bgPos": "50% 65%",
+    "zoom": 165,
+    "fx": "dusk",
+    "figs": [
+     {
+      "img": "duck-def.png",
+      "x": 36,
+      "y": 66,
+      "s": 70
+     },
+     {
+      "img": "bear-def.png",
+      "x": 78,
+      "y": 62,
+      "s": 64
+     }
+    ]
+   },
+   {
+    "id": "r3",
+    "t": "비 속. 오리가 나가며 문 옆에 삐져나온 책을 뽑아 <b>머리에 쓰고</b> 강가로 갔다.",
+    "bgPos": "15% 60%",
+    "zoom": 175,
+    "fx": "dusk",
+    "figs": [
+     {
+      "img": "duck-def.png",
+      "x": 38,
+      "y": 66,
+      "s": 70
+     },
+     {
+      "img": "c5-book.png",
+      "x": 40,
+      "y": 22,
+      "s": 28
+     }
+    ]
+   },
+   {
+    "id": "r4",
+    "t": "아침. 모리가 반납함을 비웠다 — 책은 없고, 바닥엔 <b>마른 흙</b> 한 줌.",
+    "bgPos": "20% 70%",
+    "zoom": 170,
+    "fx": "dawn",
+    "figs": [
+     {
+      "img": "mori-def.png",
+      "x": 36,
+      "y": 64,
+      "s": 70
+     },
+     {
+      "img": "c5-soil.png",
+      "x": 68,
+      "y": 78,
+      "s": 28
+     }
+    ]
+   }
+  ]
+ }
+}
