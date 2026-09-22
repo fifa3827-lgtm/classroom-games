@@ -2,8 +2,8 @@
    사건 내용은 이 파일에 없다. data/case-NN.json 을 읽어 그대로 해석한다.
    사건을 추가할 때 이 파일을 건드리지 않는 것이 목표다. */
 import {A, wake, setMood, setMusic, setSfx, startMusic, beep,
-        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609221132';
-import * as Save from './save.js?v=2609221132';
+        blip, buzz, sTap, sFind, sGood, sBad, sFan, sNo, sHot, sPage, sStamp, sSting} from './audio.js?v=2609221205';
+import * as Save from './save.js?v=2609221205';
 
 var C=null;   // 현재 사건 데이터
 var BIGPREF=false;   // 「크게 보기」를 지난번에 켜 두었는지
@@ -15,7 +15,7 @@ var ART={};                                   // 경로 -> true(있음) / false(
 /* 그림 주소에도 판 번호를 붙인다. 예전에는 ?v=1 로 고정이라, 그림을 고쳐 올려도
    한 번이라도 본 기기는 옛 그림을 영영 들고 있었다(탑 2층의 제미나이 별이 그랬다).
    stamp.py 가 올리기 직전에 이 줄을 갱신한다. */
-var ARTV='2609221132';
+var ARTV='2609221205';
 function artURL(f){return 'img/'+f+'?v='+ARTV}
 function artOK(f){return !!(f&&ART[f])}
 function probe(f){return new Promise(function(done){
@@ -1767,7 +1767,9 @@ function applyEpilogue(){
     var pins=b.pins||[],total=b.total||5,h='';
     pins.forEach(function(p){
       var art=artOK(p.img)?'<img src="'+artURL(p.img)+'" alt="">':'<svg viewBox="0 0 28 28"><use href="#'+(p.sym||'i-print')+'"></use></svg>';
-      h+='<div class="pinned">'+art+p.t+'<br><span style="color:#8a7355">사건 '+(p.no||'?')+'</span></div>';
+      /* 제목과 사건 번호를 각각 감싼다 — 카드 높이를 못 박고 두 줄까지만 보이게 하려면
+         스타일이 잡을 자리가 있어야 한다(전에는 <br> 하나뿐이라 높이가 제각각이었다). */
+      h+='<div class="pinned">'+art+'<span class="pn">'+p.t+'</span><small>사건 '+(p.no||'?')+'</small></div>';
     });
     for(var k=pins.length;k<total;k++)h+='<div class="slot"></div>';
     row.innerHTML=h;
