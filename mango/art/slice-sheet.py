@@ -41,6 +41,17 @@ FACE_W      = 112
 COLORS      = 96
 
 
+CUT_BOTTOM = False    # 아래 테두리가 열린 그림용. main()에서 --아래끊기 로 켠다.
+                      # 몸 안쪽이 배경 크림색과 색 차이가 4~6밖에 안 나는데 아래가
+                      # 열려 있으면, 지우기가 그 틈으로 들어와 몸을 통째로 파먹는다
+                      # (오리 표정 시트에서 겪음 — 체커보드에 얹어 보고 알았다).
+                      # 몸이 아직 양옆 테두리로 감싸인 줄에서 판을 끊고, 지우기의
+                      # 시작점에서 **아래 테두리를 뺀다**. 그러면 크림색 배경이 아래로
+                      # 들어올 길이 없어 몸 안쪽이 그대로 남고, 흉상 아래는 곰처럼
+                      # 한 줄로 깨끗하게 끊긴다. 색도 알파도 억지로 채우지 않는다.
+                      # (기둥마다 채우는 방법은 네모난 자리가 남아서 버렸다.)
+
+
 def cut_background(im):
     a = np.asarray(im.convert('RGB')).astype(int)
     h, w, _ = a.shape
@@ -48,7 +59,9 @@ def cut_background(im):
     close = np.abs(a - bg).max(axis=2) <= BG_TOL
     lab, n = ndimage.label(close)
     sz = ndimage.sum(close, lab, range(1, n + 1))
-    border = set(lab[0].tolist()) | set(lab[-1].tolist()) | set(lab[:, 0].tolist()) | set(lab[:, -1].tolist())
+    border = set(lab[0].tolist()) | set(lab[:, 0].tolist()) | set(lab[:, -1].tolist())
+    if not CUT_BOTTOM:
+        border |= set(lab[-1].tolist())
     kill = np.zeros(n + 1, bool)
     for i in range(1, n + 1):
         kill[i] = (i in border) or (POCKET_MAX and sz[i - 1] <= POCKET_MAX)
@@ -74,6 +87,22 @@ def head_centers(al, box):
 
 
 TOUCHING = False
+
+
+def auto_cut_row(im):
+    """몸이 아직 양옆 테두리로 감싸인 마지막 줄. 칸을 셋으로 나눠 각 칸의 가장
+    아래 잉크 줄을 찾고, 그중 가장 위인 것에서 조금 올라간 줄을 쓴다."""
+    a = np.asarray(im.convert('RGB')).astype(int)
+    h, w, _ = a.shape
+    bg = np.median(np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]]), axis=0)
+    ink = np.abs(a - bg).max(axis=2) > BG_TOL
+    lows = []
+    for k in range(3):
+        part = ink[:, k * w // 3:(k + 1) * w // 3]
+        rows = np.where(part.any(1))[0]
+        if len(rows):
+            lows.append(int(rows.max()))
+    return max(60, (min(lows) if lows else h) - 28)
 
 
 def find_cells(im, want=None):
@@ -275,10 +304,25 @@ def save(im, path, w):
 def main():
     if len(sys.argv) < 3:
         sys.exit(__doc__)
-    src, name = sys.argv[1], sys.argv[2]
-    order = (sys.argv[3] if len(sys.argv) > 3 else 'def,sp,fl,joy').split(',')
+    global CUT_BOTTOM
+    args = [x for x in sys.argv[1:] if not x.startswith('--')]
+    cut_at = None
+    for f in sys.argv[1:]:
+        if f.startswith('--아래끊기') or f.startswith('--cutbottom'):
+            CUT_BOTTOM = True
+            if '=' in f:
+                cut_at = int(f.split('=')[1])
+    src, name = args[0], args[1]
+    order = (args[2] if len(args) > 2 else 'def,sp,fl,joy').split(',')
 
-    sheet = cut_background(Image.open(src))
+    # 칸 나누기는 「아래막기 안 한 판」으로 한다 — 막고 나면 몸이 넓어져 칸끼리
+    # 이어지고, 그러면 초상이 머리·목까지만 잘린다(오리 시트에서 겪음).
+    img = Image.open(src)
+    if CUT_BOTTOM:
+        cut_at = cut_at or auto_cut_row(img)
+        print('아래끊기: %d 줄에서 끊고, 지우기를 아래 테두리에서 시작하지 않습니다.' % cut_at)
+        img = img.crop((0, 0, img.width, cut_at))
+    sheet = cut_background(img)
     cells = find_cells(sheet, len(order))
     touching = TOUCHING
     print('칸 %d개를 찾았습니다.' % len(cells))
