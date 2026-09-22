@@ -189,8 +189,11 @@ function synthOff(){if(M.timer){clearInterval(M.timer);M.timer=null}}
    합성 음악은 어떤 기기에서도 나오고 파일도 필요 없지만, 사람이 연주한 질감은 못 낸다.
    audio/ 에 파일이 있으면 그것을 틀고, 없으면 위의 합성으로 돌아간다(책 상담원과 같은 방식).
    파일을 지워도 게임은 그대로 돌아간다 — 어느 쪽도 없으면 조용할 뿐이다. */
-var FILES={title:'audio/bgm-title.mp3', case:'audio/bgm-case.mp3'};
-var MOODFILE={calm:'title',resolve:'title',invest:'case',tense:'case',build:'case'};
+var FILES={title:'audio/bgm-title.mp3', case:'audio/bgm-case.mp3', solve:'audio/bgm-solve.mp3'};
+var MOODFILE={calm:'title',resolve:'solve',invest:'case',tense:'case',build:'case'};
+/* 그 분위기의 파일이 아직 없으면 이 파일로 대신한다. 해결 화면 전용 곡을 넣기 전에도
+   지금처럼 주제곡이 울리고, 파일을 넣는 순간 조용히 갈아탄다. */
+var TRKFALL={solve:'title'};
 var TRK={},trkKey=null,trkNode=null,trkGain=null,trkTried=false;
 var TRKVOL=.6;
 /* mp3 는 인코딩할 때 앞뒤에 20~50ms 짜리 빈 구간이 붙는다. 브라우저가 그걸 떼 주기도 하고
@@ -214,7 +217,7 @@ function loadTracks(){
       buf._cut=edgeTrim(buf);
       TRK[k]=buf;
       /* 지금 이 분위기에 해당하는 파일이 뒤늦게 도착했으면 합성에서 조용히 갈아탄다 */
-      if(MOODFILE[M.mood]===k&&A.music)applyMood();
+      if((MOODFILE[M.mood]===k||TRKFALL[MOODFILE[M.mood]]===k)&&A.music)applyMood();
     }).catch(function(){/* 파일이 없는 건 흔한 일이다 — 조용히 넘어간다 */});
   });
 }
@@ -241,6 +244,7 @@ function trkPlay(k){
 function applyMood(){
   if(!ac||!A.music)return;
   var k=MOODFILE[M.mood];
+  if(k&&!TRK[k]&&TRKFALL[k])k=TRKFALL[k];
   if(k&&TRK[k]){synthOff();trkPlay(k)}
   else{trkStop(.4);synthOn()}
 }
