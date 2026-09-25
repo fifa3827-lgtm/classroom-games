@@ -92,8 +92,8 @@ h1{font-family:Jua,sans-serif;font-weight:400;font-size:44px;white-space:nowrap;
   <div class="ttl"><span class="seal" aria-label="배정">裵鄭</span><h1>명윤랜드</h1></div>
   <div class="sub">대관람차에 손님을 <b>배정</b>해 주세요</div>
   <div class="how">
-    <div><b style="background:#ff8fa8">1</b>곤돌라가 아래 빛나는 띠에 들어오면</div>
-    <div><b style="background:#6cbcff">2</b>같은 색 줄을 톡! 줄줄이 폴짝 타요</div>
+    <div><b style="background:#ff8fa8">1</b>관람차는 음악 박자에 맞춰 돌아요</div>
+    <div><b style="background:#6cbcff">2</b>고리가 줄어 과녁에 딱 닿을 때 같은 색 줄을 톡!</div>
     <div><b style="background:#ffb067">3</b>꽉 채우면 꼭대기에서 불꽃이 펑!</div>
   </div>
   <button class="btn" id="btnStart">놀러 가기</button>
@@ -562,7 +562,7 @@ const s16 = () => BGM.cur < 0 ? .085 : 15 / BGM.bpm;
 const G = {
   state: 'title', stage: 1, score: 0, hearts: 3, combo: 0, maxCombo: 0, charge: 0, fever: 0, note: 0,
   boarded: 0, spawned: 0, spawnT: 0, lostStage: 0,
-  wheelA: 0, dir: 1, dirS: 1, speedMul: 1, windT: 0, windNext: 12, revNext: 16,
+  wheelA: 0, windNext: 12, revNext: 16, grades: [0, 0, 0, 0], judge: null,
   gondolas: [], lanes: [], hops: [], parts: [], texts: [], rockets: [], shake: 0, flash: 0,
   time: 0, P: null, timeScale: 1, sky: 1, skyTo: 1, laneFlash: [], clearT: 0, introT: 0, hintT: 0,
 };
@@ -570,10 +570,11 @@ function params(s) {
   const gondolas = Math.min(12, 6 + Math.floor((s - 1) / 2)), spacing = TAU / gondolas;
   return {
     s, colors: Math.min(6, 2 + Math.floor(s / 2)), lanes: s <= 2 ? 3 : s <= 6 ? 4 : 5, gondolas,
-    speed: Math.min(1.0, .34 + s * .042), spawn: Math.max(.55, 2.45 - s * .16), target: Math.min(80, 10 + s * 4), cap: 5,
+    every: s <= 2 ? 4 : s <= 5 ? 3 : 2,          // 곤돌라가 몇 박마다 탑승 띠 한가운데에 오는가 (리듬)
+    winT: s <= 2 ? .42 : Math.max(.2, .38 - s * .01),   // 탑승 띠 안에 머무는 시간(초, 한쪽)
+    spawn: Math.max(.55, 2.45 - s * .16), target: Math.min(80, 10 + s * 4), cap: 5,
     seatMin: s <= 2 ? 2 : s <= 4 ? 3 : 2, seatMax: s <= 2 ? 2 : s <= 8 ? 3 : 4,
     heart: s >= 2, rainbow: s >= 3, wind: s >= 7, reverse: s >= 10,
-    win: Math.min(spacing * .42, Math.max(.16, .33 - s * .008)),
   };
 }
 const NEWS = {
@@ -592,6 +593,40 @@ const SKIES = [
   { top: '#1d2556', bot: '#5a4f9e', hill: '#35407c', hill2: '#2b346c', plaza: '#dcd6f0', night: 1 },
 ];
 const skyOf = s => Math.floor((s - 1) / 3) % 4;
+
+// =====================================================================
+// 리듬: 관람차가 배경음 박자에 맞춰 돈다. 곤돌라는 정확히 P.every 박마다 탑승 띠 한가운데에 온다.
+// 시계는 오디오 시계(들리는 시각 = currentTime - 출력 지연)를 쓴다 → 화면·소리·판정이 같은 박을 본다.
+// 속도·방향 바꾸기(돌풍 · 역회전 · 곡 바뀜)는 늘 「곤돌라가 한가운데 오는 순간」에만 해서 박이 어긋나지 않는다.
+// =====================================================================
+const RH = { aRef: BOTTOM, tRef: 0, omega: .4, dir: 1, mult: 1, next: null, key: '', jv: 0, windEnd: 0 };
+const clockNow = () => AC ? AC.currentTime - (AC.outputLatency || AC.baseLatency || 0) : performance.now() / 1000;
+const beatLen = () => 60 / (BGM.cur >= 0 ? BGM.bpm : 112);
+const spacingA = () => TAU / Math.max(1, G.gondolas.length);
+const arrivalP = () => (G.P ? G.P.every : 4) * beatLen() / RH.mult;          // 곤돌라 도착 간격(초)
+const wheelAt = t => RH.aRef + RH.dir * RH.omega * (t - RH.tRef);
+function nextArrival(t) { const Pd = arrivalP(); return RH.tRef + Math.ceil((t - RH.tRef) / Pd - 1e-6) * Pd; }
+function rhSync(now) {                    // 곡(박)이 바뀌었거나 곤돌라 수가 바뀌면 다시 맞춘다
+  const beat = beatLen(), old = wheelAt(now);
+  const t0 = BGM.cur >= 0 ? BGM.t0 : now;
+  const tA = t0 + Math.ceil((now + .05 - t0) / beat) * beat;
+  const oldA = wheelAt(tA), sp = spacingA();
+  RH.omega = sp / ((G.P ? G.P.every : 4) * beat / RH.mult);
+  RH.aRef = BOTTOM + Math.round((oldA - BOTTOM) / sp) * sp; RH.tRef = tA; RH.next = null;
+  RH.jv += old - wheelAt(now);            // 화면에서는 부드럽게 따라붙는다
+}
+function rhSchedule(change) {             // 다음 도착 순간에 바꾼다
+  const now = clockNow(), tA = nextArrival(now + .02);
+  RH.next = Object.assign({ t: tA }, change);
+}
+function rhApply(now) {
+  const n = RH.next; if (!n || now < n.t) return;
+  RH.aRef = wheelAt(n.t); RH.tRef = n.t; RH.next = null;
+  if (n.dir) RH.dir = n.dir;
+  if (n.mult) { RH.mult = n.mult; RH.omega = spacingA() / ((G.P ? G.P.every : 4) * beatLen() / RH.mult); }
+  if (n.windOn) { RH.windEnd = n.t + 4 * arrivalP(); }
+}
+function beatPulse() { if (BGM.cur < 0) return 0; const b = beatLen(), ph = ((clockNow() - BGM.t0) / b) % 1; return Math.exp(-(ph < 0 ? ph + 1 : ph) * 7); }
 
 // =====================================================================
 // 배치
@@ -623,7 +658,7 @@ const slotS = f => 1 - Math.min(f, 6) * .045;
 function gPos(g) {
   const a = G.wheelA + g.i * TAU / G.gondolas.length;
   const rx = L.cx + L.R * Math.cos(a), ry = L.cy + L.R * Math.sin(a);
-  const sway = Math.sin(G.time * 1.7 + g.i) * .04 + (G.speedMul - 1) * .12 * G.dirS;
+  const sway = Math.sin(G.time * 1.7 + g.i) * .04 + (RH.mult - 1) * .1 * RH.dir;
   return { a, rx, ry, x: rx + Math.sin(sway) * L.hang, y: ry + Math.cos(sway) * L.hang };
 }
 
@@ -654,8 +689,8 @@ function setupStage(demo) {
   G.lanes = []; for (let i = 0; i < P.lanes; i++) G.lanes.push([]);
   G.laneFlash = new Array(P.lanes).fill(0);
   G.hops = []; G.boarded = 0; G.spawned = 0; G.spawnT = 1.2; G.lostStage = 0;
-  G.combo = 0; G.charge = 0; G.note = 0; G.maxCombo = 0; G.fever = 0; bgmFever(false);
-  G.windT = 0; G.windNext = rand(9, 14); G.revNext = rand(14, 20); G.dir = 1; G.dirS = 1; G.speedMul = 1;
+  G.combo = 0; G.charge = 0; G.note = 0; G.maxCombo = 0; G.fever = 0; G.grades = [0, 0, 0, 0]; G.judge = null; bgmFever(false);
+  G.windNext = rand(9, 14); G.revNext = rand(14, 20); RH.mult = 1; RH.dir = 1; RH.next = null; RH.windEnd = 0; RH.key = '';
   if (!demo) for (let i = 0; i < P.lanes; i++) for (let k = 0; k < 2; k++) { const last = G.lanes[i][G.lanes[i].length - 1]; G.lanes[i].push(newPassenger(last && Math.random() < .5 ? last.c : ri(P.colors), k + 3)); G.spawned++; }
   else G.lanes.forEach((l, i) => { for (let k = 0; k < 3; k++) l.push(newPassenger((i + k) % P.colors, k)); });
   G.gondolas = []; for (let i = 0; i < P.gondolas; i++) { const g = { i }; G.gondolas.push(g); }
@@ -667,10 +702,12 @@ function setupStage(demo) {
 // =====================================================================
 // 조작
 // =====================================================================
+function winAngle() { return Math.min(spacingA() * .45, RH.omega * G.P.winT * (G.fever > 0 ? 1.35 : 1)); }
 function windowGondola() {
-  const win = G.P.win * (G.fever > 0 ? 1.35 : 1); let best = null, bd = 9;
-  for (const g of G.gondolas) { const d = Math.abs(angDiff(gPos(g).a, BOTTOM)); if (d < win && d < bd && g.riders.length + g.incoming < g.seats) { bd = d; best = g; } }
-  return best ? { g: best, d: bd, win } : null;
+  const win = winAngle(); let best = null, bd = 9, sd = 0;
+  for (const g of G.gondolas) { const dd = angDiff(gPos(g).a, BOTTOM), d = Math.abs(dd); if (d < win && d < bd && g.riders.length + g.incoming < g.seats) { bd = d; best = g; sd = dd; } }
+  // dt: 한가운데에 오는 순간과의 시간 차(초). 음수 = 빨리 누름, 양수 = 늦게 누름
+  return best ? { g: best, d: bd, win, dt: sd / (RH.dir * RH.omega) } : null;
 }
 function tapLane(li) {
   if (G.state !== 'play') return;
@@ -683,9 +720,11 @@ function tapLane(li) {
   if (g.type !== 'rainbow' && g.c !== c) { sfxWrong(); buzz(HAPTIC.wrong); breakCombo(); lane[0].shake = .5; addText(laneX(li), slotY(0) - L.pr * 1.6, '색이 달라요', '#d9587a', 19); return; }
   const free = g.seats - g.riders.length - g.incoming;
   let k = 0; while (k < lane.length && k < free && lane[k].c === c) k++;
-  const perfect = w.d < w.win * .33;
-  G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); if (G.fever <= 0) G.charge++;
-  const mult = (1 + Math.min(G.combo, 20) * .1) * (G.fever > 0 ? 2 : 1) * (perfect ? 1.5 : 1);
+  // 리듬 판정: 박에 딱 맞춰 누를수록 좋다
+  const adt = Math.abs(w.dt), grade = adt < .075 ? 3 : adt < .15 ? 2 : 1, perfect = grade === 3;
+  G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); if (G.fever <= 0) G.charge += grade === 3 ? 2 : 1;
+  G.grades[grade]++;
+  const mult = (1 + Math.min(G.combo, 20) * .1) * (G.fever > 0 ? 2 : 1) * [0, 1, 1.5, 2][grade];
   const now = AC ? AC.currentTime : 0, st = s16();
   let tNext = AC ? Math.max(gridNext(4, .07), now + .07) : 0;
   for (let j = 0; j < k; j++) {
@@ -698,12 +737,15 @@ function tapLane(li) {
   g.incoming += k;
   lane.forEach((p, idx) => { p.target = idx; });
   const pts = Math.round(10 * k * mult); addScore(pts);
-  addText(L.cx + (li - (G.lanes.length - 1) / 2) * 18, L.py - L.gh * 1.6, (perfect ? '퍼펙트! ' : '') + '+' + pts, perfect ? '#ef4f78' : '#2f2a4d', perfect ? 26 : 22);
-  if (perfect) { burst(gPos(g).x, gPos(g).y, 14, '#fff6b0', 'star'); G.flash = .25; }
+  const J = [null, ['좋아요', '#35a877'], ['그레이트!', '#3587d6'], ['퍼펙트!', '#ef4f78']][grade];
+  G.judge = { txt: J[0], col: J[1], t: .7, grade, late: grade < 3 ? (w.dt < 0 ? '조금 빨라요' : '조금 느려요') : '' };
+  addText(L.cx, L.py - L.gh * 1.75, '+' + pts, '#2f2a4d', 20);
+  if (perfect) { burst(gPos(g).x, gPos(g).y, 16, '#fff6b0', 'star'); G.flash = .25; if (AC) { hit(now, .09, 1500, .22, 'bandpass', 1); hit(now, .04, 6000, .12, 'highpass'); } }
+  else if (grade === 2) burst(gPos(g).x, gPos(g).y, 8, '#cfe8ff', 'star');
   buzz(HAPTIC.board(k));
   if (G.charge >= 6 && G.fever <= 0) startFever();
 }
-function breakCombo() { if (G.combo >= 4) addText(L.cx, L.py + 26, G.combo + ' 콤보에서 멈춤', '#5d5680', 16); G.combo = 0; G.charge = 0; G.note = 0; }
+function breakCombo() { G.judge = null; if (G.combo >= 4) addText(L.cx, L.py + 26, G.combo + ' 콤보에서 멈춤', '#5d5680', 16); G.combo = 0; G.charge = 0; G.note = 0; }
 function startFever() { G.fever = 8; G.charge = 0; sfxFever(); bgmFever(true); buzz(HAPTIC.fever); G.flash = .6; addText(L.cx, L.cy, '피버 타임!', '#ef4f78', 44, 1.6); }
 function addScore(n) { G.score += n; const el = $('#scorePill'); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
 function spawnOne() {
@@ -790,7 +832,7 @@ function beginStage() {
   const P = G.P, prev = G.stage > 1 ? params(G.stage - 1) : null;
   if (prev && P.colors > prev.colors) { const c = COLORS[P.colors - 1]; bits.push(`<b style="color:${c.dark}">새 친구 ${c.name}</b>손님이 ${P.colors}가지 색이 되었어요`); }
   if (prev && P.lanes > prev.lanes) bits.push(`<b>줄이 ${P.lanes}개</b>기다리는 줄이 하나 늘었어요`);
-  if (G.stage === 1) bits.push('곤돌라가 아래 빛나는 띠에 오면<br>같은 색 줄을 톡!');
+  if (G.stage === 1) bits.push('고리가 줄어들어 과녁에 닿는 박자에<br>같은 색 줄을 톡! 박에 맞출수록 퍼펙트');
   bits.push(`<span style="color:#8a83a8">♪ ${TRACKS[trackOf(G.stage)].name}${lapRate(G.stage) > 1 ? ' (더 빠르게)' : ''}</span>`);
   $('#bnNew').innerHTML = bits.join('<div style="height:8px"></div>');
   $('#banner').classList.add('on'); ting();
@@ -811,7 +853,7 @@ function stageClear() {
     $('#clStars').querySelectorAll('span').forEach((s, i) => s.classList.toggle('on', i < stars));
     $('#clScore').textContent = G.score.toLocaleString(); $('#clCombo').textContent = G.maxCombo;
     const lines = ['손님들이 행복하게 내려왔어요', '관람차가 반짝반짝 빛나요', '명윤랜드가 점점 북적여요', '다음 손님들이 줄을 서고 있어요'];
-    $('#clMsg').textContent = (stars === 3 ? '한 명도 놓치지 않았어요! ' : '') + lines[G.stage % lines.length] + '. 하트 하나를 채웠어요.';
+    $('#clMsg').textContent = `퍼펙트 ${G.grades[3]} · 그레이트 ${G.grades[2]} · 좋아요 ${G.grades[1]}. ` + (stars === 3 ? '한 명도 놓치지 않았어요! ' : '') + lines[G.stage % lines.length] + '.';
     showOv('clear', true);
   }, 1500);
 }
@@ -850,17 +892,19 @@ function update(dt) {
   const P = G.P;
   if (G.state === 'intro') { G.introT -= dt; if (G.introT <= 0) { G.state = 'play'; $('#banner').classList.remove('on'); } }
   if (G.state === 'play') {
-    if (P.wind) { G.windNext -= dt; if (G.windNext <= 0) { G.windT = 2.8; G.windNext = rand(10, 16); whoosh(1.6); addText(L.cx, L.cy - L.R * .2, '돌풍!', '#3587d6', 32, 1.2); } }
-    if (P.reverse) { G.revNext -= dt; if (G.revNext <= 0) { G.dir *= -1; G.revNext = rand(14, 22); sfxReverse(); addText(L.cx, L.cy + L.R * .2, '거꾸로 돌아요!', '#7f63d6', 28, 1.3); } }
+    if (P.wind && !RH.next && RH.mult === 1) { G.windNext -= dt; if (G.windNext <= 0) { G.windNext = rand(12, 18); rhSchedule({ mult: 2, windOn: true }); whoosh(1.6); addText(L.cx, L.cy - L.R * .2, '돌풍! 두 배 빠르게', '#3587d6', 28, 1.4); } }
+    if (P.reverse && !RH.next && RH.mult === 1) { G.revNext -= dt; if (G.revNext <= 0) { G.revNext = rand(14, 22); rhSchedule({ dir: -RH.dir }); sfxReverse(); addText(L.cx, L.cy + L.R * .2, '거꾸로 돌아요!', '#7f63d6', 28, 1.3); } }
     if (G.spawned < P.target) { G.spawnT -= dt; if (G.spawnT <= 0) { G.spawnT = P.spawn * rand(.75, 1.25) * (P.s < 4 ? 1 : 1.35); spawnOne(); } }
     if (G.fever > 0) { G.fever -= dt; if (G.fever <= 0) { bgmFever(false); addText(L.cx, L.py + 30, '피버 끝', '#5d5680', 18); } }
     if (G.boarded >= P.target && !G.hops.length) stageClear();
   }
-  if (G.windT > 0) G.windT -= dt;
-  G.speedMul = lerp(G.speedMul, G.windT > 0 ? 1.9 : 1, Math.min(1, dt * 3));
-  G.dirS = lerp(G.dirS, G.dir, Math.min(1, dt * 1.4));
-  const spin = G.state === 'over' ? .4 : G.state === 'title' ? .75 : 1;
-  G.wheelA += P.speed * G.speedMul * G.dirS * dt * spin;
+  const now = clockNow(), key = [BGM.t0, BGM.bpm, G.gondolas.length, P.every].join('|');
+  if (key !== RH.key) { RH.key = key; rhSync(now); }
+  rhApply(now);
+  if (RH.windEnd && now >= RH.windEnd && !RH.next) { RH.next = { t: RH.windEnd, mult: 1 }; RH.windEnd = 0; rhApply(now); }
+  RH.jv *= Math.exp(-dt * 7);
+  G.wheelA = wheelAt(now) + RH.jv;
+  if (G.judge) { G.judge.t -= dt; if (G.judge.t <= 0) G.judge = null; }
   const w = G.state === 'play' ? windowGondola() : null; G.winG = w ? w.g : null;
   for (const g of G.gondolas) {
     const a = gPos(g).a, dt2 = Math.abs(angDiff(a, TOP));
@@ -958,10 +1002,10 @@ function drawWheel() {
   [[-1, 1], [1, 1]].forEach(([sx]) => { ctx.strokeStyle = edge; ctx.lineWidth = gs * .26; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + sx * R * .58, L.py + 4); ctx.stroke(); ctx.strokeStyle = frame; ctx.lineWidth = gs * .17; ctx.stroke(); });
   ctx.strokeStyle = frame; ctx.lineWidth = gs * .1; ctx.beginPath(); ctx.moveTo(cx - R * .36, cy + R * .62); ctx.lineTo(cx + R * .36, cy + R * .62); ctx.stroke();
   // 탑승 구역 띠 (바퀴 아래쪽)
-  const win = G.P.win * (G.fever > 0 ? 1.35 : 1), wg = G.winG;
+  const win = winAngle(), wg = G.winG, bp = beatPulse();
   const zc = wg ? (wg.type === 'rainbow' ? `hsl(${G.time * 200 % 360},90%,70%)` : wg.type === 'heart' ? '#ff8fa8' : COLORS[wg.c].base) : '#ffffff';
   ctx.lineCap = 'butt';
-  ctx.strokeStyle = zc; ctx.globalAlpha = wg ? .55 + .2 * Math.sin(G.time * 12) : .38; ctx.lineWidth = gs * 1.25;
+  ctx.strokeStyle = zc; ctx.globalAlpha = wg ? .55 + .3 * bp : .3 + .25 * bp; ctx.lineWidth = gs * 1.25;
   ctx.beginPath(); ctx.arc(cx, cy, R + gs * .1, BOTTOM - win, BOTTOM + win); ctx.stroke();
   ctx.globalAlpha = wg ? .9 : .5; ctx.lineWidth = gs * .55; ctx.strokeStyle = '#ffffff';
   ctx.beginPath(); ctx.arc(cx, cy, R + gs * .1, BOTTOM - win * .33, BOTTOM + win * .33); ctx.stroke(); ctx.globalAlpha = 1;
@@ -985,11 +1029,25 @@ function drawWheel() {
   }
   ctx.globalAlpha = 1;
 }
+const gColor = g => g.type === 'rainbow' ? `hsl(${G.time * 200 % 360},90%,70%)` : g.type === 'heart' ? '#ff8fa8' : COLORS[g.c].base;
+// 다가오는 곤돌라를 알려 주는 고리: 줄어들어 과녁과 겹치는 순간이 박자 (리듬게임의 노트)
+function drawApproach() {
+  if (G.state !== 'play' && G.state !== 'intro') return;
+  const Pd = arrivalP(), X = L.cx, Y = L.cy + L.R + L.hang, bp = beatPulse();
+  let best = null, bt = 9;
+  for (const g of G.gondolas) { if (g.riders.length + g.incoming >= g.seats) continue; const tt = -angDiff(gPos(g).a, BOTTOM) / (RH.dir * RH.omega); if (tt > -.03 && tt < Pd * 1.02 && tt < bt) { bt = tt; best = g; } }
+  ctx.strokeStyle = `rgba(255,255,255,${.6 + bp * .4})`; ctx.lineWidth = 3 + bp * 2; ctx.setLineDash([7, 6]); ctx.beginPath(); ctx.arc(X, Y, L.gs * .98, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  if (!best) return;
+  const u = clamp(bt / Pd, 0, 1);
+  ctx.globalAlpha = .2 + .8 * (1 - u); ctx.strokeStyle = gColor(best); ctx.lineWidth = 4 + 5 * (1 - u);
+  ctx.beginPath(); ctx.arc(X, Y, L.gs * (.98 + 2.3 * u), 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+}
 function drawHub() {
   const { cx, cy, gs } = L;
-  ctx.fillStyle = '#ffd36e'; ctx.strokeStyle = '#e8a93a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, gs * .42, 0, TAU); ctx.fill(); ctx.stroke();
+  const hb = 1 + beatPulse() * .16;
+  ctx.fillStyle = '#ffd36e'; ctx.strokeStyle = '#e8a93a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, gs * .42 * hb, 0, TAU); ctx.fill(); ctx.stroke();
   // 가운데 하트: 裵 · 鄭 두 사람
-  ctx.fillStyle = '#ef4f78'; heartPath(cx, cy + gs * .06, gs * .24); ctx.fill();
+  ctx.fillStyle = '#ef4f78'; heartPath(cx, cy + gs * .06, gs * .24 * hb); ctx.fill();
 }
 function drawGondola(g) {
   const p = gPos(g), s = L.gs, w = s * 1.2, h = L.gh, x = p.x, y = p.y;
@@ -1045,7 +1103,7 @@ function drawPlatform() {
   ctx.fillStyle = '#f6c38f'; rr(cx - w / 2, py - 2, w, gs * .38, 10); ctx.fill();
   ctx.fillStyle = '#e0a36b'; ctx.fillRect(cx - w / 2 + 6, py + gs * .2, w - 12, 3);
   const wg = G.winG, zc = wg ? (wg.type === 'rainbow' ? `hsl(${G.time * 200 % 360},90%,70%)` : wg.type === 'heart' ? '#ff8fa8' : COLORS[wg.c].base) : null;
-  for (let k = 0; k < 7; k++) { const x = cx - w / 2 + 12 + k * (w - 24) / 6; ctx.fillStyle = zc || (night > .3 ? '#ffe9a0' : '#fff6d0'); ctx.globalAlpha = zc ? .9 : .6; ctx.beginPath(); ctx.arc(x, py + gs * .08, 3, 0, TAU); ctx.fill(); }
+  for (let k = 0; k < 7; k++) { const x = cx - w / 2 + 12 + k * (w - 24) / 6; ctx.fillStyle = zc || (night > .3 ? '#ffe9a0' : '#fff6d0'); const bpp = beatPulse(); ctx.globalAlpha = zc ? .9 : .45 + .55 * bpp; ctx.beginPath(); ctx.arc(x, py + gs * .08, 3 + bpp * 1.5, 0, TAU); ctx.fill(); }
   ctx.globalAlpha = 1;
 }
 function drawLanes() {
@@ -1064,7 +1122,7 @@ function drawLanes() {
     }
     for (let k = l.length - 1; k >= 0; k--) {
       const p = l[k], s = slotS(p.fy), y = slotY(p.fy), sh = p.shake > 0 ? Math.sin(p.shake * 60) * 4 * p.shake * 2 : 0;
-      const bob = Math.sin(G.time * 3 + p.seed) * 1.5 * (k === 0 ? 1.6 : 1);
+      const bob = Math.sin(G.time * 3 + p.seed) * .8 - beatPulse() * (k === 0 ? 5 : 2.5);
       critter(x + sh, y + bob, L.pr * s, p.c, { blink: p.blink < 0, front: k === 0, worried: full });
     }
   }
@@ -1148,6 +1206,14 @@ function drawTexts() {
 }
 function drawHudCanvas() {
   if (G.state !== 'play' && G.state !== 'intro') return;
+  if (G.judge) {
+    const j = G.judge, a = clamp(j.t / .25, 0, 1), pop = 1 + Math.max(0, j.t - .55) * 2.2;
+    ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.font = `${Math.round((j.grade === 3 ? 38 : 30) * pop)}px Jua`; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(255,255,255,.95)';
+    const jy = L.cy + L.R * .42; ctx.strokeText(j.txt, L.cx, jy); ctx.fillStyle = j.col; ctx.fillText(j.txt, L.cx, jy);
+    if (j.late) { ctx.font = '15px Jua'; ctx.lineWidth = 4; ctx.strokeText(j.late, L.cx, jy + 28); ctx.fillStyle = '#5d5680'; ctx.fillText(j.late, L.cx, jy + 28); }
+    ctx.globalAlpha = 1;
+  }
   const x = GX + 16, y = L.py - 6;
   if (G.combo >= 2) {
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.font = `${Math.round(22 + Math.min(G.combo, 20))}px Jua`;
@@ -1167,7 +1233,7 @@ function render() {
   const sh = G.shake > 0 && !RM ? G.shake * 7 : 0;
   ctx.save(); if (sh) ctx.translate(rand(-sh, sh), rand(-sh, sh));
   drawBG(); drawPlatform(); drawWheel();
-  G.gondolas.forEach(drawGondola); drawHub();
+  G.gondolas.forEach(drawGondola); drawHub(); drawApproach();
   if (G.state !== 'title') { drawLanes(); drawHops(); }
   drawParts(); drawTexts(); drawHudCanvas();
   ctx.restore();
