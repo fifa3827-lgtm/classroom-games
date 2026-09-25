@@ -569,10 +569,11 @@ const G = {
 function params(s) {
   const gondolas = Math.min(12, 6 + Math.floor((s - 1) / 2)), spacing = TAU / gondolas;
   return {
-    s, colors: Math.min(6, 2 + Math.floor(s / 2)), lanes: s <= 2 ? 3 : s <= 6 ? 4 : 5, gondolas,
-    every: s <= 2 ? 4 : s <= 5 ? 3 : 2,          // 곤돌라가 몇 박마다 탑승 띠 한가운데에 오는가 (리듬)
-    winT: s <= 2 ? .42 : Math.max(.2, .38 - s * .01),   // 탑승 띠 안에 머무는 시간(초, 한쪽)
-    spawn: Math.max(.55, 2.45 - s * .16), target: Math.min(80, 10 + s * 4), cap: 5,
+    // 7단계 이후가 너무 가파르다는 의견(「8단계부터 어려워」)으로 색 · 줄 · 박 간격 · 손님 속도가 오르는 시점을 뒤로 미뤘다
+    s, colors: s <= 2 ? 2 : s <= 4 ? 3 : s <= 7 ? 4 : s <= 12 ? 5 : 6, lanes: s <= 2 ? 3 : s <= 8 ? 4 : 5, gondolas,
+    every: s <= 2 ? 4 : s <= 9 ? 3 : 2,          // 곤돌라가 몇 박마다 탑승 띠 한가운데에 오는가 (리듬)
+    winT: s <= 2 ? .42 : Math.max(.22, .40 - s * .008),   // 탑승 띠 안에 머무는 시간(초, 한쪽)
+    spawn: Math.max(.85, 3.0 - s * .11), target: Math.min(80, 10 + s * 4), cap: 5,   // spawn: 「승객이 너무 빨리 차는 것 같아」 → 약 25% 느리게
     seatMin: s <= 2 ? 2 : s <= 4 ? 3 : 2, seatMax: s <= 2 ? 2 : s <= 8 ? 3 : 4,
     heart: s >= 2, rainbow: s >= 3, wind: s >= 7, reverse: s >= 10,
   };
@@ -758,7 +759,7 @@ function spawnOne() {
   const l = G.lanes[li], last = l[l.length - 1];
   const c = last && Math.random() < .45 ? last.c : ri(P.colors);
   // 4단계부터는 친구끼리 두세 명씩 한꺼번에 온다(같은 색)
-  let n = P.s < 4 ? 1 : 1 + ri(Math.min(3, 1 + Math.floor(P.s / 4)));
+  let n = P.s < 6 ? 1 : 1 + ri(Math.min(3, 1 + Math.floor(P.s / 8)));
   n = Math.min(n, P.target - G.spawned);
   for (let k = 0; k < n; k++) {
     if (l.length >= P.cap) { loseHeart(li); break; }
@@ -846,7 +847,7 @@ function stageClear() {
   [0, .35, .7].forEach((d, i) => setTimeout(() => { const x = L.cx + (i - 1) * L.R * .8; explode(x, L.cy - L.R * rand(.6, 1), COLORS.map(c => c.base), 3, i === 1, i === 2 && G.stage >= 2, 0); if (AC) sfxBurst(AC.currentTime + .13, 3, i === 1 ? 'big' : 'n'); }, 300 + d * 1000));
   const stars = G.lostStage === 0 ? 3 : G.lostStage === 1 ? 2 : 1;
   G.hearts = Math.min(3, G.hearts + 1);
-  if (G.stage >= save.check + 5 || (G.stage + 1) % 5 === 1) save.check = Math.max(save.check, Math.floor(G.stage / 5) * 5 + 1);
+  save.check = G.stage + 1;          // 이어하기: 깬 단계의 다음 단계 (「죽은 자리에서 이어하기」)
   save.bestStage = Math.max(save.bestStage, G.stage); save.bestScore = Math.max(save.bestScore, G.score); persist();
   setTimeout(() => {
     $('#clTitle').textContent = G.stage + '단계 성공!';
@@ -860,12 +861,12 @@ function stageClear() {
 function gameOver() {
   G.state = 'over'; bgmFever(false); G.fever = 0; sfxOver(); duck(3000);
   save.bestStage = Math.max(save.bestStage, G.stage); save.bestScore = Math.max(save.bestScore, G.score);
-  const cp = Math.floor((G.stage - 1) / 5) * 5 + 1; save.check = Math.max(save.check, cp); persist();
+  const cp = G.stage; save.check = cp; persist();   // 이어하기: 끝난 바로 그 단계부터
   setTimeout(() => {
     $('#ovStage').textContent = G.stage + '단계'; $('#ovScore').textContent = G.score.toLocaleString();
     $('#ovMsg').textContent = '줄이 너무 길어서 손님들이 지쳤어요. 조금만 더 빨리 태워 볼까요?';
     $('#ovBest').textContent = `최고 기록 ${save.bestStage}단계 · ${save.bestScore.toLocaleString()}점`;
-    const b = $('#btnCheck'); b.hidden = cp <= 1; b.textContent = cp + '단계부터'; b.dataset.from = cp;
+    const b = $('#btnCheck'); b.hidden = cp <= 1; b.textContent = cp + '단계 이어하기'; b.dataset.from = cp;
     showOv('over', true);
   }, 1100);
 }
@@ -875,7 +876,7 @@ function toTitle() {
 }
 function refreshTitle() {
   $('#bestTxt').textContent = save.bestStage ? `최고 기록 ${save.bestStage}단계 · ${save.bestScore.toLocaleString()}점` : '';
-  const b = $('#btnCont'); b.hidden = save.check <= 1; b.textContent = save.check + '단계부터'; b.dataset.from = save.check;
+  const b = $('#btnCont'); b.hidden = save.check <= 1; b.textContent = save.check + '단계 이어하기'; b.dataset.from = save.check;
 }
 function pause(on) {
   if (on && G.state !== 'play' && G.state !== 'intro') return;
@@ -894,7 +895,9 @@ function update(dt) {
   if (G.state === 'play') {
     if (P.wind && !RH.next && RH.mult === 1) { G.windNext -= dt; if (G.windNext <= 0) { G.windNext = rand(12, 18); rhSchedule({ mult: 2, windOn: true }); whoosh(1.6); addText(L.cx, L.cy - L.R * .2, '돌풍! 두 배 빠르게', '#3587d6', 28, 1.4); } }
     if (P.reverse && !RH.next && RH.mult === 1) { G.revNext -= dt; if (G.revNext <= 0) { G.revNext = rand(14, 22); rhSchedule({ dir: -RH.dir }); sfxReverse(); addText(L.cx, L.cy + L.R * .2, '거꾸로 돌아요!', '#7f63d6', 28, 1.3); } }
-    if (G.spawned < P.target) { G.spawnT -= dt; if (G.spawnT <= 0) { G.spawnT = P.spawn * rand(.75, 1.25) * (P.s < 4 ? 1 : 1.35); spawnOne(); } }
+    if (G.spawned < P.target) { G.spawnT -= dt; if (G.spawnT <= 0) { // 줄이 많이 찼을수록 새 손님이 천천히 온다(40%를 넘으면 늦춰지기 시작, 거의 다 차면 두 배쯤 느리게)
+      const queued = G.lanes.reduce((a, l) => a + l.length, 0), fill = queued / (G.lanes.length * P.cap);
+      G.spawnT = P.spawn * rand(.8, 1.2) * (P.s < 6 ? 1 : 1.3) * (1 + 1.8 * Math.max(0, fill - .4)); spawnOne(); } }
     if (G.fever > 0) { G.fever -= dt; if (G.fever <= 0) { bgmFever(false); addText(L.cx, L.py + 30, '피버 끝', '#5d5680', 18); } }
     if (G.boarded >= P.target && !G.hops.length) stageClear();
   }
