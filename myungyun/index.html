@@ -178,7 +178,7 @@ function audio() {
     for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
     VERB = AC.createConvolver(); VERB.buffer = ir; const vg = AC.createGain(); vg.gain.value = .32; VERB.connect(vg).connect(MASTER);
     NOISE = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate); const nd = NOISE.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    bgmWant(G.state === 'title' ? 0 : tierOf(G.stage));
+    if (G.state === 'title') bgmWant(0); else bgmWant(trackOf(G.stage), lapRate(G.stage));
   } catch (e) { AC = null; } }
   if (AC && AC.state === 'suspended') AC.resume();
 }
@@ -190,7 +190,7 @@ function setSound(on) {
   const b = $('#btnSnd'); b.classList.toggle('off', !on); b.setAttribute('aria-label', on ? '소리 끄기' : '소리 켜기');
 }
 const PENT = [1, 9/8, 5/4, 3/2, 5/3, 2, 9/4, 5/2, 3, 10/3, 4];
-const ROOT = 261.63;   // 도. 배경음도 도 장조라 효과음이 저절로 화음이 된다
+let ROOT = 261.63;     // 으뜸음. 곡이 바뀌면 bgmPlay()가 그 곡의 조에 맞춰 바꾼다 → 효과음이 저절로 배경음과 화음이 된다
 function env(g, t, a, peak, d, end = .0001) { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(end, t + a + d); }
 function tone(type, f0, f1, t, dur, vol, bus = OUT, pan = 0) {
   const o = AC.createOscillator(), g = AC.createGain(); o.type = type;
@@ -324,16 +324,29 @@ const HAPTIC = { tap: 20, board: n => Math.min(90, 30 + n * 12), full: [60, 40, 
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 
 // =====================================================================
-// 배경음: 타악 중심의 신나는 놀이공원 그루브 (Lanternfall 4차 배경음 방향: 가락 악기는 거의 없이)
-// 도 장조 · 16마디 반복 · 단계가 오르면 빠르기가 112 → 122 → 132로 올라간다.
-// 피버 층(봉고 16분·오픈 하이햇·마림바 찌르기·글로켄 아르페지오)을 같은 박에 겹쳐 두고 피버 때만 올린다.
+// 배경음: 단계마다 다른 곡 여덟 곡 (Lanternfall 4차 배경음 방향: 타악 중심, 가락 악기는 거의 없이)
+// 곡마다 박자·조·장르가 다르고, 효과음의 으뜸음(ROOT)도 그 곡의 조를 따라가 저절로 화음이 된다.
+// 여덟 곡을 한 바퀴 돌면 다음 바퀴부터는 6%씩 빨라진다(재생 속도, 효과음 음높이도 같이 맞춘다).
+// 곡마다 피버 층(봉고·오픈 하이햇·마림바 찌르기·글로켄 아르페지오)을 같은 박에 겹쳐 두고 피버 때만 올린다.
 // =====================================================================
-const TIERS = [112, 122, 132];
-const tierOf = s => s <= 4 ? 0 : s <= 9 ? 1 : 2;
-const BGM = { bufs: {}, busy: {}, want: -1, cur: -1, bpm: 120, t0: 0, main: null, fever: null, feverOn: false };
+// ch: [베이스 음(도=48 기준), 성질 M 장 · m 단 · 7 딸림7]
+const TRACKS = [
+  { name: '아침 산책',   bpm: 112, key: 0,  S: 16, sw: .14, style: 'walk',   ch: [[48, 'M'], [45, 'm'], [41, 'M'], [43, 'M']] },
+  { name: '솜사탕 왈츠', bpm: 138, key: 5,  S: 12, sw: 0,   style: 'waltz',  ch: [[48, 'M'], [43, '7'], [45, 'm'], [41, 'M']] },
+  { name: '통통 셔플',   bpm: 104, key: -5, S: 16, sw: .33, style: 'shuffle',ch: [[48, 'M'], [53, 'M'], [48, 'M'], [43, '7']] },
+  { name: '라틴 카니발', bpm: 122, key: 2,  S: 16, sw: .06, style: 'samba',  ch: [[48, 'M'], [45, 'm'], [50, 'm'], [43, '7']] },
+  { name: '스카 퐁퐁',   bpm: 132, key: -2, S: 16, sw: 0,   style: 'ska',    ch: [[48, 'M'], [53, 'M'], [55, 'M'], [53, 'M']] },
+  { name: '밤하늘 디스코', bpm: 118, key: 3, S: 16, sw: .02, style: 'disco',  ch: [[50, 'm'], [43, '7'], [48, 'M'], [45, 'm']] },
+  { name: '폴카 소풍',   bpm: 148, key: -3, S: 16, sw: 0,   style: 'polka',  ch: [[48, 'M'], [43, '7'], [43, '7'], [48, 'M'], [48, 'M'], [53, 'M'], [43, '7'], [48, 'M']] },
+  { name: '피날레 행진', bpm: 128, key: -4, S: 16, sw: 0,   style: 'march',  ch: [[48, 'M'], [53, 'M'], [43, '7'], [48, 'M']] },
+];
+const trackOf = s => (s - 1) % TRACKS.length;
+const lapRate = s => Math.min(1.24, 1 + Math.floor((s - 1) / TRACKS.length) * .06);
+const BGM = { bufs: {}, busy: {}, want: -1, cur: -1, rate: 1, bpm: 120, t0: 0, main: null, fever: null, feverOn: false };
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-async function renderBGM(tier) {
-  const bpm = TIERS[tier], sr = 44100, beat = 60 / bpm, s16 = beat / 4, bars = 16, len = bars * 4 * beat, tail = 2;
+const loopLen = T => 16 * (T.S / 4) * 60 / T.bpm;
+async function renderBGM(idx) {
+  const T = TRACKS[idx], bpm = T.bpm, sr = 44100, beat = 60 / bpm, s16 = beat / 4, bars = 16, len = loopLen(T), tail = 2, K = T.key;
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   const renderLayer = async layer => {
     const oc = new OAC(2, Math.ceil((len + tail) * sr), sr);
@@ -345,51 +358,149 @@ async function renderBGM(tier) {
     const nb = oc.createBuffer(1, sr * 2, sr); { const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
     const E = (g, t, a, p, d) => { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(p, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); };
     const bus = (pan = 0, wet = 0) => { const g = oc.createGain(); let n = g; if (pan && oc.createStereoPanner) { const p = oc.createStereoPanner(); p.pan.value = pan; n = g.connect(p); } n.connect(out); if (wet) { const w = oc.createGain(); w.gain.value = wet; n.connect(w).connect(verb); } return g; };
-    const O = (type, f, t, a, p, d, dst, f1, fd) => { const o = oc.createOscillator(), g = oc.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + fd); E(g, t, a, p, d); o.connect(g).connect(dst); o.start(t); o.stop(t + a + d + .05); };
+    const O = (type, f, t, a, p, d, dst, f1, fd) => { const o = oc.createOscillator(), g = oc.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + fd); E(g, t, a, p, d); o.connect(g).connect(dst); o.start(t); o.stop(t + a + d + .05); return o; };
     const N = (t, a, p, d, ft, ff, q, dst) => { const n = oc.createBufferSource(), f = oc.createBiquadFilter(), g = oc.createGain(); n.buffer = nb; f.type = ft; f.frequency.value = ff; f.Q.value = q; E(g, t, a, p, d); n.connect(f).connect(g).connect(dst); n.start(t, Math.random() * 1.5); n.stop(t + a + d + .05); };
     const M = bus(0, 0), L = bus(-.35, .05), R = bus(.35, .05), C = bus(0, .35), WL = bus(-.2, .45), WR = bus(.25, .45);
+    // ---- 악기 ----
     const kick = (t, v) => { O('sine', 160, t, .002, v, .3, M, 50, .09); N(t, .001, v * .22, .012, 'highpass', 2500, .7, M); };
+    const snare = (t, v) => { O('triangle', 210, t, .001, v * .5, .08, C, 150, .05); N(t, .001, v, .13, 'bandpass', 1900, .8, C); N(t, .001, v * .4, .05, 'highpass', 6000, .7, C); };
+    const rim = (t, v) => { O('square', 1700, t, .001, v * .35, .02, C); N(t, .001, v * .6, .02, 'bandpass', 3200, 2, C); };
     const clap = (t, v) => { for (let k = 0; k < 3; k++) N(t + k * .011, .001, v * (k === 2 ? 1 : .6), k === 2 ? .13 : .016, 'bandpass', 1300, 1.1, C); };
     const shaker = (t, v, dst) => N(t, .006, v, .045, 'bandpass', 8500, .8, dst);
+    const chat = (t, v) => N(t, .001, v, .035, 'highpass', 9000, .7, R);
+    const ohat = (t, v) => N(t, .002, v, .17, 'highpass', 8000, .7, L);
+    const crash = (t, v) => { N(t, .002, v, 1.2, 'highpass', 6000, .5, C); N(t, .002, v * .5, .6, 'bandpass', 4000, .6, C); };
     const tamb = (t, v) => { N(t, .002, v, .12, 'highpass', 7500, .7, R); N(t, .002, v * .5, .06, 'bandpass', 10500, 3, R); };
     const conga = (t, f, v, dst) => { O('sine', f * 1.35, t, .002, v, .2, dst, f, .025); O('triangle', f * 2, t, .001, v * .18, .05, dst); N(t, .001, v * .2, .012, 'bandpass', f * 6, 1, dst); };
     const cowbell = (t, v) => { const bp = oc.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 2; bp.connect(R); O('square', 587, t, .001, v, .22, bp); O('square', 845, t, .001, v * .8, .18, bp); };
+    const agogo = (t, hi, v) => { const f = hi ? 1180 : 880, bp = oc.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 3; bp.connect(L); O('square', f, t, .001, v, .16, bp); O('sine', f * 2.1, t, .001, v * .4, .08, L); };
+    const clave = (t, v) => { O('sine', 2500, t, .001, v, .05, R); O('sine', 3700, t, .001, v * .3, .02, R); };
     const wood = (t, v) => { O('sine', 1650, t, .001, v, .045, L); O('sine', 2480, t, .001, v * .4, .02, L); };
-    const bass = (t, midi, v) => { const f = mtof(midi); O('sine', f, t, .003, v, .36, M); O('sine', f * 4, t, .001, v * .22, .1, M); O('sine', f * 2, t, .001, v * .3, .04, M); O('sine', f / 2, t, .004, v * .55, .28, M); };
-    const mar = (t, midi, v, dst) => { const f = mtof(midi); O('sine', f, t, .002, v, .4, dst); O('sine', f * 4, t, .001, v * .3, .12, dst); O('sine', f * 10.1, t, .001, v * .1, .05, dst); };
-    const kal = (t, midi, v, dst) => { const f = mtof(midi); O('sine', f, t, .001, v, .8, dst); O('sine', f * 5.4, t, .001, v * .2, .1, dst); };
-    const glock = (t, midi, v, dst) => { const f = mtof(midi); O('sine', f, t, .001, v, .9, dst); O('sine', f * 2.76, t, .001, v * .3, .3, dst); };
-    const ohat = (t, v) => N(t, .002, v, .17, 'highpass', 8000, .7, L);
-    const at = (bar, step) => bar * 4 * beat + step * s16 + (step % 2 ? s16 * .14 : 0);   // 16분 스윙 살짝
-    const CH = [[48, [60, 64, 67]], [45, [57, 60, 64]], [41, [57, 60, 65]], [43, [59, 62, 67]]];   // 도 · 라단조 · 파 · 솔
-    const TOPS = [[72, 74, 76, 79], [69, 72, 74, 76], [72, 74, 77, 79], [74, 76, 79, 81]];
+    const bass = (t, midi, v, d = .36) => { const f = mtof(midi + K); O('sine', f, t, .003, v, d, M); O('sine', f * 4, t, .001, v * .22, .1, M); O('sine', f * 2, t, .001, v * .3, .04, M); O('sine', f / 2, t, .004, v * .55, d * .8, M); };
+    const mar = (t, midi, v, dst) => { const f = mtof(midi + K); O('sine', f, t, .002, v, .4, dst); O('sine', f * 4, t, .001, v * .3, .12, dst); O('sine', f * 10.1, t, .001, v * .1, .05, dst); };
+    const kal = (t, midi, v, dst) => { const f = mtof(midi + K); O('sine', f, t, .001, v, .8, dst); O('sine', f * 5.4, t, .001, v * .2, .1, dst); };
+    const glock = (t, midi, v, dst) => { const f = mtof(midi + K); O('sine', f, t, .001, v, .9, dst); O('sine', f * 2.76, t, .001, v * .3, .3, dst); };
+    const squeeze = (t, midi, v, d, dst) => {         // 손풍금처럼 짧게 찌르는 화음 (폴카)
+      const f = mtof(midi + K), lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800; lp.Q.value = .7; lp.connect(dst);
+      O('sawtooth', f, t, .012, v, d, lp); O('square', f * 1.004, t, .012, v * .5, d, lp); };
+    const triOf = ([r, q]) => { const b = r + 12 + (r < 46 ? 12 : 0); return q === 'm' ? [b, b + 3, b + 7] : q === '7' ? [b, b + 4, b + 10] : [b, b + 4, b + 7]; };
+    const S = T.S, at = (bar, step) => bar * S * s16 + step * s16 + (step % 2 ? s16 * T.sw : 0);
+    const tri4 = t3 => [...t3, t3[0] + 12];
+    const each = (arr, fn) => arr.forEach(fn);
     for (let b = 0; b < bars; b++) {
-      const [root, tri] = CH[b % 4], fill = b % 8 === 7;
-      if (layer === 'main') {
-        [0, 4, 8, 12].forEach(s => { if (!(fill && s === 12)) kick(at(b, s), .85); });
-        if (b % 4 === 3 && !fill) kick(at(b, 14), .42);
-        [4, 12].forEach(s => clap(at(b, s), .42)); if (b % 8 === 7) { clap(at(b, 14), .22); clap(at(b, 15), .3); }
-        for (let s = 0; s < 16; s++) shaker(at(b, s), s % 4 === 0 ? .15 : s % 2 === 0 ? .1 : .07, s % 2 ? R : L);
-        [2, 6, 10, 14].forEach(s => tamb(at(b, s), .12));
-        const cg = b % 2 === 0 ? [[3, 196, .26], [6, 262, .2], [10, 196, .24], [11, 196, .16], [14, 262, .2]] : [[2, 262, .2], [6, 196, .26], [7, 196, .15], [10, 262, .2], [13, 196, .22]];
-        if (!fill) cg.forEach(([s, f, v]) => conga(at(b, s), f, v, s % 2 ? R : L));
-        else [330, 300, 262, 262, 220, 196, 196, 165].forEach((f, i) => conga(at(b, 8 + i), f, .24 + i * .01, i % 2 ? R : L));
-        [[0, 0, .5], [3, 0, .3], [6, 7, .34], [10, 0, .32], [12, 12, .26], [14, 7, .28]].forEach(([s, iv, v]) => bass(at(b, s), root + 12 + iv, v));
-        [2, 10].forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .006, m, .045, i % 2 ? WR : WL)));
-        if (b >= 8) [0, 6, 10].forEach(s => cowbell(at(b, s), .06));
-        if (b % 2) [7, 15].forEach(s => wood(at(b, s), .08));
-        if (b % 4 === 3) TOPS[b % 4].forEach((m, i) => kal(at(b, 12 + i), m, .09 + i * .01, i % 2 ? WR : WL));
-        if (b === 0) glock(at(0, 0), 84, .09, C);
-      } else {
-        [2, 6, 10, 14].forEach(s => ohat(at(b, s), .13));
-        [7, 15].forEach(s => clap(at(b, s), .12));
-        for (let s = 0; s < 16; s++) conga(at(b, s), s % 2 ? 330 : 392, s % 4 === 0 ? .15 : .085, s % 2 ? R : L);
-        kick(at(b, 14), .35);
-        [0, 3, 6, 10, 12].forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .004, m + 12, .07, i % 2 ? WR : WL)));
-        const arp = [0, 1, 2, 3, 2, 1, 2, 3].map(i => TOPS[b % 4][i] + 12);
-        arp.forEach((m, i) => glock(at(b, i * 2), m, .045, i % 2 ? WR : WL));
+      const chd = T.ch[b % T.ch.length], root = chd[0], tri = triOf(chd), fill = b % 8 === 7, last = b === bars - 1;
+      const topArp = tri4(tri).map(m => m + 12);
+      if (layer === 'fever') {
+        // 피버 층: 박자 모양은 곡마다 같게(16분 또는 왈츠 12칸)
+        const off = S === 12 ? [2, 6, 10] : [2, 6, 10, 14];
+        each(off, s => ohat(at(b, s), .12));
+        for (let s = 0; s < S; s++) conga(at(b, s), s % 2 ? 330 : 392, s % 4 === 0 ? .15 : .085, s % 2 ? R : L);
+        (S === 12 ? [0, 4, 8] : [0, 3, 6, 10, 12]).forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .004, m + 12, .065, i % 2 ? WR : WL)));
+        [0, 1, 2, 3, 2, 1, 2, 3].slice(0, S / 2).forEach((k, i) => glock(at(b, i * 2), topArp[k], .045, i % 2 ? WR : WL));
+        kick(at(b, S - 2), .33);
+        continue;
       }
+      switch (T.style) {
+        case 'walk': {   // 1곡: 네 박 킥 + 손뼉 + 콩가, 통통 튀는 마림바 베이스 (처음 만든 곡 그대로)
+          [0, 4, 8, 12].forEach(s => { if (!(fill && s === 12)) kick(at(b, s), .85); });
+          if (b % 4 === 3 && !fill) kick(at(b, 14), .42);
+          [4, 12].forEach(s => clap(at(b, s), .42)); if (fill) { clap(at(b, 14), .22); clap(at(b, 15), .3); }
+          for (let s = 0; s < 16; s++) shaker(at(b, s), s % 4 === 0 ? .15 : s % 2 === 0 ? .1 : .07, s % 2 ? R : L);
+          [2, 6, 10, 14].forEach(s => tamb(at(b, s), .12));
+          const cg = b % 2 === 0 ? [[3, 196, .26], [6, 262, .2], [10, 196, .24], [11, 196, .16], [14, 262, .2]] : [[2, 262, .2], [6, 196, .26], [7, 196, .15], [10, 262, .2], [13, 196, .22]];
+          if (!fill) cg.forEach(([s, f, v]) => conga(at(b, s), f, v, s % 2 ? R : L));
+          else [330, 300, 262, 262, 220, 196, 196, 165].forEach((f, i) => conga(at(b, 8 + i), f, .24 + i * .01, i % 2 ? R : L));
+          [[0, 0, .5], [3, 0, .3], [6, 7, .34], [10, 0, .32], [12, 12, .26], [14, 7, .28]].forEach(([s, iv, v]) => bass(at(b, s), root + 12 + iv, v));
+          [2, 10].forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .006, m, .045, i % 2 ? WR : WL)));
+          if (b >= 8) [0, 6, 10].forEach(s => cowbell(at(b, s), .06));
+          if (b % 2) [7, 15].forEach(s => wood(at(b, s), .08));
+          if (b % 4 === 3) topArp.forEach((m, i) => kal(at(b, 12 + i), m, .09 + i * .01, i % 2 ? WR : WL));
+          if (b === 0) glock(at(0, 0), 84, .09, C);
+          break;
+        }
+        case 'waltz': {  // 2곡: 쿵짝짝 3박. 오르골 같은 글로켄 아르페지오가 위에서 반짝
+          kick(at(b, 0), .8); bass(at(b, 0), root + 12, .48, .5);
+          if (b % 2) bass(at(b, 8), root + 19, .28);
+          [4, 8].forEach(s => { tri.forEach((m, i) => mar(at(b, s) + i * .005, m, .06, i % 2 ? WR : WL)); tamb(at(b, s), .09); });
+          for (let s = 0; s < 12; s += 2) shaker(at(b, s), s === 0 ? .13 : .08, s % 4 ? R : L);
+          const box = b % 2 ? [3, 2, 1, 0, 1, 2] : [0, 1, 2, 3, 2, 1];
+          box.forEach((k, i) => glock(at(b, i * 2), topArp[k], .05 - (i % 2) * .012, i % 2 ? WR : WL));
+          if (fill) [262, 247, 220, 196, 175, 165].forEach((f, i) => conga(at(b, 6 + i), f, .2, i % 2 ? R : L));
+          if (b % 4 === 3) wood(at(b, 10), .09);
+          if (b === 0) crash(at(0, 0), .05);
+          break;
+        }
+        case 'shuffle': { // 3곡: 무겁게 튀는 셔플. 걷는 베이스, 뒷박 손뼉, 봉고 꾸밈
+          kick(at(b, 0), .85); kick(at(b, 8), .75); kick(at(b, 11), .3);
+          [4, 12].forEach(s => { clap(at(b, s), .4); snare(at(b, s), .12); });
+          for (let s = 0; s < 16; s += 2) chat(at(b, s + 1), .07), chat(at(b, s), .1);
+          const walk = [0, 4, 7, 9];
+          walk.forEach((iv, i) => bass(at(b, i * 4), root + 12 + iv, i === 0 ? .5 : .36, .3));
+          [6, 14].forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .005, m, .06, i % 2 ? WR : WL)));
+          [7, 15].forEach(s => conga(at(b, s), 392, .16, R));
+          if (fill) [13, 14, 15].forEach(s => snare(at(b, s), .18));
+          if (b % 4 === 3) [12, 13, 14, 15].forEach((s, i) => kal(at(b, s), topArp[i], .08, i % 2 ? WR : WL));
+          break;
+        }
+        case 'samba': {  // 4곡: 삼바 수르두(두 번째 박이 큼) + 아고고 종 + 클라베 3-2
+          kick(at(b, 0), .45); kick(at(b, 8), .9); kick(at(b, 12), .35); kick(at(b, 14), .3);
+          [[0, 1], [3, 1], [6, 1], [10, 1], [12, 1], [2, 0], [8, 0], [14, 0]].forEach(([s, hi]) => agogo(at(b, s), hi, .05));
+          (b % 2 ? [4, 8] : [0, 6, 12]).forEach(s => clave(at(b, s), .1));
+          for (let s = 0; s < 16; s++) shaker(at(b, s), s % 4 === 3 ? .15 : .07, s % 2 ? R : L);
+          [[4, 330, .18], [7, 262, .24], [12, 330, .18], [15, 262, .22]].forEach(([s, f, v]) => conga(at(b, s), f, v, L));
+          [[0, 0, .46], [6, 7, .3], [8, 0, .4], [12, 7, .3], [14, 12, .26]].forEach(([s, iv, v]) => bass(at(b, s), root + 12 + iv, v, .28));
+          [3, 10].forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .005, m, .055, i % 2 ? WR : WL)));
+          if (fill) for (let s = 8; s < 16; s++) snare(at(b, s), .08 + (s - 8) * .015);
+          if (b % 4 === 1) whistle(at(b, 0));
+          break;
+        }
+        case 'ska': {    // 5곡: 뒷박마다 짧게 찍는 화음(스캥크) + 통통 튀는 옥타브 베이스
+          kick(at(b, 0), .85); kick(at(b, 8), .8); if (b % 2) kick(at(b, 10), .35);
+          [4, 12].forEach(s => rim(at(b, s), .32)); if (fill) [12, 13, 14, 15].forEach(s => snare(at(b, s), .14 + s * .005));
+          for (let s = 0; s < 16; s += 2) chat(at(b, s), s % 4 ? .07 : .1);
+          [2, 6, 10, 14].forEach(s => { tri.forEach((m, i) => mar(at(b, s) + i * .003, m + 12, .07, i % 2 ? WR : WL)); tamb(at(b, s), .06); });
+          [[0, 0, .48], [3, 12, .3], [4, 0, .34], [8, 7, .42], [11, 19, .26], [12, 7, .32]].forEach(([s, iv, v]) => bass(at(b, s), root + iv, v, .22));
+          if (b % 4 === 3) [11, 12, 13, 14, 15].forEach((s, i) => kal(at(b, s), topArp[i % 4], .07, i % 2 ? WR : WL));
+          break;
+        }
+        case 'disco': {  // 6곡: 네 박 킥 + 뒷박 오픈 하이햇 + 옥타브를 오가는 베이스
+          [0, 4, 8, 12].forEach(s => kick(at(b, s), .85));
+          [4, 12].forEach(s => clap(at(b, s), .4));
+          [2, 6, 10, 14].forEach(s => ohat(at(b, s), .11));
+          for (let s = 0; s < 16; s++) chat(at(b, s), s % 2 ? .04 : .06);
+          for (let s = 0; s < 16; s += 2) bass(at(b, s), root + (s % 4 ? 24 : 12), s % 4 ? .28 : .42, .2);
+          [3, 11].forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .004, m + 12, .05, i % 2 ? WR : WL)));
+          [5, 13].forEach(s => conga(at(b, s), 262, .15, R));
+          if (b % 2) topArp.forEach((m, i) => glock(at(b, 8 + i * 2), m, .04, i % 2 ? WR : WL));
+          if (b % 8 === 0) crash(at(b, 0), .06);
+          if (fill) [12, 13, 14, 15].forEach((s, i) => conga(at(b, s), 330 - i * 30, .2, L));
+          break;
+        }
+        case 'polka': {  // 7곡: 쿵-짝 두 박 폴카. 손풍금 화음이 뒷박을 찍는다
+          [0, 8].forEach(s => { kick(at(b, s), .8); });
+          bass(at(b, 0), root + 12, .48, .26); bass(at(b, 8), root + 19, .4, .26);
+          [4, 12].forEach(s => { snare(at(b, s), .16); tri.forEach(m => squeeze(at(b, s), m, .035, .12, C)); });
+          [6, 14].forEach(s => tri.forEach(m => squeeze(at(b, s), m, .022, .07, C)));
+          [2, 6, 10, 14].forEach(s => tamb(at(b, s), .08));
+          if (b % 2) [8, 10, 12, 14].forEach((s, i) => glock(at(b, s), topArp[i], .045, i % 2 ? WR : WL));
+          if (fill) for (let s = 8; s < 16; s++) snare(at(b, s), .1 + (s - 8) * .015);
+          break;
+        }
+        case 'march': {  // 8곡: 작은북 행진 + 큰북 + 글로켄 팡파레 음형
+          kick(at(b, 0), .85); kick(at(b, 8), .7);
+          [4, 12].forEach(s => snare(at(b, s), .26)); [14, 15].forEach(s => snare(at(b, s), .1)); [2, 10].forEach(s => snare(at(b, s), .07));
+          if (b % 4 === 0) crash(at(b, 0), .07);
+          bass(at(b, 0), root + 12, .5, .3); bass(at(b, 8), root + 19, .4, .3);
+          [0, 4, 8, 12].forEach((s, i) => glock(at(b, s), topArp[b % 2 ? 3 - i : i], .05, i % 2 ? WR : WL));
+          [4, 12].forEach(s => tri.forEach((m, i) => mar(at(b, s) + i * .004, m, .05, i % 2 ? WR : WL)));
+          for (let s = 0; s < 16; s += 2) shaker(at(b, s), .06, R);
+          if (fill) for (let s = 8; s < 16; s++) snare(at(b, s), .12 + (s - 8) * .02);
+          break;
+        }
+      }
+      if (last && T.style !== 'walk') clap(at(b, S - 1), .18);
     }
+    function whistle(t) { const o = O('sine', 2400, t, .005, .03, .12, R); O('sine', 2600, t + .15, .005, .03, .1, R); }
     const buf = await (oc.startRendering.length ? new Promise(r => { oc.oncomplete = e => r(e.renderedBuffer); oc.startRendering(); }) : oc.startRendering());
     // 꼬리(잔향)를 앞머리에 되감아 붙여 빈틈없는 고리로 만든다
     const Ls = Math.round(len * sr), tl = buf.length - Ls, res = AC.createBuffer(2, Ls, sr); let pk = 0;
@@ -400,34 +511,38 @@ async function renderBGM(tier) {
   const main = await renderLayer('main'), fever = await renderLayer('fever');
   return { main, fever, bpm };
 }
-// 미리 녹음해 둔 파일(bgm/t0_main.mp3 …)을 먼저 쓰고, 없으면 그 자리에서 녹음한다(느림).
-async function loadBGMFiles(tier) {
-  const get = n => fetch(`bgm/t${tier}_${n}.mp3`).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(b => new Promise((res, rej) => AC.decodeAudioData(b, res, rej)));
+// 미리 녹음해 둔 파일(bgm/m1_main.mp3 …)을 먼저 쓰고, 없으면 그 자리에서 녹음한다(느림).
+// ONSET: 원본 wav에서 잰 첫 킥 위치(표본). 디코더가 앞머리를 남기면 그 차이만큼 건너뛴다. 곡을 다시 뽑으면 다시 잰다.
+const ONSET = [353, 445, 429, 510, 2391, 454, 441, 433];
+async function loadBGMFiles(idx) {
+  const get = n => fetch(`bgm/m${idx + 1}_${n}.mp3`).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(b => new Promise((res, rej) => AC.decodeAudioData(b, res, rej)));
   const [main, fever] = await Promise.all([get('main'), get('fever')]);
-  const bpm = TIERS[tier], len = 16 * 4 * 60 / bpm, d = main.getChannelData(0), sr = main.sampleRate;
-  // mp3 앞머리 빈 구간을 건너뛴다: 고리의 첫 킥(최고치의 30%)이 시작점
-  let pk = 0; for (let i = 0; i < Math.min(d.length, sr * 3); i++) pk = Math.max(pk, Math.abs(d[i]));
-  let i = 0; while (i < d.length && Math.abs(d[i]) < pk * .3) i++;
-  // 원본(wav)에서 잰 같은 지점과의 차이 = 디코더가 남긴 앞머리. 대부분의 브라우저는 0이다
-  const ONSET = [611, 617, 504];
-  let off = Math.max(0, (i - ONSET[tier]) / sr); if (off < .002) off = 0;
-  if (off + len > main.duration) off = Math.max(0, main.duration - len);
-  return { main, fever, bpm, off, len };
+  const T = TRACKS[idx], len = loopLen(T), d = main.getChannelData(0), sr = main.sampleRate;
+  let off = 0;
+  if (main.duration - len > .005) {        // 디코더가 앞머리를 잘라 주지 않았을 때만 찾는다(크롬·사파리·파이어폭스는 잘라 준다)
+    let pk = 0; for (let i = 0; i < Math.min(d.length, sr * 3); i++) pk = Math.max(pk, Math.abs(d[i]));
+    let i = 0; while (i < d.length && Math.abs(d[i]) < pk * .3) i++;
+    off = Math.max(0, (i - ONSET[idx]) / sr); if (off + len > main.duration) off = Math.max(0, main.duration - len);
+  }
+  return { main, fever, bpm: T.bpm, off, len };
 }
-function bgmWant(tier) {
-  BGM.want = tier; if (!AC) return;
-  if (BGM.bufs[tier]) { bgmPlay(); return; }
-  if (BGM.busy[tier]) return; BGM.busy[tier] = true;
-  loadBGMFiles(tier).catch(() => renderBGM(tier).then(b => Object.assign(b, { off: 0, len: b.main.duration })))
-    .then(b => { BGM.bufs[tier] = b; if (BGM.want === tier) bgmPlay(); }).catch(() => { BGM.busy[tier] = false; });
+function bgmWant(idx, rate = 1) {
+  BGM.want = idx; BGM.wantRate = rate; if (!AC) return;
+  if (BGM.bufs[idx]) { bgmPlay(); return; }
+  if (BGM.busy[idx]) return; BGM.busy[idx] = true;
+  loadBGMFiles(idx).catch(() => renderBGM(idx).then(b => Object.assign(b, { off: 0, len: b.main.duration })))
+    .then(b => { BGM.bufs[idx] = b; if (BGM.want === idx) bgmPlay(); }).catch(() => { BGM.busy[idx] = false; });
+  // 다음 곡도 미리 받아 둔다
+  const nx = (idx + 1) % TRACKS.length; if (!BGM.bufs[nx] && !BGM.busy[nx]) loadBGMFiles(nx).then(b => { BGM.bufs[nx] = b; }).catch(() => {});
 }
 function bgmPlay() {
-  const tier = BGM.want, b = BGM.bufs[tier]; if (!AC || !b || BGM.cur === tier) return;
+  const idx = BGM.want, rate = BGM.wantRate || 1, b = BGM.bufs[idx]; if (!AC || !b || (BGM.cur === idx && BGM.rate === rate)) return;
   const t = AC.currentTime + .08, old = [BGM.main, BGM.fever];
-  const mk = (buf, vol) => { const s = AC.createBufferSource(), g = AC.createGain(); s.buffer = buf; s.loop = true; s.loopStart = b.off; s.loopEnd = b.off + b.len; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + (BGM.cur < 0 ? 1.2 : .4)); s.connect(g).connect(MUS); s.start(t, b.off); return { s, g }; };
+  const mk = (buf, vol) => { const s = AC.createBufferSource(), g = AC.createGain(); s.buffer = buf; s.loop = true; s.loopStart = b.off; s.loopEnd = b.off + b.len; s.playbackRate.value = rate; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + (BGM.cur < 0 ? 1.2 : .5)); s.connect(g).connect(MUS); s.start(t, b.off); return { s, g }; };
   BGM.main = mk(b.main, .9); BGM.fever = mk(b.fever, BGM.feverOn ? .85 : .0001);
   old.forEach(o => { if (!o) return; o.g.gain.cancelScheduledValues(t); o.g.gain.setTargetAtTime(.0001, t, .25); o.s.stop(t + 1.5); });
-  BGM.t0 = t; BGM.bpm = b.bpm; BGM.cur = tier;
+  BGM.t0 = t; BGM.bpm = b.bpm * rate; BGM.cur = idx; BGM.rate = rate;
+  ROOT = 261.63 * Math.pow(2, TRACKS[idx].key / 12) * rate;     // 효과음도 이 곡의 조로
 }
 function bgmFever(on) {
   BGM.feverOn = on; if (!AC || !BGM.fever) return;
@@ -668,7 +783,7 @@ function startGame(from) {
 }
 function beginStage() {
   setupStage(false); G.state = 'intro'; G.introT = 2.2;
-  bgmWant(tierOf(G.stage));
+  bgmWant(trackOf(G.stage), lapRate(G.stage));
   $('#bnStage').textContent = G.stage + '단계';
   const bits = [], nw = NEWS[G.stage];
   if (nw) bits.push(`<b>${nw[0]}</b>${nw[1]}`);
@@ -676,6 +791,7 @@ function beginStage() {
   if (prev && P.colors > prev.colors) { const c = COLORS[P.colors - 1]; bits.push(`<b style="color:${c.dark}">새 친구 ${c.name}</b>손님이 ${P.colors}가지 색이 되었어요`); }
   if (prev && P.lanes > prev.lanes) bits.push(`<b>줄이 ${P.lanes}개</b>기다리는 줄이 하나 늘었어요`);
   if (G.stage === 1) bits.push('곤돌라가 아래 빛나는 띠에 오면<br>같은 색 줄을 톡!');
+  bits.push(`<span style="color:#8a83a8">♪ ${TRACKS[trackOf(G.stage)].name}${lapRate(G.stage) > 1 ? ' (더 빠르게)' : ''}</span>`);
   $('#bnNew').innerHTML = bits.join('<div style="height:8px"></div>');
   $('#banner').classList.add('on'); ting();
   updateHud(true);
@@ -1102,7 +1218,7 @@ function frame(now) {
 }
 setupStage(true); resize(); setSound(save.sound); refreshTitle();
 requestAnimationFrame(frame);
-window.__game = { G, tapLane, windowGondola, params, get BGM() { return BGM; }, get AC() { return AC; }, startGame, renderBGM };   // 검사용
+window.__game = { TRACKS, G, tapLane, windowGondola, params, get BGM() { return BGM; }, get AC() { return AC; }, startGame, renderBGM };   // 검사용
 })();
 </script>
 </body>
