@@ -332,6 +332,8 @@ const COLOR_NAMES=['핑크','하늘','라임','주황','보라','노랑'];
 const GOAL=100, LIMIT_MS=30000, COMBO_GAP=350, SEND_MS=110, STEP=0.4;
 // 최고 속도(초당 m): 아무리 빨리 두드려도 100m에 10초쯤 걸리게. 달릴 힘이 초당 VCAP씩 차오르고, 한 번 두드릴 때마다 꺼내 쓴다
 const VCAP=11, VBANK=2.2;
+// 손가락을 여러 개 써도 유리하지 않게: 0.07초 안에 연달아 들어온 두드림은 한 번으로만 센다 (1초에 약 14번까지)
+const TAP_MIN=70;
 
 const $=s=>document.querySelector(s);
 const screens={lobby:$('#lobby'),room:$('#room'),game:$('#game'),result:$('#result')};
@@ -589,13 +591,13 @@ function myPos(){ const L=lanes(), me=G.racers[myId], i=L.order.indexOf(me); if(
 /* 탭 유도: 데스크탑(마우스)은 스페이스바, 태블릿은 화면 두드리기 */
 function setTapHint(desk){ document.body.classList.toggle('desk',desk);
   $('#cuePad').innerHTML=desk?'스페이스바':'탭!';
-  $('#cueCap').innerHTML=desk?'<kbd>스페이스바</kbd>를 연타하세요 · 클릭해도 달려요':'화면 아무 데나 빠르게 두드려요 · 손가락 여러 개도 OK'; }
+  $('#cueCap').innerHTML=desk?'<kbd>스페이스바</kbd>를 연타하세요 · 클릭해도 달려요':'화면 아무 데나 빠르게 두드려요'; }
 setTapHint(matchMedia('(hover:hover) and (pointer:fine)').matches);
 addEventListener('pointerdown', e=>setTapHint(e.pointerType==='mouse'), true);
 addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter') setTapHint(true); }, true);
 function tap(x,y){
   if(!G.running||G.ended||net.spec) return; const el=elapsed(); const me=G.racers[myId]; if(!me||el<0||me.fin) return;
-  const t=now(); const before=mult(); G.combo=(t-G.lastTap<COMBO_GAP)?G.combo+1:1; G.lastTap=t; G.bestCombo=Math.max(G.bestCombo,G.combo);
+  const t=now(); if(t-(G.lastCount||0)<TAP_MIN) return; G.lastCount=t; const before=mult(); G.combo=(t-G.lastTap<COMBO_GAP)?G.combo+1:1; G.lastTap=t; G.bestCombo=Math.max(G.bestCombo,G.combo);
   const m=mult(); const gain=Math.min(STEP*m,G.bank||0); G.bank=(G.bank||0)-gain; me.d=Math.min(GOAL,me.d+gain); G.taps++;
   const c=COLORS[myColor];
   G.rings.push({x,y,r:8,life:.4,c}); SND.fx.tap(m>=2.5?3:m>=2?2:m>=1.5?1:0,G.combo);
