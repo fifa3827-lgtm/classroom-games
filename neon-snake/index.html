@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>네온 스네이크 아레나</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -166,6 +168,13 @@ body.mouse #cv{cursor:crosshair}
   #lobby .btn{padding:12px}
   #lobby .notice{margin-bottom:10px}
 }
+
+/* 안내 글씨는 한 줄로 (좁은 화면에서는 글씨를 줄인다) */
+#roomStatus,#lobby .sub,.codeLabel{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#roomStatus{font-size:clamp(12px,3.4vw,18px)}
+#lobby .sub{font-size:clamp(11px,3.3vw,17px)}
+.pl{white-space:nowrap;font-size:clamp(12px,3.4vw,16px);min-width:0}
+.pl.empty{padding-left:6px;padding-right:6px}
 </style>
 </head>
 <body>
@@ -473,7 +482,7 @@ function renderPlayers(){
   }
   $('#btnStart').style.display = net.isHost ? 'block' : 'none';
   $('#btnStart').disabled = arr.length<2;
-  $('#roomStatus').textContent = net.spec ? (arr.length<2?`${arr.length}명 입장 · 태블릿으로 QR을 찍거나 방 코드를 입력하세요`:`${arr.length}명 입장 · 준비되면 시작을 누르세요`) : net.isHost ? (arr.length<2?'친구가 들어오면 시작할 수 있어요':`${arr.length}명 · 시작을 누르면 바로 출발`) : '방장이 시작하기를 기다리는 중…';
+  $('#roomStatus').textContent = net.spec ? (arr.length<2?`${arr.length}명 입장 · QR을 찍거나 코드를 입력하세요`:`${arr.length}명 입장 · 준비되면 시작을 누르세요`) : net.isHost ? (arr.length<2?'친구가 들어오면 시작할 수 있어요':`${arr.length}명 · 시작을 누르면 바로 출발`) : '방장이 시작하기를 기다리는 중…';
 }
 let _host=null; function currentHost(){ return _host; }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -840,6 +849,12 @@ function endGame(){
   lastKills=0; bOff(); input.active=false; stickEl.style.display='none';
   setTimeout(()=>show('result'), 600);
 }
+
+/* 항상 전체 화면: 전체 화면이 아니면 다음 터치·클릭 때 다시 켠다 (브라우저는 사용자가 누를 때만 전체 화면을 허락함) */
+function goFull(){ const d=document, el=d.documentElement; if(d.fullscreenElement||d.webkitFullscreenElement) return;
+  const f=el.requestFullscreen||el.webkitRequestFullscreen; if(!f) return;
+  try{ const p=f.call(el,{navigationUI:'hide'}); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
+addEventListener('pointerup',goFull,{capture:true}); addEventListener('keyup',goFull,{capture:true});
 </script>
 </body>
 </html>
