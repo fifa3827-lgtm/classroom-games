@@ -4,11 +4,15 @@
 games.py 의 내용을 읽어 out/intro/<게임>/index.html 을 만든다.
 검색에 잘 걸리도록 모든 글을 HTML 안에 그대로 넣는다 (자바스크립트로 그리지 않는다).
 """
-import html, json, os, shutil
+import hashlib, html, json, os, shutil
 from PIL import Image
 from games import GAMES, ALL, CATS, SITE
 
 OUT = "out/intro"
+# intro.css 주소 끝에 붙이는 버전 번호 = 파일 내용의 지문. css를 고치면 번호가 저절로 바뀌어
+# 서버(AWS) · 브라우저 캐시가 옛 css를 붙잡지 않는다 (관리자 안내: 「js · css는 버저닝」)
+with open("intro.css", "rb") as _f:
+    CSSV = hashlib.md5(_f.read()).hexdigest()[:8]
 E = html.escape
 BADGE = {"ok": ("가장 좋아요", "ok"), "good": ("좋아요", "good"), "soso": ("괜찮아요", "soso")}
 NUM = "①②③④⑤⑥⑦⑧⑨"
@@ -85,7 +89,7 @@ def page(slug, g):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../intro.css">
+<link rel="stylesheet" href="../intro.css?v={CSSV}">
 <script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>
 </head>
 <body class="{g["orient"]}">
