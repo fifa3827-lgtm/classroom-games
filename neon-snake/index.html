@@ -97,6 +97,12 @@ body.netDown #netDown{display:block}
 .rk b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
 .rk.me b{font-weight:700}
 .rk.dead{opacity:.4;text-decoration:line-through}
+#keyHint{position:absolute;left:calc(20px + env(safe-area-inset-left,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));display:none;pointer-events:none;padding:10px 16px;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25);color:#fff;font-size:15px;backdrop-filter:blur(6px)}
+#keyHint kbd{font-family:"Black Han Sans","Noto Sans KR",sans-serif;padding:2px 8px;margin:0 2px;border-radius:6px;background:rgba(255,255,255,.18);border-bottom:2px solid rgba(255,255,255,.35)}
+#keyHint.on{background:rgba(255,255,255,.22);border-color:#fff}
+body.mouse #boost{visibility:hidden}
+body.mouse #keyHint{display:block}
+body.mouse #cv{cursor:crosshair}
 #boost{position:absolute;left:calc(20px + env(safe-area-inset-left,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.4);font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-size:22px;color:#fff;backdrop-filter:blur(6px)}
 #boost.on{background:rgba(255,255,255,.35);transform:scale(.94)}
 #stick{position:absolute;width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.35);display:none;pointer-events:none;margin:-60px 0 0 -60px}
@@ -120,7 +126,7 @@ body.netDown #netDown{display:block}
 .br.first{border-color:#fff;background:#fff;color:#161a4a}
 .br.first .n,.br.first span{color:#161a4a}
 /* ---------- 중계 모드 ---------- */
-.spec #me,.spec #boost,.spec #stick,.spec #deadNote{display:none!important}
+.spec #me,.spec #boost,.spec #stick,.spec #deadNote,.spec #keyHint{display:none!important}
 .spec #hudRow{justify-content:flex-end}
 .spec #rank{min-width:300px}
 .spec .rk{font-size:22px;padding:8px 14px;border-radius:12px}
@@ -200,6 +206,7 @@ body.netDown #netDown{display:block}
   </div>
   <div id="stick"><i></i></div>
   <button id="boost">부스트</button>
+  <div id="keyHint">🖱️ 마우스로 방향 · <kbd>스페이스바</kbd> 부스트</div>
   <div id="banner"></div>
   <div id="countdown"></div>
   <div id="specTag"><b>네온 스네이크 아레나</b><span id="specCode"></span></div>
@@ -542,16 +549,21 @@ function startMultiplayer(){
 function spawnSlot(i,n){ const a=(i/n)*Math.PI*2; const d=ARENA_R*0.45; return {x:Math.cos(a)*d, y:Math.sin(a)*d, a:a+Math.PI/2}; }
 function resetGame(){ G.snakes={}; G.food={}; G.parts=[]; G.ended=false; G.shake=0; G.deathOrder=[]; G.foodSeq=0; $('#deadNote').style.display='none'; $('#banner').className=''; }
 function beginRound(){
-  G.running=true; show('game'); boostBtn.style.display='block'; lastKills=0;
+  G.running=true; show('game'); boostBtn.style.display='block'; keyHint.style.display=''; lastKills=0;
   if (G.solo) G.t0 = now()+3500;
   const c0=G.snakes[myId]; G.cam.x=c0?c0.x:0; G.cam.y=c0?c0.y:0; G.cam.z=c0?1:specFitZ(); $('#feed').innerHTML='';
   if (!loopOn){ loopOn=true; last=now(); requestAnimationFrame(loop); }
 }
 
 /* ---------- 입력 ---------- */
-const input = { active:false, ox:0,oy:0, dx:0,dy:0, id:null, boost:false, keys:{} };
+const input = { active:false, ox:0,oy:0, dx:0,dy:0, id:null, boost:false, keys:{}, mouse:false, mx:0, my:0 };
+/* 데스크탑(마우스): 머리가 마우스 쪽으로 따라감, 스페이스바 = 부스트 / 태블릿(터치): 끌기 조이스틱 + 부스트 버튼 */
+function setMouseMode(on){ input.mouse=on; document.body.classList.toggle('mouse',on); }
+setMouseMode(matchMedia('(hover:hover) and (pointer:fine)').matches);
+addEventListener('pointermove', e=>{ if (e.pointerType==='mouse'){ if(!input.mouse) setMouseMode(true); input.mx=e.clientX; input.my=e.clientY; } });
+addEventListener('pointerdown', e=>{ if (e.pointerType==='touch'&&input.mouse) setMouseMode(false); }, true);
 const stickEl=$('#stick');
-cv.addEventListener('pointerdown', e=>{ if (input.active||net.spec) return; input.active=true; input.id=e.pointerId; input.ox=e.clientX; input.oy=e.clientY; input.dx=input.dy=0; stickEl.style.display='block'; stickEl.style.left=e.clientX+'px'; stickEl.style.top=e.clientY+'px'; stickEl.firstElementChild.style.transform=''; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointerdown', e=>{ if (e.pointerType==='mouse'){ input.mx=e.clientX; input.my=e.clientY; return; } if (input.active||net.spec) return; input.active=true; input.id=e.pointerId; input.ox=e.clientX; input.oy=e.clientY; input.dx=input.dy=0; stickEl.style.display='block'; stickEl.style.left=e.clientX+'px'; stickEl.style.top=e.clientY+'px'; stickEl.firstElementChild.style.transform=''; cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e=>{ if (!input.active||e.pointerId!==input.id) return; let dx=e.clientX-input.ox, dy=e.clientY-input.oy; const d=Math.hypot(dx,dy); if (d>48){dx*=48/d;dy*=48/d;} input.dx=dx; input.dy=dy; stickEl.firstElementChild.style.transform=`translate(${dx}px,${dy}px)`; });
 const endStick=e=>{ if (e.pointerId!==input.id) return; input.active=false; input.id=null; stickEl.style.display='none'; };
 cv.addEventListener('pointerup',endStick); cv.addEventListener('pointercancel',endStick);
@@ -559,8 +571,10 @@ const boostBtn=$('#boost');
 boostBtn.addEventListener('pointerdown',e=>{ e.preventDefault(); input.boost=true; boostBtn.classList.add('on'); boostBtn.setPointerCapture(e.pointerId); });
 const bOff=()=>{ input.boost=false; boostBtn.classList.remove('on'); };
 boostBtn.addEventListener('pointerup',bOff); boostBtn.addEventListener('pointercancel',bOff);
-addEventListener('keydown',e=>{ input.keys[e.key]=true; if(e.key===' ')input.boost=true; });
-addEventListener('keyup',e=>{ input.keys[e.key]=false; if(e.key===' ')input.boost=false; });
+const keyHint=$('#keyHint');
+addEventListener('keydown',e=>{ input.keys[e.key]=true; if(e.key===' '){ input.boost=true; keyHint.classList.add('on'); if(G.running) e.preventDefault(); } });
+addEventListener('keyup',e=>{ input.keys[e.key]=false; if(e.key===' '){ input.boost=false; keyHint.classList.remove('on'); } });
+addEventListener('blur',()=>{ input.boost=false; input.keys={}; keyHint.classList.remove('on'); });
 
 /* ---------- 원격 스네이크 ---------- */
 function applyRemote(id,v){
@@ -618,6 +632,7 @@ function update(dt){
   // 조작
   if (me&&me.alive&&el>=0){
     let want=null;
+    if (input.mouse){ const hx=W/2+(me.x-G.cam.x)*G.cam.z, hy=H/2+(me.y-G.cam.y)*G.cam.z, mdx=input.mx-hx, mdy=input.my-hy; if (Math.hypot(mdx,mdy)>14) want=Math.atan2(mdy,mdx); }
     if (input.active&&(Math.abs(input.dx)+Math.abs(input.dy))>6) want=Math.atan2(input.dy,input.dx);
     const k=input.keys; let kx=(k.ArrowRight||k.d?1:0)-(k.ArrowLeft||k.a?1:0), ky=(k.ArrowDown||k.s?1:0)-(k.ArrowUp||k.w?1:0); if(kx||ky) want=Math.atan2(ky,kx);
     if (want!=null) me.want=want;
@@ -698,7 +713,7 @@ function killSnake(s,by,remote){
   for (let i=0;i<bp.length;i+=2){ const p=bp[i]; for(let j=0;j<3;j++) G.parts.push({x:p.x,y:p.y,vx:rnd(-220,220),vy:rnd(-220,220),life:rnd(.5,1),t:1,c,sz:rnd(2,5)}); }
   if (!remote){ // 내 뱀(또는 내 봇)이 죽음 → 먹이로 흩뿌림
     for (let i=0;i<bp.length;i+=2){ const p=bp[i]; dropFood(p.x+rnd(-6,6),p.y+rnd(-6,6),2,s.color); }
-    if (s.id===myId){ G.shake=18; $('#deadNote').style.display='block'; boostBtn.style.display='none'; if(!G.solo) sendMe(); }
+    if (s.id===myId){ G.shake=18; $('#deadNote').style.display='block'; boostBtn.style.display='none'; keyHint.style.display='none'; if(!G.solo) sendMe(); }
     if (by){ by.kills++; if (by.id===myId){ G.shake=10; banner('격추!'); } else if (!G.solo && by.id!==myId){ net.ref.child('players/'+by.id+'/kills').transaction(v=>(v||0)+1); } }
   } else { if (G.snakes[myId]&&G.snakes[myId].alive&&s.id!==myId){ G.shake=Math.max(G.shake,6); } }
   if (net.spec){ G.shake=Math.max(G.shake,8); feed(`<span style="color:${c}">${esc(s.name)}</span> 탈락`,c); const left=Object.values(G.snakes).filter(o=>o.alive); if(left.length===2) banner('최후의 2마리!'); }
