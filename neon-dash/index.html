@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>DASH! 전력질주!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -154,6 +156,31 @@ body.desk #tapCue .pad::before,body.desk #tapCue .pad::after{border-radius:22px}
 .spec .br .av{width:56px;height:56px}
 .spec #qr canvas,.spec #qr img{width:220px!important;height:220px!important}
 @media (prefers-reduced-motion:reduce){#banner.pop{animation-duration:.01s}#tapCue .pad,#tapCue .pad::before,#tapCue .pad::after,#podium img{animation:none}}
+
+/* 가로 태블릿: 제목은 왼쪽, 입력 카드는 오른쪽 (높이가 낮아도 한 화면에) */
+@media (orientation:landscape) and (max-height:900px) and (min-width:700px){
+  #lobby.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,500px);grid-template-rows:1fr auto auto 1fr;column-gap:clamp(24px,4vw,56px);align-items:center;justify-items:center;padding:16px clamp(20px,4vw,48px)}
+  #lobby>h1{grid-column:1;grid-row:2;margin:0!important;white-space:nowrap;font-size:clamp(40px,6vw,84px)}
+  #lobby .title .t1{font-size:clamp(56px,10vw,120px)} #lobby .title .t2{font-size:clamp(32px,5.4vw,64px)}
+  #lobby>.sub{max-width:100%}
+  #lobby>.sub{grid-column:1;grid-row:3;margin:14px 0 0!important}
+  #lobby>.card{grid-column:2;grid-row:1/5;align-self:center;margin:0!important;width:100%;padding:16px 18px}
+  #lobby .roles{margin-bottom:10px}
+  #lobby .role{padding:10px 8px}
+  #lobby .field{margin-bottom:10px}
+  #lobby .field input{padding:10px 14px}
+  #lobby .swatches{margin-bottom:12px}
+  #lobby .stack{gap:8px}
+  #lobby .btn{padding:12px}
+  #lobby .notice{margin-bottom:10px}
+}
+
+/* 안내 글씨는 한 줄로 (좁은 화면에서는 글씨를 줄인다) */
+#roomStatus,#lobby .sub,.codeLabel{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#roomStatus{font-size:clamp(12px,3.4vw,18px)}
+#lobby .sub{font-size:clamp(11px,3.3vw,17px)}
+.pl{white-space:nowrap;font-size:clamp(12px,3.4vw,16px);min-width:0}
+.pl.empty{padding-left:6px;padding-right:6px}
 </style>
 </head>
 <body>
@@ -410,7 +437,7 @@ function renderPlayers(){
     else{ d.className='pl empty'; d.textContent='자리 비었음'; }
     list.appendChild(d); }
   $('#btnStart').style.display=net.isHost?'block':'none'; $('#btnStart').disabled=arr.length<2;
-  $('#roomStatus').textContent=net.spec?(arr.length<2?`${arr.length}명 입장 · 태블릿으로 QR을 찍거나 방 코드를 입력하세요`:`${arr.length}명 입장 · 준비되면 시작을 누르세요`):net.isHost?(arr.length<2?'친구가 들어오면 시작할 수 있어요':`${arr.length}명 · 시작을 누르면 바로 출발`):'방장이 시작하기를 기다리는 중…';
+  $('#roomStatus').textContent=net.spec?(arr.length<2?`${arr.length}명 입장 · QR을 찍거나 코드를 입력하세요`:`${arr.length}명 입장 · 준비되면 시작을 누르세요`):net.isHost?(arr.length<2?'친구가 들어오면 시작할 수 있어요':`${arr.length}명 · 시작을 누르면 바로 출발`):'방장이 시작하기를 기다리는 중…';
 }
 function onState(){
   if(net.state==='lobby'&&screens.result.classList.contains('on')) show('room');
@@ -759,6 +786,12 @@ async function finish(){
   $('#btnAgain').textContent=(!G.solo&&!net.isHost)?'대기실로':'한 판 더';
   show('result'); SND.fx.win();
 }
+
+/* 항상 전체 화면: 전체 화면이 아니면 다음 터치·클릭 때 다시 켠다 (브라우저는 사용자가 누를 때만 전체 화면을 허락함) */
+function goFull(){ const d=document, el=d.documentElement; if(d.fullscreenElement||d.webkitFullscreenElement) return;
+  const f=el.requestFullscreen||el.webkitRequestFullscreen; if(!f) return;
+  try{ const p=f.call(el,{navigationUI:'hide'}); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
+addEventListener('pointerup',goFull,{capture:true}); addEventListener('keyup',goFull,{capture:true});
 </script>
 </body>
 </html>
