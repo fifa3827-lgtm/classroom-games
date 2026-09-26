@@ -175,6 +175,10 @@ body.mouse #cv{cursor:crosshair}
 #lobby .sub{font-size:clamp(11px,3.3vw,17px)}
 .pl{white-space:nowrap;font-size:clamp(12px,3.4vw,16px);min-width:0}
 .pl.empty{padding-left:6px;padding-right:6px}
+
+/* 소리 켜기/끄기 */
+#snd{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:40;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.35);backdrop-filter:blur(6px)}
+#snd svg{width:22px;height:22px;display:block;margin:auto}
 </style>
 </head>
 <body>
@@ -211,6 +215,7 @@ body.mouse #cv{cursor:crosshair}
   </div>
 </section>
 
+<button id="snd" type="button"></button>
 <div id="netDown" role="alert">연결이 끊겨서 다시 연결하는 중…</div>
 <section id="room" class="screen">
   <div class="codeLabel">이 코드를 입력해서 들어오세요</div>
@@ -347,7 +352,7 @@ const SEND_MS = 80;
 
 const $ = s => document.querySelector(s);
 const screens = { lobby:$('#lobby'), room:$('#room'), game:$('#game'), result:$('#result') };
-function show(name){ for (const k in screens) screens[k].classList.toggle('on', k===name); }
+function show(name){ for (const k in screens) screens[k].classList.toggle('on', k===name); try{ musicFor(name==='game'?'race':name); }catch(e){} }
 const rnd = (a,b)=>a+Math.random()*(b-a);
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const now=()=>performance.now();
@@ -576,13 +581,98 @@ function startMultiplayer(){
   beginRound();
 }
 function spawnSlot(i,n){ const a=(i/n)*Math.PI*2; const d=ARENA_R*0.45; return {x:Math.cos(a)*d, y:Math.sin(a)*d, a:a+Math.PI/2}; }
-function resetGame(){ G.snakes={}; G.food={}; G.parts=[]; G.ended=false; G.shake=0; G.deathOrder=[]; G.foodSeq=0; $('#deadNote').style.display='none'; $('#banner').className=''; }
+function resetGame(){ G.lastCd=null; G.warned=false; G.lastTick=null; G.snakes={}; G.food={}; G.parts=[]; G.ended=false; G.shake=0; G.deathOrder=[]; G.foodSeq=0; $('#deadNote').style.display='none'; $('#banner').className=''; }
 function beginRound(){
   G.running=true; show('game'); boostBtn.style.display='block'; keyHint.style.display=''; lastKills=0;
   if (G.solo) G.t0 = now()+3500;
   const c0=G.snakes[myId]; G.cam.x=c0?c0.x:0; G.cam.y=c0?c0.y:0; G.cam.z=c0?1:specFitZ(); $('#feed').innerHTML='';
   if (!loopOn){ loopOn=true; last=now(); requestAnimationFrame(loop); }
 }
+
+/* ---------- 소리 (파일 없이 코드로 만든다) — 네온 신스 ---------- */
+const SND=(()=>{
+  let AC=null, master=null, sfx=null, bgm=null, muted=false;
+  try{ muted=localStorage.getItem('snakeMute')==='1'; }catch(e){}
+  function ac(){
+    if(!AC){ const C=window.AudioContext||window.webkitAudioContext; if(!C) return null; AC=new C();
+      master=AC.createGain(); master.gain.value=muted?0:1; master.connect(AC.destination);
+      const comp=AC.createDynamicsCompressor(); comp.threshold.value=-14; comp.ratio.value=4; comp.connect(master);
+      sfx=AC.createGain(); sfx.gain.value=.8; sfx.connect(comp);
+      bgm=AC.createGain(); bgm.gain.value=0; bgm.connect(comp); }
+    if(AC.state==='suspended') AC.resume();
+    return AC;
+  }
+  function tone(f,dur,type='square',vol=.2,when=0,to=null,dest=null,lp=0){
+    const a=ac(); if(!a) return; const t=a.currentTime+when;
+    const o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.setValueAtTime(f,t);
+    if(to) o.frequency.exponentialRampToValueAtTime(to,t+dur);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+.006); g.gain.exponentialRampToValueAtTime(.0008,t+dur);
+    let node=o; if(lp){ const fl=a.createBiquadFilter(); fl.type='lowpass'; fl.frequency.value=lp; o.connect(fl); node=fl; }
+    node.connect(g); g.connect(dest||sfx); o.start(t); o.stop(t+dur+.02);
+  }
+  let nbuf=null;
+  function noise(dur,vol=.2,when=0,freq=3000,type='highpass',dest=null,to=null){
+    const a=ac(); if(!a) return; const t=a.currentTime+when;
+    if(!nbuf){ nbuf=a.createBuffer(1,a.sampleRate,a.sampleRate); const d=nbuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; }
+    const s=a.createBufferSource(); s.buffer=nbuf; const f=a.createBiquadFilter(); f.type=type; f.frequency.setValueAtTime(freq,t); if(to) f.frequency.exponentialRampToValueAtTime(to,t+dur); f.Q.value=type==='bandpass'?2:.7;
+    const g=a.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0008,t+dur);
+    s.connect(f); f.connect(g); g.connect(dest||sfx); s.start(t,Math.random()*.5); s.stop(t+dur+.02);
+  }
+  const mid=n=>440*Math.pow(2,(n-69)/12);
+  let lastEat=0, chain=0, lastBoost=0;
+  const PENTA=[0,3,5,7,10,12,15,17,19,22,24];
+  const fx={
+    beep(){ tone(mid(76),.14,'square',.14,0,null,null,2400); },
+    go(){ tone(mid(64),.35,'sawtooth',.12,0,mid(88),null,3000); tone(mid(76),.35,'square',.08,.02,mid(100)); noise(.3,.1,0,800,'bandpass',null,6000); },
+    eat(v){ const t=performance.now(); if(t-lastEat<45) return; chain=t-lastEat<700?Math.min(chain+1,PENTA.length-1):0; lastEat=t;
+      const n=69+PENTA[chain]; tone(mid(n),.08,'triangle',.11); tone(mid(n+12),.05,'sine',.06,.01); if(v>1) tone(mid(n+7),.07,'square',.04,.03,null,null,2500); },
+    boost(){ const t=performance.now(); if(t-lastBoost<120) return; lastBoost=t; noise(.16,.07,0,900,'bandpass',null,1800); },
+    kill(){ tone(mid(84),.12,'square',.14,0,mid(96)); tone(mid(91),.16,'sawtooth',.08,.05,null,null,3500); noise(.35,.2,.02,2500,'lowpass',null,300); tone(80,.35,'sine',.35,0,40); },
+    boom(){ noise(.25,.1,0,1200,'lowpass',null,200); tone(90,.22,'sine',.16,0,45); },
+    die(){ tone(mid(72),.7,'sawtooth',.12,0,mid(40),null,2200); tone(mid(67),.7,'square',.06,.05,mid(35),null,1600); noise(.5,.16,0,1800,'lowpass',null,150); },
+    warn(){ for(let i=0;i<3;i++){ tone(mid(81),.18,'square',.1,i*.42,null,null,2600); tone(mid(76),.18,'square',.1,i*.42+.2,null,null,2600); } },
+    tick(last){ tone(mid(last?93:88),.05,'square',.08,0,null,null,4000); },
+    sting(){ [69,72,76,81].forEach((m,i)=>tone(mid(m),.3,'sawtooth',.07,i*.07,null,null,3000)); },
+    win(){ const seq=[[69,0],[72,.12],[76,.24],[81,.36],[79,.54],[81,.66],[88,.82]];
+      seq.forEach(([m,w])=>{ tone(mid(m),.22,'sawtooth',.09,w,null,null,3500); tone(mid(m+12),.16,'square',.035,w); });
+      [57,64,69,72,76].forEach(m=>tone(mid(m),1.4,'sawtooth',.045,1.0,null,null,2200)); },
+    click(){ tone(mid(84),.05,'square',.07); },
+  };
+  // 배경음: 가 단조 신스웨이브 (Am–F–C–G), 16분음 아르페지오 베이스 + 4박 킥
+  const ROOT=[45,41,48,43], CH=[[57,60,64],[57,60,65],[55,60,64],[55,59,62]];
+  const ARP=[0,12,7,12, 0,12,7,15, 0,12,7,12, 0,10,7,12];
+  const MEL=[76,0,0,74,76,0,79,0, 0,0,76,0,74,0,72,0,  72,0,0,74,72,0,69,0, 0,0,72,0,74,0,76,0,
+             79,0,0,76,79,0,84,0, 0,0,83,0,79,0,76,0,  74,0,0,76,74,0,71,0, 0,0,74,0,76,0,74,0];
+  let bpm=124, step=0, next=0, timer=null, playing=false;
+  function tick(){ const a=AC; if(!a) return;
+    while(next<a.currentTime+.12){ const w=next-a.currentTime, bar=(step>>4)&3, s=step&15;
+      if(s%4===0) tone(140,.18,'sine',.55,w,42,bgm);                                   // 킥
+      if(s===4||s===12){ noise(.16,.2,w,1500,'highpass',bgm); tone(200,.08,'triangle',.12,w,140,bgm); } // 스네어
+      if(s%2===1) noise(.03,.06,w,9000,'highpass',bgm);                               // 하이햇
+      tone(mid(ROOT[bar]-12+ARP[s]),.12,'sawtooth',.09,w,null,bgm,900);                // 베이스 아르페지오
+      if(s===0) CH[bar].forEach(n=>tone(mid(n),60/bpm*3.8,'sawtooth',.022,w,null,bgm,1400)); // 패드
+      const m=MEL[(bar<<4)|s]; if(m){ tone(mid(m),.2,'square',.05,w,null,bgm,2600); tone(mid(m),.24,'sawtooth',.03,w+.09,null,bgm,1800); }
+      next+=60/bpm/4; step=(step+1)&63; } }
+  function start(tempo){ if(tempo) bpm=tempo; const a=ac(); if(!a) return; if(playing) return; playing=true;
+    next=a.currentTime+.05; step=0; bgm.gain.cancelScheduledValues(a.currentTime); bgm.gain.setTargetAtTime(.55,a.currentTime,.3); timer=setInterval(tick,25); }
+  function stop(){ if(!playing||!AC) return; playing=false; clearInterval(timer); bgm.gain.cancelScheduledValues(AC.currentTime); bgm.gain.setTargetAtTime(0,AC.currentTime,.08); }
+  function setMute(m){ muted=m; try{ localStorage.setItem('snakeMute',m?'1':'0'); }catch(e){} if(master&&AC) master.gain.setTargetAtTime(m?0:1,AC.currentTime,.03); }
+  return { unlock:ac, fx, bgm:{start,stop,tempo:t=>{bpm=t;}}, get muted(){return muted;}, setMute };
+})();
+['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>SND.unlock(),{capture:true,passive:true}));
+// 배경음은 큰 화면(중계)과 혼자 연습에서만. 태블릿 6대가 동시에 틀면 부스가 시끄러워진다.
+function musicFor(scene){
+  const want=(net.spec||G.solo)&&scene!=='lobby';
+  if(!want){ SND.bgm.stop(); return; }
+  SND.bgm.tempo(scene==='race'?128:112); SND.bgm.start();
+}
+const sndBtn=document.getElementById('snd');
+const SPK_ON='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const SPK_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
+function paintSnd(){ sndBtn.innerHTML=SND.muted?SPK_OFF:SPK_ON; sndBtn.setAttribute('aria-label',SND.muted?'소리 켜기':'소리 끄기'); }
+sndBtn.onclick=e=>{ e.stopPropagation(); SND.setMute(!SND.muted); paintSnd(); if(!SND.muted) SND.fx.click(); };
+sndBtn.addEventListener('pointerdown',e=>e.stopPropagation());
+paintSnd();
 
 /* ---------- 입력 ---------- */
 const input = { active:false, ox:0,oy:0, dx:0,dy:0, id:null, boost:false, keys:{}, mouse:false, mx:0, my:0 };
@@ -655,6 +745,9 @@ function update(dt){
   if (!G.running) return;
   const el=elapsed(); const R=arenaR(el);
   const cd=$('#countdown'); if (el<0){ cd.textContent=Math.ceil(-el/1000); } else if (el<700){ cd.textContent='출발!'; } else cd.textContent='';
+  { const cn=el<0?Math.ceil(-el/1000):0; if(cn!==G.lastCd){ if(cn>0&&cn<=3) SND.fx.beep(); else if(cn===0&&G.lastCd!=null) SND.fx.go(); G.lastCd=cn; }
+    if(!G.warned&&el>SHRINK_AT){ G.warned=true; SND.fx.warn(); SND.bgm.tempo(140); }
+    const left=Math.ceil((ROUND_MS-el)/1000); if(el>0&&left<=10&&left>0&&left!==G.lastTick){ G.lastTick=left; SND.fx.tick(left<=3); } }
   const tf=$('#timerFill'); tf.style.width=clamp(100-el/ROUND_MS*100,0,100)+'%'; tf.classList.toggle('hot',el>SHRINK_AT);
 
   const me=G.snakes[myId];
@@ -685,6 +778,7 @@ function update(dt){
     const sp=s.boost?BOOST:SPEED; s.x+=Math.cos(s.a)*sp*dt; s.y+=Math.sin(s.a)*sp*dt;
     s.pts.unshift({x:s.x,y:s.y}); trimPath(s);
     // 부스트 비용: 0.5초마다 1마디를 먹이로 떨어뜨림
+    if (s.boost&&s.id===myId) SND.fx.boost();
     if (s.boost){ s.boostAcc+=dt; if (s.boostAcc>0.45){ s.boostAcc=0; s.len=Math.max(6,s.len-1); const tail=s.pts[s.pts.length-1]; dropFood(tail.x+rnd(-8,8),tail.y+rnd(-8,8),1,s.color); if(s.len<=8) s.boost=false; }
       for (let i=0;i<2;i++) G.parts.push({x:s.x-Math.cos(s.a)*s.r,y:s.y-Math.sin(s.a)*s.r,vx:rnd(-60,60)-Math.cos(s.a)*120,vy:rnd(-60,60)-Math.sin(s.a)*120,life:.4,t:.4,c:COLORS[s.color],sz:3}); }
     // 먹이
@@ -734,18 +828,19 @@ function eat(s,f){
   s.len+=f.v;
   const c=f.c<0?'#fff':COLORS[f.c];
   for (let i=0;i<8+f.v*4;i++) G.parts.push({x:f.x,y:f.y,vx:rnd(-160,160),vy:rnd(-160,160),life:.5,t:.5,c,sz:rnd(2,4)});
-  if (s.id===myId){ G.parts.push({x:f.x,y:f.y,vx:0,vy:-60,life:.7,t:.7,c:'#fff',txt:'+'+f.v}); }
+  if (s.id===myId){ G.parts.push({x:f.x,y:f.y,vx:0,vy:-60,life:.7,t:.7,c:'#fff',txt:'+'+f.v}); SND.fx.eat(f.v); }
 }
 function killSnake(s,by,remote){
   if (!s.alive) return; s.alive=false; s.diedAt=elapsed(); G.deathOrder.push(s.id);
+  if (s.id===myId) SND.fx.die(); else if (net.spec) SND.fx.boom();
   const bp=bodyPoints(s); const c=COLORS[s.color];
   for (let i=0;i<bp.length;i+=2){ const p=bp[i]; for(let j=0;j<3;j++) G.parts.push({x:p.x,y:p.y,vx:rnd(-220,220),vy:rnd(-220,220),life:rnd(.5,1),t:1,c,sz:rnd(2,5)}); }
   if (!remote){ // 내 뱀(또는 내 봇)이 죽음 → 먹이로 흩뿌림
     for (let i=0;i<bp.length;i+=2){ const p=bp[i]; dropFood(p.x+rnd(-6,6),p.y+rnd(-6,6),2,s.color); }
     if (s.id===myId){ G.shake=18; $('#deadNote').style.display='block'; boostBtn.style.display='none'; keyHint.style.display='none'; if(!G.solo) sendMe(); }
-    if (by){ by.kills++; if (by.id===myId){ G.shake=10; banner('격추!'); } else if (!G.solo && by.id!==myId){ net.ref.child('players/'+by.id+'/kills').transaction(v=>(v||0)+1); } }
+    if (by){ by.kills++; if (by.id===myId){ G.shake=10; banner('격추!'); SND.fx.kill(); } else if (!G.solo && by.id!==myId){ net.ref.child('players/'+by.id+'/kills').transaction(v=>(v||0)+1); } }
   } else { if (G.snakes[myId]&&G.snakes[myId].alive&&s.id!==myId){ G.shake=Math.max(G.shake,6); } }
-  if (net.spec){ G.shake=Math.max(G.shake,8); feed(`<span style="color:${c}">${esc(s.name)}</span> 탈락`,c); const left=Object.values(G.snakes).filter(o=>o.alive); if(left.length===2) banner('최후의 2마리!'); }
+  if (net.spec){ G.shake=Math.max(G.shake,8); feed(`<span style="color:${c}">${esc(s.name)}</span> 탈락`,c); const left=Object.values(G.snakes).filter(o=>o.alive); if(left.length===2){ banner('최후의 2마리!'); SND.fx.sting(); } }
 }
 let lastKills=0;
 function banner(t){ const b=$('#banner'); b.textContent=t; b.className=''; void b.offsetWidth; b.className='pop'; }
@@ -753,7 +848,7 @@ function renderRank(){
   const arr=Object.values(G.snakes).sort((a,b)=>(b.alive-a.alive)||(b.len-a.len));
   const el=$('#rank'); el.innerHTML=arr.slice(0,6).map((s,i)=>`<div class="rk ${s.id===myId?'me':''} ${s.alive?'':'dead'}" style="--c:${COLORS[s.color]}"><i style="background:${COLORS[s.color]}"></i><b>${esc(s.name)}</b><span>${s.len}</span></div>`).join('');
   const me=G.snakes[myId]; if (me){ $('#meLen').textContent=me.len; const r=arr.findIndex(s=>s.id===myId)+1; $('#meRank').textContent=me.alive?`길이 · ${r}위`:'탈락';
-    if (me.kills>lastKills){ lastKills=me.kills; if(!G.solo) banner('격추!'); } }
+    if (me.kills>lastKills){ lastKills=me.kills; if(!G.solo){ banner('격추!'); SND.fx.kill(); } } }
 }
 
 /* ---------- 그리기 ---------- */
@@ -847,7 +942,7 @@ function endGame(){
   $('#board').innerHTML=arr.map((s,i)=>`<div class="br ${i===0?'first':''}" style="--c:${COLORS[s.color]}"><span class="n">${i+1}</span><i style="background:${COLORS[s.color]}"></i><b>${esc(s.name)}</b><span>길이 ${s.len} · 격추 ${s.kills}${s.alive?' · 생존':''}</span></div>`).join('');
   $('#btnAgain').textContent = (!G.solo && !net.isHost) ? '대기실로' : '한 판 더';
   lastKills=0; bOff(); input.active=false; stickEl.style.display='none';
-  setTimeout(()=>show('result'), 600);
+  setTimeout(()=>{ show('result'); SND.fx.win(); }, 600);
 }
 
 /* 항상 전체 화면: 전체 화면이 아니면 다음 터치·클릭 때 다시 켠다 (브라우저는 사용자가 누를 때만 전체 화면을 허락함) */
