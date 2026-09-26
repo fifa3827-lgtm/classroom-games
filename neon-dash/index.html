@@ -329,7 +329,9 @@ body.desk #tapCue .pad::before,body.desk #tapCue .pad::after{border-radius:22px}
 const SERVER_URL = 'wss://game.edoori.co.kr/ws';
 const COLORS=['#ff3d8a','#21e6ff','#a8ff3d','#ff9a2e','#b26bff','#ffe63d'];
 const COLOR_NAMES=['핑크','하늘','라임','주황','보라','노랑'];
-const GOAL=100, LIMIT_MS=30000, COMBO_GAP=350, SEND_MS=110, STEP=0.5;
+const GOAL=100, LIMIT_MS=30000, COMBO_GAP=350, SEND_MS=110, STEP=0.4;
+// 최고 속도(초당 m): 아무리 빨리 두드려도 100m에 10초쯤 걸리게. 달릴 힘이 초당 VCAP씩 차오르고, 한 번 두드릴 때마다 꺼내 쓴다
+const VCAP=11, VBANK=2.2;
 
 const $=s=>document.querySelector(s);
 const screens={lobby:$('#lobby'),room:$('#room'),game:$('#game'),result:$('#result')};
@@ -594,7 +596,7 @@ addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter') setTapHint(tru
 function tap(x,y){
   if(!G.running||G.ended||net.spec) return; const el=elapsed(); const me=G.racers[myId]; if(!me||el<0||me.fin) return;
   const t=now(); const before=mult(); G.combo=(t-G.lastTap<COMBO_GAP)?G.combo+1:1; G.lastTap=t; G.bestCombo=Math.max(G.bestCombo,G.combo);
-  const m=mult(); me.d=Math.min(GOAL,me.d+STEP*m); G.taps++;
+  const m=mult(); const gain=Math.min(STEP*m,G.bank||0); G.bank=(G.bank||0)-gain; me.d=Math.min(GOAL,me.d+gain); G.taps++;
   const c=COLORS[myColor];
   G.rings.push({x,y,r:8,life:.4,c}); SND.fx.tap(m>=2.5?3:m>=2?2:m>=1.5?1:0,G.combo);
   for(let i=0;i<5+m*3;i++){ const a=rnd(0,Math.PI*2), v=rnd(120,380); G.parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rnd(.25,.5),t:.5,c:Math.random()<.3?'#fff':c,sz:rnd(2,4+m)}); }
@@ -636,6 +638,7 @@ function update(dt,t){
   for(const r of Object.values(G.racers)){ const pv=r.shown; r.shown+=(r.d-r.shown)*(1-Math.pow(.0008,dt)); r.vel=r.vel*.85+((r.shown-pv)/Math.max(dt,1e-3))*.15; r.phase+=dt*(2+r.vel*1.6); }
   for(let i=G.parts.length-1;i>=0;i--){ const p=G.parts[i]; p.life-=dt; if(p.life<=0){ G.parts.splice(i,1); continue; } p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=p.conf?.97:.92; p.vy=(p.conf?p.vy*.98:p.vy*.92)+(p.conf?600:260)*dt; }
   for(let i=G.rings.length-1;i>=0;i--){ const r=G.rings[i]; r.life-=dt; r.r+=dt*360; if(r.life<=0) G.rings.splice(i,1); }
+  if(el>=0) G.bank=Math.min(VBANK,(G.bank||0)+VCAP*dt); else G.bank=0;
   G.shake*=.85; G.flash=Math.max(0,G.flash-dt); G.bg+=dt*(1+me.vel*.25);
   if(!G.solo&&!net.spec&&net.ref&&t-G.lastSend>SEND_MS&&!me.fin){ G.lastSend=t; net.ref.child('players/'+myId+'/score').set(Math.round(me.d*10)/10); }
   if(t-uiTick>200&&net.spec){ uiTick=t; $('#place').textContent='방 코드 '+net.code+' · 중계 중'; }
