@@ -130,7 +130,7 @@ h1{font-family:Jua,sans-serif;font-weight:400;font-size:44px;white-space:nowrap;
 'use strict';
 // =====================================================================
 // 裵鄭 명윤랜드 (배정 명윤랜드)
-// 소중한 두 사람을 위해 만든 놀이공원 퍼즐. 배정(配定) = 손님을 알맞은 자리에 앉힌다는 뜻도 겹친다.
+// 소중한 두 사람을 위해 만든 놀이공원 퍼즐(게임과 설명에서는 裵鄭 · 명윤랜드로만 부른다). 배정(配定) = 손님을 알맞은 자리에 앉힌다는 뜻도 겹친다.
 // 버스 피버(Bus Fever)의 「같은 색 손님을 꽉 채워 출발시키는 쾌감」을 오마주하고,
 // 조작은 관람차 타이밍 탭으로 바꿨다. 소리 구조는 Lanternfall(랜턴폴)을 따른다:
 //   마림바·칼림바 음정 효과음(연속할수록 5음계로 오름) · 박자 격자에 맞춘 연쇄 · 폭죽 녹음 · 진동 무늬.
@@ -152,11 +152,11 @@ const persist = () => store.set('save', save);
 
 // 손님 여섯 친구. f: 머리 모양 (색을 못 가려도 모양으로 구별)
 const COLORS = [
+  { base: '#6cbcff', dark: '#3587d6', light: '#cfe8ff', f: 'baby',   name: '하늘통통' },   // 1단계부터 나오도록 맨 앞. 사용자가 보낸 사진 속 아기를 닮게 그린 손님(사진 파일은 쓰지 않는다). 하늘색 세일러 옷이 이 손님의 색
   { base: '#ff8fa8', dark: '#d9587a', light: '#ffd3dd', f: 'cat',    name: '딸기냥' },
   { base: '#ffb067', dark: '#dc7f36', light: '#ffe2c4', f: 'sprout', name: '귤싹이' },
   { base: '#ffd95a', dark: '#d2a41b', light: '#fff2bd', f: 'tuft',   name: '레몬삐약' },
   { base: '#6fd8a8', dark: '#35a877', light: '#cdf5e1', f: 'bunny',  name: '민트토끼' },
-  { base: '#6cbcff', dark: '#3587d6', light: '#cfe8ff', f: 'antenna',name: '하늘통통' },
   { base: '#b69bff', dark: '#7f63d6', light: '#e6dcff', f: 'bear',   name: '포도곰' },
 ];
 
@@ -326,7 +326,7 @@ const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (
 // =====================================================================
 // 배경음: 단계마다 다른 곡 여덟 곡 (Lanternfall 4차 배경음 방향: 타악 중심, 가락 악기는 거의 없이)
 // 곡마다 박자·조·장르가 다르고, 효과음의 으뜸음(ROOT)도 그 곡의 조를 따라가 저절로 화음이 된다.
-// 여덟 곡을 한 바퀴 돌면 다음 바퀴부터는 6%씩 빨라진다(재생 속도, 효과음 음높이도 같이 맞춘다).
+// 여덟 곡을 한 바퀴 돌면 다음 바퀴부터는 4%씩(최대 20%) 빨라진다(재생 속도, 효과음 음높이도 같이 맞춘다).
 // 곡마다 피버 층(봉고·오픈 하이햇·마림바 찌르기·글로켄 아르페지오)을 같은 박에 겹쳐 두고 피버 때만 올린다.
 // =====================================================================
 // ch: [베이스 음(도=48 기준), 성질 M 장 · m 단 · 7 딸림7]
@@ -341,7 +341,7 @@ const TRACKS = [
   { name: '피날레 행진', bpm: 128, key: -4, S: 16, sw: 0,   style: 'march',  ch: [[48, 'M'], [53, 'M'], [43, '7'], [48, 'M']] },
 ];
 const trackOf = s => (s - 1) % TRACKS.length;
-const lapRate = s => Math.min(1.24, 1 + Math.floor((s - 1) / TRACKS.length) * .06);
+const lapRate = s => Math.min(1.2, 1 + Math.floor((s - 1) / TRACKS.length) * .04);   // 여덟 곡 한 바퀴마다 4%씩(최대 20%)
 const BGM = { bufs: {}, busy: {}, want: -1, cur: -1, rate: 1, bpm: 120, t0: 0, main: null, fever: null, feverOn: false };
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const loopLen = T => 16 * (T.S / 4) * 60 / T.bpm;
@@ -567,25 +567,31 @@ const G = {
   time: 0, P: null, timeScale: 1, sky: 1, skyTo: 1, laneFlash: [], clearT: 0, introT: 0, hintT: 0,
 };
 function params(s) {
-  const gondolas = Math.min(12, 6 + Math.floor((s - 1) / 2)), spacing = TAU / gondolas;
+  // 난이도 곡선: 「사람들이 50단계까지는 가야지」 → 50단계에 걸쳐 아주 천천히 오르게 다시 짰다.
+  // 곤돌라 간격은 4박(1~4단계) 뒤로 계속 3박. 어려움은 색 · 줄 · 손님 속도 · 곡 빠르기로만 조금씩 오른다.
+  const gondolas = Math.min(12, 6 + Math.floor((s - 1) / 4));
   return {
-    // 7단계 이후가 너무 가파르다는 의견(「8단계부터 어려워」)으로 색 · 줄 · 박 간격 · 손님 속도가 오르는 시점을 뒤로 미뤘다
-    s, colors: s <= 2 ? 2 : s <= 4 ? 3 : s <= 7 ? 4 : s <= 12 ? 5 : 6, lanes: s <= 2 ? 3 : s <= 8 ? 4 : 5, gondolas,
-    every: s <= 2 ? 4 : s <= 15 ? 3 : 2,          // 「11단계에서 계속 끝나」 → 2박 간격은 16단계부터          // 곤돌라가 몇 박마다 탑승 띠 한가운데에 오는가 (리듬)
-    winT: s <= 2 ? .42 : Math.max(.25, .40 - s * .006),   // 탑승 띠 안에 머무는 시간(초, 한쪽)
-    spawn: Math.max(1.0, 3.0 - s * .09), target: Math.min(36, 8 + s * 2), cap: 5,   // spawn: 「승객이 너무 빨리 차는 것 같아」 → 약 25% 느리게
-    seatMin: s <= 2 ? 2 : s <= 4 ? 3 : 2, seatMax: s <= 2 ? 2 : s <= 11 ? 3 : 4,
-    heart: s >= 2, rainbow: s >= 3, wind: s >= 8, reverse: s >= 13,
+    s, colors: s <= 2 ? 2 : s <= 6 ? 3 : s <= 14 ? 4 : s <= 34 ? 5 : 6,
+    lanes: s <= 3 ? 3 : s <= 18 ? 4 : 5, gondolas,
+    every: s <= 4 ? 4 : 3,                                   // 곤돌라가 몇 박마다 탑승 띠 한가운데에 오는가 (리듬)
+    winT: s <= 2 ? .44 : Math.max(.27, .42 - s * .003),      // 탑승 띠 안에 머무는 시간(초, 한쪽)
+    spawn: Math.max(1.5, 3.0 - s * .03),                     // 새 손님 간격(초). 50단계에 1.5초
+    target: Math.min(28, 8 + s), cap: 5,                     // 한 단계 손님 수: 짧게 끊어 성공 축하가 자주 온다
+    seatMin: s <= 2 ? 2 : s <= 4 ? 3 : 2, seatMax: s <= 2 ? 2 : s <= 20 ? 3 : 4,
+    group: s < 8 ? 1 : 2,                                    // 한 번에 몰려오는 손님 수(최대)
+    heart: s >= 2, rainbow: s >= 3, wind: s >= 10, reverse: s >= 18,
   };
 }
 const NEWS = {
   2: ['하트 곤돌라', '두 사람을 위한 하트 곤돌라! 꽉 채우면 하트 불꽃이 터져요'],
   3: ['무지개 곤돌라', '어떤 색 손님이든 태울 수 있어요'],
   5: ['크기가 다른 곤돌라', '2인승과 3인승이 섞여 있어요. 자리를 잘 보세요'],
-  8: ['돌풍', '가끔 바람이 불어 관람차가 빨라져요'],
-  12: ['4인승 곤돌라', '한 번에 넷까지 태울 수 있어요'],
-  13: ['거꾸로 회전', '관람차가 가끔 반대로 돌아요'],
-  16: ['더 빠른 박자', '이제 곤돌라가 두 박마다 와요'],
+  8: ['친구끼리 온 손님', '같은 색 친구들이 두 명씩 함께 줄을 서요'],
+  10: ['돌풍', '가끔 바람이 불어 관람차가 빨라져요'],
+  18: ['거꾸로 회전', '관람차가 가끔 반대로 돌아요'],
+  21: ['4인승 곤돌라', '한 번에 넷까지 태울 수 있어요'],
+  30: ['30단계!', '여기까지 온 당신은 명윤랜드의 VIP 손님이에요'],
+  50: ['50단계!', '명윤랜드가 가장 사랑하는 손님이 되었어요'],
 };
 // 하늘: 단계 셋마다 낮 → 노을 → 저녁 → 밤
 const SKIES = [
@@ -775,7 +781,7 @@ function spawnOne() {
   const l = G.lanes[li], last = l[l.length - 1];
   const c = last && Math.random() < .45 ? last.c : ri(P.colors);
   // 4단계부터는 친구끼리 두세 명씩 한꺼번에 온다(같은 색)
-  let n = P.s < 6 ? 1 : 1 + ri(Math.min(3, 1 + Math.floor(P.s / 8)));
+  let n = 1 + ri(P.group);
   n = Math.min(n, P.target - G.spawned);
   for (let k = 0; k < n; k++) {
     if (l.length >= P.cap) { loseHeart(li); break; }
@@ -865,7 +871,7 @@ function beginBonus() {
 }
 function bonusEnd() {
   G.state = 'clear'; G.fever = 0; bgmFever(false);
-  const got = G.score - G.bonusScore;
+  const got = G.score - G.bonusScore; G.hearts = Math.min(3, G.hearts + 1);   // 보너스를 마치면 하트도 하나 채운다
   toneClear(true); buzz(HAPTIC.clear);
   for (let i = 0; i < 160; i++) G.parts.push({ type: 'conf', x: rand(0, W), y: rand(-H * .4, -10), vx: rand(-40, 40), vy: rand(60, 200), g: 60, life: rand(2.5, 4), max: 4, size: rand(5, 9), col: COLORS[ri(6)].base, rot: rand(0, TAU), vr: rand(-8, 8) });
   save.bestScore = Math.max(save.bestScore, G.score); persist();
@@ -873,7 +879,7 @@ function bonusEnd() {
     $('#clTitle').textContent = '보너스 타임 끝!';
     $('#clStars').querySelectorAll('span').forEach(s => s.classList.add('on'));
     $('#clScore').textContent = G.score.toLocaleString(); $('#clCombo').textContent = G.maxCombo;
-    $('#clMsg').textContent = `보너스로 ${got.toLocaleString()}점을 모았어요. 다음은 ${G.stage + 1}단계예요.`;
+    $('#clMsg').textContent = `보너스로 ${got.toLocaleString()}점을 모았어요. 하트도 하나 채웠어요. 다음은 ${G.stage + 1}단계예요.`;
     showOv('clear', true);
   }, 1300);
 }
@@ -936,7 +942,7 @@ function update(dt) {
     if (G.bonus) { G.spawnT -= dt; if (G.spawnT <= 0) { G.spawnT = .35; spawnOne(); } }
     else if (G.spawned < P.target) { G.spawnT -= dt; if (G.spawnT <= 0) { // 줄이 많이 찼을수록 새 손님이 천천히 온다(40%를 넘으면 늦춰지기 시작, 거의 다 차면 두 배쯤 느리게)
       const queued = G.lanes.reduce((a, l) => a + l.length, 0), fill = queued / (G.lanes.length * P.cap);
-      G.spawnT = P.spawn * rand(.8, 1.2) * (P.s < 6 ? 1 : 1.3) * (1 + 1.8 * Math.max(0, fill - .4)); spawnOne(); } }
+      G.spawnT = P.spawn * rand(.8, 1.2) * (P.group > 1 ? 1.3 : 1) * (1 + 1.8 * Math.max(0, fill - .4)); spawnOne(); } }
     if (G.fever > 0) { G.fever -= dt; if (G.fever <= 0) { bgmFever(false); addText(L.cx, L.py + 30, '피버 끝', '#5d5680', 18); } }
     if (G.bonus) { G.bonusT -= dt; if (G.bonusT <= 0 && !G.hops.length) bonusEnd(); }
     else if (G.boarded >= P.target && !G.hops.length) stageClear();
@@ -1001,7 +1007,7 @@ function addText(x, y, txt, col, size, life = .9, glow) { G.texts.push({ x, y, t
 const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const mixc = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${Math.round(lerp(A[0], B[0], t))},${Math.round(lerp(A[1], B[1], t))},${Math.round(lerp(A[2], B[2], t))})`; };
 function skyCol(key) { const i = Math.floor(G.sky), t = G.sky - i, a = SKIES[i % 4], b = SKIES[(i + 1) % 4]; return key === 'night' ? lerp(a.night, b.night, t) : mixc(a[key], b[key], t); }
-function rr(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function rr(x, y, w, h, r) { r = Math.max(0, Math.min(r, w / 2, h / 2)); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function heartPath(x, y, s) { ctx.beginPath(); ctx.moveTo(x, y + s * .35); ctx.bezierCurveTo(x - s * 1.1, y - s * .35, x - s * .5, y - s * 1.05, x, y - s * .45); ctx.bezierCurveTo(x + s * .5, y - s * 1.05, x + s * 1.1, y - s * .35, x, y + s * .35); ctx.closePath(); }
 const STARS = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random() * .55, r: rand(.6, 1.6), p: rand(0, TAU) }));
 const CLOUDS = Array.from({ length: 6 }, (_, i) => ({ x: Math.random(), y: rand(.08, .4), s: rand(.7, 1.3), v: rand(.006, .014) * (i % 2 ? 1 : .7) }));
@@ -1182,22 +1188,34 @@ function drawLanes() {
 function critter(x, y, r, ci, o = {}) {
   const C = COLORS[ci] || COLORS[0];
   ctx.save(); ctx.translate(x, y); const sq = o.sq || 0; ctx.scale(1 + sq, 1 - sq);
+  if (C.f === 'baby') { drawBaby(r, o, C); ctx.restore(); return; }
   ctx.lineWidth = Math.max(1.2, r * .09); ctx.strokeStyle = C.dark; ctx.fillStyle = C.base; ctx.lineJoin = 'round';
   if (C.f === 'cat') [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx * r * .78, -r * .3); ctx.lineTo(sx * r * .62, -r * 1.08); ctx.lineTo(sx * r * .14, -r * .82); ctx.closePath(); ctx.fill(); ctx.stroke(); });
   if (C.f === 'bunny') [-1, 1].forEach(sx => { ctx.beginPath(); ctx.ellipse(sx * r * .36, -r * 1.02, r * .2, r * .52, sx * .15, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffc9d6'; ctx.beginPath(); ctx.ellipse(sx * r * .36, -r * 1.0, r * .09, r * .32, sx * .15, 0, TAU); ctx.fill(); ctx.fillStyle = C.base; });
   if (C.f === 'bear') [-1, 1].forEach(sx => { ctx.beginPath(); ctx.arc(sx * r * .64, -r * .64, r * .3, 0, TAU); ctx.fill(); ctx.stroke(); });
+  if (C.f === 'sailor') [-1, 1].forEach(sx => { ctx.beginPath(); ctx.arc(sx * r * .96, r * .04, r * .19, 0, TAU); ctx.fill(); ctx.stroke(); });   // 동그란 귀
   ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill(); ctx.stroke();
+  if (C.f === 'sailor' && !o.ghost) {   // 남색 세일러 깃 + 흰 두 줄 + 단추
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r - ctx.lineWidth * .5, 0, TAU); ctx.clip();
+    ctx.fillStyle = '#2d3452'; ctx.beginPath(); ctx.moveTo(-r * 1.1, r * .36); ctx.quadraticCurveTo(0, r * .86, r * 1.1, r * .36); ctx.lineTo(r * 1.1, r * 1.3); ctx.lineTo(-r * 1.1, r * 1.3); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#fff8ea'; ctx.lineWidth = Math.max(1, r * .055); ctx.lineCap = 'round';
+    [0, .12].forEach(k => { ctx.beginPath(); ctx.moveTo(-r * .98, r * (.5 + k)); ctx.quadraticCurveTo(0, r * (.98 + k), r * .98, r * (.5 + k)); ctx.stroke(); });
+    ctx.fillStyle = '#fff3cf'; ctx.beginPath(); ctx.arc(0, r * .93, r * .07, 0, TAU); ctx.fill();
+    ctx.restore(); ctx.lineWidth = Math.max(1.2, r * .09); ctx.strokeStyle = C.dark;
+  }
   if (!o.ghost) {
     ctx.fillStyle = C.light; ctx.beginPath(); ctx.ellipse(-r * .36, -r * .42, r * .26, r * .15, -.5, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(0, r * .45, r * .5, r * .3, 0, 0, TAU); ctx.fill();
+    if (C.f !== 'sailor') { ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(0, r * .45, r * .5, r * .3, 0, 0, TAU); ctx.fill(); }
     ctx.fillStyle = '#2f2a4d'; ctx.strokeStyle = '#2f2a4d'; ctx.lineWidth = Math.max(1.2, r * .09); ctx.lineCap = 'round';
     const ey = -r * .05;
-    if (o.happy) [-1, 1].forEach(sx => { ctx.beginPath(); ctx.arc(sx * r * .32, ey + r * .05, r * .12, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); });
+    const smile = o.happy || (C.f === 'sailor' && !o.blink && !o.worried);   // 아기 손님은 늘 눈웃음
+    if (smile) [-1, 1].forEach(sx => { ctx.beginPath(); ctx.arc(sx * r * .32, ey + r * .05, r * .12, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); });
     else if (o.blink) [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx * r * .32 - r * .1, ey); ctx.lineTo(sx * r * .32 + r * .1, ey); ctx.stroke(); });
     else [-1, 1].forEach(sx => { ctx.beginPath(); ctx.arc(sx * r * .32, ey, r * .12, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx * r * .32 + r * .04, ey - r * .05, r * .045, 0, TAU); ctx.fill(); ctx.fillStyle = '#2f2a4d'; });
     ctx.beginPath();
     if (o.worried) { ctx.moveTo(-r * .12, r * .3); ctx.quadraticCurveTo(0, r * .2, r * .12, r * .3); }
     else if (o.hop) { ctx.arc(0, r * .25, r * .1, 0, TAU); }
+    else if (C.f === 'sailor') { ctx.moveTo(-r * .16, r * .1); ctx.quadraticCurveTo(0, r * .4, r * .16, r * .1); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ff9fb2'; ctx.beginPath(); ctx.ellipse(0, r * .25, r * .075, r * .045, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#2f2a4d'; ctx.beginPath(); }
     else { ctx.moveTo(-r * .14, r * .2); ctx.quadraticCurveTo(-r * .07, r * .3, 0, r * .2); ctx.quadraticCurveTo(r * .07, r * .3, r * .14, r * .2); }
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,120,150,.45)'; [-1, 1].forEach(sx => { ctx.beginPath(); ctx.arc(sx * r * .58, r * .18, r * .13, 0, TAU); ctx.fill(); });
@@ -1205,8 +1223,62 @@ function critter(x, y, r, ci, o = {}) {
   ctx.strokeStyle = C.dark; ctx.fillStyle = C.base; ctx.lineWidth = Math.max(1.2, r * .08);
   if (C.f === 'sprout') { ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(0, -r * 1.25); ctx.stroke(); ctx.fillStyle = '#7ccf6a'; ctx.strokeStyle = '#4c9e45'; [-1, 1].forEach(sx => { ctx.beginPath(); ctx.ellipse(sx * r * .2, -r * 1.3, r * .22, r * .1, sx * -.5, 0, TAU); ctx.fill(); ctx.stroke(); }); }
   if (C.f === 'tuft') { ctx.beginPath(); [-1, 0, 1].forEach(k => { ctx.moveTo(k * r * .12, -r * .96); ctx.quadraticCurveTo(k * r * .25, -r * 1.3, k * r * .3 + r * .05, -r * 1.25); }); ctx.stroke(); }
+  if (C.f === 'sailor') {   // 옆으로 넘긴 짧은 앞머리 + 정수리 한 올
+    ctx.fillStyle = '#3b302b'; ctx.beginPath(); ctx.moveTo(-r * .62, -r * .7); ctx.quadraticCurveTo(-r * .05, -r * 1.14, r * .62, -r * .74); ctx.quadraticCurveTo(r * .15, -r * .84, -r * .18, -r * .58); ctx.quadraticCurveTo(-r * .4, -r * .6, -r * .62, -r * .7); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#3b302b'; ctx.lineWidth = Math.max(1, r * .07); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(r * .02, -r * .97); ctx.quadraticCurveTo(r * .22, -r * 1.18, r * .04, -r * 1.26); ctx.stroke();
+  }
   if (C.f === 'antenna') { ctx.beginPath(); ctx.moveTo(r * .1, -r * .97); ctx.quadraticCurveTo(r * .3, -r * 1.3, r * .22, -r * 1.42); ctx.stroke(); ctx.fillStyle = '#ffd95a'; ctx.strokeStyle = '#d2a41b'; ctx.beginPath(); ctx.arc(r * .22, -r * 1.48, r * .14, 0, TAU); ctx.fill(); ctx.stroke(); }
   ctx.restore();
+}
+// 하늘통통: 동그랗고 볼이 통통한 얼굴, 넓은 이마와 옆으로 넘긴 가는 머리, 작은 눈웃음, 활짝 벌린 입, 하늘색 세일러 옷
+function drawBaby(r, o, C) {
+  // 「얼굴은 애기처럼 귀엽게」: 이마를 넓게 두고 눈·코·입을 얼굴 아래쪽에 모았다(아기 비율). 눈썹은 없애고 볼은 크게
+  const skin = '#ffe4cf', hair = '#3a2c25', lw = Math.max(1.2, r * .08);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.fillStyle = skin; ctx.strokeStyle = C.dark; ctx.lineWidth = lw;
+  [-1, 1].forEach(sx => { ctx.beginPath(); ctx.ellipse(sx * r * .98, r * .16, r * .16, r * .19, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#f9c9b0'; ctx.beginPath(); ctx.ellipse(sx * r * .98, r * .17, r * .07, r * .1, 0, 0, TAU); ctx.fill(); ctx.fillStyle = skin; });
+  const face = () => { ctx.beginPath(); ctx.moveTo(0, -r); ctx.bezierCurveTo(r * .6, -r, r * 1.0, -r * .6, r * 1.02, r * .05); ctx.bezierCurveTo(r * 1.06, r * .76, r * .6, r * 1.02, 0, r * 1.02); ctx.bezierCurveTo(-r * .6, r * 1.02, -r * 1.06, r * .76, -r * 1.02, r * .05); ctx.bezierCurveTo(-r * 1.0, -r * .6, -r * .6, -r, 0, -r); ctx.closePath(); };
+  face(); ctx.fillStyle = skin; ctx.fill();
+  ctx.save(); face(); ctx.clip();
+  ctx.fillStyle = C.base; ctx.beginPath(); ctx.moveTo(-r * 1.2, r * .5); ctx.quadraticCurveTo(0, r * .95, r * 1.2, r * .5); ctx.lineTo(r * 1.2, r * 1.3); ctx.lineTo(-r * 1.2, r * 1.3); ctx.closePath(); ctx.fill();
+  if (!o.ghost) {
+    ctx.strokeStyle = '#fffaf0'; ctx.lineWidth = Math.max(1, r * .05);
+    [0, .11].forEach(k => { ctx.beginPath(); ctx.moveTo(-r * 1.05, r * (.62 + k)); ctx.quadraticCurveTo(0, r * (1.04 + k), r * 1.05, r * (.62 + k)); ctx.stroke(); });
+    ctx.fillStyle = '#fff3cf'; ctx.beginPath(); ctx.arc(0, r * .92, r * .065, 0, TAU); ctx.fill();
+    // 보송한 아기 머리: 얇게 덮인 머리 + 앞머리 몇 가닥
+    ctx.fillStyle = hair; ctx.beginPath(); ctx.moveTo(-r * .98, -r * .42); ctx.quadraticCurveTo(-r * .9, -r * 1.06, 0, -r * 1.06); ctx.quadraticCurveTo(r * .9, -r * 1.06, r * .98, -r * .38);
+    ctx.quadraticCurveTo(r * .72, -r * .7, r * .34, -r * .78); ctx.quadraticCurveTo(r * .12, -r * .68, -r * .02, -r * .8); ctx.quadraticCurveTo(-r * .2, -r * .7, -r * .42, -r * .8); ctx.quadraticCurveTo(-r * .76, -r * .72, -r * .98, -r * .42); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  face(); ctx.strokeStyle = C.dark; ctx.lineWidth = lw * 1.15; ctx.stroke();
+  // 정수리 한 올 (동그랗게 말린)
+  ctx.strokeStyle = hair; ctx.lineWidth = Math.max(1, r * .07); ctx.beginPath(); ctx.moveTo(r * .04, -r * .98); ctx.bezierCurveTo(r * .1, -r * 1.24, r * .34, -r * 1.2, r * .26, -r * 1.06); ctx.stroke();
+  if (o.ghost) return;
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(-r * .3, -r * .44, r * .2, r * .08, -.3, 0, TAU); ctx.fill();
+  // 큰 볼
+  ctx.fillStyle = 'rgba(255,125,140,.38)'; [-1, 1].forEach(sx => { ctx.beginPath(); ctx.ellipse(sx * r * .58, r * .3, r * .22, r * .16, 0, 0, TAU); ctx.fill(); });
+  // 눈: 평소엔 반짝이는 동그란 눈, 웃을 땐(탑승 · 폴짝) 눈웃음
+  const ey = r * .1, ex = r * .33;
+  if (o.happy || o.hop) {
+    ctx.strokeStyle = '#2f2a4d'; ctx.lineWidth = Math.max(1.3, r * .09);
+    [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx * ex - r * .13, ey + r * .02); ctx.quadraticCurveTo(sx * ex, ey - r * .14, sx * ex + r * .13, ey + r * .02); ctx.stroke(); });
+  } else if (o.blink) {
+    ctx.strokeStyle = '#2f2a4d'; ctx.lineWidth = Math.max(1.3, r * .08);
+    [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx * ex - r * .11, ey); ctx.quadraticCurveTo(sx * ex, ey + r * .06, sx * ex + r * .11, ey); ctx.stroke(); });
+  } else {
+    [-1, 1].forEach(sx => {
+      ctx.fillStyle = '#2f2a4d'; ctx.beginPath(); ctx.ellipse(sx * ex, ey, r * .12, r * .14, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx * ex + r * .04, ey - r * .05, r * .05, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx * ex - r * .04, ey + r * .05, r * .022, 0, TAU); ctx.fill();
+    });
+  }
+  // 조그만 코
+  ctx.fillStyle = '#f2b79c'; ctx.beginPath(); ctx.ellipse(0, r * .27, r * .06, r * .04, 0, 0, TAU); ctx.fill();
+  // 입: 작게 벌린 웃음
+  ctx.fillStyle = '#8a3f45';
+  if (o.worried) { ctx.strokeStyle = '#8a3f45'; ctx.lineWidth = Math.max(1, r * .06); ctx.beginPath(); ctx.moveTo(-r * .09, r * .44); ctx.quadraticCurveTo(0, r * .38, r * .09, r * .44); ctx.stroke(); }
+  else { const w = o.hop ? .15 : .12, h = o.hop ? .2 : .15; ctx.beginPath(); ctx.moveTo(-r * w, r * .36); ctx.quadraticCurveTo(0, r * .39, r * w, r * .36); ctx.quadraticCurveTo(r * w * .8, r * (.36 + h), 0, r * (.37 + h)); ctx.quadraticCurveTo(-r * w * .8, r * (.36 + h), -r * w, r * .36); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff9fae'; ctx.beginPath(); ctx.ellipse(0, r * (.36 + h * .72), r * w * .55, r * h * .3, 0, 0, TAU); ctx.fill(); }
 }
 function drawHops() {
   for (const h of G.hops) {
@@ -1332,7 +1404,7 @@ function frame(now) {
 }
 setupStage(true); resize(); setSound(save.sound); refreshTitle();
 requestAnimationFrame(frame);
-window.__game = { TRACKS, G, tapLane, windowGondola, params, get BGM() { return BGM; }, get AC() { return AC; }, startGame, renderBGM };   // 검사용
+window.__game = { critter, TRACKS, G, tapLane, windowGondola, params, get BGM() { return BGM; }, get AC() { return AC; }, startGame, renderBGM };   // 검사용
 })();
 </script>
 </body>
