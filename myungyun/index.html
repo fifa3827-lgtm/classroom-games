@@ -571,20 +571,21 @@ function params(s) {
   return {
     // 7단계 이후가 너무 가파르다는 의견(「8단계부터 어려워」)으로 색 · 줄 · 박 간격 · 손님 속도가 오르는 시점을 뒤로 미뤘다
     s, colors: s <= 2 ? 2 : s <= 4 ? 3 : s <= 7 ? 4 : s <= 12 ? 5 : 6, lanes: s <= 2 ? 3 : s <= 8 ? 4 : 5, gondolas,
-    every: s <= 2 ? 4 : s <= 9 ? 3 : 2,          // 곤돌라가 몇 박마다 탑승 띠 한가운데에 오는가 (리듬)
-    winT: s <= 2 ? .42 : Math.max(.22, .40 - s * .008),   // 탑승 띠 안에 머무는 시간(초, 한쪽)
-    spawn: Math.max(.85, 3.0 - s * .11), target: Math.min(80, 10 + s * 4), cap: 5,   // spawn: 「승객이 너무 빨리 차는 것 같아」 → 약 25% 느리게
-    seatMin: s <= 2 ? 2 : s <= 4 ? 3 : 2, seatMax: s <= 2 ? 2 : s <= 8 ? 3 : 4,
-    heart: s >= 2, rainbow: s >= 3, wind: s >= 7, reverse: s >= 10,
+    every: s <= 2 ? 4 : s <= 15 ? 3 : 2,          // 「11단계에서 계속 끝나」 → 2박 간격은 16단계부터          // 곤돌라가 몇 박마다 탑승 띠 한가운데에 오는가 (리듬)
+    winT: s <= 2 ? .42 : Math.max(.25, .40 - s * .006),   // 탑승 띠 안에 머무는 시간(초, 한쪽)
+    spawn: Math.max(1.0, 3.0 - s * .09), target: Math.min(36, 8 + s * 2), cap: 5,   // spawn: 「승객이 너무 빨리 차는 것 같아」 → 약 25% 느리게
+    seatMin: s <= 2 ? 2 : s <= 4 ? 3 : 2, seatMax: s <= 2 ? 2 : s <= 11 ? 3 : 4,
+    heart: s >= 2, rainbow: s >= 3, wind: s >= 8, reverse: s >= 13,
   };
 }
 const NEWS = {
   2: ['하트 곤돌라', '두 사람을 위한 하트 곤돌라! 꽉 채우면 하트 불꽃이 터져요'],
   3: ['무지개 곤돌라', '어떤 색 손님이든 태울 수 있어요'],
   5: ['크기가 다른 곤돌라', '2인승과 3인승이 섞여 있어요. 자리를 잘 보세요'],
-  7: ['돌풍', '가끔 바람이 불어 관람차가 빨라져요'],
-  9: ['4인승 곤돌라', '한 번에 넷까지 태울 수 있어요'],
-  10: ['거꾸로 회전', '관람차가 가끔 반대로 돌아요'],
+  8: ['돌풍', '가끔 바람이 불어 관람차가 빨라져요'],
+  12: ['4인승 곤돌라', '한 번에 넷까지 태울 수 있어요'],
+  13: ['거꾸로 회전', '관람차가 가끔 반대로 돌아요'],
+  16: ['더 빠른 박자', '이제 곤돌라가 두 박마다 와요'],
 };
 // 하늘: 단계 셋마다 낮 → 노을 → 저녁 → 밤
 const SKIES = [
@@ -678,7 +679,8 @@ function pickColor(except) {
 function makeGondola(g, demo) {
   const P = G.P; let type = 'n';
   const has = t => G.gondolas.some(o => o !== g && o.type === t);
-  if (!demo) { if (P.rainbow && !has('rainbow') && Math.random() < .13) type = 'rainbow'; else if (P.heart && !has('heart') && Math.random() < .12) type = 'heart'; }
+  if (G.bonus && !demo) type = 'rainbow';
+  else if (!demo) { if (P.rainbow && !has('rainbow') && Math.random() < .13) type = 'rainbow'; else if (P.heart && !has('heart') && Math.random() < .12) type = 'heart'; }
   else if (g.i === 2) type = 'heart'; else if (g.i === 5) type = 'rainbow';
   g.type = type; g.seats = type === 'heart' ? 2 : P.seatMin + ri(P.seatMax - P.seatMin + 1);
   g.c = type === 'rainbow' ? -1 : demo ? g.i % P.colors : pickColor(g);
@@ -744,7 +746,15 @@ function tapLane(li) {
   if (perfect) { burst(gPos(g).x, gPos(g).y, 16, '#fff6b0', 'star'); G.flash = .25; if (AC) { hit(now, .09, 1500, .22, 'bandpass', 1); hit(now, .04, 6000, .12, 'highpass'); } }
   else if (grade === 2) burst(gPos(g).x, gPos(g).y, 8, '#cfe8ff', 'star');
   buzz(HAPTIC.board(k));
-  if (G.charge >= 6 && G.fever <= 0) startFever();
+  if (G.charge >= 6 && G.fever <= 0 && !G.bonus) startFever();
+  if ([10, 20, 30, 50, 75, 100, 150, 200].includes(G.combo)) comboParty(G.combo);
+}
+// 콤보 이정표: 10 · 20 · 30 · 50 … 에서 한 번씩 크게 터뜨린다
+function comboParty(n) {
+  addText(L.cx, L.cy - L.R * .15, n + ' 콤보!', '#ef4f78', 40 + Math.min(n, 100) * .1, 1.4);
+  for (let i = 0; i < 50 + n; i++) G.parts.push({ type: 'conf', x: L.cx + rand(-60, 60), y: L.cy, vx: rand(-260, 260), vy: rand(-420, -120), g: 420, life: rand(1.2, 2), max: 2, size: rand(5, 8), col: COLORS[ri(6)].base, rot: rand(0, TAU), vr: rand(-10, 10) });
+  if (AC) { const t0 = gridNext(4, .02); [0, 2, 4, 5, 7].forEach((d, i) => kalimba(ROOT * PENT[d] * 2, t0 + i * s16(), .24, i / 4 - .5, .8)); sfxBurst(t0 + 5 * s16(), 2, 'big'); }
+  buzz(HAPTIC.fever); G.flash = .45; addScore(n * 10);
 }
 function breakCombo() { G.judge = null; if (G.combo >= 4) addText(L.cx, L.py + 26, G.combo + ' 콤보에서 멈춤', '#5d5680', 16); G.combo = 0; G.charge = 0; G.note = 0; }
 function startFever() { G.fever = 8; G.charge = 0; sfxFever(); bgmFever(true); buzz(HAPTIC.fever); G.flash = .6; addText(L.cx, L.cy, '피버 타임!', '#ef4f78', 44, 1.6); }
@@ -752,6 +762,12 @@ function addScore(n) { G.score += n; const el = $('#scorePill'); el.classList.re
 function spawnOne() {
   // 새 손님은 아무 줄에나 선다(가장 짧은 줄을 조금 더 좋아함). 고른 줄이 꽉 차 있으면 기다리다 돌아가고 하트가 준다
   const P = G.P, all = G.lanes.map((l, i) => i);
+  if (G.bonus) {        // 보너스: 가장 짧은 줄에 손님이 끝없이 온다(하트는 안 준다)
+    let li = 0; G.lanes.forEach((l, i) => { if (l.length < G.lanes[li].length) li = i; });
+    const l = G.lanes[li]; if (l.length >= P.cap) return;
+    const last = l[l.length - 1], c = last && Math.random() < .55 ? last.c : ri(P.colors);
+    const p = newPassenger(c, P.cap + 1); p.target = l.length; l.push(p); return;
+  }
   let li;
   if (Math.random() < .4) { let mn = 99; all.forEach(i => { if (G.lanes[i].length < mn) mn = G.lanes[i].length; }); const c = all.filter(i => G.lanes[i].length === mn); li = c[ri(c.length)]; }
   else li = all[ri(all.length)];
@@ -819,7 +835,7 @@ function explode(x, y, cols, size, big, heart, pts) {
 function showOv(id, on) { $('#' + id).classList.toggle('on', on); }
 function startGame(from) {
   audio(); click(); buzz(HAPTIC.button);
-  G.stage = from || 1; G.score = 0; G.hearts = 3; G.parts = []; G.texts = []; G.rockets = [];
+  G.stage = from || 1; G.score = 0; G.hearts = 3; G.parts = []; G.texts = []; G.rockets = []; G.bonus = false;
   ['title', 'over', 'clear', 'pause'].forEach(id => showOv(id, false));
   $('#hud').classList.add('on');
   beginStage();
@@ -838,6 +854,28 @@ function beginStage() {
   $('#bnNew').innerHTML = bits.join('<div style="height:8px"></div>');
   $('#banner').classList.add('on'); ting();
   updateHud(true);
+}
+function beginBonus() {
+  G.bonus = true; setupStage(false); G.bonus = true; G.state = 'intro'; G.introT = 2;
+  G.bonusT = 20; G.bonusScore = G.score; G.fever = 22; G.charge = 0; bgmFever(true);
+  G.lanes.forEach(l => { while (l.length < 3) { const last = l[l.length - 1]; l.push(newPassenger(last && Math.random() < .6 ? last.c : ri(G.P.colors), l.length + 3)); } });
+  $('#bnStage').textContent = '보너스 타임!';
+  $('#bnNew').innerHTML = '<b>20초 동안 마음껏!</b>곤돌라가 모두 무지개예요. 아무 줄이나 박자에 맞춰 톡!<br>하트는 줄지 않고 점수는 두 배';
+  $('#banner').classList.add('on'); sfxFever(); updateHud(true);
+}
+function bonusEnd() {
+  G.state = 'clear'; G.fever = 0; bgmFever(false);
+  const got = G.score - G.bonusScore;
+  toneClear(true); buzz(HAPTIC.clear);
+  for (let i = 0; i < 160; i++) G.parts.push({ type: 'conf', x: rand(0, W), y: rand(-H * .4, -10), vx: rand(-40, 40), vy: rand(60, 200), g: 60, life: rand(2.5, 4), max: 4, size: rand(5, 9), col: COLORS[ri(6)].base, rot: rand(0, TAU), vr: rand(-8, 8) });
+  save.bestScore = Math.max(save.bestScore, G.score); persist();
+  setTimeout(() => {
+    $('#clTitle').textContent = '보너스 타임 끝!';
+    $('#clStars').querySelectorAll('span').forEach(s => s.classList.add('on'));
+    $('#clScore').textContent = G.score.toLocaleString(); $('#clCombo').textContent = G.maxCombo;
+    $('#clMsg').textContent = `보너스로 ${got.toLocaleString()}점을 모았어요. 다음은 ${G.stage + 1}단계예요.`;
+    showOv('clear', true);
+  }, 1300);
 }
 function stageClear() {
   G.state = 'clear'; G.clearT = 0; bgmFever(false); G.fever = 0;
@@ -872,7 +910,7 @@ function gameOver() {
 }
 function toTitle() {
   ['over', 'clear', 'pause'].forEach(id => showOv(id, false)); $('#hud').classList.remove('on');
-  G.state = 'title'; G.parts = []; G.texts = []; G.rockets = []; setupStage(true); bgmWant(0); refreshTitle(); showOv('title', true);
+  G.state = 'title'; G.bonus = false; G.parts = []; G.texts = []; G.rockets = []; setupStage(true); bgmWant(0); refreshTitle(); showOv('title', true);
 }
 function refreshTitle() {
   $('#bestTxt').textContent = save.bestStage ? `최고 기록 ${save.bestStage}단계 · ${save.bestScore.toLocaleString()}점` : '';
@@ -895,11 +933,13 @@ function update(dt) {
   if (G.state === 'play') {
     if (P.wind && !RH.next && RH.mult === 1) { G.windNext -= dt; if (G.windNext <= 0) { G.windNext = rand(12, 18); rhSchedule({ mult: 2, windOn: true }); whoosh(1.6); addText(L.cx, L.cy - L.R * .2, '돌풍! 두 배 빠르게', '#3587d6', 28, 1.4); } }
     if (P.reverse && !RH.next && RH.mult === 1) { G.revNext -= dt; if (G.revNext <= 0) { G.revNext = rand(14, 22); rhSchedule({ dir: -RH.dir }); sfxReverse(); addText(L.cx, L.cy + L.R * .2, '거꾸로 돌아요!', '#7f63d6', 28, 1.3); } }
-    if (G.spawned < P.target) { G.spawnT -= dt; if (G.spawnT <= 0) { // 줄이 많이 찼을수록 새 손님이 천천히 온다(40%를 넘으면 늦춰지기 시작, 거의 다 차면 두 배쯤 느리게)
+    if (G.bonus) { G.spawnT -= dt; if (G.spawnT <= 0) { G.spawnT = .35; spawnOne(); } }
+    else if (G.spawned < P.target) { G.spawnT -= dt; if (G.spawnT <= 0) { // 줄이 많이 찼을수록 새 손님이 천천히 온다(40%를 넘으면 늦춰지기 시작, 거의 다 차면 두 배쯤 느리게)
       const queued = G.lanes.reduce((a, l) => a + l.length, 0), fill = queued / (G.lanes.length * P.cap);
       G.spawnT = P.spawn * rand(.8, 1.2) * (P.s < 6 ? 1 : 1.3) * (1 + 1.8 * Math.max(0, fill - .4)); spawnOne(); } }
     if (G.fever > 0) { G.fever -= dt; if (G.fever <= 0) { bgmFever(false); addText(L.cx, L.py + 30, '피버 끝', '#5d5680', 18); } }
-    if (G.boarded >= P.target && !G.hops.length) stageClear();
+    if (G.bonus) { G.bonusT -= dt; if (G.bonusT <= 0 && !G.hops.length) bonusEnd(); }
+    else if (G.boarded >= P.target && !G.hops.length) stageClear();
   }
   const now = clockNow(), key = [BGM.t0, BGM.bpm, G.gondolas.length, P.every].join('|');
   if (key !== RH.key) { RH.key = key; rhSync(now); }
@@ -1246,11 +1286,11 @@ function render() {
 let hudCache = '';
 function updateHud(force) {
   if (G.state === 'title') return;
-  const key = [G.stage, G.boarded, G.P.target, G.score, G.hearts].join(',');
+  const key = [G.stage, G.boarded, G.P.target, G.score, G.hearts, G.bonus ? Math.ceil(G.bonusT) : 0].join(',');
   if (!force && key === hudCache) return; hudCache = key;
-  $('#stagePill').textContent = G.stage + '단계';
-  $('#progFill').style.width = (Math.min(1, G.boarded / G.P.target) * 100) + '%';
-  $('#progTxt').textContent = `손님 ${Math.min(G.boarded, G.P.target)} / ${G.P.target}`;
+  $('#stagePill').textContent = G.bonus ? '보너스' : G.stage + '단계';
+  $('#progFill').style.width = (G.bonus ? Math.max(0, G.bonusT / 20) : Math.min(1, G.boarded / G.P.target)) * 100 + '%';
+  $('#progTxt').textContent = G.bonus ? `보너스 ${Math.max(0, Math.ceil(G.bonusT))}초` : `손님 ${Math.min(G.boarded, G.P.target)} / ${G.P.target}`;
   $('#scorePill').textContent = G.score.toLocaleString();
   $('#hearts').innerHTML = [0, 1, 2].map(i => `<span class="${i < G.hearts ? '' : 'off'}">♥</span>`).join('');
 }
@@ -1273,7 +1313,12 @@ $('#btnStart').onclick = () => startGame(1);
 $('#btnCont').onclick = e => startGame(+e.currentTarget.dataset.from || 1);
 $('#btnRetry').onclick = () => startGame(1);
 $('#btnCheck').onclick = e => startGame(+e.currentTarget.dataset.from || 1);
-$('#btnNext').onclick = () => { click(); buzz(HAPTIC.button); showOv('clear', false); G.stage++; G.parts = G.parts.filter(p => p.type === 'conf'); beginStage(); };
+$('#btnNext').onclick = () => {
+  click(); buzz(HAPTIC.button); showOv('clear', false); G.parts = G.parts.filter(p => p.type === 'conf');
+  // 세 단계마다 20초 보너스 타임 (「금방 지루해한대」 → 분위기를 바꾸는 쉬는 판)
+  if (!G.bonus && G.stage % 3 === 0) { beginBonus(); return; }
+  G.bonus = false; G.stage++; beginStage();
+};
 $('#btnSnd').onclick = () => { setSound(!save.sound); click(); };
 $('#btnPause').onclick = () => { click(); pause(true); };
 $('#btnResume').onclick = () => { pause(false); click(); };
