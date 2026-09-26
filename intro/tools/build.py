@@ -35,6 +35,11 @@ def page(slug, g):
     cat_emo, cat_name = CATS[g["cat"]]
     url = f"{SITE}/intro/{slug}/"
     play = f"/{slug}/"
+    # 행사 진행용 게임: 여럿이 모여 큰 화면으로 중계하며 하는 게임에 붙이는 표시
+    ev = g.get("event")
+    EVENT_TAG = ('<p class="event-tag"><span aria-hidden="true">🎪</span> 행사 진행용 · '
+                 + E(ev if isinstance(ev, str) else "여럿이 모여 큰 화면으로 중계") + '</p>') if ev else ""
+    EVENT_RIB = '<span class="event-rib">🎪 행사 진행용</span>' if ev else ""
     facts = "".join(f'<li><span aria-hidden="true">{a}</span>{E(b)}</li>' for a, b in g["facts"])
     story = "".join(f"<p>{E(p)}</p>" for p in g["story"])
     steps = "".join(
@@ -101,9 +106,9 @@ def page(slug, g):
 
 <main>
   <section class="hero">
-    <div class="hero-img"><img src="shot0.webp" {wh("shot0.webp")} alt="{E(g["name"])} 첫 화면" fetchpriority="high"></div>
+    <div class="hero-img">{EVENT_RIB}<img src="shot0.webp" {wh("shot0.webp")} alt="{E(g["name"])} 첫 화면" fetchpriority="high"></div>
     <div class="hero-txt">
-      <p class="eyebrow">{cat_emo} {E(cat_name)} · 무료 · 설치 없음</p>
+      {EVENT_TAG}<p class="eyebrow">{cat_emo} {E(cat_name)} · 무료 · 설치 없음</p>
       <h1>{E(g["name"])}</h1>
       <p class="lead">“{E(g["lead"])}”</p>
       <ul class="facts">{facts}</ul>
