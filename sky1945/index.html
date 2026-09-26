@@ -36,15 +36,17 @@
     overscroll-behavior:none;
   }
   .cabinet{
-    max-width:600px;
     margin:0 auto;
-    padding-inline:16px;
-    padding-block:14px 26px;
+    padding-inline:12px;
+    padding-block:10px calc(10px + env(safe-area-inset-bottom));
     display:flex;
     flex-direction:column;
-    gap:10px;
+    align-items:center;
+    gap:8px;
     min-height:100dvh;
   }
+  /* 계기판·설명은 게임 화면 폭(--gw)에 맞춘다 — JS layout()이 계산 */
+  .cabinet > .hud, .cabinet > .legend-wrap{width:var(--gw, 100%);max-width:100%}
   .cabinet:fullscreen{
     background:radial-gradient(120% 80% at 50% -10%, #16202e 0%, #070b12 55%, #04060a 100%);
     max-width:none;width:100%;overflow:hidden;
@@ -77,10 +79,23 @@
   .plate .sub{font-family:var(--num);font-size:13px;letter-spacing:.22em;color:var(--steel);white-space:nowrap}
 
   .hud{
-    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;
+    display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;
     background:linear-gradient(#111a25,#0b121b);border:1px solid var(--rivet);
-    border-radius:3px;padding:8px 11px;
+    border-radius:3px;padding:6px 10px;
   }
+  .hi{font-style:normal;color:var(--steel);margin-left:6px;letter-spacing:.12em}
+  .hi b{font-weight:400;color:var(--steel)}
+  .tools{display:flex;gap:6px}
+  .tools button{
+    width:36px;height:36px;padding:0;display:grid;place-items:center;border-radius:6px;letter-spacing:0;
+    color:var(--paper);
+  }
+  .ov{
+    position:absolute;top:6px;z-index:2;display:flex;gap:3px;pointer-events:none;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.85));
+  }
+  .ov.l{left:8px}
+  .ov.r{right:8px}
   .cell{display:flex;flex-direction:column;gap:2px;min-width:0}
   .cell.right{align-items:flex-end}
   .cell.mid{align-items:center}
@@ -90,10 +105,11 @@
     font-variant-numeric:tabular-nums;letter-spacing:.03em;
   }
   .val.small{font-size:18px;color:var(--steel)}
-  .stagetag{font-family:var(--display);font-size:15px;color:var(--paper);line-height:1.1;white-space:nowrap}
+  .stagetag{font-family:var(--display);font-size:15px;color:var(--paper);line-height:1.1;white-space:nowrap;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis}
   .icons{display:flex;gap:3px;align-items:center;height:16px}
   .icons svg{display:block}
-  .icons .off{opacity:.18}
+  .icons .off{opacity:.22}
 
   .screen{
     position:relative;
@@ -122,10 +138,7 @@
   button:hover{border-color:var(--steel)}
   button:active{transform:translateY(1px)}
   button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-  #bomb{
-    flex:1;color:#0a0d13;background:linear-gradient(#ffc861,#e8992c);
-    border-color:#a8701c;font-size:17px;
-  }
+  #bomb{color:#0a0d13;background:linear-gradient(#ffc861,#e8992c);border-color:#a8701c}
   #bomb:disabled{color:#43505f;background:linear-gradient(#1a232f,#121a24);border-color:var(--rivet);cursor:default}
 
   .legend{
@@ -196,9 +209,12 @@
   .screen .fire{width:90px;height:90px;font-size:16px;opacity:.88}
   /* ---- 모바일: 화면을 최대한 게임에 ---- */
   @media (max-width:640px){
-    .cabinet{padding-inline:10px;padding-block:8px 10px;gap:6px}
-    .plate{display:none}
-    .hud{padding:5px 9px;gap:6px}
+    /* 휴대폰: 좌우 여백 없이 화면을 가로로 꽉 채운다 */
+    .cabinet{padding-inline:0;padding-top:0;gap:0}
+    .hud{padding:5px 10px;gap:8px;border-radius:0;border-inline:0;border-top:0}
+    .screen{border-radius:0;border:0;box-shadow:none}
+    .legend-wrap{padding-inline:12px}
+    .tools button{width:34px;height:34px}
     .val{font-size:21px}
     .val.small{font-size:15px}
     .stagetag{font-size:13px}
@@ -213,56 +229,32 @@
 <body>
 
 <div class="cabinet">
-  <div class="plate">
-    <h1>천공비행단 <em>1945</em></h1>
-    <span class="sub">SORTIE 03</span>
-  </div>
-
-  <div class="hud">
+  <div class="hud" id="hud">
     <div class="cell">
-      <span class="lbl">SCORE</span>
+      <span class="lbl">SCORE <i class="hi">HI <b id="hi">0</b></i></span>
       <span class="val" id="score">0</span>
     </div>
     <div class="cell mid">
       <span class="stagetag" id="stagetag">기체 선택</span>
       <span class="lbl" id="wpn">POWER 1</span>
     </div>
-    <div class="cell right">
-      <span class="lbl">HI-SCORE</span>
-      <span class="val small" id="hi">0</span>
+    <div class="tools">
+      <button id="bomb" type="button" aria-label="폭탄 (스페이스)" title="폭탄 (스페이스)"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="9" cy="11.5" r="6" fill="currentColor"/><rect x="7.8" y="3.2" width="2.4" height="3" fill="currentColor"/><path d="M10.5 3.8 L14 1.6" stroke="#ff6a3d" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></button>
+      <button id="pause" type="button" aria-label="일시정지" title="일시정지"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="5" y="4" width="3.4" height="12" rx="1" fill="currentColor"/><rect x="11.6" y="4" width="3.4" height="12" rx="1" fill="currentColor"/></svg></button>
+      <button id="sound" type="button" aria-label="소리 끄기" title="소리"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor"/><path d="M13 7.2a4 4 0 0 1 0 5.6M15.3 5a7 7 0 0 1 0 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></button>
+      <button id="full" type="button" aria-label="전체 화면" title="전체 화면" hidden><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></button>
     </div>
   </div>
 
   <div class="screen" id="screen">
     <canvas id="game" aria-label="비행기 슈팅 게임 화면"></canvas>
     <div class="vign"></div>
+    <div class="ov l icons" id="lives" aria-label="남은 기체"></div>
+    <div class="ov r icons" id="bombs" aria-label="남은 폭탄"></div>
     <div class="pad" id="pad" hidden>
       <button class="fire" id="padbomb" type="button">BOMB</button>
-      <div class="padmid">
-        <button id="padpause" type="button">PAUSE</button>
-        <button id="padsound" type="button">SOUND</button>
-        <button id="padfull" type="button">FULL</button>
-      </div>
     </div>
     <div class="stick" id="stick" hidden><div class="knob" id="knob"></div></div>
-  </div>
-
-  <div class="hud" style="grid-template-columns:1fr 1fr">
-    <div class="cell">
-      <span class="lbl">기체 잔량</span>
-      <span class="icons" id="lives"></span>
-    </div>
-    <div class="cell right">
-      <span class="lbl">폭탄</span>
-      <span class="icons" id="bombs"></span>
-    </div>
-  </div>
-
-  <div class="deck">
-    <button id="bomb" type="button">BOMB</button>
-    <button id="pause" type="button">PAUSE</button>
-    <button id="sound" type="button">SOUND</button>
-    <button id="full" type="button" hidden>FULL</button>
   </div>
 
   <details class="legend-wrap" id="legendwrap">
@@ -270,7 +262,7 @@
     <div class="legend">
       <div><b>기체 선택</b> — 시작 화면에서 좌우를 탭하거나 <span class="k">← →</span>, 숫자 <span class="k">1~5</span>. 가운데를 탭하면 출격.</div>
       <div><b>이동</b> — 휴대폰·태블릿은 화면 아무 곳이나 누르면 그 자리에 <b>조이스틱</b>이 생기고, 기울인 만큼 움직입니다. PC는 <span class="k">← ↑ ↓ →</span> / <span class="k">WASD</span>. 사격은 자동.</div>
-      <div><b>폭탄</b> — 화면 왼쪽 아래 <b>BOMB</b> 버튼, 이동 중 다른 손가락 탭, 또는 <span class="k">SPACE</span>. 기체마다 폭탄이 다릅니다.</div>
+      <div><b>폭탄</b> — 휴대폰은 화면 왼쪽 아래 <b>BOMB</b> 버튼, PC는 <span class="k">SPACE</span> 또는 오른쪽 위 폭탄 버튼. 기체마다 폭탄이 다릅니다.</div>
       <div class="p"><span class="pill" style="background:#ff6a3d">P</span> 주무장 강화 (최대 5단)</div>
       <div class="p"><span class="pill" style="background:#6ef0ff">B</span> 폭탄 보급</div>
       <div class="p"><span class="pill" style="background:#93e05c">S</span> 실드 · <span class="pill" style="background:#ffd35c;margin-left:4px">★</span> 보너스</div>
@@ -284,7 +276,8 @@
 "use strict";
 
 /* ============================ 기본 셋업 ============================ */
-const W = 480, H = 720;
+const W = 480;
+let H = 720;   // 세로 길이는 화면 비율에 맞춰 720~1040 사이로 늘어난다 (layout)
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d', { alpha:false });
 const TOUCH = window.matchMedia && matchMedia('(pointer:coarse)').matches;
@@ -299,30 +292,30 @@ function fit(){
   ctx.imageSmoothingQuality = 'high';
 }
 function layout(){
-  // 화면 요소들을 뺀 남은 높이에 2:3 비율로 최대한 크게
+  // 위쪽 계기판 한 줄만 빼고 남은 공간을 게임 화면이 전부 쓴다 (설명은 화면 아래로 스크롤).
+  // 세로로 긴 기기(휴대폰)는 가로를 꽉 채우고 게임 세로 길이 H를 늘려 빈 공간이 생기지 않게 한다.
   const cs = getComputedStyle(cabinet);
-  const gap = parseFloat(cs.rowGap) || 0;
-  let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-  let n = 0;
-  for(const ch of cabinet.children){
-    if(ch === screen || ch.hidden || getComputedStyle(ch).display === 'none') continue;
-    used += ch.getBoundingClientRect().height; n++;
-  }
-  used += gap * n;
+  const hudEl = document.getElementById('hud');
   const vh = (document.fullscreenElement ? window.innerHeight : (window.visualViewport ? window.visualViewport.height : window.innerHeight));
-  const availH = Math.max(260, vh - used);
-  const availW = cabinet.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  let h = availH, w = h * (W/H);
-  if(w > availW){ w = availW; h = w * (H/W); }
+  const availH = Math.max(300, vh - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+                 - hudEl.getBoundingClientRect().height - (parseFloat(cs.rowGap) || 0));
+  const availW = Math.max(240, document.documentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+  const want = Math.round(W * availH / availW);          // 이 화면을 가득 채우는 논리 세로 길이
+  const nh = Math.max(720, Math.min(1040, want));
+  let w, h;
+  if(want >= 720){ w = availW; h = Math.min(availH, w * nh / W); }   // 세로로 긴 화면: 가로 꽉
+  else { h = availH; w = h * W / 720; }                               // 가로로 넓은 화면(PC): 세로 꽉
+  if(nh !== H){ H = nh; fit(); }
   screen.style.width = Math.floor(w) + 'px';
   screen.style.height = Math.floor(h) + 'px';
+  cabinet.style.setProperty('--gw', Math.floor(w) + 'px');
 }
 fit();
 window.addEventListener('resize', ()=>{ fit(); layout(); });
 if(window.visualViewport) visualViewport.addEventListener('resize', layout);
 document.addEventListener('fullscreenchange', ()=> setTimeout(layout, 50));
 const legendWrap = document.getElementById('legendwrap');
-legendWrap.open = !TOUCH && window.innerWidth > 640;
+legendWrap.open = false;   // 설명은 접어 두고 게임 화면 아래에 둔다
 legendWrap.addEventListener('toggle', layout);
 const fullBtn = document.getElementById('full');
 if(document.fullscreenEnabled && cabinet.requestFullscreen){
@@ -343,24 +336,27 @@ if(TOUCH){
   stick.hidden = false;
   const RAD = 38;                                   // 이 거리(px)를 기울이면 최고 속도
   const GAIN = 1.1;                                 // 기울기 대비 속도 배율 (감도)
-  let cx = 0, cy = 0, selCool = 0;
+  const EDGE = 64;                                  // 스틱이 화면 밖으로 잘리지 않게 가장자리에서 띄우는 거리(px)
+  let lx = 0, ly = 0, selCool = 0;                  // 입력 기준점(손가락이 처음 닿은 곳)
+  const place = ()=>{                               // 보이는 스틱은 항상 게임 화면 안쪽에
+    const r = screen.getBoundingClientRect();
+    const vx = clamp(lx, r.left + EDGE, r.right - EDGE), vy = clamp(ly, r.top + EDGE, r.bottom - EDGE);
+    stick.style.left = (vx - r.left) + 'px'; stick.style.top = (vy - r.top) + 'px';
+  };
   const setKnob = (dx,dy)=>{ knob.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)'; };
   // 손가락이 닿은 자리에 스틱을 띄운다 (플로팅 조이스틱)
   joy.start = function(e){
-    const r = screen.getBoundingClientRect();
-    cx = e.clientX; cy = e.clientY;
-    stick.style.left = (cx - r.left) + 'px'; stick.style.top = (cy - r.top) + 'px';
+    lx = e.clientX; ly = e.clientY; place();
     stick.classList.add('show');
     joy.on = true; joy.id = e.pointerId; joy.x = joy.y = 0; setKnob(0,0);
   };
   joy.move = function(e){
     if(!joy.on || e.pointerId !== joy.id) return;
-    let dx = e.clientX - cx, dy = e.clientY - cy;
+    let dx = e.clientX - lx, dy = e.clientY - ly;
     const d = Math.hypot(dx,dy);
-    if(d > RAD){                                     // 반경을 넘어가면 스틱 자체가 손가락을 따라온다
-      const r = screen.getBoundingClientRect();
-      cx += dx - dx*RAD/d; cy += dy - dy*RAD/d;
-      stick.style.left = (cx - r.left) + 'px'; stick.style.top = (cy - r.top) + 'px';
+    if(d > RAD){                                     // 반경을 넘어가면 기준점이 손가락을 따라온다
+      lx += dx - dx*RAD/d; ly += dy - dy*RAD/d;
+      place();
       dx *= RAD/d; dy *= RAD/d;
     }
     setKnob(dx,dy);
@@ -385,10 +381,6 @@ if(TOUCH){
   });
   pb.addEventListener('pointerup', e=> e.stopPropagation());
   pb.addEventListener('touchstart', e=> e.preventDefault(), { passive:false });
-  document.getElementById('padpause').addEventListener('click', ()=> el.pause.click());
-  document.getElementById('padsound').addEventListener('click', ()=> el.sound.click());
-  const pf = document.getElementById('padfull');
-  if(fullBtn.hidden) pf.hidden = true; else pf.addEventListener('click', ()=> fullBtn.click());
 }
 
 const rnd = (a,b)=> a + Math.random()*(b-a);
@@ -610,6 +602,12 @@ const el = {
 };
 const PLANE_ICON = '<svg width="16" height="14" viewBox="0 0 16 14"><path d="M8 0 L9.6 5 L16 8.4 L16 10.4 L9.6 8.8 L9.6 12 L11.4 13.4 L11.4 14 L4.6 14 L4.6 13.4 L6.4 12 L6.4 8.8 L0 10.4 L0 8.4 L6.4 5 Z" fill="#8fb4dd"/></svg>';
 const BOMB_ICON = '<svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="8.4" r="5" fill="#ffc861"/><rect x="6" y="1" width="2" height="3" fill="#ffc861"/><path d="M8 1.6 L11 0" stroke="#ff6a3d" stroke-width="1.4" fill="none"/></svg>';
+const IC = {
+  pause:'<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="5" y="4" width="3.4" height="12" rx="1" fill="currentColor"/><rect x="11.6" y="4" width="3.4" height="12" rx="1" fill="currentColor"/></svg>',
+  play:'<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M6.5 4 L16 10 L6.5 16 Z" fill="currentColor"/></svg>',
+  snd:'<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor"/><path d="M13 7.2a4 4 0 0 1 0 5.6M15.3 5a7 7 0 0 1 0 10" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+  mute:'<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor"/><path d="M13 7.5l4.5 5M17.5 7.5l-4.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+};
 let hudCache = {};
 const STAGE_NAME = ['— 동해 상공','— 폭풍 전선','— 요새 상공','— 빙하 해협','— 화산 본토'];
 function hud(){
@@ -633,9 +631,7 @@ function hud(){
     : (mode==='over' ? '작전 종료' : '기체 선택');
   if(hudCache.t !== tag){ el.tag.textContent = tag; hudCache.t = tag; }
   if(TOUCH){
-    const pp = document.getElementById('padpause'), ps = document.getElementById('padsound'), pb = document.getElementById('padbomb');
-    if(pp.textContent !== el.pause.textContent) pp.textContent = el.pause.textContent;
-    if(ps.textContent !== el.sound.textContent) ps.textContent = el.sound.textContent;
+    const pb = document.getElementById('padbomb');
     const off = mode === 'play' && P.bombs <= 0;
     if(pb.classList.contains('off') !== off) pb.classList.toggle('off', off);
     const lbl = mode === 'title' ? 'START' : mode === 'over' ? 'RETRY' : 'BOMB';
@@ -713,14 +709,14 @@ screen.addEventListener('pointercancel', endPtr);
 
 el.bomb.addEventListener('click', ()=>{ Snd.resume(); useBomb(); });
 el.pause.addEventListener('click', togglePause);
-el.sound.addEventListener('click', ()=>{ Snd.resume(); el.sound.textContent = Snd.toggle() ? 'SOUND' : 'MUTED'; });
+el.sound.addEventListener('click', ()=>{ Snd.resume(); const on = Snd.toggle(); el.sound.innerHTML = on ? IC.snd : IC.mute; el.sound.setAttribute('aria-label', on ? '소리 끄기' : '소리 켜기'); });
 function togglePause(){
   if(mode !== 'play') return;
   paused = !paused;
-  el.pause.textContent = paused ? 'RESUME' : 'PAUSE';
+  el.pause.innerHTML = paused ? IC.play : IC.pause; el.pause.setAttribute('aria-label', paused ? '계속하기' : '일시정지');
 }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden && mode === 'play' && !paused){ paused = true; el.pause.textContent = 'RESUME'; }
+  if(document.hidden && mode === 'play' && !paused){ paused = true; el.pause.innerHTML = IC.play; }
 });
 
 /* ============================ 파티클 ============================ */
@@ -838,7 +834,7 @@ function bombNuke(){
 }
 function bombCarpet(){
   bombCommon(); shake = 14;
-  for(let row=0; row<9; row++){
+  for(let row=0, rows=Math.ceil((H-40)/70); row<rows; row++){
     later(row*0.13, ()=>{
       const y = 40 + row*70;
       flash = Math.max(flash, 0.25); shake = Math.max(shake, 12);
@@ -1463,7 +1459,7 @@ function startGame(){
   P.inv = 2.2; P.shield = 0; P.barrier = 0; P.beam = 0; P.alive = true; P.cool = 0;
   hudCache = {};
   initProps(); buildStage(1);
-  el.pause.textContent = 'PAUSE';
+  el.pause.innerHTML = IC.pause;
 }
 function stageClear(){
   mode = 'clear';
@@ -1742,12 +1738,14 @@ function render(dt){
   /* --- 보스 체력 바 --- */
   if(boss && boss.st !== 'enter'){
     const r = clamp(boss.hp / boss.max, 0, 1);
-    ctx.fillStyle = 'rgba(6,10,16,.72)'; ctx.fillRect(24, 14, W-48, 16);
+    ctx.fillStyle = 'rgba(6,10,16,.72)'; ctx.fillRect(24, 34, W-48, 18);
     ctx.fillStyle = boss.phase === 3 ? '#ff4b2b' : boss.phase === 2 ? '#ffb648' : '#6ef0ff';
-    ctx.fillRect(26, 16, (W-52)*r, 12);
-    ctx.strokeStyle = 'rgba(180,200,220,.5)'; ctx.lineWidth = 1; ctx.strokeRect(24.5, 14.5, W-49, 15);
-    ctx.fillStyle = '#c9d6e6'; ctx.font = '13px "Gothic A1", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    ctx.fillText(BOSS_NAME[stage-1], 26, 46);
+    ctx.fillRect(26, 36, (W-52)*r, 14);
+    ctx.strokeStyle = 'rgba(180,200,220,.5)'; ctx.lineWidth = 1; ctx.strokeRect(24.5, 34.5, W-49, 17);
+    ctx.font = '700 12px "Gothic A1", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(BOSS_NAME[stage-1], 32, 43.5);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(BOSS_NAME[stage-1], 32, 43.5);
+    ctx.textBaseline = 'alphabetic';
   }
 
   /* --- 배너 --- */
@@ -1791,6 +1789,7 @@ function render(dt){
 function drawSelect(){
   const pl = PLANES[sel];
   ctx.fillStyle = 'rgba(4,7,13,.62)'; ctx.fillRect(0,0,W,H);
+  ctx.save(); ctx.translate(0, Math.round((H-720)/2));
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
   ctx.fillStyle = '#e6edf5'; ctx.font = '30px "Black Han Sans", sans-serif';
@@ -1863,6 +1862,7 @@ function drawSelect(){
   }
   ctx.fillStyle = '#8496ab'; ctx.font = '14px "Gothic A1", sans-serif';
   ctx.fillText('HI-SCORE  ' + hi.toLocaleString('en-US'), W/2, TOUCH ? 690 : 676);
+  ctx.restore();
 }
 function hexToRgba(h){
   const n = parseInt(h.slice(1),16);
