@@ -93,7 +93,7 @@ h1{font-family:Jua,sans-serif;font-weight:400;font-size:44px;white-space:nowrap;
   <div class="sub">대관람차에 손님을 <b>배정</b>해 주세요</div>
   <div class="how">
     <div><b style="background:#ff8fa8">1</b>관람차는 음악 박자에 맞춰 돌아요</div>
-    <div><b style="background:#6cbcff">2</b>고리가 줄어 과녁에 딱 닿을 때 같은 색 줄을 톡!</div>
+    <div><b style="background:#6cbcff">2</b>곤돌라가 아래 빛나는 띠에 오면 같은 색 줄을 톡!</div>
     <div><b style="background:#ffb067">3</b>꽉 채우면 꼭대기에서 불꽃이 펑!</div>
   </div>
   <button class="btn" id="btnStart">놀러 가기</button>
@@ -849,7 +849,7 @@ function beginStage() {
   const P = G.P, prev = G.stage > 1 ? params(G.stage - 1) : null;
   if (prev && P.colors > prev.colors) { const c = COLORS[P.colors - 1]; bits.push(`<b style="color:${c.dark}">새 친구 ${c.name}</b>손님이 ${P.colors}가지 색이 되었어요`); }
   if (prev && P.lanes > prev.lanes) bits.push(`<b>줄이 ${P.lanes}개</b>기다리는 줄이 하나 늘었어요`);
-  if (G.stage === 1) bits.push('고리가 줄어들어 과녁에 닿는 박자에<br>같은 색 줄을 톡! 박에 맞출수록 퍼펙트');
+  if (G.stage === 1) bits.push('곤돌라가 아래 빛나는 띠에 오면<br>같은 색 줄을 톡! 띠 한가운데 박자에 맞출수록 퍼펙트');
   bits.push(`<span style="color:#8a83a8">♪ ${TRACKS[trackOf(G.stage)].name}${lapRate(G.stage) > 1 ? ' (더 빠르게)' : ''}</span>`);
   $('#bnNew').innerHTML = bits.join('<div style="height:8px"></div>');
   $('#banner').classList.add('on'); ting();
@@ -1276,7 +1276,7 @@ function render() {
   const sh = G.shake > 0 && !RM ? G.shake * 7 : 0;
   ctx.save(); if (sh) ctx.translate(rand(-sh, sh), rand(-sh, sh));
   drawBG(); drawPlatform(); drawWheel();
-  G.gondolas.forEach(drawGondola); drawHub(); drawApproach();
+  G.gondolas.forEach(drawGondola); drawHub();   // 줄어드는 고리(drawApproach)는 「둥근 원은 지우는 게 낫겠다」는 의견으로 뺐다
   if (G.state !== 'title') { drawLanes(); drawHops(); }
   drawParts(); drawTexts(); drawHudCanvas();
   ctx.restore();
