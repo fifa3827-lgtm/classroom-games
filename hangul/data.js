@@ -10,7 +10,7 @@ window.HANGUL_DATA = {
     appName: "쵸코와 한글",
     teacherPin: "1234",          // 선생님 모드 (홈에서 쵸코를 5번 톡톡)
     studentCode: "cat01",        // 시트에 기록될 학생 별칭 (실명 금지)
-    sheetUrl: "https://script.google.com/macros/s/AKfycbz27sncTlzZYm8c-WyvUx84xdoJKXvmEKnXO9n1jn-rXPUCkGa6NnL-1TnjvPYr_sJThw/exec",  // 구글 시트 「쵸코와 한글 진도 기록」 Apps Script 웹앱 (2026-09-15 배포). 비우면 기기 안에만 저장
+    sheetUrl: "",  // 공개용이라 비워 둠: 방문자 기록이 시트로 가지 않고 기기 안에만 저장된다. 우리 반 기기에서만 선생님 모드 → 「구글 Apps Script 웹앱 주소」에 넣어 쓴다
     englishHint: true,           // 낱말에 영어 뜻 표시
     questionsPerActivity: 6,     // 활동 하나에 문제 수
     openSet: 1,                  // 글자판에 열린 범위 (1~5). 선생님 모드에서 조절
