@@ -20,7 +20,9 @@ body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Not
 h1,h2,.display{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-weight:400;letter-spacing:.01em}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 input{font:inherit}
-.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;overflow:auto}
+.screen>:first-child{margin-top:auto}.screen>:last-child{margin-bottom:auto}
+#game.screen{overflow:hidden}
 .screen.on{display:flex}
 
 /* ---------- lobby ---------- */
@@ -146,6 +148,24 @@ body.mouse #cv{cursor:crosshair}
 #feed div{background:rgba(10,12,40,.7);padding:8px 14px;border-radius:10px;font-size:22px;font-weight:700;animation:feedIn .3s ease-out}
 @keyframes feedIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){#banner.pop{animation-duration:.01s}}
+
+/* 가로 태블릿: 제목은 왼쪽, 입력 카드는 오른쪽 (높이가 낮아도 한 화면에) */
+@media (orientation:landscape) and (max-height:900px) and (min-width:700px){
+  #lobby.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,500px);grid-template-rows:1fr auto auto 1fr;column-gap:clamp(24px,4vw,56px);align-items:center;justify-items:center;padding:16px clamp(20px,4vw,48px)}
+  #lobby>h1{grid-column:1;grid-row:2;margin:0!important;white-space:nowrap;font-size:clamp(40px,6vw,84px)}
+  #lobby .title .t1{font-size:clamp(56px,10vw,120px)} #lobby .title .t2{font-size:clamp(32px,5.4vw,64px)}
+  #lobby>.sub{max-width:100%}
+  #lobby>.sub{grid-column:1;grid-row:3;margin:14px 0 0!important}
+  #lobby>.card{grid-column:2;grid-row:1/5;align-self:center;margin:0!important;width:100%;padding:16px 18px}
+  #lobby .roles{margin-bottom:10px}
+  #lobby .role{padding:10px 8px}
+  #lobby .field{margin-bottom:10px}
+  #lobby .field input{padding:10px 14px}
+  #lobby .swatches{margin-bottom:12px}
+  #lobby .stack{gap:8px}
+  #lobby .btn{padding:12px}
+  #lobby .notice{margin-bottom:10px}
+}
 </style>
 </head>
 <body>
