@@ -650,14 +650,14 @@ function layout() {
   const top = 64, n = G.P ? G.P.lanes : 3;
   L.laneTop = H * .655; L.laneBot = H - 16;
   const avail = L.laneTop - 30 - (top + 12);
-  let R = Math.min(avail / 2.45, GW * .40); L.R = R;
+  let R = Math.max(40, Math.min(avail / 2.45, GW * .40)); L.R = R;   // 창이 아주 작거나 처음 뜰 때 크기가 0이어도 반지름이 음수가 되지 않게(음수면 그리기가 멈춘다)
   L.gs = clamp(R * .3, 22, 58);
   L.cx = W / 2; L.cy = top + 12 + R + Math.max(0, (avail - 2.45 * R) / 2);
   L.hang = L.gs * .74;
   L.gh = L.gs * .95;
   L.py = L.cy + R + L.hang + L.gh / 2 + 3;
   L.laneX0 = GX + GW * .03; L.laneW = GW * .94 / n;
-  L.pr = Math.min(L.laneW * .3, (L.laneBot - L.laneTop) / (2.5 + 4 * 1.7), 30);
+  L.pr = Math.max(4, Math.min(L.laneW * .3, (L.laneBot - L.laneTop) / (2.5 + 4 * 1.7), 30));
   L.ground = L.cy + R * .72;
 }
 const laneX = i => L.laneX0 + (i + .5) * L.laneW;
@@ -1400,7 +1400,8 @@ addEventListener('resize', resize);
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000) * G.timeScale; last = now;
-  update(dt); render(); updateHud(); requestAnimationFrame(frame);
+  requestAnimationFrame(frame);   // 먼저 다음 장면을 예약: 한 장면에서 오류가 나도 게임이 영영 멈추지 않게
+  try { update(dt); render(); updateHud(); } catch (e) { console.error(e); }
 }
 setupStage(true); resize(); setSound(save.sound); refreshTitle();
 requestAnimationFrame(frame);
