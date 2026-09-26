@@ -103,6 +103,7 @@ body.netDown #netDown{display:block}
 .br.first{border-color:#fff;background:#fff;color:#161a4a}
 .br.first .n,.br.first span{color:#161a4a}
 .spec #tapHint{display:none!important}
+#tapHint kbd{font-family:"Black Han Sans","Noto Sans KR",sans-serif;color:#fff;padding:2px 10px;margin:0 3px;border-radius:7px;background:rgba(255,255,255,.18);border-bottom:2px solid rgba(255,255,255,.4)}
 .spec .board{width:min(900px,100%)}
 .spec .br{font-size:28px;padding:16px 24px}
 .spec .br .n{font-size:36px;width:50px}
@@ -413,6 +414,12 @@ function begin(){ G.running=true; show('game'); document.documentElement.style.s
 /* ---------- 입력 ---------- */
 cv.addEventListener('pointerdown',e=>{ e.preventDefault(); tap(e.clientX,e.clientY); });
 addEventListener('keydown',e=>{ if(e.repeat) return; if(e.key===' '||e.key==='Enter') tap(W/2+rnd(-80,80),H/2+rnd(-80,80)); });
+/* 달리기 안내: 데스크탑(마우스)은 스페이스바 연타, 태블릿은 화면 두드리기 */
+const tapHintEl=$('#tapHint');
+function setTapHint(desk){ tapHintEl.innerHTML = desk ? '<kbd>스페이스바</kbd>를 연타하세요 · 클릭해도 달려요' : '화면 아무 데나 두드리세요 · 손가락 여러 개도 OK'; }
+setTapHint(matchMedia('(hover:hover) and (pointer:fine)').matches);
+addEventListener('pointerdown', e=>setTapHint(e.pointerType==='mouse'), true);
+addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter') setTapHint(true); }, true);
 function tap(x,y){
   if(!G.running||G.ended||net.spec) return; const el=elapsed(); const me=G.racers[myId]; if(!me||el<0||me.fin) return;
   const t=now(); const before=mult(); G.combo=(t-G.lastTap<COMBO_GAP)?G.combo+1:1; G.lastTap=t; G.bestCombo=Math.max(G.bestCombo,G.combo);
