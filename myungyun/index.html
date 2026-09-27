@@ -71,6 +71,28 @@ h1{font-family:Jua,sans-serif;font-weight:400;font-size:44px;white-space:nowrap;
 #bnNew{font-size:15px;color:var(--ink);margin-top:6px;line-height:1.45}
 #bnNew b{font-family:Jua,sans-serif;font-weight:400;font-size:18px;display:block}
 @media (prefers-reduced-motion: reduce){.card,#banner .in{transition:none}.ov.on .stars span{animation:none;transform:none}}
+/* 에필로그 (60단계) */
+#ep{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;visibility:hidden;transition:opacity 1.2s,visibility 0s 1.2s}
+#ep.on{opacity:1;visibility:visible;transition:opacity 1.2s}
+#epCap{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 8vh);text-align:center;padding:0 22px}
+#ep.fin #epCap{bottom:auto;top:calc(env(safe-area-inset-top) + 9vh)}
+#ep.pro #epCap{bottom:auto;top:30%}
+#epCap{word-break:keep-all}
+#epCap>div{white-space:nowrap}
+#epCap>div{opacity:0;transform:translateY(10px);transition:opacity .9s ease,transform .9s ease}
+#epCap.show>div{opacity:1;transform:none}
+#epCap.show #epLabel{transition-delay:.4s}#epCap.show #epL1{transition-delay:1.3s}#epCap.show #epL2{transition-delay:2.8s}
+#epLabel{font-family:Jua,sans-serif;font-size:15px;letter-spacing:2px;color:#ef4f78;margin-bottom:8px;text-shadow:0 0 8px rgba(255,255,255,.9)}
+#epL1{font-family:Jua,sans-serif;font-size:clamp(23px,6.4vw,32px);line-height:1.25;color:var(--ink);text-shadow:0 0 12px rgba(255,255,255,.95),0 0 3px #fff}
+#epL2{font-size:clamp(15px,4.3vw,19px);line-height:1.65;margin-top:8px;color:var(--ink);text-shadow:0 0 10px rgba(255,255,255,.95),0 0 3px #fff}
+#epCap::before{content:'';position:absolute;left:-10%;right:-10%;top:-40px;bottom:-40px;z-index:-1;background:radial-gradient(ellipse at center,rgba(255,250,245,.55),rgba(255,250,245,0) 68%)}
+#ep.night #epCap::before{background:radial-gradient(ellipse at center,rgba(15,15,50,.5),rgba(15,15,50,0) 68%)}
+#ep.night #epL1,#ep.night #epL2{color:#fffaf2;text-shadow:0 2px 14px rgba(15,15,50,.8)}
+#ep.night #epLabel{color:#ffb3c4;text-shadow:0 1px 8px rgba(15,15,50,.8)}
+#epSkip{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:12px;border:0;border-radius:999px;background:rgba(255,250,245,.5);color:var(--ink);font-family:Jua,sans-serif;font-size:14px;padding:7px 14px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .6s}
+#epSkip.on{opacity:.85;pointer-events:auto}
+#epEnd{z-index:7;place-items:end center;padding-bottom:calc(env(safe-area-inset-bottom) + 22px)}
+#epEnd .card{background:rgba(255,250,245,.94)}
 </style>
 </head>
 <body>
@@ -98,6 +120,7 @@ h1{font-family:Jua,sans-serif;font-weight:400;font-size:44px;white-space:nowrap;
   </div>
   <button class="btn" id="btnStart">놀러 가기</button>
   <button class="btn sub2" id="btnCont" hidden>이어서</button>
+  <button class="btn sub2" id="btnEp" hidden>에필로그 다시 보기</button>
   <div class="best" id="bestTxt"></div>
 </div></div>
 
@@ -123,6 +146,16 @@ h1{font-family:Jua,sans-serif;font-weight:400;font-size:44px;white-space:nowrap;
   <p class="msg">관람차가 멈춰서 기다리고 있어요.</p>
   <button class="btn" id="btnResume">계속하기</button>
   <button class="btn sub2" id="btnHome">처음으로</button>
+</div></div>
+
+<div id="ep"><div id="epCap"><div id="epLabel"></div><div id="epL1"></div><div id="epL2"></div></div><button id="epSkip">건너뛰기 ›</button></div>
+<div class="ov" id="epEnd"><div class="card">
+  <p class="ded">하늘이와 함께한 60단계</p>
+  <div class="ttl"><span class="seal" aria-label="배정">裵鄭</span><h1>명윤랜드</h1></div>
+  <p class="msg" style="margin-top:10px">소중한 두 사람에게,<br>그리고 여기까지 함께 와 준 당신에게 고마워요</p>
+  <div class="rows"><div>도착한 단계<b id="epStage">60</b></div><div><span id="epScoreL">점수</span><b id="epScore">0</b></div></div>
+  <button class="btn" id="epCont">61단계 계속하기</button>
+  <button class="btn sub2" id="epHome">처음 화면으로</button>
 </div></div>
 
 <script>
@@ -592,6 +625,7 @@ const NEWS = {
   21: ['4인승 곤돌라', '한 번에 넷까지 태울 수 있어요'],
   30: ['30단계!', '여기까지 온 당신은 명윤랜드의 VIP 손님이에요'],
   50: ['50단계!', '명윤랜드가 가장 사랑하는 손님이 되었어요'],
+  60: ['60단계', '오늘은 아주 특별한 손님이 기다리고 있어요'],
 };
 // 하늘: 단계 셋마다 낮 → 노을 → 저녁 → 밤
 const SKIES = [
@@ -893,6 +927,7 @@ function stageClear() {
   G.hearts = Math.min(3, G.hearts + 1);
   save.check = G.stage + 1;          // 이어하기: 깬 단계의 다음 단계 (「죽은 자리에서 이어하기」)
   save.bestStage = Math.max(save.bestStage, G.stage); save.bestScore = Math.max(save.bestScore, G.score); persist();
+  if (G.stage === EP_LEVEL) { setTimeout(() => { if (G.state === 'clear') epStart(true); }, 2800); return; }   // 60단계: 성공 카드 대신 에필로그
   setTimeout(() => {
     $('#clTitle').textContent = G.stage + '단계 성공!';
     $('#clStars').querySelectorAll('span').forEach((s, i) => s.classList.toggle('on', i < stars));
@@ -921,6 +956,7 @@ function toTitle() {
 function refreshTitle() {
   $('#bestTxt').textContent = save.bestStage ? `최고 기록 ${save.bestStage}단계 · ${save.bestScore.toLocaleString()}점` : '';
   const b = $('#btnCont'); b.hidden = save.check <= 1; b.textContent = save.check + '단계 이어하기'; b.dataset.from = save.check;
+  $('#btnEp').hidden = !(save.ending || /epilogue/.test(location.search + location.hash));   // 한 번 본 사람(또는 주소에 ?epilogue)만
 }
 function pause(on) {
   if (on && G.state !== 'play' && G.state !== 'intro') return;
@@ -933,6 +969,7 @@ function pause(on) {
 // =====================================================================
 function update(dt) {
   G.time += dt;
+  if (EP.on) { epStep(dt); return; }
   if (G.state === 'paused') return;
   const P = G.P;
   if (G.state === 'intro') { G.introT -= dt; if (G.introT <= 0) { G.state = 'play'; $('#banner').classList.remove('on'); } }
@@ -1345,6 +1382,7 @@ function drawHudCanvas() {
 }
 function render() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (EP.on) { epDraw(); return; }
   const sh = G.shake > 0 && !RM ? G.shake * 7 : 0;
   ctx.save(); if (sh) ctx.translate(rand(-sh, sh), rand(-sh, sh));
   drawBG(); drawPlatform(); drawWheel();
@@ -1365,6 +1403,382 @@ function updateHud(force) {
   $('#progTxt').textContent = G.bonus ? `보너스 ${Math.max(0, Math.ceil(G.bonusT))}초` : `손님 ${Math.min(G.boarded, G.P.target)} / ${G.P.target}`;
   $('#scorePill').textContent = G.score.toLocaleString();
   $('#hearts').innerHTML = [0, 1, 2].map(i => `<span class="${i < G.hearts ? '' : 'off'}">♥</span>`).join('');
+}
+
+// =====================================================================
+// 에필로그 (60단계를 깨면 한 번): 1단계부터 60단계까지 명윤랜드에 온 하늘색 손님이 자라는 이야기
+// 봄 · 하늘통통(한 살) → 여름 · 하늘이(일곱 살) → 가을 · 하늘이(열일곱 살) → 겨울 · 하늘(스물아홉 살) → 불꽃
+// 첫 장면은 두 사람이 아기를 안고 타고, 마지막 장면은 어른이 된 아이가 두 사람을 태운다(처음과 끝이 거울처럼).
+// 음악은 파일 없이 즉석 연주: 3/4박 오르골 왈츠(다장조, 90bpm, 한 마디 2초). 장면은 8마디(16초)씩 음악에 맞춰 넘어간다.
+// 사람 얼굴은 게임 손님과 같은 둥근 그림체로만 그린다(실제 인물을 닮게 그리지 않는다).
+// =====================================================================
+const EP_LEVEL = 60;
+const EP_SCENES = [      // 「연관된 글은 한 줄로」: 한 문장은 한 줄(좁은 화면에서는 글자를 줄여 맞춘다)
+  { t0: 0, t1: 8, kind: 'pro', night: true, l1: '60단계를 모두 마쳤어요', l2: '명윤랜드에는 늘 하늘색 손님이 있었어요' },
+  { t0: 8, t1: 24, kind: 'spring', label: '봄 · 하늘통통, 한 살', l1: '처음 관람차에 오른 날', l2: '두 사람 품에 안겨 내내 까르르 웃었어요' },
+  { t0: 24, t1: 40, kind: 'summer', label: '여름 · 하늘이, 일곱 살', l1: '키 재기 판에 발끝을 세우던 아이', l2: '처음 혼자 올라 힘껏 손을 흔들었어요' },
+  { t0: 40, t1: 56, kind: 'autumn', label: '가을 · 하늘이, 열일곱 살', l1: '교복을 입고 친구들과 온 날', l2: '꼭대기에서 몰래 소원을 빌었어요' },
+  { t0: 56, t1: 72, kind: 'winter', night: true, label: '겨울 · 하늘, 스물아홉 살', l1: '어른이 된 하늘이', l2: '이번엔 두 사람을 태우고 올라갔어요' },
+  { t0: 72, t1: 1e9, kind: 'fin', night: true, l1: '하늘이의 모든 계절에', l2: '명윤랜드가 있었어요' },
+];
+const EP_END_CARD = 86;          // 43마디째: 마지막 화음 직전에 끝 카드
+const EP = { on: false, t: 0, t0: 0, p0: 0, E: [], V: [], ei: 0, vi: 0, si: -1, fx: [], timer: 0, fromGame: false, endShown: false, capOff: false, nextFw: 0, END: 88 };
+const epNow = () => AC ? AC.currentTime - EP.t0 : performance.now() / 1000 - EP.p0;
+const ease = u => u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+
+// ---- 음악 ----
+function epPad(ms, t, dur, vol) {                 // 부드러운 화음 바탕(삼각파 두 겹을 살짝 어긋나게)
+  const f = AC.createBiquadFilter(), g = AC.createGain(), v = AC.createGain();
+  f.type = 'lowpass'; f.frequency.value = 1300; v.gain.value = .55;
+  g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(vol, t + .7); g.gain.setValueAtTime(vol, t + dur * .75); g.gain.exponentialRampToValueAtTime(.0001, t + dur + .9);
+  f.connect(g); g.connect(OUT); g.connect(v).connect(VERB);
+  ms.forEach((m, i) => [-1, 1].forEach(d => { const o = AC.createOscillator(); o.type = 'triangle'; o.frequency.value = mtof(m) * (1 + d * .0012 * (i + 1)); o.connect(f); o.start(t); o.stop(t + dur + 1); }));
+}
+function epPiano(f, t, vol, pan, dur) {          // 피아노: 배음 네 개가 높은 것부터 빨리 사라지고, 망치 소리가 살짝
+  const out = toneOut(pan, .38);
+  [[1, 1], [2, .42], [3, .18], [4, .09]].forEach(([k, a]) => partial(f * k, t, .004, vol * a, dur / Math.pow(k, .6), out));
+  partial(f * 7.1, t, .001, vol * .05, .05, out);
+}
+function epStrings(ms, t, dur, vol, cut = 1700) {  // 현악 합주: 톱니파 세 겹을 살짝 어긋나게 + 떨림(비브라토), 천천히 차오르고 천천히 사라진다
+  const f = AC.createBiquadFilter(), g = AC.createGain(), v = AC.createGain(), lfo = AC.createOscillator(), lg = AC.createGain();
+  f.type = 'lowpass'; f.frequency.value = cut; f.Q.value = .6; v.gain.value = .75; lfo.frequency.value = 5.2; lg.gain.value = 2.2;
+  g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(1.1, dur * .45)); g.gain.setValueAtTime(vol, t + dur * .8); g.gain.exponentialRampToValueAtTime(.0001, t + dur + 1.3);
+  f.connect(g); g.connect(OUT); g.connect(v).connect(VERB); lfo.connect(lg); lfo.start(t); lfo.stop(t + dur + 1.5);
+  ms.forEach(m => [-7, 0, 7].forEach(c => { const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m); o.detune.value = c; lg.connect(o.detune); o.connect(f); o.start(t); o.stop(t + dur + 1.5); }));
+}
+function epSwell(t, dur) {                          // 전조 직전 「쏴아」 차오르는 심벌
+  const n = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  n.buffer = NOISE; n.loop = true; f.type = 'highpass'; f.frequency.setValueAtTime(2500, t); f.frequency.exponentialRampToValueAtTime(7000, t + dur);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + dur); g.gain.exponentialRampToValueAtTime(.0001, t + dur + .06);
+  n.connect(f).connect(g).connect(SAM); const v = AC.createGain(); v.gain.value = .6; g.connect(v).connect(VERB); n.start(t); n.stop(t + dur + .1);
+}
+function epBuild() {
+  // 「감동적인 BGM」: 피아노로 조용히 시작 → 가을에 오르골 → 겨울에 현악 합주와 첼로 → 불꽃에서 한 음 올려(전조) 다 함께
+  const B = 60 / 90, BAR = B * 3, E = [], V = [], at = (t, fn) => E.push({ t, fn });
+  const CH = { C: { b: 48, t: [60, 64, 67] }, Am: { b: 45, t: [57, 60, 64] }, F: { b: 53, t: [57, 60, 65] }, G: { b: 55, t: [59, 62, 67] }, Em: { b: 52, t: [59, 64, 67] }, Dm: { b: 50, t: [57, 62, 65] } };
+  const A = { ch: ['C', 'Am', 'F', 'G', 'C', 'Em', 'F', 'C'], mel: [[[64, 2], [67, 1]], [[69, 2], [72, 1]], [[72, 1.5], [71, .5], [69, 1]], [[67, 3]], [[64, 1], [67, 1], [72, 1]], [[71, 2], [67, 1]], [[69, 1], [67, 1], [65, 1]], [[64, 3]]] };
+  const Bm = { ch: ['F', 'Em', 'Dm', 'G', 'C', 'Am', 'F', 'C'], mel: [[[65, 1], [69, 1], [72, 1]], [[76, 2], [74, 1]], [[74, 1], [72, 1], [69, 1]], [[71, 2], [67, 1]], [[72, 1], [76, 1], [79, 1]], [[81, 2], [79, 1]], [[77, 1], [76, 1], [74, 1]], [[72, 3]]] };
+  // 머리 4마디: 밤하늘에 피아노 분산화음 + 현악이 멀리서
+  ['C', 'Am', 'F', 'G'].forEach((c, i) => {
+    const t = i * BAR, ch = CH[c];
+    at(t, T => epStrings(ch.t, T, BAR * 1.05, .012 + i * .003, 1200));
+    [ch.b, ch.t[0], ch.t[1], ch.t[2], ch.t[0] + 12, ch.t[2]].forEach((m, k) => at(t + k * B / 2, T => epPiano(mtof(m), T, .13 + i * .015, k % 2 ? .3 : -.3, 2.2)));
+  });
+  let bar = 4;
+  [[A, 1], [Bm, 2], [A, 3], [Bm, 4], [A, 5]].forEach(([sec, lv]) => {
+    const tr = lv === 5 ? 2 : 0;                    // 불꽃 장면은 라장조로 한 음 위
+    sec.ch.forEach((c, i) => {
+      const t = (bar + i) * BAR, ch = CH[c], tri = ch.t.map(m => m + tr), bass = ch.b + tr;
+      if (lv <= 2) at(t, T => epPad(tri, T, BAR * 1.05, .02));
+      if (lv >= 3) at(t, T => epStrings(tri, T, BAR * 1.02, lv === 3 ? .012 : lv === 4 ? .026 : .03));
+      if (lv >= 4) at(t, T => epStrings([bass - 12], T, BAR * 1.02, lv === 4 ? .026 : .03, 650));       // 첼로
+      if (lv === 4) at(t, T => epStrings([tri[2] + 12], T, BAR * 1.02, .011, 2200));                    // 높은 현이 길게 받쳐 줌
+      at(t, T => epPiano(mtof(bass), T, lv >= 4 ? .24 : .2, -.25, 2.4));
+      [1, 2].forEach(k => at(t + k * B, T => { epPiano(mtof(tri[1]), T, .075, .25, 1.1); epPiano(mtof(tri[2]), T, .065, .35, 1.1); }));
+      let bt = 0;
+      sec.mel[i].forEach(([m0, d]) => {
+        const m = m0 + tr, dur = Math.max(1.2, d * B * 1.6);
+        at(t + bt * B, T => {
+          const mv = [0, .24, .28, .2, .34, .36][lv];            // 봄은 작게 시작해서 겨울 · 불꽃으로 갈수록 크게
+          epPiano(mtof(m), T, mv, 0, dur);
+          if (lv === 2 && bt + d >= 3) kalimba(mtof(m + 12), T + B * .5, .06, .4, .6);            // 여름: 메아리
+          if (lv === 3) kalimba(mtof(m + 12), T, .22, .15, Math.max(.8, dur * .6));                 // 가을: 오르골이 한 옥타브 위로
+          if (lv === 5) { epStrings([m], T, d * B * .95, .02, 2600); kalimba(mtof(m + 24), T, .05, .3, .7); }   // 불꽃: 현이 멜로디를 함께
+        });
+        bt += d;
+      });
+    });
+    bar += 8;
+  });
+  at(35 * BAR, T => epSwell(T, BAR));               // 전조 직전 차오름
+  at(36 * BAR, T => { ROOT = 261.63 * Math.pow(2, 2 / 12); });
+  const END = bar * BAR;                            // 44마디: 라장조 으뜸화음을 굴려서 길게
+  at(END, T => { [50, 57, 62, 66, 69, 74, 78, 81, 86].forEach((m, k) => epPiano(mtof(m), T + k * .08, .22 - k * .012, k / 8 - .5, 4.5)); epStrings([62, 66, 69, 74], T, 5.5, .03); epStrings([38], T, 5.5, .028, 650); kalimba(mtof(86), T + .8, .07, .2, 3); });
+  at(35 * BAR, () => { fwKit(); FWB.gain.value = 1.1; });   // 음악이 가득할 때 불꽃이 찢어지지 않게 조금 작게(끝나면 되돌림)
+  [36, 38, 40, 42].forEach((b, k) => { const kind = k === 3 ? 'heart' : 'big'; at(b * BAR, T => sfxBurst(T, 3, kind)); V.push({ t: b * BAR, k: kind }); });
+  [37, 39, 41, 43].forEach(b => { const t = b * BAR + B * 1.5; at(t, T => sfxBurst(T, 2, 'n')); V.push({ t, k: 'n' }); });
+  at(END, T => sfxBurst(T, 3, 'heart')); V.push({ t: END, k: 'heart' }, { t: END + .25, k: 'big' }, { t: END + .5, k: 'big' });
+  E.sort((a, b) => a.t - b.t); V.sort((a, b) => a.t - b.t);
+  return { E, V, END };
+}
+function epTick() {                                // 소리는 0.3초 앞까지 미리 예약(화면이 끊겨도 음악은 박자대로)
+  if (!EP.on) return; const now = epNow();
+  while (EP.ei < EP.E.length && EP.E[EP.ei].t < now + .3) { const ev = EP.E[EP.ei++]; if (AC && ev.t >= now - .05) try { ev.fn(EP.t0 + ev.t); } catch (e) {} }
+}
+
+// ---- 흐름 ----
+function epStart(fromGame) {
+  audio(); const b = epBuild();
+  Object.assign(EP, { on: true, fromGame, E: b.E, V: b.V, END: b.END, ei: 0, vi: 0, si: -1, fx: [], endShown: false, capOff: false, nextFw: 0, t: 0 });
+  EP.t0 = AC ? AC.currentTime + .2 : 0; EP.p0 = performance.now() / 1000 + .2;
+  if (AC) { clearTimeout(duckT); MUS.gain.cancelScheduledValues(AC.currentTime); MUS.gain.setTargetAtTime(.0001, AC.currentTime, .5); ROOT = 261.63; bgmFever(false); }
+  save.ending = true; persist();
+  G.parts = []; G.texts = []; G.rockets = []; G.flash = 0; G.fever = 0;
+  ['clear', 'over', 'pause', 'title'].forEach(id => showOv(id, false)); $('#hud').classList.remove('on'); $('#banner').classList.remove('on');
+  $('#epCont').hidden = !fromGame; $('#epHome').textContent = fromGame ? '처음 화면으로' : '닫기';
+  $('#epStage').textContent = fromGame ? EP_LEVEL : Math.max(save.bestStage, EP_LEVEL);
+  $('#epScore').textContent = (fromGame ? G.score : save.bestScore).toLocaleString();
+  $('#epScoreL').textContent = fromGame ? '점수' : '최고 점수';
+  $('#ep').className = 'on night'; $('#epCap').className = '';
+  setTimeout(() => { if (EP.on) $('#epSkip').classList.add('on'); }, 2500);
+  clearInterval(EP.timer); EP.timer = setInterval(epTick, 50); epTick();
+}
+function epClose() {
+  EP.on = false; clearInterval(EP.timer); if (FWB) FWB.gain.value = FW_VOL;
+  $('#ep').className = ''; $('#epSkip').classList.remove('on'); showOv('epEnd', false);
+  if (AC) { MUS.gain.cancelScheduledValues(AC.currentTime); MUS.gain.setTargetAtTime(MUS_VOL, AC.currentTime, .8); if (BGM.cur >= 0) ROOT = 261.63 * Math.pow(2, TRACKS[BGM.cur].key / 12) * BGM.rate; }
+  G.parts = []; G.flash = 0;
+}
+function epSkip() {                                // 건너뛰기 → 불꽃 장면으로
+  if (!EP.on || EP.t >= 72) return; click();
+  const d = 72 - epNow(); EP.t0 -= d; EP.p0 -= d;
+  while (EP.ei < EP.E.length && EP.E[EP.ei].t < 72) EP.ei++;
+  while (EP.vi < EP.V.length && EP.V[EP.vi].t < 72) EP.vi++;
+  $('#epSkip').classList.remove('on');
+}
+function epCaption(sc) {
+  const cap = $('#epCap');
+  $('#epLabel').textContent = sc.label || ''; $('#epL1').innerHTML = sc.l1; $('#epL2').innerHTML = sc.l2;
+  ['#epL1', '#epL2'].forEach(id => { const el = $(id); el.style.fontSize = ''; const avail = cap.clientWidth - 44, fs = parseFloat(getComputedStyle(el).fontSize);   // 한 줄에 다 들어가게 글자 크기 맞추기
+    el.style.display = 'inline-block'; const wNow = el.scrollWidth; el.style.display = ''; if (wNow > avail) el.style.fontSize = Math.max(12, fs * avail / wNow) + 'px'; });
+  cap.className = ''; void cap.offsetWidth; cap.className = 'show';
+  $('#ep').className = 'on' + (sc.night ? ' night' : '') + (sc.kind === 'fin' ? ' fin' : sc.kind === 'pro' ? ' pro' : '');
+}
+function epFirework(k) {
+  const x = W / 2 + rand(-.32, .32) * Math.min(W, 560), y = H * rand(.1, .26);
+  const pal = k === 'heart' ? ['#ff8fa8', '#ffd3dd', '#ef4f78', '#ffffff'] : [COLORS[ri(6)].base, COLORS[ri(6)].light, '#ffffff', '#fff3c2'];
+  explode(x, y, pal, k === 'n' ? 2 : 3, k !== 'n', k === 'heart', 0);
+}
+function epFx(kind) {                              // 계절 알갱이 새로 뿌리기
+  const n = { pro: 0, spring: 34, summer: 22, autumn: 30, winter: 70, fin: 40 }[kind] || 0;
+  EP.fx = Array.from({ length: n }, () => epFxOne(kind, true));
+}
+function epFxOne(kind, anywhere) {
+  const p = { kind, x: rand(0, W), y: anywhere ? rand(-H * .1, H) : rand(-60, -10), r: rand(.6, 1.4), rot: rand(0, TAU), vr: rand(-1.5, 1.5), ph: rand(0, TAU), sp: rand(.7, 1.3) };
+  if (kind === 'summer') { p.bal = Math.random() < .3; p.y = anywhere ? rand(0, H * 1.1) : H + rand(10, 80); p.col = COLORS[ri(6)].base; }
+  if (kind === 'autumn') p.col = ['#e8703a', '#f2a93b', '#d9493a', '#c9822f'][ri(4)];
+  return p;
+}
+function epStepFx(dt) {
+  for (let i = 0; i < EP.fx.length; i++) {
+    const p = EP.fx[i]; p.ph += dt; p.rot += p.vr * dt;
+    if (p.kind === 'spring') { p.y += 34 * p.sp * dt; p.x += Math.sin(p.ph * 1.3) * 22 * dt + 10 * dt; }
+    else if (p.kind === 'summer') { if (p.bal) p.y -= 26 * p.sp * dt; else p.y += Math.sin(p.ph) * 4 * dt; }
+    else if (p.kind === 'autumn') { p.y += 46 * p.sp * dt; p.x += Math.sin(p.ph * 1.7) * 36 * dt; }
+    else { p.y += (18 + p.r * 22) * p.sp * dt; p.x += Math.sin(p.ph * .9) * 12 * dt; }
+    const out = p.kind === 'summer' && p.bal ? p.y < -80 : p.y > H + 30;
+    if (out || p.x < -40 || p.x > W + 40) EP.fx[i] = epFxOne(p.kind, false);
+  }
+}
+function epStep(dt) {
+  const t = Math.max(0, epNow()); EP.t = t;
+  let s = 0; for (let i = 0; i < EP_SCENES.length; i++) if (t >= EP_SCENES[i].t0) s = i;
+  if (s !== EP.si) { EP.si = s; EP.capOff = false; epCaption(EP_SCENES[s]); epFx(EP_SCENES[s].kind); }
+  const sc = EP_SCENES[s];
+  if (!EP.capOff && (t > sc.t1 - 1.2 || (sc.kind === 'fin' && t > EP_END_CARD - 1))) { EP.capOff = true; $('#epCap').className = ''; }
+  if (!EP.endShown && t >= EP_END_CARD) { EP.endShown = true; $('#epSkip').classList.remove('on'); showOv('epEnd', true); }
+  while (EP.vi < EP.V.length && EP.V[EP.vi].t <= t) epFirework(EP.V[EP.vi++].k);
+  if (t > EP.END + 2 && t > EP.nextFw) { EP.nextFw = t + rand(1.4, 2.6); epFirework(Math.random() < .25 ? 'heart' : 'n'); }
+  epStepFx(dt);
+  for (let i = G.parts.length; i--;) {             // 불꽃 알갱이만 움직인다(게임은 멈춘 채)
+    const p = G.parts[i]; p.life -= dt; if (p.life <= 0) { G.parts.splice(i, 1); continue; }
+    if (p.type === 'ring') continue;
+    p.px = p.x; p.py = p.y;
+    if (p.drag) { const k = Math.exp(-p.drag * dt); p.vx *= k; p.vy *= k; }
+    p.vy += (p.g || 0) * dt; p.x += (p.vx || 0) * dt; p.y += (p.vy || 0) * dt; if (p.vr) p.rot += p.vr * dt;
+  }
+  G.flash = Math.max(0, G.flash - dt * 1.6);
+}
+
+// ---- 그림: 사람(게임 손님과 같은 둥근 그림체) ----
+function epFace(w, h, chin) { ctx.beginPath(); ctx.moveTo(0, -h); ctx.bezierCurveTo(w * .62, -h, w, -h * .55, w, -h * .05); ctx.bezierCurveTo(w, h * .55, w * chin, h, 0, h); ctx.bezierCurveTo(-w * chin, h, -w, h * .55, -w, -h * .05); ctx.bezierCurveTo(-w, -h * .55, -w * .62, -h, 0, -h); ctx.closePath(); }
+function epPerson(x, y, r, s) {
+  const out = '#a0705f', lw = Math.max(1.2, r * .075), w = r * .92, h = r * (s.hr || 1.05);
+  ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // 몸(어깨)과 옷
+  ctx.fillStyle = s.cloth; ctx.strokeStyle = s.clothD || out; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.moveTo(-r * .5, h * .78); ctx.quadraticCurveTo(-r * 1.3, h * .95, -r * 1.36, r * 2.6); ctx.lineTo(r * 1.36, r * 2.6); ctx.quadraticCurveTo(r * 1.3, h * .95, r * .5, h * .78); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const ny = h * .86;
+  if (s.collar === 'sailor') { ctx.strokeStyle = '#fffaf0'; ctx.lineWidth = r * .07; [0, .16].forEach(k => { ctx.beginPath(); ctx.moveTo(-r * 1.1, ny + r * (.35 + k)); ctx.quadraticCurveTo(0, ny + r * (.95 + k), r * 1.1, ny + r * (.35 + k)); ctx.stroke(); }); ctx.fillStyle = '#ef4f78'; ctx.beginPath(); ctx.moveTo(0, ny + r * .62); ctx.lineTo(-r * .26, ny + r * .46); ctx.lineTo(-r * .22, ny + r * .8); ctx.closePath(); ctx.moveTo(0, ny + r * .62); ctx.lineTo(r * .26, ny + r * .46); ctx.lineTo(r * .22, ny + r * .8); ctx.closePath(); ctx.fill(); }
+  if (s.collar === 'uniform') { ctx.fillStyle = '#fffaf2'; ctx.beginPath(); ctx.moveTo(-r * .42, ny); ctx.lineTo(r * .42, ny); ctx.lineTo(0, ny + r * .9); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#6cbcff'; ctx.beginPath(); ctx.moveTo(-r * .09, ny + r * .1); ctx.lineTo(r * .09, ny + r * .1); ctx.lineTo(r * .13, ny + r * .75); ctx.lineTo(0, ny + r * .9); ctx.lineTo(-r * .13, ny + r * .75); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = lw * .8; [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx * r * .45, ny); ctx.lineTo(sx * r * .12, ny + r * 1.1); ctx.stroke(); }); ctx.fillStyle = '#ffd95a'; ctx.beginPath(); ctx.arc(-r * .7, ny + r * .75, r * .07, 0, TAU); ctx.fill(); }
+  if (s.collar === 'cardigan') { ctx.fillStyle = '#fffaf2'; [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(0, ny + r * .05); ctx.lineTo(sx * r * .42, ny - r * .02); ctx.lineTo(sx * r * .2, ny + r * .38); ctx.closePath(); ctx.fill(); }); ctx.fillStyle = 'rgba(255,255,255,.8)'; [.55, .9, 1.25].forEach(k => { ctx.beginPath(); ctx.arc(0, ny + r * k, r * .055, 0, TAU); ctx.fill(); }); }
+  if (s.collar === 'knit') { ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = lw; ctx.beginPath(); ctx.arc(0, ny - r * .1, r * .42, .25 * Math.PI, .75 * Math.PI); ctx.stroke(); }
+  if (s.scarf) { ctx.fillStyle = s.scarf; rr(-r * .62, ny - r * .12, r * 1.24, r * .34, r * .16); ctx.fill(); ctx.beginPath(); rr(r * .12, ny + r * .1, r * .28, r * .7, r * .1); ctx.fill(); }
+  // 긴 머리(뒤)
+  if (s.style === 'pb') { ctx.fillStyle = s.hair; ctx.beginPath(); ctx.moveTo(-w * 1.08, -h * .1); ctx.bezierCurveTo(-w * 1.2, h * .9, -w * .9, h * 1.25, -w * .5, h * 1.2); ctx.lineTo(w * .5, h * 1.2); ctx.bezierCurveTo(w * .9, h * 1.25, w * 1.2, h * .9, w * 1.08, -h * .1); ctx.closePath(); ctx.fill(); }
+  // 귀 · 얼굴
+  ctx.fillStyle = s.skin; ctx.strokeStyle = out; ctx.lineWidth = lw;
+  [-1, 1].forEach(sx => { ctx.beginPath(); ctx.ellipse(sx * w * 1.0, h * .08, r * .14, r * .18, 0, 0, TAU); ctx.fill(); ctx.stroke(); });
+  epFace(w, h, s.chin || .6); ctx.fill(); ctx.stroke();
+  // 앞머리
+  ctx.fillStyle = s.hair; ctx.beginPath();
+  if (s.style === 'bob') { ctx.moveTo(-w * 1.08, h * .42); ctx.bezierCurveTo(-w * 1.2, -h * 1.25, w * 1.2, -h * 1.25, w * 1.08, h * .42); ctx.lineTo(w * .86, h * .4); ctx.lineTo(w * .8, -h * .28); ctx.quadraticCurveTo(0, -h * .4, -w * .8, -h * .28); ctx.lineTo(-w * .86, h * .4); }
+  else if (s.style === 'teen') { ctx.moveTo(-w * 1.04, h * .12); ctx.bezierCurveTo(-w * 1.14, -h * 1.22, w * 1.14, -h * 1.22, w * 1.04, h * .12); ctx.lineTo(w * .9, -h * .18); ctx.quadraticCurveTo(w * .25, -h * .6, -w * .5, -h * .16); ctx.quadraticCurveTo(-w * .8, -h * .26, -w * .92, h * .02); }
+  else if (s.style === 'adult') { ctx.moveTo(-w * 1.0, -h * .02); ctx.bezierCurveTo(-w * 1.08, -h * 1.2, w * 1.08, -h * 1.2, w * 1.0, -h * .02); ctx.lineTo(w * .92, -h * .36); ctx.quadraticCurveTo(w * .2, -h * .62, -w * .3, -h * .52); ctx.quadraticCurveTo(-w * .78, -h * .5, -w * .92, -h * .2); }
+  else if (s.style === 'pa') { ctx.moveTo(-w * 1.0, -h * .08); ctx.bezierCurveTo(-w * 1.06, -h * 1.2, w * 1.06, -h * 1.2, w * 1.0, -h * .08); ctx.lineTo(w * .92, -h * .32); ctx.quadraticCurveTo(0, -h * .74, -w * .92, -h * .32); }
+  else if (s.style === 'pb') { ctx.moveTo(-w * 1.06, h * .32); ctx.bezierCurveTo(-w * 1.16, -h * 1.22, w * 1.16, -h * 1.22, w * 1.06, h * .32); ctx.lineTo(w * .9, h * .26); ctx.quadraticCurveTo(w * .78, -h * .44, 0, -h * .62); ctx.quadraticCurveTo(-w * .78, -h * .44, -w * .9, h * .26); }
+  ctx.closePath(); ctx.fill();
+  if (s.clip) { ctx.fillStyle = s.clip; ctx.save(); ctx.translate(w * .5, -h * .5); ctx.rotate(.4); ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 - Math.PI / 2, rr2 = k % 2 ? r * .08 : r * .18; ctx.lineTo(Math.cos(a) * rr2, Math.sin(a) * rr2); } ctx.closePath(); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.ellipse(-w * .38, -h * .52, r * .2, r * .07, -.35, 0, TAU); ctx.fill();
+  // 눈 · 볼 · 코 · 입
+  const ey = h * (s.ey || 0), ex = w * .38, es = r * (s.es || .12);
+  ctx.fillStyle = 'rgba(255,125,140,.36)'; [-1, 1].forEach(sx => { ctx.beginPath(); ctx.ellipse(sx * w * .6, ey + r * .26, r * .2, r * .13, 0, 0, TAU); ctx.fill(); });
+  ctx.strokeStyle = '#2f2a4d'; ctx.fillStyle = '#2f2a4d'; ctx.lineWidth = Math.max(1.2, r * .085);
+  if (s.happy) [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx * ex - es, ey + es * .2); ctx.quadraticCurveTo(sx * ex, ey - es * 1.1, sx * ex + es, ey + es * .2); ctx.stroke(); });
+  else [-1, 1].forEach(sx => { ctx.fillStyle = '#2f2a4d'; ctx.beginPath(); ctx.ellipse(sx * ex, ey, es * .85, es, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx * ex + es * .3, ey - es * .35, es * .35, 0, TAU); ctx.fill(); });
+  if (s.lines) { ctx.strokeStyle = 'rgba(160,112,95,.6)'; ctx.lineWidth = Math.max(1, r * .045); [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(sx * (ex + es * 1.25), ey - es * .1); ctx.lineTo(sx * (ex + es * 1.7), ey - es * .4); ctx.moveTo(sx * (ex + es * 1.25), ey + es * .25); ctx.lineTo(sx * (ex + es * 1.7), ey + es * .35); ctx.stroke(); }); }
+  if (s.glasses) { ctx.strokeStyle = '#6b5a66'; ctx.lineWidth = Math.max(1, r * .06); [-1, 1].forEach(sx => { ctx.beginPath(); ctx.arc(sx * ex, ey, es * 2.1, 0, TAU); ctx.stroke(); }); ctx.beginPath(); ctx.moveTo(-ex + es * 2.1, ey); ctx.quadraticCurveTo(0, ey - es * .6, ex - es * 2.1, ey); ctx.stroke(); }
+  ctx.fillStyle = '#eaa98c'; ctx.beginPath(); ctx.ellipse(0, ey + r * .26, r * .06, r * .04, 0, 0, TAU); ctx.fill();
+  const my = ey + r * .42;
+  if (s.open) { ctx.fillStyle = '#8a3f45'; ctx.beginPath(); ctx.moveTo(-r * .15, my); ctx.quadraticCurveTo(0, my + r * .03, r * .15, my); ctx.quadraticCurveTo(r * .12, my + r * .2, 0, my + r * .21); ctx.quadraticCurveTo(-r * .12, my + r * .2, -r * .15, my); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ff9fae'; ctx.beginPath(); ctx.ellipse(0, my + r * .15, r * .07, r * .04, 0, 0, TAU); ctx.fill(); }
+  else { ctx.strokeStyle = '#8a3f45'; ctx.lineWidth = Math.max(1.1, r * .065); ctx.beginPath(); ctx.moveTo(-r * .14, my); ctx.quadraticCurveTo(0, my + r * .13, r * .14, my); ctx.stroke(); }
+  ctx.restore();
+}
+function epHand(x, y, r, skin, sleeve) { ctx.fillStyle = sleeve; ctx.beginPath(); ctx.ellipse(x, y + r * 1.1, r * .9, r * 1.1, 0, 0, TAU); ctx.fill(); ctx.fillStyle = skin; ctx.strokeStyle = '#a0705f'; ctx.lineWidth = Math.max(1, r * .15); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke(); }
+const EP_SKIN = '#ffe2cc';
+const EP_PA = { skin: EP_SKIN, hair: '#3a2c25', style: 'pa', cloth: '#5b6fae', clothD: '#43528a', collar: 'knit', ey: .02, es: .11, hr: 1.1, chin: .5, happy: true };
+const EP_PB = { skin: EP_SKIN, hair: '#4a342c', style: 'pb', cloth: '#f59a8b', clothD: '#d9786b', collar: 'knit', ey: .03, es: .11, hr: 1.08, chin: .5, happy: true };
+
+// ---- 그림: 곤돌라 · 관람차 · 하늘 ----
+function epGondola(gx, py, gw, gh, col, dark, sway, lit, inner) {
+  ctx.save(); ctx.translate(gx, py); ctx.rotate(sway);
+  const hang = gh * .2;
+  ctx.strokeStyle = dark; ctx.lineWidth = gw * .04; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, hang + gh * .06); ctx.stroke();
+  ctx.fillStyle = '#fffaf3'; ctx.lineWidth = gw * .018; ctx.beginPath(); ctx.arc(0, 0, gw * .045, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.translate(0, hang + gh * .5);
+  ctx.fillStyle = 'rgba(40,20,60,.12)'; rr(-gw * .5 + 6, -gh * .42 + 10, gw, gh * .86, gw * .17); ctx.fill();
+  ctx.fillStyle = col; ctx.strokeStyle = dark; ctx.lineWidth = gw * .02; rr(-gw * .5, -gh * .42, gw, gh * .86, gw * .17); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = dark; rr(-gw * .36, -gh * .52, gw * .72, gh * .14, gh * .07); ctx.fill();
+  ctx.fillStyle = '#ffd95a'; ctx.beginPath(); ctx.arc(0, -gh * .52, gw * .04, 0, TAU); ctx.fill();
+  const wx = -gw * .41, wy = -gh * .31, ww = gw * .82, wh = gh * .52;
+  ctx.fillStyle = lit ? '#fff0c9' : '#eef8ff'; rr(wx, wy, ww, wh, gw * .1); ctx.fill();
+  ctx.save(); rr(wx, wy, ww, wh, gw * .1); ctx.clip();
+  if (lit) { const lg = ctx.createRadialGradient(0, wy + wh * .3, 5, 0, wy + wh * .3, ww * .7); lg.addColorStop(0, 'rgba(255,230,160,.9)'); lg.addColorStop(1, 'rgba(255,200,140,0)'); ctx.fillStyle = lg; ctx.fillRect(wx, wy, ww, wh); }
+  inner({ x: wx, y: wy, w: ww, h: wh, yb: wy + wh });
+  ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = gw * .035; ctx.beginPath(); ctx.moveTo(wx + ww * .08, wy + wh * .45); ctx.lineTo(wx + ww * .3, wy + wh * .05); ctx.moveTo(wx + ww * .16, wy + wh * .62); ctx.lineTo(wx + ww * .42, wy + wh * .12); ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = dark; ctx.lineWidth = gw * .03; rr(wx, wy, ww, wh, gw * .1); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; rr(-gw * .5, gh * .27, gw, gh * .06, 0); ctx.fill();
+  for (let k = 0; k < 7; k++) { ctx.fillStyle = (k + Math.floor(EP.t * 3)) % 2 ? '#fff3c2' : '#ffffff'; ctx.beginPath(); ctx.arc(-gw * .36 + k * gw * .12, gh * .3, gw * .018, 0, TAU); ctx.fill(); }
+  ctx.restore();
+}
+function epSky(top, bot) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+function epStars(a) { if (a <= 0) return; STARS.forEach(s => { ctx.globalAlpha = a * (.45 + .55 * Math.sin(EP.t * 2 + s.p)); ctx.fillStyle = '#fffbe6'; ctx.beginPath(); ctx.arc(s.x * W, s.y * H * 1.2, s.r, 0, TAU); ctx.fill(); }); ctx.globalAlpha = 1; }
+function epClouds(a, dy) { CLOUDS.forEach((c, i) => { const x = ((c.x + EP.t * c.v * .6) % 1.4 - .2) * W, y = c.y * H * .7 + 30 + dy * (.3 + i * .05), s = c.s * 28; ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); ctx.arc(x + s * 1.1, y + s * .2, s * .8, 0, TAU); ctx.arc(x - s * 1.05, y + s * .25, s * .7, 0, TAU); ctx.arc(x + s * .3, y - s * .45, s * .75, 0, TAU); ctx.fill(); }); }
+function epHills(y, c1, c2, lights) {
+  ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(0, y); for (let x = 0; x <= W + 20; x += 20) ctx.lineTo(x, y - 30 - Math.sin(x * .011 + 1) * 20); ctx.lineTo(W, H + 400); ctx.lineTo(0, H + 400); ctx.fill();
+  tent(W * .18, y - 18, Math.min(W, 500) * .07, '#ff9fb4', '#fff4ec', lights ? .4 : 0);
+  tent(W * .82, y - 14, Math.min(W, 500) * .06, '#8fc9ff', '#fff4ec', lights ? .4 : 0);
+  ctx.fillStyle = c1; ctx.beginPath(); ctx.moveTo(0, y + 12); for (let x = 0; x <= W + 20; x += 20) ctx.lineTo(x, y + 8 - Math.sin(x * .008 + 3) * 14); ctx.lineTo(W, H + 400); ctx.lineTo(0, H + 400); ctx.fill();
+  if (lights) for (let k = 0; k < 26; k++) { const x = (k * 97.3 % 1) * W, yy = y + 26 + (k * 53.1 % 1) * 60; ctx.globalAlpha = .6 + .4 * Math.sin(EP.t * 3 + k); ctx.fillStyle = k % 3 ? '#ffe39a' : '#ffb3c4'; ctx.beginPath(); ctx.arc(x, yy, 2.2, 0, TAU); ctx.fill(); }
+  ctx.globalAlpha = 1;
+}
+function epRim(px, py, gw, gh, night) {            // 우리 곤돌라가 매달린 큰 바퀴의 윗부분(화면 밖으로 이어짐)
+  const R = Math.max(W, H) * 1.15, cx = px, cy = py + R, rot = EP.t * .012;
+  ctx.strokeStyle = night ? 'rgba(233,228,251,.9)' : 'rgba(255,250,243,.95)'; ctx.lineWidth = gw * .05; ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI * .85, -Math.PI * .15); ctx.stroke();
+  ctx.lineWidth = gw * .02; ctx.beginPath(); ctx.arc(cx, cy, R - gw * .16, -Math.PI * .85, -Math.PI * .15); ctx.stroke();
+  const sg = ctx.createLinearGradient(0, py, 0, py + H * .42); sg.addColorStop(0, night ? 'rgba(233,228,251,.75)' : 'rgba(255,250,243,.85)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.strokeStyle = sg; ctx.lineWidth = gw * .016;       // 바퀴살은 아래로 갈수록 흐려져 글과 겹치지 않게
+  for (let k = -7; k <= 7; k++) { const a = TOP + k * .11 + (rot % .11); ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * (R - gw * .16), cy + Math.sin(a) * (R - gw * .16)); ctx.lineTo(cx + Math.cos(a) * (R - H * .5), cy + Math.sin(a) * (R - H * .5)); ctx.stroke(); }
+  for (let k = -20; k <= 20; k++) { const a = TOP + k * .035 + (rot % .035), x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R; ctx.fillStyle = (k + Math.floor(EP.t * 4)) % 3 ? '#fff3c2' : '#ffd3dd'; ctx.globalAlpha = night ? 1 : .8; ctx.beginPath(); ctx.arc(x, y, gw * .016, 0, TAU); ctx.fill(); }
+  ctx.globalAlpha = 1;
+}
+function epDrawFx(front) {
+  for (const p of EP.fx) {
+    if (p.kind === 'spring' && front) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = '#ffc3d3'; ctx.globalAlpha = .9; ctx.beginPath(); ctx.ellipse(0, 0, 6 * p.r, 3.6 * p.r, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffe4ec'; ctx.beginPath(); ctx.ellipse(-1.5 * p.r, -.8 * p.r, 2.4 * p.r, 1.2 * p.r, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+    else if (p.kind === 'summer') {
+      if (p.bal && !front) { const s = 13 * p.r; ctx.strokeStyle = 'rgba(80,70,110,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y + s); ctx.quadraticCurveTo(p.x + Math.sin(p.ph) * 6, p.y + s * 2, p.x, p.y + s * 3); ctx.stroke(); ctx.fillStyle = p.col; ctx.beginPath(); ctx.ellipse(p.x, p.y, s * .85, s, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(p.x - s * .3, p.y - s * .35, s * .2, s * .3, -.4, 0, TAU); ctx.fill(); }
+      else if (!p.bal && front) { ctx.globalAlpha = .5 + .5 * Math.sin(p.ph * 3); ctx.fillStyle = '#fffbe0'; const s = 3 * p.r; ctx.beginPath(); ctx.moveTo(p.x, p.y - s * 2); ctx.lineTo(p.x + s * .5, p.y); ctx.lineTo(p.x, p.y + s * 2); ctx.lineTo(p.x - s * .5, p.y); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(p.x - s * 2, p.y); ctx.lineTo(p.x, p.y + s * .5); ctx.lineTo(p.x + s * 2, p.y); ctx.lineTo(p.x, p.y - s * .5); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; }
+    }
+    else if (p.kind === 'autumn' && front) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; const s = 7 * p.r; ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 - Math.PI / 2, rr2 = k % 2 ? s * .45 : s; ctx.lineTo(Math.cos(a) * rr2, Math.sin(a) * rr2); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(120,60,30,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, s * 1.3); ctx.stroke(); ctx.restore(); }
+    else if ((p.kind === 'winter' || p.kind === 'fin') && front) { ctx.globalAlpha = .85; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(p.x, p.y, 1.2 + p.r * 1.6, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+}
+const EP_LOOK = {
+  spring: { top: '#bfe3ff', bot: '#ffeef3', h1: '#a8e6a3', h2: '#8fd79a', g: '#ff9fb4', gd: '#d9587a', cloud: .8 },
+  summer: { top: '#63c3ff', bot: '#fff3c4', h1: '#7fd67f', h2: '#64c46e', g: '#ffb067', gd: '#dc7f36', cloud: .85 },
+  autumn: { top: '#7a64c9', bot: '#ffb08a', h1: '#d98a5c', h2: '#c2744a', g: '#6fd8a8', gd: '#35a877', cloud: .35 },
+  winter: { top: '#131a46', bot: '#4a4a90', h1: '#e8eefc', h2: '#cdd7f2', g: '#6cbcff', gd: '#3587d6', cloud: .08 },
+};
+function epSeason(sc, t, u) {
+  const L2 = EP_LOOK[sc.kind], rise = ease(u), night = !!sc.night;
+  epSky(L2.top, L2.bot);
+  if (night) { epStars(1); ctx.fillStyle = '#fff6d6'; ctx.beginPath(); ctx.arc(W * .8, H * .12, 20, 0, TAU); ctx.fill(); ctx.fillStyle = L2.top; ctx.beginPath(); ctx.arc(W * .8 + 8, H * .12 - 6, 17, 0, TAU); ctx.fill(); }
+  else if (sc.kind === 'autumn') { const sy = H * (.74 + rise * .34); const sg = ctx.createRadialGradient(W * .3, sy, 4, W * .3, sy, 90); sg.addColorStop(0, 'rgba(255,240,200,1)'); sg.addColorStop(.3, 'rgba(255,200,140,.8)'); sg.addColorStop(1, 'rgba(255,160,120,0)'); ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H); }
+  else { ctx.fillStyle = sc.kind === 'summer' ? '#fff3a8' : '#fff7d6'; ctx.globalAlpha = .95; ctx.beginPath(); ctx.arc(W * .82, H * .1, sc.kind === 'summer' ? 30 : 22, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+  epClouds(L2.cloud, rise * H * .25);
+  epHills(H * (.83 + rise * .42), L2.h1, L2.h2, night);
+  const gw = Math.min(W * .74, H * .44, 340), gh = gw * .86, px = W / 2, py = H * .13;
+  epRim(px, py, gw, gh, night);
+  epDrawFx(false);
+  const sway = Math.sin(t * 1.1) * .03 + Math.sin(t * .47) * .015;
+  epGondola(px, py, gw, gh, L2.g, L2.gd, sway, night, win => epInside(sc.kind, win, gw, gh, t, u));
+  epDrawFx(true);
+}
+function epInside(kind, win, gw, gh, t, u) {
+  const yb = win.yb;
+  if (kind === 'spring') {
+    const r = gw * .105;
+    epPerson(-gw * .2, yb - r * 1.3, r, EP_PA); epPerson(gw * .2, yb - r * 1.25, r, EP_PB);
+    const br = gw * .085, bx = Math.sin(t * .9) * gw * .01, by = yb - br * .75 + Math.sin(t * 2.2) * br * .05;
+    critter(bx, by, br, 0, { happy: (t % 3.2) > 1.4, hop: (t % 3.2) > 2.6 });
+    epHand(bx - br * 1.05, by + br * .75, br * .24, EP_SKIN, EP_PA.cloth); epHand(bx + br * 1.05, by + br * .7, br * .24, EP_SKIN, EP_PB.cloth);
+  } else if (kind === 'summer') {
+    const r = gw * .13, cx = gw * .06, cy = yb - r * 1.25;
+    const bx = -gw * .27, bY = win.y + gh * .13 + Math.sin(t * 1.3) * 4, hx = cx - r * 1.12, hy = cy + r * 1.15;
+    ctx.strokeStyle = 'rgba(80,70,110,.55)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(bx + 10, (bY + hy) / 2, bx, bY + gw * .075); ctx.stroke();
+    ctx.fillStyle = '#ff8fa8'; ctx.beginPath(); ctx.ellipse(bx, bY, gw * .065, gw * .078, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(bx - gw * .02, bY - gw * .03, gw * .014, gw * .024, -.4, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#d9587a'; ctx.beginPath(); ctx.moveTo(bx, bY + gw * .075); ctx.lineTo(bx - 4, bY + gw * .09); ctx.lineTo(bx + 4, bY + gw * .09); ctx.closePath(); ctx.fill();
+    epPerson(cx, cy, r, { skin: EP_SKIN, hair: '#3a2c25', style: 'bob', cloth: '#6cbcff', clothD: '#3587d6', collar: 'sailor', ey: .14, es: .15, hr: 1.0, chin: .72, happy: (t % 2.6) > 1.8, open: true, clip: '#ffd95a' });
+    epHand(hx, hy, r * .2, EP_SKIN, '#6cbcff');
+    const wv = Math.sin(t * 7) * r * .22; epHand(cx + r * 1.2 + wv * .4, cy + r * .2 - Math.abs(wv), r * .22, EP_SKIN, '#6cbcff');
+  } else if (kind === 'autumn') {
+    const wish = u > .42 && u < .88, r = gw * .112;
+    critter(-gw * .25, yb - gw * .085, gw * .085, 1, { happy: true }); critter(gw * .25, yb - gw * .085, gw * .085, 4, { happy: true });
+    epPerson(0, yb - r * 1.38, r, { skin: EP_SKIN, hair: '#3a2c25', style: 'teen', cloth: '#2d3452', clothD: '#1f2440', collar: 'uniform', ey: .04, es: .12, hr: 1.08, chin: .55, happy: wish || (t % 3) > 2.2, open: !wish });
+    if (wish) for (let k = 0; k < 7; k++) { const a = t * .8 + k, x = Math.sin(a * 1.7 + k) * gw * .3, y = win.y + gh * .06 + ((t * 18 + k * 20) % (gh * .22)); ctx.globalAlpha = .9; ctx.fillStyle = '#fff3a8'; const s = 3 + (k % 3); ctx.beginPath(); ctx.moveTo(x, y - s * 2); ctx.lineTo(x + s * .5, y); ctx.lineTo(x, y + s * 2); ctx.lineTo(x - s * .5, y); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(x - s * 2, y); ctx.lineTo(x, y + s * .5); ctx.lineTo(x + s * 2, y); ctx.lineTo(x, y - s * .5); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; }
+  } else if (kind === 'winter') {
+    const r = gw * .098, rc = gw * .105;
+    epPerson(-gw * .255, yb - r * 1.3, r, Object.assign({}, EP_PA, { hair: '#c9c3cf', glasses: true, lines: true }));
+    epPerson(gw * .255, yb - r * 1.28, r, Object.assign({}, EP_PB, { hair: '#d6d0da', lines: true }));
+    epPerson(0, yb - rc * 1.45, rc, { skin: EP_SKIN, hair: '#3a2c25', style: 'adult', cloth: '#8fcaf0', clothD: '#5aa6d8', collar: 'cardigan', ey: -.02, es: .1, hr: 1.12, chin: .5, happy: true, scarf: '#ef4f78' });
+  }
+}
+function epMiniWheel(cx, cy, R, t, glow) {
+  const rot = t * .15, n = 10;
+  ctx.strokeStyle = 'rgba(233,228,251,.85)'; ctx.lineWidth = Math.max(2, R * .03);
+  [-1, 1].forEach(sx => { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + sx * R * .62, cy + R * 1.32); ctx.stroke(); });
+  for (let k = 0; k < n * 2; k++) { const a = rot + k * Math.PI / n; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.stroke(); }
+  ctx.lineWidth = Math.max(2.5, R * .045); ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+  for (let k = 0; k < 40; k++) { const a = k / 40 * TAU + rot; ctx.fillStyle = ['#fff3c2', '#ffd3dd', '#cfe8ff'][(k + Math.floor(t * 6)) % 3]; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * R, cy + Math.sin(a) * R, Math.max(1.5, R * .022), 0, TAU); ctx.fill(); }
+  for (let k = 0; k < n; k++) {
+    const a = rot + k * TAU / n, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R, c = COLORS[k % 6], s = R * .17;
+    if (k === 0 && glow) { const gg = ctx.createRadialGradient(x, y + s * .7, 2, x, y + s * .7, s * 2.4); gg.addColorStop(0, 'rgba(160,215,255,.8)'); gg.addColorStop(1, 'rgba(160,215,255,0)'); ctx.fillStyle = gg; ctx.fillRect(x - s * 3, y - s * 2, s * 6, s * 6); }
+    ctx.strokeStyle = c.dark; ctx.lineWidth = Math.max(1.2, s * .1); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + s * .3); ctx.stroke();
+    ctx.fillStyle = c.base; rr(x - s * .6, y + s * .25, s * 1.2, s * .95, s * .25); ctx.fill(); ctx.fillStyle = '#fff0c9'; rr(x - s * .45, y + s * .38, s * .9, s * .45, s * .12); ctx.fill();
+  }
+  ctx.fillStyle = '#ffd95a'; ctx.beginPath(); ctx.arc(cx, cy, R * .12, 0, TAU); ctx.fill(); ctx.fillStyle = '#ef4f78'; heartPath(cx, cy + R * .02, R * .06); ctx.fill();
+}
+function epDraw() {
+  const t = EP.t, sc = EP_SCENES[Math.max(0, EP.si)], u = clamp((t - sc.t0) / Math.min(16, sc.t1 - sc.t0), 0, 1);
+  if (sc.kind === 'pro') {
+    epSky('#12163a', '#3a3474'); epStars(1);
+    if (t > 3.5 && t < 5.2) { const k = (t - 3.5) / 1.7, x = W * (.85 - k * .6), y = H * (.08 + k * .18); ctx.strokeStyle = `rgba(255,251,230,${1 - k})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 60, y - 18); ctx.stroke(); }
+    const R = Math.min(W, H) * .16; epHills(H * .9, '#262e62', '#1d2452', true); epMiniWheel(W / 2, H * .9 - R * 1.3, R, t, true);
+  } else if (sc.kind === 'fin') {
+    const tf = t - 72;
+    epSky('#0f1538', '#3d3a7e'); epStars(1);
+    const R = Math.min(W * .36, H * .25), cy = H * .56;
+    epHills(cy + R * 1.3, '#262e62', '#1d2452', true);
+    epMiniWheel(W / 2, cy, R, t, true);
+    drawParts(); epDrawFx(true);
+    if (tf < 1.2) { ctx.fillStyle = `rgba(255,248,240,${1 - tf / 1.2})`; ctx.fillRect(0, 0, W, H); }
+  } else epSeason(sc, t, u);
+  // 장면 사이: 크림색으로 스르르
+  for (const b of [8, 24, 40, 56]) { const d = Math.abs(t - b); if (d < .8) { ctx.fillStyle = `rgba(255,248,240,${1 - d / .8})`; ctx.fillRect(0, 0, W, H); } }
+  if (t < 1.5) { ctx.fillStyle = `rgba(10,10,30,${1 - t / 1.5})`; ctx.fillRect(0, 0, W, H); }
+  const vg = ctx.createRadialGradient(W / 2, H * .45, Math.min(W, H) * .35, W / 2, H * .5, Math.max(W, H) * .8); vg.addColorStop(0, 'rgba(30,20,50,0)'); vg.addColorStop(1, 'rgba(30,20,50,.28)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  if (G.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${G.flash * .3})`; ctx.fillRect(0, 0, W, H); }
 }
 
 // =====================================================================
@@ -1392,6 +1806,10 @@ $('#btnNext').onclick = () => {
   G.bonus = false; G.stage++; beginStage();
 };
 $('#btnSnd').onclick = () => { setSound(!save.sound); click(); };
+$('#btnEp').onclick = () => { click(); epStart(false); };
+$('#epSkip').onclick = () => epSkip();
+$('#epCont').onclick = () => { epClose(); $('#hud').classList.add('on'); $('#btnNext').onclick(); };
+$('#epHome').onclick = () => { click(); epClose(); toTitle(); };
 $('#btnPause').onclick = () => { click(); pause(true); };
 $('#btnResume').onclick = () => { pause(false); click(); };
 $('#btnHome').onclick = () => { showOv('pause', false); if (AC) AC.resume(); toTitle(); };
@@ -1405,7 +1823,7 @@ function frame(now) {
 }
 setupStage(true); resize(); setSound(save.sound); refreshTitle();
 requestAnimationFrame(frame);
-window.__game = { critter, TRACKS, G, tapLane, windowGondola, params, get BGM() { return BGM; }, get AC() { return AC; }, startGame, renderBGM };   // 검사용
+window.__game = { EP, epStart, epSkip, critter, TRACKS, G, tapLane, windowGondola, params, get BGM() { return BGM; }, get AC() { return AC; }, startGame, renderBGM };   // 검사용
 })();
 </script>
 </body>
