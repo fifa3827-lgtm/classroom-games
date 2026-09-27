@@ -129,7 +129,7 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
   const decompose = s => { const k = s.charCodeAt(0) - 0xAC00; return [keyOf(CHO_I, Math.floor(k / 588)), keyOf(JUNG_I, Math.floor(k / 28) % 21), keyOf(JONG_I, k % 28)]; };
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const INKW = '#e8e4dc';
-  const SW = 400, SH = 380; // 투사지 크기
+  const SW = 460, SH = 420; // 투사지 크기
   const rad = d => d * Math.PI / 180;
   const rot = (x, y, a) => { const c = Math.cos(rad(a)), s = Math.sin(rad(a)); return [x * c - y * s, x * s + y * c]; };
 
@@ -185,42 +185,19 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
 
   // ---------- 게임 ----------
   const G = {
-    W, H, CARD, CHO, JUNG, JS, jamo, syl, compose, decompose, clamp, Snd, P, SW, SH, rot,
-    puzzles: [], mode: 'title', cur: null, t: 0, night: false,
+    W, H, CARD, CHO, JUNG, JS, jamo, syl, compose, decompose, clamp, Snd, P, rot,
+    puzzles: [], mode: 'title', cur: null, t: 0,
     solved: {}, wrongs: {}, lockUntil: {}, puzT: {}, hintN: {}, leaves: 0, entry: [], toastMsg: '', toastT: 0, shake: 0, flash: 0,
-    // 투사지: 획(local 좌표, 접힌 자국 중심 기준)·지운 자국·놓인 자리
-    sheet: { strokes: [], marks: [], snapped: false, x: 0, y: 0, a: 0 },
-    cache: {}, used: {},
+    cache: {}, used: {}, HINT_SEC: 60,
     reg(p) { this.puzzles.push(p); },
     byId(id) { return this.puzzles.find(p => p.id === id); },
     art(key, w, h, draw, opt) { opt = opt || {}; const big = w * h > 400000; const n = opt.still ? 1 : (big ? 2 : 3); const v = opt.still ? 0 : Math.floor(this.t * (big ? 4 : 5)) % n; const k = key + '#' + v; this.used[k] = this.t; if (this.cache[k]) return this.cache[k];
       const cv = P.mk(w, h), x = cv.getContext('2d'); draw(x, P.rng((opt.seed || 7) + v * 101), v); if (!opt.noGrain) P.graphite(cv, 13 + v); return (this.cache[k] = cv); },
     evict() { for (const k in this.cache) if (this.t - (this.used[k] || 0) > 2) { this.cache[k].width = 0; delete this.cache[k]; delete this.used[k]; } },
-    drop(prefix) { for (const k in this.cache) if (k.startsWith(prefix)) delete this.cache[k]; },
     paperCard: null,
-
-    // ---------- 접힌 자국 계산 ----------
-    // 판 N의 모음은 판 N-1(또는 허브)에서 베낀다. 정답 먹선은 원천의 투사지 local 좌표 u에 있고, 판 N에서 그 획이 바로 선 모음이 되어야 하므로
-    // 판 N의 접힌 자국 f_N = T_N - R(a_N)·u. 원천의 먹선 모양은 local에서 -a_N 만큼 돌아가 있다 (그래서 원천에서는 다른 모음처럼 보인다).
-    layoutFolds() {
-      const hub = this.HUB; hub.fold = { x: hub.foldAt[0], y: hub.foldAt[1], a: hub.foldAngle || 0 };
-      const list = this.puzzles.filter(p => !p.final);
-      list.forEach((p, i) => {
-        const src = p.src === 'hub' ? hub : list[i - 1]; p.srcObj = i === 0 ? null : src;
-        const ent = i === 0 ? null : (src.ink || []).find(k => k.for === p.id); if (i > 0 && !ent) throw new Error('원천에 ' + p.id + '용 먹선이 없다');
-        const u = ent ? ent.u : [0, 0];
-        const [ux, uy] = rot(u[0], u[1], p.angle); p.fold = { x: p.vowelAt[0] - ux, y: p.vowelAt[1] - uy, a: p.angle }; });
-      // 원천(각 판·허브)의 먹선을 world 좌표로: 정답 먹선은 목표 판의 각도만큼 되돌려 놓는다
-      [hub].concat(list).forEach(src => { src.inkW = []; (src.ink || []).forEach(k => {
-        const tgt = k.for ? list.find(q => q.id === k.for) : null; const rr = tgt ? -tgt.angle : (k.rot || 0); const d = JS[k.v]; const L = k.L || 120; const base = k.id || (k.v + k.u.join(','));
-        d.forEach((st, si) => { const pts = st.map(([a, b]) => { const [lx, ly] = rot((a - 0.5) * L, (b - 0.5) * L, rr); const [wx, wy] = rot(k.u[0] + lx, k.u[1] + ly, src.fold.a); return [src.fold.x + wx, src.fold.y + wy]; });
-          src.inkW.push({ pts, ok: !!tgt, v: k.v, id: base + '-' + si, base }); }); }); });
-      if (!this.sheet.strokes.length && !this.sheet.marks.length) this.sheet.strokes = [{ pts: [[0, -75], [0, 75]], given: true }];
-    },
-
     init() {
       this.cv = document.getElementById('cv'); this.c = this.cv.getContext('2d');
-      this.load(); this.layoutFolds(); this.mode = 'hub'; this.unsnap(); this.mode = 'title'; this.resize(); addEventListener('resize', () => this.resize());
+      this.load(); this.resize(); addEventListener('resize', () => this.resize());
       const cv = this.cv; const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
       cv.addEventListener('pointerdown', e => { Snd.unlock(); cv.setPointerCapture(e.pointerId); const p = pos(e); this.down(p); e.preventDefault(); });
       cv.addEventListener('pointermove', e => { const p = pos(e); this.move(p); });
@@ -253,203 +230,114 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
     },
     resize() { const dpr = Math.min(2, devicePixelRatio || 1); const sw = innerWidth, sh = innerHeight; const s = Math.min(sw / W, sh / H); const w = W * s, h = H * s;
       Object.assign(this.cv.style, { width: w + 'px', height: h + 'px', left: (sw - w) / 2 + 'px', top: (sh - h) / 2 + 'px' }); this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(h * dpr); this.scale = this.cv.width / W; },
-    KEY: 'mitgeurim2.v1',
-    save() { try { localStorage.setItem(this.KEY, JSON.stringify({ solved: this.solved, wrongs: this.wrongs, leaves: this.leaves, night: this.night, hintN: this.hintN, done: this.done, sheet: { strokes: this.sheet.strokes, marks: this.sheet.marks }, arr: this.arr })); } catch (e) { } },
-    load() { try { const s = JSON.parse(localStorage.getItem(this.KEY) || 'null'); if (s) { this.solved = s.solved || {}; this.wrongs = s.wrongs || {}; this.leaves = s.leaves || 0; this.night = !!s.night; this.hintN = s.hintN || {}; this.done = !!s.done; if (s.sheet) { this.sheet.strokes = s.sheet.strokes || []; this.sheet.marks = s.sheet.marks || []; } this.arr = s.arr || null; } } catch (e) { } },
-    nSolved() { return this.puzzles.filter(p => !p.final && this.solved[p.id]).length; },
-    nAll() { return this.puzzles.filter(p => !p.final).length; },
-    hasProgress() { return this.done || Object.keys(this.solved).length > 0 || Object.keys(this.wrongs).length > 0 || this.sheet.marks.length > 0; },
-    reset() { this.solved = {}; this.wrongs = {}; this.leaves = 0; this.hintN = {}; this.done = false; this.night = false; this.lockUntil = {}; this.puzT = {}; this.entry = []; this.resetAsk = 0; this.arr = null;
-      this.sheet = { strokes: [], marks: [], snapped: false, x: 0, y: 0, a: 0 }; this.puzzles.forEach(p => { p.st = null; }); try { localStorage.removeItem(this.KEY); } catch (e) { } this.layoutFolds(); this.save(); },
-    startFresh() { this.reset(); this.mode = 'hub'; this.cur = null; Snd.paper(); this.toast('새 종이다. 책상 위 투사지에 획 하나가 그어져 있다'); },
-
-    // ---------- 전환 ----------
-    open(p) { if (p.final && this.nSolved() < this.nAll()) { this.toast('아직 벽에 그림자가 다 모이지 않았다'); return; }
-      Snd.paper(); this.cur = p; this.mode = 'puzzle'; this.entry = []; this.puzT[p.id] = this.puzT[p.id] || 0; this.hintShow = 0; if (!p.st) { p.st = {}; if (p.init) p.init(p.st, this); } this.unsnap(); },
-    toHub() { Snd.paper(); this.mode = 'hub'; this.cur = null; this.entry = []; this.unsnap(); },
+    KEY: 'mitgeurim2.v2',
+    save() { try { localStorage.setItem(this.KEY, JSON.stringify({ solved: this.solved, wrongs: this.wrongs, leaves: this.leaves, hintN: this.hintN, done: this.done })); } catch (e) { } },
+    load() { try { const s = JSON.parse(localStorage.getItem(this.KEY) || 'null'); if (s) { this.solved = s.solved || {}; this.wrongs = s.wrongs || {}; this.leaves = s.leaves || 0; this.hintN = s.hintN || {}; this.done = !!s.done; } } catch (e) { } },
+    nSolved() { return this.puzzles.filter(p => this.solved[p.id]).length; },
+    nAll() { return this.puzzles.length; },
+    hasProgress() { return this.done || Object.keys(this.solved).length > 0 || Object.keys(this.wrongs).length > 0; },
+    reset() { this.solved = {}; this.wrongs = {}; this.leaves = 0; this.hintN = {}; this.done = false; this.lockUntil = {}; this.puzT = {}; this.entry = []; this.resetAsk = 0; this.puzzles.forEach(p => { p.st = null; }); if (this.FINAL) this.FINAL.st = null; try { localStorage.removeItem(this.KEY); } catch (e) { } this.save(); },
+    startFresh() { this.reset(); this.mode = 'hub'; this.cur = null; Snd.paper(); this.toast('새 종이다. 방 안의 사물을 눌러 보자'); },
+    open(p) { Snd.paper(); this._wasOpen = p.id; this.cur = p; this.mode = 'puzzle'; this.entry = []; this.puzT[p.id] = this.puzT[p.id] || 0; this.hintShow = 0; if (!p.st) { p.st = {}; p.init(p.st, this); } },
+    toHub() { Snd.paper(); this.mode = 'hub'; this.cur = null; this.entry = []; if (this.nSolved() === this.nAll() && !this.solved.final && this._wasOpen !== 'final') { this._wasOpen = null; setTimeout(() => { if (this.mode === 'hub') this.open(this.FINAL); }, 1400); } this._wasOpen = null; },
     toast(m) { this.toastMsg = m; this.toastT = 2.8; },
-
-    // ---------- 투사지 ----------
-    foldOf() { return this.mode === 'hub' ? this.HUB.fold : (this.cur && !this.cur.final ? this.cur.fold : null); },
-    srcOf() { return this.mode === 'hub' ? this.HUB : this.cur; },
-    unsnap() { const s = this.sheet; s.snapped = false; s.a = 0; if (this.mode === 'hub') { s.x = 1030; s.y = 110; } else { s.x = CARD.x + CARD.w - 230; s.y = CARD.y + CARD.h - 200; } },
-    // 투사지 위 획을 world 좌표로
-    sheetWorld() { const s = this.sheet; return s.strokes.map(k => ({ pts: k.pts.map(([x, y]) => { const [ax, ay] = rot(x, y, s.a); return [s.x + ax, s.y + ay]; }) })); },
-    // 획 목록을 (x0,y0,x1,y1) 선분으로: 꺾인 획이 하나라도 있으면 모음이 아니다
-    segs(lines) { if (lines.some(l => l.pts.length !== 2)) return null; return lines.map(l => ({ x0: l.pts[0][0], y0: l.pts[0][1], x1: l.pts[1][0], y1: l.pts[1][1] })); },
-    // 획들이 어떤 모음인지 (없으면 null)
-    readVowel(lines0) { const lines = this.segs(lines0); if (!lines || !lines.length || lines.length > 2) return null; const len = l => Math.hypot(l.x1 - l.x0, l.y1 - l.y0); const ori = l => { const dx = Math.abs(l.x1 - l.x0), dy = Math.abs(l.y1 - l.y0); return dx > dy * 3 ? 'h' : dy > dx * 3 ? 'v' : null; };
-      const sorted = lines.slice().sort((a, b) => len(b) - len(a)); const L = sorted[0]; const lo = ori(L); if (len(L) < 90 || !lo) return null;
-      if (lines.length === 1) return lo === 'h' ? 'ㅡ' : 'ㅣ';
-      const S = sorted[1]; const so = ori(S); if (!so || so === lo || len(S) < 25 || len(S) > len(L) * 0.75) return null;
-      const mx = (L.x0 + L.x1) / 2, my = (L.y0 + L.y1) / 2; const ends = [[S.x0, S.y0], [S.x1, S.y1]];
-      // 짧은 획의 한쪽 끝이 긴 획의 가운데 근처에 닿아야 한다
-      const near = ends.map(([ex, ey]) => lo === 'v' ? (Math.abs(ex - mx) < 14 && Math.abs(ey - my) < len(L) * 0.22) : (Math.abs(ey - my) < 14 && Math.abs(ex - mx) < len(L) * 0.22));
-      const ti = near[0] ? 0 : near[1] ? 1 : -1; if (ti < 0) return null; const far = ends[1 - ti];
-      if (lo === 'v') return far[0] > mx ? 'ㅏ' : 'ㅓ'; return far[1] < my ? 'ㅗ' : 'ㅜ'; },
-    sheetVowel() { return this.sheet.snapped ? this.readVowel(this.sheetWorld()) : null; },
-    // 먹선 중 투사지 아래 있는 것
-    inkUnder(k) { const s = this.sheet; return k.pts.every(([x, y]) => { const [lx, ly] = rot(x - s.x, y - s.y, -s.a); return Math.abs(lx) < SW / 2 - 14 && Math.abs(ly) < SH / 2 - 14; }); },
-    hitInk(p) { const src = this.srcOf(); if (!src || !src.inkW) return null; for (const k of src.inkW) { for (let i = 0; i < k.pts.length - 1; i++) { if (distSeg(p, k.pts[i], k.pts[i + 1]) < 18) return k; } } return null; },
-    hitStroke(p) { const w = this.sheetWorld(); for (let i = 0; i < w.length; i++) { const l = w[i]; for (let j = 0; j < l.pts.length - 1; j++) if (distSeg(p, l.pts[j], l.pts[j + 1]) < 16) return i; } return -1; },
-    // 먹선 하나를 투사지에 베낀다 (local 좌표로 저장)
-    trace(k) { const s = this.sheet; if (s.strokes.length >= 2) { this.toast('투사지에 자리가 없다. 베낀 획을 누르면 지워진다'); Snd.wrong(); return; }
-      if (s.strokes.some(q => q.id === k.id)) { this.toast('이미 베낀 선이다'); return; }
-      const pts = k.pts.map(([x, y]) => rot(x - s.x, y - s.y, -s.a));
-      s.strokes.push({ pts, id: k.id }); Snd.trace(); this.toast('먹선을 베꼈다'); this.save(); },
-    eraseStroke(i) { const s = this.sheet; const k = s.strokes.splice(i, 1)[0]; s.marks.push(k); if (s.marks.length > 40) s.marks.shift(); Snd.erase(); this.toast('지웠다. 눌린 자국은 남는다'); this.save(); },
-
-    // ---------- 입력 ----------
     down(p) { this.pd = p;
       if (this.mode === 'title') { this.wantFull = this.touchDev;
         if (this.hasProgress() && Math.abs(p.x - (CARD.x + CARD.w / 2)) < 230 && Math.abs(p.y - 812) < 30) { if (this.resetAsk && this.t < this.resetAsk) { this.startFresh(); } else { this.resetAsk = this.t + 4; Snd.click(); } return; }
         this.resetAsk = 0; this.mode = 'hub'; Snd.paper(); return; }
-      if (this.mode === 'end') { if ((this.endT || 0) < 10.5) return; const cx0 = CARD.x + CARD.w / 2;
-        if (Math.abs(p.y - 815) < 36) { if (Math.abs(p.x - (cx0 - 190)) < 150) { this.startFresh(); return; } if (Math.abs(p.x - (cx0 + 190)) < 150) { this.toHub(); return; } } return; }
+      if (this.mode === 'end') { if ((this.endT || 0) < 6.5) return; const cx0 = CARD.x + CARD.w / 2;
+        if (Math.abs(p.y - 815) < 36) { if (Math.abs(p.x - (cx0 - 190)) < 150) { this.startFresh(); return; } if (Math.abs(p.x - (cx0 + 190)) < 150) { this.mode = 'hub'; return; } } return; }
       if (p.x > 1250) { this.stripDown(p); return; }
-      if (this.mode === 'puzzle' && Math.hypot(p.x - (CARD.x + 44), p.y - (CARD.y + 40)) < 30) { this.toHub(); return; }
-      if (this.mode === 'puzzle' && this.cur.final) { this.cur.down(this.cur.st, p, this); return; }
-      // 투사지: 위에 베낀 획을 누르면 지우고, 종이를 누르면 끈다
-      const s = this.sheet; const si = this.hitStroke(p); if (s.snapped && si >= 0 && !s.strokes[si].given) { this.eraseStroke(si); return; }
-      const [lx, ly] = rot(p.x - s.x, p.y - s.y, -s.a); const onSheet = Math.abs(lx) < SW / 2 && Math.abs(ly) < SH / 2;
-      // 투사지 아래 먹선을 누르면 베낀다 (투사지가 접힌 자국에 맞춰져 있을 때만)
-      if (onSheet && s.snapped) { const k = this.hitInk(p); if (k && this.inkUnder(k)) { this.trace(k); return; } }
-      if (onSheet) { this.drag = { dx: p.x - s.x, dy: p.y - s.y, sx: p.x, sy: p.y, moved: false }; s.snapped = false; s.a = 0; Snd.pick(); return; }
       if (this.mode === 'hub') { this.hubDown(p); return; }
-      if (this.mode === 'puzzle') { const pz = this.cur; if (pz.down) pz.down(pz.st, p, this); }
-    },
-    move(p) { this.hover = p; const d = this.drag; if (d) { const s = this.sheet; s.x = p.x - d.dx; s.y = p.y - d.dy; if (Math.hypot(p.x - d.sx, p.y - d.sy) > 6) { d.moved = true; Snd.scratch(2); } return; }
-      if (this.mode === 'puzzle' && this.cur.move) this.cur.move(this.cur.st, p, this); },
-    up(p) { const d = this.drag; if (d) { this.drag = null; const s = this.sheet; const f = this.foldOf();
-        if (f && Math.hypot(s.x - f.x, s.y - f.y) < 80) { s.x = f.x; s.y = f.y; s.a = f.a; s.snapped = true; Snd.snap(); }
-        else { s.x = clamp(s.x, CARD.x + 60, CARD.x + CARD.w - 60); s.y = clamp(s.y, CARD.y + 60, CARD.y + CARD.h - 60); if (d.moved) Snd.sheet(); } return; }
-      if (this.mode === 'puzzle' && this.cur.up) this.cur.up(this.cur.st, p, this); },
+      if (this.mode === 'puzzle') { if (Math.hypot(p.x - (CARD.x + 44), p.y - (CARD.y + 40)) < 30) { this.toHub(); return; } const pz = this.cur; if (pz.down) pz.down(pz.st, p, this); } },
+    move(p) { this.hover = p; if (this.mode === 'puzzle' && this.cur.move) this.cur.move(this.cur.st, p, this); },
+    up(p) { if (this.mode === 'puzzle' && this.cur.up) this.cur.up(this.cur.st, p, this); },
     padRect(i) { const cx = 1425, cy = 640, s = 76; const col = i % 3, row = Math.floor(i / 3); return { x: cx - s * 1.5 + col * s, y: cy - s * 1.5 + row * s, s }; },
     jungRect(i) { const cx = 1425, cy = 640, s = 76; const col = i % 3, row = Math.floor(i / 3); return { x: cx - s * 1.5 + col * s, y: cy - s + row * s, s }; },
     stripDown(p) {
       if (this.mode === 'hub' && this.hasProgress() && Math.abs(p.x - 1425) < 150 && Math.abs(p.y - 838) < 40) { if (this.resetAsk && this.t < this.resetAsk) this.startFresh(); else { this.resetAsk = this.t + 4; Snd.click(); } return; }
       if (Math.hypot(p.x - 1425, p.y - 70) < 34) { this.useHint(); return; }
-      if (this.mode !== 'puzzle' || this.cur.final) { if (this.mode === 'hub' && Math.hypot(p.x - 1425, p.y - 290) < 120) this.toast('사물을 눌러 보자'); return; }
+      if (this.mode !== 'puzzle' || this.cur.noPad) { if (this.mode === 'hub') this.toast('방 안의 사물을 눌러 보자'); return; }
       const stage = this.entry.length;
       if (stage === 1) { for (let i = 0; i < 6; i++) { const r = this.jungRect(i); if (inR(p, r)) { this.pad(JUNG[i]); return; } } }
       else { for (let i = 0; i < 9; i++) { const r = this.padRect(i); if (inR(p, r)) { this.pad(CHO[i]); return; } } if (stage === 2 && Math.abs(p.x - 1425) < 100 && Math.abs(p.y - 786) < 26) { this.pad(''); return; } }
-      if (p.y > 420 && p.y < 500 && this.entry.length) { this.entry.pop(); Snd.tap(); }
-    },
+      if (p.y > 420 && p.y < 500 && this.entry.length) { this.entry.pop(); Snd.tap(); } },
     pad(ch) { const pz = this.cur; if (this.solved[pz.id]) { this.toast('이미 찾은 글자다'); return; }
       const lu = this.lockUntil[pz.id] || 0; if (this.t < lu) { this.toast('종이가 번져 있다… ' + Math.ceil(lu - this.t) + '초'); Snd.wrong(); return; }
       Snd.pick(); this.entry.push(ch); if (this.entry.length < 3) return;
       const [c, j, g] = this.entry; const s = compose(c, j, g);
-      // 투사지 검증: 접힌 자국에 맞춰져 있고, 비친 획이 적은 모음과 같아야 한다
-      if (!this.sheet.snapped) { this.toast('투사지를 접힌 자국에 맞춰야 글자가 된다'); Snd.wrong(); this.entry = []; return; }
-      const sv = this.sheetVowel();
-      if (sv !== j || s !== pz.ans) this.fail(pz, sv == null ? '투사지의 획은 모음이 되지 않는다' : sv !== j ? '투사지에 비친 획과 다르다' : null);
-      else { this.solved[pz.id] = true; this.leaves += 3; this.save(); Snd.solved(); this.flash = 1; this.entry = []; setTimeout(() => { if (this.cur === pz) this.toHub(); }, 1800); }
-    },
+      if (s !== pz.ans) { this.fail(pz, '「' + s + '」는 아니다. 연필을 한 번 깎았다'); return; }
+      this.solved[pz.id] = true; this.leaves += 3; this.save(); Snd.solved(); this.flash = 1; this.entry = []; setTimeout(() => { if (this.cur === pz) this.toHub(); }, 1800); },
     fail(pz, msg) { this.wrongs[pz.id] = (this.wrongs[pz.id] || 0) + 1; this.leaves = Math.max(0, this.leaves - 1); this.shake = 0.5; Snd.wrong(); const w = this.wrongs[pz.id];
-      if (w % 3 === 0) { const sec = 20 * Math.pow(2, w / 3 - 1); this.lockUntil[pz.id] = this.t + Math.min(160, sec); this.toast('종이가 번졌다. 잠시 기다려야 한다'); } else this.toast(msg || '잎이 하나 떨어졌다');
+      if (w % 3 === 0) { const sec = 20 * Math.pow(2, w / 3 - 1); this.lockUntil[pz.id] = this.t + Math.min(160, sec); this.toast('종이가 번졌다. 잠시 기다려야 한다'); } else this.toast(msg || '연필을 한 번 깎았다');
       setTimeout(() => { this.entry = []; }, 380); this.save(); },
-    useHint() { if (this.mode !== 'puzzle') { this.toast('모래는 퍼즐 안에서만 흐른다'); return; } const pz = this.cur; const n = this.hintN[pz.id] || 0; const ready = Math.floor((this.puzT[pz.id] || 0) / 100);
+    useHint() { if (this.mode !== 'puzzle') { this.toast('모래는 퍼즐 안에서만 흐른다'); return; } const pz = this.cur; const n = this.hintN[pz.id] || 0; const ready = Math.floor((this.puzT[pz.id] || 0) / this.HINT_SEC);
       if (n >= pz.hints.length) { this.hintShow = 6; return; } if (ready <= n) { this.toast('모래가 아직 다 내려오지 않았다'); return; } this.hintN[pz.id] = n + 1; this.hintShow = 8; Snd.paper(); this.save(); },
-    hubDown(p) { const hs = this.hubSpots(); for (const s of hs) { if (Math.hypot(p.x - s.x, p.y - s.y) < s.r) { if (s.lamp) { this.night = !this.night; Snd.night(this.night); this.save(); return; } this.open(s.p); return; } } },
-    hubSpots() { const out = [{ x: this.HUB.lamp.x, y: this.HUB.lamp.y, r: 46, lamp: true }]; this.puzzles.forEach(p => { if (p.hub) out.push({ x: p.hub.x, y: p.hub.y, r: p.hub.r || 60, p }); }); return out; },
-
-    update(dt) { if (this.mode === 'puzzle') { this.puzT[this.cur.id] = (this.puzT[this.cur.id] || 0) + dt; if (this.cur.update) this.cur.update(this.cur.st, dt, this); }
+    hubDown(p) { if (this.nSolved() === this.nAll()) { this.open(this.FINAL); return; } for (const p2 of this.puzzles) { const h = p2.hub; if (Math.hypot(p.x - h.x, p.y - h.y) < (h.r || 90)) { this.open(p2); return; } } },
+    update(dt) { if (this.mode === 'end') this.endT = (this.endT || 0) + dt; if (this.mode === 'puzzle') { this.puzT[this.cur.id] = (this.puzT[this.cur.id] || 0) + dt; if (this.cur.update) this.cur.update(this.cur.st, dt, this); }
       this.toastT = Math.max(0, this.toastT - dt); this.shake = Math.max(0, this.shake - dt); this.flash = Math.max(0, this.flash - dt * 0.6); this.hintShow = Math.max(0, (this.hintShow || 0) - dt); },
-
-    // ---------- 그리기 ----------
     render() { const c = this.c; c.setTransform(this.scale, 0, 0, this.scale, 0, 0); c.fillStyle = '#0b0b0b'; c.fillRect(0, 0, W, H);
       if (this.mode === 'title') { this.drawTitle(c); return; }
       if (this.mode === 'end') { this.drawEnd(c); return; }
       const sx = this.shake > 0 ? Math.sin(this.t * 60) * 8 * this.shake : 0;
-      c.save(); c.translate(sx, 0); this.drawCardBase(c);
-      c.save(); c.clip(this.cardPath);
+      c.save(); c.translate(sx, 0); this.drawCardBase(c); c.save(); c.clip(this.cardPath);
       if (this.mode === 'hub') this.drawHub(c); else this.drawPuzzle(c);
-      c.restore(); c.restore();
-      this.drawStrip(c);
-      if (this.toastT > 0) { c.save(); c.globalAlpha = Math.min(1, this.toastT * 2); c.font = '34px "Nanum Pen Script", cursive'; c.textAlign = 'center'; c.fillStyle = '#1c1b19'; c.fillText(this.toastMsg, CARD.x + CARD.w / 2, CARD.y + CARD.h - 34); c.restore(); }
-    },
+      c.restore(); c.restore(); this.drawStrip(c);
+      if (this.toastT > 0) { c.save(); c.globalAlpha = Math.min(1, this.toastT * 2); c.font = '34px "Nanum Pen Script", cursive'; c.textAlign = 'center'; c.fillStyle = this.mode === 'puzzle' && this.cur.dark && this.cur.dark(this.cur.st) ? '#e8e4dc' : '#1c1b19'; c.fillText(this.toastMsg, CARD.x + CARD.w / 2, CARD.y + CARD.h - 34); c.restore(); } },
     drawCardBase(c) { if (!this.paperCard) { const cv = P.mk(W, H), x = cv.getContext('2d'); this.cardPath = P.card(x, CARD.x, CARD.y, CARD.w, CARD.h, 12); this.paperCard = cv; } c.drawImage(this.paperCard, 0, 0); },
     ink(c, cv, x, y, a) { c.save(); if (a != null) c.globalAlpha = a; c.drawImage(cv, x, y); c.restore(); },
-    // 먹선: 연필과 달리 새까맣고 흔들리지 않는다 (지워지지 않는 선)
-    drawInk(c, src) { if (!src || !src.inkW) return;
-      // 먹선이 적힌 꼬리표: 연필로 그린 작은 종이 조각
-      const groups = {}; src.inkW.forEach(k => { (groups[k.base] = groups[k.base] || []).push(k); });
-      for (const b in groups) { const pts = groups[b].flatMap(k => k.pts); const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); const x0 = Math.min(...xs) - 26, y0 = Math.min(...ys) - 26, w = Math.max(...xs) - Math.min(...xs) + 52, h = Math.max(...ys) - Math.min(...ys) + 52;
-        const tag = this.art('tag-' + b + '-' + Math.round(w) + 'x' + Math.round(h), w + 20, h + 20, (x, r) => { P.stroke(x, P.rectPts(10, 10, w, h), { r, w: 1.3, alpha: 0.55 }); P.ring(x, 22, 22, 4, 4, { r, w: 1.1 }); P.smudge(x, 10, 10 + h - 30, w, 30, { alpha: 0.1, seed: 5 }); }); this.ink(c, tag, x0 - 10, y0 - 10); }
-      c.save(); c.strokeStyle = '#0c0b0a'; c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = 5; c.globalAlpha = 0.92;
-      src.inkW.forEach(k => { c.beginPath(); k.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); }); c.restore(); },
-    // 접힌 자국: 연필로 그린 네모 귀퉁이와 주름
-    drawFold(c, f) { if (!f) return; const a = this.art('fold', 120, 120, (x, r) => { P.stroke(x, [[20, 100], [20, 20], [100, 20]], { r, w: 1.2, alpha: 0.45, passes: 1 }); P.stroke(x, [[20, 62], [62, 20]], { r, w: 1.6, alpha: 0.55 }); P.stroke(x, [[26, 66], [66, 26]], { r, w: 0.9, alpha: 0.3, passes: 1 }); P.smudge(x, 18, 18, 50, 50, { alpha: 0.12, seed: 8 }); });
-      const [cx, cy] = rot(-SW / 2, -SH / 2, f.a); c.save(); c.translate(f.x + cx, f.y + cy); c.rotate(rad(f.a)); c.globalAlpha = this.sheet.snapped ? 0.35 : 0.85; c.drawImage(a, -20, -20); c.restore(); },
-    // 투사지: 반투명 종이, 접힌 귀퉁이, 베낀 획(진한 연필), 지운 자국(아주 옅게)
-    drawSheet(c) { const s = this.sheet; const night = this.night && this.mode === 'puzzle' && !this.cur.final; c.save(); c.translate(s.x, s.y); c.rotate(rad(s.a));
-      c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = s.snapped ? 6 : 18; c.shadowOffsetY = s.snapped ? 2 : 8; c.fillStyle = night ? 'rgba(210,205,196,.55)' : 'rgba(236,232,224,.42)'; c.fillRect(-SW / 2, -SH / 2, SW, SH); c.shadowBlur = 0; c.shadowOffsetY = 0;
-      const tex = this.art('sheet-tex', SW, SH, (x, r) => { for (let i = 0; i < 500; i++) { x.globalAlpha = 0.05 + r() * 0.1; x.strokeStyle = r() < 0.5 ? '#fff' : '#9a958c'; x.lineWidth = 0.7; x.beginPath(); const sx = r() * SW, sy = r() * SH, an = r() * 6.28, l = 6 + r() * 20; x.moveTo(sx, sy); x.lineTo(sx + Math.cos(an) * l, sy + Math.sin(an) * l); x.stroke(); }
-        x.globalAlpha = 0.5; x.strokeStyle = '#7a756c'; x.lineWidth = 1; x.strokeRect(0.5, 0.5, SW - 1, SH - 1); x.beginPath(); x.moveTo(0, 42); x.lineTo(42, 0); x.stroke(); x.beginPath(); x.moveTo(0, 42); x.lineTo(42, 42); x.lineTo(42, 0); x.stroke(); }, { noGrain: true, still: true });
-      c.drawImage(tex, -SW / 2, -SH / 2);
-      // 지운 자국
-      const path = k => { c.beginPath(); k.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); };
-      c.strokeStyle = '#9d988f'; c.lineWidth = 2.5; c.lineCap = 'round'; c.lineJoin = 'round'; c.globalAlpha = 0.28; s.marks.forEach(k => { path(k); c.stroke(); });
-      // 베낀 획 (창빛에 뒤집히는 판이면 좌우 반전)
-      const flip = night && this.cur && this.cur.mirror && s.snapped; if (flip) c.scale(-1, 1);
-      c.globalAlpha = 0.9; c.strokeStyle = '#2a2826'; c.lineWidth = 4.2; s.strokes.forEach(k => { path(k); c.stroke(); c.globalAlpha = 0.5; c.lineWidth = 2; c.translate(-1.2, 1); path(k); c.stroke(); c.translate(1.2, -1); c.globalAlpha = 0.9; c.lineWidth = 4.2; });
-      c.restore(); },
-    drawPuzzle(c) { const pz = this.cur;
-      if (pz.final) { pz.draw(c, pz.st, this); }
-      else { pz.draw(c, pz.st, this); this.drawInk(c, pz); this.drawFold(c, pz.fold); this.drawNight(c, pz); this.drawSheet(c); }
-      const b = this.art('ui-back', 80, 80, (x, r) => { P.stroke(x, [[58, 40], [22, 40]], { r, w: 3 }); P.stroke(x, [[36, 26], [22, 40], [36, 54]], { r, w: 3 }); }); this.ink(c, b, CARD.x + 4, CARD.y);
-      const n = this.hintN[pz.id] || 0; if (n && this.hintShow > 0) { c.save(); c.globalAlpha = Math.min(1, this.hintShow); c.font = '32px "Nanum Pen Script", cursive'; c.fillStyle = '#2a2826'; c.textAlign = 'left'; pz.hints.slice(0, n).forEach((h, i) => c.fillText('· ' + h, CARD.x + 60, CARD.y + CARD.h - 40 - (n - 1 - i) * 36)); c.restore(); }
-      if (this.solved[pz.id] && !pz.final) { c.save(); c.globalAlpha = 0.9; const s = 110; const st = this.art('stamp-' + pz.id, s + 30, s + 30, (x, r) => syl(x, pz.ans, 14, 14, s, { r, w: 7, color: '#8a1f1f' }), { still: true }); this.ink(c, st, CARD.x + CARD.w - 160, CARD.y + 24); c.restore(); }
-      if (this.flash > 0) { c.save(); c.globalAlpha = this.flash * 0.5; c.fillStyle = '#fff'; c.fillRect(CARD.x, CARD.y, CARD.w, CARD.h); c.restore(); }
-    },
-    // 밤: 카드가 어두워지고, 판에 불빛(창·가로등)이 있으면 그 둘레만 밝다
-    drawNight(c, pz) { if (!this.night) return;
-      const ov = this.art('night-' + pz.id + (pz.light ? 'L' : ''), W, H, (x) => { x.fillStyle = 'rgba(24,26,34,.72)'; x.fillRect(CARD.x, CARD.y, CARD.w, CARD.h);
-        if (pz.light) { x.globalCompositeOperation = 'destination-out'; const g = x.createRadialGradient(pz.light.x, pz.light.y, 10, pz.light.x, pz.light.y, pz.light.r); g.addColorStop(0, 'rgba(0,0,0,.95)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(CARD.x, CARD.y, CARD.w, CARD.h); } }, { noGrain: true, still: true });
-      c.drawImage(ov, 0, 0); if (pz.nightDraw) pz.nightDraw(c, pz.st, this); },
-    drawHub(c) { this.hubArt(c); this.drawInk(c, this.HUB); this.drawFold(c, this.HUB.fold); if (this.night) { c.save(); c.fillStyle = 'rgba(28,30,38,.78)'; c.fillRect(CARD.x, CARD.y, CARD.w, CARD.h); c.restore(); this.puzzles.forEach(p => { if (p.hub && p.hub.night) p.hub.night(c, this); }); }
-      this.drawSheet(c); },
+    drawPuzzle(c) { const pz = this.cur; pz.draw(c, pz.st, this);
+      const dk = pz.dark && pz.dark(pz.st); const b = this.art('ui-back' + (dk ? 'w' : ''), 80, 80, (x, r) => { const o = { r, w: 3, color: dk ? INKW : P.INK }; P.stroke(x, [[58, 40], [22, 40]], o); P.stroke(x, [[36, 26], [22, 40], [36, 54]], o); }); this.ink(c, b, CARD.x + 4, CARD.y);
+      const n = this.hintN[pz.id] || 0; if (n && this.hintShow > 0) { c.save(); c.globalAlpha = Math.min(1, this.hintShow); c.font = '32px "Nanum Pen Script", cursive'; c.fillStyle = dk ? '#e8e4dc' : '#2a2826'; c.textAlign = 'left'; pz.hints.slice(0, n).forEach((h, i) => c.fillText('· ' + h, CARD.x + 60, CARD.y + CARD.h - 80 - (n - 1 - i) * 36)); c.restore(); }
+      if (this.solved[pz.id] && !pz.noPad) { c.save(); c.globalAlpha = 0.9; const s = 110; const st = this.art('stamp-' + pz.id, s + 30, s + 30, (x, r) => syl(x, pz.ans, 14, 14, s, { r, w: 7, color: '#8a1f1f' }), { still: true }); this.ink(c, st, CARD.x + CARD.w - 170, CARD.y + 24); c.restore(); }
+      if (this.flash > 0) { c.save(); c.globalAlpha = this.flash * 0.5; c.fillStyle = '#fff'; c.fillRect(CARD.x, CARD.y, CARD.w, CARD.h); c.restore(); } },
+    drawHub(c) { const base = this.art('hub-room', W, H, (x, r) => this.HUB.draw(x, r, this)); this.ink(c, base, 0, 0);
+      this.puzzles.forEach(p => { const h = p.hub, sv = !!this.solved[p.id]; const a = this.art('hub-' + p.id + (sv ? 's' : ''), h.w, h.h, (x, r) => h.draw(x, r, this), sv ? {} : { still: true });
+        this.ink(c, a, h.x - h.w / 2, h.y - h.h / 2, sv ? 1 : 0.32); if (sv) { const sm = this.art('hub-sm-' + p.id, h.w, h.h, (x, r) => P.smudge(x, 10, h.h * 0.7, h.w - 20, h.h * 0.25, { alpha: 0.18, seed: 5 }), { still: true }); this.ink(c, sm, h.x - h.w / 2, h.y - h.h / 2); } });
+      if (this.mode === 'end') return; c.save(); c.font = '30px "Nanum Pen Script", cursive'; c.fillStyle = '#3a3733'; c.textAlign = 'center'; c.globalAlpha = 0.7; c.fillText(this.nSolved() === this.nAll() ? '모든 그림이 완성됐다. 아무 곳이나 누르면 원고지가 펼쳐진다' : '흐린 밑그림을 눌러 그림 한 장을 연다. 그림 속 사물의 모양이 한 글자가 된다', CARD.x + CARD.w / 2, CARD.y + CARD.h - 34); c.restore(); },
     drawTitle(c) { this.drawCardBase(c); c.save(); c.clip(this.cardPath);
       const fg = this.fontsOk ? 1 : 0, cx0 = CARD.x + CARD.w / 2;
       const a = this.art('title' + fg, W, H, (x, r) => {
         const bw = 250, y0 = 190; for (let i = 0; i < 3; i++) { const bx = cx0 - bw * 1.5 + i * bw;
           P.stroke(x, P.rectPts(bx, y0, bw, bw), { r, w: 1.1, alpha: 0.35, passes: 1 });
-          P.stroke(x, [[bx + bw / 2, y0 - 12], [bx + bw / 2, y0 + bw + 12]], { r, w: 0.9, alpha: 0.22, passes: 1 }); P.stroke(x, [[bx - 12, y0 + bw / 2], [bx + bw + 12, y0 + bw / 2]], { r, w: 0.9, alpha: 0.22, passes: 1 });
-          P.stroke(x, [[bx, y0], [bx + bw, y0 + bw]], { r, w: 0.8, alpha: 0.13, passes: 1 }); P.stroke(x, [[bx + bw, y0], [bx, y0 + bw]], { r, w: 0.8, alpha: 0.13, passes: 1 }); }
+          P.stroke(x, [[bx + bw / 2, y0 - 12], [bx + bw / 2, y0 + bw + 12]], { r, w: 0.9, alpha: 0.22, passes: 1 }); P.stroke(x, [[bx - 12, y0 + bw / 2], [bx + bw + 12, y0 + bw / 2]], { r, w: 0.9, alpha: 0.22, passes: 1 }); }
         const m = P.mk(W, H), mx = m.getContext('2d'); mx.font = '700 230px "Gowun Batang", serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('밑그림', cx0, y0 + bw / 2 + 8);
         const f = P.mk(W, H), fx = f.getContext('2d'); const all = new Path2D(); all.rect(cx0 - 420, y0 - 20, 840, bw + 40);
         P.hatch(fx, all, [cx0 - 420, y0 - 20, 840, bw + 40], { spacing: 4.5, alpha: 0.8, sketch: true, angle: -0.95, seed: 3, w: 1.6 });
-        P.hatch(fx, all, [cx0 - 420, y0 - 20, 840, bw + 40], { spacing: 9, alpha: 0.35, sketch: true, angle: 0.6, seed: 9, w: 1.2 });
         fx.globalCompositeOperation = 'destination-in'; fx.drawImage(m, 0, 0); x.drawImage(f, 0, 0);
-        x.save(); x.font = '700 230px "Gowun Batang", serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.strokeStyle = '#26241f'; x.lineJoin = 'round';
-        for (let k = 0; k < 3; k++) { x.globalAlpha = 0.28 - k * 0.07; x.lineWidth = 1.1 - k * 0.2; x.strokeText('밑그림', cx0 + (r() - 0.5) * 3, y0 + bw / 2 + 8 + (r() - 0.5) * 3); } x.restore();
-        // 둘째 장: 원고지 오른쪽 아래 작은 칸에 「二」
         const bx = cx0 + bw * 1.5 + 30, by = y0 + bw - 70; P.stroke(x, P.rectPts(bx, by, 70, 70), { r, w: 1, alpha: 0.35, passes: 1 }); P.stroke(x, [[bx + 14, by + 24], [bx + 56, by + 24]], { r, w: 3.2, alpha: 0.85 }); P.stroke(x, [[bx + 10, by + 50], [bx + 60, by + 50]], { r, w: 3.4, alpha: 0.85 });
-        // 투사지 한 장이 비스듬히 놓여 있고, 그 위에 획 하나
-        x.save(); x.translate(cx0 - 120, 640); x.rotate(-0.08); x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(-190, -70, 380, 150); x.strokeStyle = '#7a756c'; x.globalAlpha = 0.6; x.lineWidth = 1; x.strokeRect(-190, -70, 380, 150); x.beginPath(); x.moveTo(-190, -30); x.lineTo(-150, -70); x.stroke(); x.restore();
-        P.stroke(x, [[cx0 - 40, 590], [cx0 - 44, 690]], { r, w: 4, alpha: 0.7 });
-        const px = cx0 + 170, py = 612, L = 330, ang = -0.18, ca = Math.cos(ang), sa = Math.sin(ang), pt = (u, v) => [px + u * ca - v * sa, py + u * sa + v * ca];
-        const body = [pt(0, -11), pt(L, -11), pt(L, 11), pt(0, 11)]; P.charcoal(x, P.polyPath(body), [px - 10, py - 80, L + 20, 120], { r, base: 0.18, pts: body });
-        P.stroke(x, [pt(0, 0), pt(L, 0)], { r, w: 0.8, alpha: 0.4, passes: 1 });
-        const tip = [pt(0, -11), pt(-46, 0), pt(0, 11)]; P.stroke(x, tip.concat([tip[0]]), { r, w: 1.6 }); const lead = [pt(-30, -4), pt(-46, 0), pt(-30, 4)]; P.charcoal(x, P.polyPath(lead), [px - 60, py - 30, 40, 40], { r, base: 0.9, pts: lead });
-        const fer = [pt(L, -12), pt(L + 34, -12), pt(L + 34, 12), pt(L, 12)]; P.hatch(x, P.polyPath(fer), [px + L - 20, py - 80, 70, 120], { spacing: 4, alpha: 0.7, angle: 0.2, seed: 2 }); P.stroke(x, fer.concat([fer[0]]), { r, w: 1.4 });
-        m.width = 0; f.width = 0;
-      }); this.ink(c, a, 0, 0);
-      c.font = '30px "Gowun Batang", serif'; c.textAlign = 'center'; c.fillStyle = '#4a4640'; c.fillText('둘째 장 — 투사지에 비친 열다섯 장의 그림', cx0, 510);
-      c.font = '38px "Nanum Pen Script", cursive'; c.fillStyle = '#55514b'; c.globalAlpha = 0.65 + 0.35 * Math.sin(this.t * 2.2); c.fillText(this.hasProgress() ? '종이를 눌러 이어서 하기' : '종이를 눌러 시작', cx0, 760); c.globalAlpha = 1;
-      if (this.hasProgress()) { const ask = this.resetAsk && this.t < this.resetAsk; c.font = '26px "Gowun Batang", serif'; c.fillStyle = ask ? '#8a1f1f' : '#6b665e';
-        const tx = ask ? '한 번 더 누르면 찾은 글자가 모두 지워져요' : '처음부터 새로 하기'; c.fillText(tx, cx0, 820); const tw = c.measureText(tx).width;
-        c.strokeStyle = c.fillStyle; c.globalAlpha = 0.5; c.lineWidth = 1.2; c.beginPath(); c.moveTo(cx0 - tw / 2, 828); c.lineTo(cx0 + tw / 2, 828); c.stroke(); }
+        m.width = 0; f.width = 0; }); this.ink(c, a, 0, 0);
+      c.font = '30px "Gowun Batang", serif'; c.textAlign = 'center'; c.fillStyle = '#4a4640'; c.fillText('둘째 장 — 빛과 그림자로 읽는 열한 장의 그림', cx0, 520);
+      c.font = '28px "Gowun Batang", serif'; c.fillStyle = '#6b665e'; c.fillText('초성 · 모음 · 받침을 차례로 골라 한 글자를 적는다', cx0, 570);
+      c.font = '38px "Nanum Pen Script", cursive'; c.fillStyle = '#55514b'; c.globalAlpha = 0.65 + 0.35 * Math.sin(this.t * 2.2); c.fillText(this.hasProgress() ? '종이를 눌러 이어서 하기' : '종이를 눌러 시작', cx0, 720); c.globalAlpha = 1;
+      if (this.hasProgress()) { const ask = this.resetAsk && this.t < this.resetAsk; c.font = '26px "Gowun Batang", serif'; c.fillStyle = ask ? '#8a1f1f' : '#6b665e'; const tx = ask ? '한 번 더 누르면 찾은 글자가 모두 지워져요' : '처음부터 새로 하기'; c.fillText(tx, cx0, 820); }
+      c.restore(); this.drawStrip(c); },
+    ending() { this.mode = 'end'; this.done = true; this.save(); this.endT = 0; },
+    drawEnd(c) { const t = this.endT || 0; this.drawCardBase(c); c.save(); c.clip(this.cardPath); const cx0 = CARD.x + CARD.w / 2;
+      // 방이 어두워지고 촛불 하나가 켜진다. 그림자는 모두 불의 반대쪽으로 눕는다
+      this.drawHub(c); const dk = clamp((t - 0.5) / 2.5, 0, 1); c.save(); c.fillStyle = 'rgba(14,14,18,' + (0.86 * dk) + ')'; c.fillRect(CARD.x, CARD.y, CARD.w, CARD.h); c.restore();
+      const lk = clamp((t - 2.5) / 1.5, 0, 1); if (lk > 0) { const L = [cx0, 470]; c.save(); c.globalCompositeOperation = 'screen'; const g = c.createRadialGradient(L[0], L[1], 5, L[0], L[1], 520 * lk); g.addColorStop(0, 'rgba(255,238,200,' + 0.55 * lk + ')'); g.addColorStop(1, 'rgba(255,238,200,0)'); c.fillStyle = g; c.fillRect(CARD.x, CARD.y, CARD.w, CARD.h); c.restore();
+        // 사물마다 제 모습 그대로의 그림자를, 촛불 반대쪽으로 밀어 벽에 드리운다
+        this.puzzles.forEach(p => { const h = p.hub; const a = this.cache['hub-' + p.id + 's#0'] || this.cache['hub-' + p.id + '#0']; if (!a) return; const dx = h.x - L[0], dy = h.y - L[1], d = Math.hypot(dx, dy) || 1; const len = (18 + d * 0.12) * lk;
+          c.save(); c.globalAlpha = 0.5 * lk; c.filter = 'brightness(0) blur(3px)'; c.drawImage(a, h.x - h.w / 2 + dx / d * len, h.y - h.h / 2 + dy / d * len); c.restore(); });
+        c.save(); c.fillStyle = '#e8e2d2'; c.globalAlpha = lk; const f = 1 + 0.08 * Math.sin(t * 17); c.beginPath(); c.moveTo(L[0], L[1] - 30 * f); c.quadraticCurveTo(L[0] + 9, L[1] - 6, L[0], L[1] + 6); c.quadraticCurveTo(L[0] - 9, L[1] - 6, L[0], L[1] - 30 * f); c.fill(); c.fillRect(L[0] - 7, L[1] + 8, 14, 70); c.restore(); }
+      const k2 = clamp((t - 4.5) / 2, 0, 1); if (k2 > 0) { c.save(); c.globalAlpha = k2; const band = c.createLinearGradient(0, 150, 0, 350); band.addColorStop(0, 'rgba(10,10,12,0)'); band.addColorStop(0.3, 'rgba(10,10,12,.72)'); band.addColorStop(0.7, 'rgba(10,10,12,.72)'); band.addColorStop(1, 'rgba(10,10,12,0)'); c.fillStyle = band; c.fillRect(CARD.x, 150, CARD.w, 200); c.fillStyle = 'rgba(10,10,12,.6)'; c.fillRect(CARD.x, 640, CARD.w, 60); c.fillRect(CARD.x, 790, CARD.w, 60); c.textAlign = 'center'; c.fillStyle = '#efe9dc'; c.font = '70px "Nanum Pen Script", cursive'; c.fillText('모든 그림자는 불을 등진다', cx0, 250);
+        c.font = '28px "Gowun Batang", serif'; c.fillStyle = '#bdb6a8'; c.fillText('빛이 있는 쪽을 등지고 선 것이, 처음부터 그려져 있던 밑그림이었다.', cx0, 310);
+        const wr = this.cuts(); c.fillText('연필을 ' + wr + '번 깎았다 · 본 힌트 ' + Object.values(this.hintN).reduce((a, b) => a + b, 0) + '개', cx0, 680); c.restore(); }
+      const k3 = clamp((t - 6.5) / 1, 0, 1); if (k3 > 0) { c.save(); c.globalAlpha = k3; c.textAlign = 'center'; c.font = '38px "Nanum Pen Script", cursive'; c.fillStyle = '#efe9dc'; [['처음부터 다시', cx0 - 190], ['방으로 돌아가기', cx0 + 190]].forEach(([tx, bx]) => c.fillText(tx, bx, 826)); c.restore(); }
       c.restore(); this.drawStrip(c); },
     drawStrip(c) {
-      const pz = this.mode === 'puzzle' ? this.cur : null; const ready = pz ? clamp(((this.puzT[pz.id] || 0) % 100) / 100, 0, 1) : 0; const avail = pz ? Math.floor((this.puzT[pz.id] || 0) / 100) > (this.hintN[pz.id] || 0) && (this.hintN[pz.id] || 0) < pz.hints.length : false;
-      const hg = this.art('hg', 80, 90, (x, r) => { P.stroke(x, [[20, 12], [60, 12]], { r, w: 2.4, color: INKW }); P.stroke(x, [[20, 78], [60, 78]], { r, w: 2.4, color: INKW }); P.stroke(x, [[24, 12], [24, 22], [40, 45], [24, 68], [24, 78]], { r, w: 2, color: INKW }); P.stroke(x, [[56, 12], [56, 22], [40, 45], [56, 68], [56, 78]], { r, w: 2, color: INKW }); }, { noGrain: true });
-      c.save(); c.globalAlpha = pz ? 0.95 : 0.35; c.drawImage(hg, 1385, 25); c.fillStyle = INKW; c.globalAlpha = pz ? (avail ? 0.6 + 0.4 * Math.sin(this.t * 4) : 0.8) : 0.3;
-      const fillTop = avail ? 1 : ready; c.beginPath(); c.moveTo(1425 - 12 * (1 - fillTop), 50 + 18 * fillTop); c.lineTo(1425, 70); c.lineTo(1425 + 12 * (1 - fillTop), 50 + 18 * fillTop); c.closePath(); if (!avail) c.fill(); c.beginPath(); c.moveTo(1413, 101); c.lineTo(1437, 101); c.lineTo(1425 + 14 * (avail ? 1 : ready), 101 - 22 * (avail ? 1 : ready)); c.lineTo(1425 - 14 * (avail ? 1 : ready), 101 - 22 * (avail ? 1 : ready)); c.closePath(); c.fill(); c.restore();
-      this.drawTree(c, 1425, 400);
+      const pz = this.mode === 'puzzle' ? this.cur : null; const HS = this.HINT_SEC; const ready = pz ? clamp(((this.puzT[pz.id] || 0) % HS) / HS, 0, 1) : 0; const avail = pz ? Math.floor((this.puzT[pz.id] || 0) / HS) > (this.hintN[pz.id] || 0) && (this.hintN[pz.id] || 0) < pz.hints.length : false;
+      // 힌트: 흐린 밑그림 네모가 연필 빗금으로 조금씩 채워진다. 다 차면 누를 수 있다
+      const fillK = pz ? (avail ? 1 : ready) : 0; const nStep = Math.floor(fillK * 12);
+      const hb = this.art('hintbox-' + nStep, 90, 90, (x, r) => { P.stroke(x, P.rectPts(12, 12, 66, 66), { r, w: 1.6, color: INKW, alpha: 0.8 }); const pth = new Path2D(); pth.rect(14, 14, 62, 62);
+        x.save(); x.clip(pth); for (let i = 0; i < nStep; i++) { const d = -60 + i * 11; P.stroke(x, [[14 + d, 78], [14 + d + 70, 8]], { r, w: 1.6, color: INKW, alpha: 0.75, passes: 1 }); } x.restore(); }, { noGrain: true });
+      c.save(); c.globalAlpha = !pz ? 0.3 : avail ? 0.7 + 0.3 * Math.sin(this.t * 4) : 0.85; c.drawImage(hb, 1380, 25); c.restore();
+      if (pz) { c.save(); c.fillStyle = INKW; c.globalAlpha = 0.55; c.font = '20px "Gowun Batang", serif'; c.textAlign = 'center'; c.fillText(avail ? '눌러서 힌트' : '힌트 ' + (this.hintN[pz.id] || 0) + '/' + pz.hints.length, 1425, 132); c.restore(); }
+      this.drawSheetStrip(c);
       if (this.mode === 'hub' && this.hasProgress()) { const ask = this.resetAsk && this.t < this.resetAsk; c.save(); c.textAlign = 'center'; c.fillStyle = ask ? '#f0a0a0' : INKW; c.globalAlpha = ask ? 1 : 0.55; c.font = '24px "Gowun Batang", serif';
         if (ask) { c.fillText('한 번 더 누르면', 1425, 826); c.fillText('모두 지워져요', 1425, 856); } else { c.fillText('처음부터 새로', 1425, 845); c.strokeStyle = INKW; c.lineWidth = 1; c.beginPath(); c.moveTo(1360, 853); c.lineTo(1490, 853); c.stroke(); } c.restore(); }
-      if (pz && !pz.final) { this.drawPads(c, pz); }
+      if (pz && !pz.noPad) { this.drawPads(c, pz); }
       else { c.save(); c.globalAlpha = 0.22; for (let i = 0; i < 9; i++) { const rr = this.padRect(i); const g = this.art('j-' + CHO[i] + '-p', rr.s, rr.s, (x, r) => jamo(x, CHO[i], rr.s * 0.18, rr.s * 0.14, rr.s * 0.64, { r, w: 3.4, color: INKW }), { noGrain: true }); c.drawImage(g, rr.x, rr.y); } c.restore(); }
     },
     // 음절판: 적은 칸 셋(초성·중성·종성)과, 차례에 맞는 자판
@@ -464,38 +352,19 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
       else { for (let i = 0; i < 9; i++) drawKey(this.padRect(i), CHO[i], 'j-' + CHO[i] + '-p');
         if (stage === 2) { c.save(); c.globalAlpha = locked ? 0.2 : 0.85; c.fillStyle = INKW; c.font = '26px "Gowun Batang", serif'; c.textAlign = 'center'; c.fillText('받침 없음', 1425, 795); c.strokeStyle = INKW; c.lineWidth = 1; c.beginPath(); c.moveTo(1365, 804); c.lineTo(1485, 804); c.stroke(); c.restore(); } }
     },
-    drawTree(c, x, y) { const n = this.nSolved(); const lv = Math.min(this.leaves, 44);
-      const tr = this.art('tree-' + n + '-' + lv, 320, 330, (cx, r) => { const rr = P.rng(77); const leaves = [];
-        const br = (x0, y0, a, len, d) => { if (d <= 0) { leaves.push([x0, y0]); return; } const x1 = x0 + Math.cos(a) * len, y1 = y0 + Math.sin(a) * len; P.stroke(cx, [[x0, y0], [(x0 + x1) / 2 + (rr() - 0.5) * 3, (y0 + y1) / 2], [x1, y1]], { r, w: Math.max(1.1, d * 1.15), color: INKW, passes: 2 }); br(x1, y1, a - 0.42 - rr() * 0.2, len * 0.74, d - 1); br(x1, y1, a + 0.42 + rr() * 0.2, len * 0.74, d - 1); };
-        for (let i = 0; i < 4; i++) P.stroke(cx, [[160, 300], [160 + (i - 1.5) * 18, 316], [160 + (i - 1.5) * 34, 326]], { r, w: 1.6, color: INKW, passes: 1 });
-        const depth = 1 + Math.min(6, Math.ceil(n * 0.5)); P.stroke(cx, [[160, 305], [158, 250], [160, 200 - n * 4.5]], { r, w: 5 + n * 0.25, color: INKW }); br(160, 200 - n * 4.5, -Math.PI / 2, 40 + n * 2.2, depth);
-        for (let i = 0; i < Math.min(lv, leaves.length); i++) { const [lx, ly] = leaves[(i * 7) % leaves.length]; cx.fillStyle = INKW; cx.beginPath(); cx.ellipse(lx, ly - 3, 4, 6, rr() - 0.5, 0, 6.28); cx.fill(); }
-      }, { noGrain: true });
-      c.save(); c.globalAlpha = 0.95; c.drawImage(tr, x - 160, y - 300); c.restore(); },
-
-    // ---------- 허브 방 ----------
-    hubArt(c) { const base = this.art('hub-room', W, H, (x, r) => this.HUB.draw(x, r, this)); this.ink(c, base, 0, 0);
-      this.puzzles.forEach(p => { if (!p.hub) return; const k = 'hub-' + p.id + (this.solved[p.id] ? '-s' : ''); const hb = p.hub; const a = this.art(k, hb.w || 180, hb.h || 180, (x, r) => hb.draw(x, r, !!this.solved[p.id], this)); this.ink(c, a, hb.x - (hb.w || 180) / 2, hb.y - (hb.h || 180) / 2);
-        if (this.solved[p.id] && !p.final) { const t = this.art('tag-' + p.id, 70, 70, (x, r) => syl(x, p.ans, 6, 6, 56, { r, w: 3, color: '#3a3733' }), { still: true }); this.ink(c, t, hb.x + (hb.tagDx || 40), hb.y + (hb.tagDy || -90), 0.8); } });
-      const L = this.HUB.lamp; const lamp = this.art('hub-lamp' + (this.night ? 'n' : ''), 160, 220, (x, r) => { P.stroke(x, [[80, 0], [80, 70]], { r, w: 1.6 }); const sh = [[40, 110], [120, 110], [100, 70], [60, 70]]; P.charcoal(x, P.polyPath(sh), [40, 70, 80, 40], { r, pts: sh }); P.ring(x, 80, 124, 14, 14, { r, w: 1.8 }); });
-      this.ink(c, lamp, L.x - 80, L.y - 150);
-      if (!this.night) { c.save(); const g = c.createRadialGradient(L.x, L.y - 20, 10, L.x, L.y + 200, 700); g.addColorStop(0, 'rgba(255,250,235,.28)'); g.addColorStop(1, 'rgba(255,250,235,0)'); c.fillStyle = g; c.globalCompositeOperation = 'screen'; c.fillRect(CARD.x, CARD.y, CARD.w, CARD.h); c.restore(); }
-    },
-
-    ending() { this.mode = 'end'; this.done = true; this.save(); this.endT = 0; this.unsnap(); },
-    drawEnd(c) { this.endT = (this.endT || 0) + 1 / 60; const t = this.endT; this.drawCardBase(c); c.save(); c.clip(this.cardPath);
-      const fade = clamp((t - 1.5) / 4, 0, 1); if (fade < 1) { c.save(); c.globalAlpha = 1 - fade; this.hubArt(c); c.restore(); }
-      // 투사지 한 장만 남고, 지웠던 자국까지 모든 획이 빛에 비친다
-      const k = clamp((t - 4) / 2.5, 0, 1); if (k > 0) { const e = k * k * (3 - 2 * k); const cx0 = CARD.x + CARD.w / 2; c.save(); c.globalAlpha = e; c.translate(cx0, 330); c.scale(1.25, 1.25);
-        c.fillStyle = 'rgba(248,246,240,.5)'; c.fillRect(-SW / 2, -SH / 2, SW, SH); c.strokeStyle = '#7a756c'; c.lineWidth = 0.8; c.strokeRect(-SW / 2, -SH / 2, SW, SH);
-        const all = this.sheet.marks.concat(this.sheet.strokes); c.lineCap = 'round'; c.lineJoin = 'round'; all.forEach((m, i) => { const kk = clamp((t - 4.5 - i * 0.12) / 0.6, 0, 1); if (kk <= 0) return; c.globalAlpha = e * (0.25 + 0.55 * kk); c.strokeStyle = '#2a2826'; c.lineWidth = 2.6; c.beginPath(); const n = m.pts.length - 1; m.pts.forEach(([x, y], j) => { const f = clamp(kk * n - (j - 1), 0, 1); if (j === 0) c.moveTo(x, y); else { const [px, py] = m.pts[j - 1]; c.lineTo(px + (x - px) * f, py + (y - py) * f); } }); c.stroke(); }); c.restore(); }
-      const k2 = clamp((t - 8) / 2, 0, 1); if (k2 > 0) { c.save(); c.globalAlpha = k2; c.textAlign = 'center'; c.fillStyle = '#1c1b19';
-        c.font = '62px "Nanum Pen Script", cursive'; c.fillText('지우고 남은 선이 그리던 그림이다', CARD.x + CARD.w / 2, 640);
-        c.font = '34px "Nanum Pen Script", cursive'; c.fillStyle = '#3a3733'; c.fillText('투사지에 남은 자국은 처음부터 한 장의 밑그림이었다.', CARD.x + CARD.w / 2, 700);
-        const wr = Object.values(this.wrongs || {}).reduce((a, b) => a + b, 0); c.font = '26px "Gowun Batang", serif'; c.fillStyle = '#55514b'; c.fillText('열다섯 장 모두 · 번진 획 ' + wr + '개', CARD.x + CARD.w / 2, 760); c.restore(); }
-      const k3 = clamp((t - 10.5) / 1, 0, 1); if (k3 > 0) { const cx0 = CARD.x + CARD.w / 2; c.save(); c.globalAlpha = k3; c.textAlign = 'center'; c.font = '38px "Nanum Pen Script", cursive'; c.fillStyle = '#1c1b19'; c.strokeStyle = '#1c1b19'; c.lineWidth = 1.4;
-        [['처음부터 다시', cx0 - 190], ['방으로 돌아가기', cx0 + 190]].forEach(([tx, bx]) => { c.fillText(tx, bx, 826); const tw = c.measureText(tx).width; c.globalAlpha = k3 * 0.55; c.beginPath(); c.moveTo(bx - tw / 2 - 6, 836); c.lineTo(bx + tw / 2 + 6, 833); c.stroke(); c.globalAlpha = k3; }); c.restore(); }
-      c.restore(); this.drawStrip(c); },
+    // 원고지: 푼 글자가 한 칸씩 적힌다. 연필: 틀릴 때마다 한 번 깎여 짧아진다
+    PENCIL_MAX: 12,
+    drawSheetStrip(c) { const n = this.nAll(), cols = Math.min(6, n), rows = Math.ceil(n / cols), cs = 46, x0 = 1425 - cols * cs / 2, y0 = 160;
+      const grid = this.art('grid-' + n, cols * cs + 8, rows * cs + 8, (x, r) => { for (let i = 0; i < n; i++) { const gx = 4 + (i % cols) * cs, gy = 4 + Math.floor(i / cols) * cs; P.stroke(x, P.rectPts(gx, gy, cs, cs), { r, w: 1, color: INKW, alpha: 0.45, passes: 1 }); } }, { noGrain: true, still: true });
+      c.drawImage(grid, x0 - 4, y0 - 4);
+      const ns = this.nSolved(); const hz = this.art('cellhatch', cs, cs, (x, r) => { const pth = new Path2D(); pth.rect(5, 5, cs - 10, cs - 10); P.hatch(x, pth, [5, 5, cs - 10, cs - 10], { spacing: 6, alpha: 0.7, angle: -0.9, seed: 3, w: 1.3 }); x.globalCompositeOperation = 'source-in'; x.fillStyle = INKW; x.fillRect(0, 0, cs, cs); }, { noGrain: true, still: true });
+      for (let i = 0; i < ns; i++) c.drawImage(hz, x0 + (i % cols) * cs, y0 + Math.floor(i / cols) * cs);
+      const cut = Math.min(this.PENCIL_MAX, this.cuts()); const L = 250 - cut * 15, py = y0 + rows * cs + 50;
+      const pc = this.art('pencil-' + cut, 300, 40, (x, r) => { const x1 = 20 + L; P.stroke(x, [[20, 12], [x1, 12]], { r, w: 1.6, color: INKW }); P.stroke(x, [[20, 28], [x1, 28]], { r, w: 1.6, color: INKW }); P.stroke(x, [[x1, 12], [x1, 28]], { r, w: 1.6, color: INKW });
+        P.stroke(x, [[20, 12], [2, 20], [20, 28]], { r, w: 1.6, color: INKW }); x.fillStyle = INKW; x.beginPath(); x.moveTo(2, 20); x.lineTo(9, 17); x.lineTo(9, 23); x.closePath(); x.fill();
+        for (let i = 0; i < cut; i++) { x.globalAlpha = 0.5; P.stroke(x, [[x1 + 8 + i * 3, 30], [x1 + 12 + i * 3, 36]], { r, w: 1, color: INKW, passes: 1 }); } }, { noGrain: true });
+      c.save(); c.globalAlpha = 0.9; c.drawImage(pc, 1425 - 150, py); c.restore(); },
+    cuts() { return Object.values(this.wrongs || {}).reduce((a, b) => a + b, 0); },
   };
   const inR = (p, r) => p.x > r.x && p.x < r.x + r.s && p.y > r.y && p.y < r.y + r.s;
   const distSeg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; const L2 = dx * dx + dy * dy || 1; let t = ((p.x - a[0]) * dx + (p.y - a[1]) * dy) / L2; t = clamp(t, 0, 1); return Math.hypot(p.x - a[0] - dx * t, p.y - a[1] - dy * t); };
@@ -504,251 +373,331 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
 })(window);
 </script>
 <script>
-// 밑그림2 — 열다섯 판. 각 판: 허브의 사물(hub), 초성 사물·종성 사물·들러리, 모음 자리(vowelAt)와 접힌 자국 각도(angle),
-// 다음 판을 위해 베낄 먹선(ink: for=목표 판, u=투사지 local 자리), 낮·밤(need/light), 힌트.
+// 밑그림2 — 열한 장. 규칙: 그림 속 사물의 실제 모양이 곧 글자. 따로 외울 약속이 없다.
+// 1막 사물 그대로(모·그·을) · 2막 장면의 목적이 상태를 고른다(는·든·다) · 3막 그림자, 실제 투영 계산(자·등·림·불·진)
+// 마지막: 열한 글자를 띄어쓰기대로 나눈 원고지(2·4·2·3)에 늘어놓아 「모든 그림자는 불을 등진다」
 (function (G) {
-  const P = G.P, C = G.CARD, clamp = G.clamp, JS = G.JS;
-  const inR = (p, x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h;
-  // 굵은 목탄 획: 사물의 몸통
-  const bold = (x, r, pts, w) => { P.stroke(x, pts, { r, w, passes: 3, alpha: 0.82, jit: 2.4, step: 5 }); P.stroke(x, pts, { r, w: w * 0.3, passes: 1, alpha: 0.55, color: '#0e0d0c', jit: 1 }); };
-  // 자음 모양의 사물 몸통 (px,py 왼쪽 위, s 크기)
-  const jobj = (x, r, ch, px, py, s, w) => { const d = JS[ch]; w = w || s * 0.1; if (d === 'O') { const a0 = r() * 6.28; bold(x, r, P.circlePts(px + s / 2, py + s / 2, s * 0.34, s * 0.36, a0, a0 + Math.PI * 2.06), w); return; } d.forEach(st => bold(x, r, st.map(([a, b]) => [px + a * s, py + b * s]), w)); };
+  const P = G.P, C = G.CARD, clamp = G.clamp, rad = d => d * Math.PI / 180, JS = G.JS;
+  const bold = (x, r, pts, w) => { P.stroke(x, pts, { r, w, passes: 3, alpha: 0.85, jit: 2.2, step: 5 }); P.stroke(x, pts, { r, w: w * 0.3, passes: 1, alpha: 0.5, color: '#0e0d0c', jit: 1 }); };
   const line = (x, r, pts, o) => P.stroke(x, pts, Object.assign({ r, w: 1.8 }, o));
-  const soft = (x, r, ch, px, py, s) => { const d = JS[ch]; if (d === 'O') { P.ring(x, px + s / 2, py + s / 2, s * 0.32, s * 0.34, { r, w: s * 0.05, alpha: 0.35, passes: 1 }); return; } d.forEach(st => P.stroke(x, st.map(([a, b]) => [px + a * s, py + b * s]), { r, w: s * 0.05, alpha: 0.35, passes: 1 })); };
-  const O = { x: 520, y: 380 }; // 초성 사물의 기본 자리(중심)
-
-  // ---------- 사물 그리기 (0..s 상자, 왼쪽 위 기준) ----------
-  const ICON = {
-    bottle(x, r, s) { // 유리병: 목은 연필, 두꺼운 밑바닥이 ㅇ
-      line(x, r, [[s * 0.4, s * 0.02], [s * 0.4, s * 0.16], [s * 0.26, s * 0.3], [s * 0.24, s * 0.62]], { w: 1.6 }); line(x, r, [[s * 0.6, s * 0.02], [s * 0.6, s * 0.16], [s * 0.74, s * 0.3], [s * 0.76, s * 0.62]], { w: 1.6 }); P.ring(x, s * 0.5, s * 0.02, s * 0.1, s * 0.03, { r, w: 1.4 });
-      jobj(x, r, 'ㅇ', s * 0.14, s * 0.4, s * 0.72, s * 0.07); const gp = new Path2D(); gp.rect(s * 0.26, s * 0.2, s * 0.48, s * 0.45); P.hatch(x, gp, [s * 0.26, s * 0.2, s * 0.48, s * 0.45], { spacing: 10, alpha: 0.14, sketch: true, angle: -1.25, seed: 3 }); },
-    cork(x, r, s) { const p = [[s * 0.2, s * 0.2], [s * 0.8, s * 0.2], [s * 0.82, s * 0.82], [s * 0.18, s * 0.82]]; P.charcoal(x, P.polyPath(p), [0, 0, s, s], { r, pts: p, base: 0.5 }); },
-    drawer(x, r, s) { // 서랍: 옆에서 본 빼낸 서랍이 ㄷ, 손잡이 점
-      jobj(x, r, 'ㄷ', 0, 0, s, s * 0.09); line(x, r, [[s * 0.3, s * 0.32], [s * 0.78, s * 0.32]], { w: 1.2, alpha: 0.4 }); line(x, r, [[s * 0.3, s * 0.68], [s * 0.78, s * 0.68]], { w: 1.2, alpha: 0.4 }); x.fillStyle = '#1d1c1a'; x.globalAlpha = 0.9; x.beginPath(); x.arc(s * 0.09, s * 0.5, s * 0.05, 0, 6.28); x.fill(); x.globalAlpha = 1; },
-    frame(x, r, s) { // 액자: 연필 틀, 위·오른쪽 테두리가 굵어 ㄱ
-      line(x, r, P.rectPts(s * 0.16, s * 0.2, s * 0.66, s * 0.66), { w: 1.6 }); line(x, r, P.rectPts(s * 0.24, s * 0.28, s * 0.5, s * 0.5), { w: 1, alpha: 0.5 }); jobj(x, r, 'ㄱ', 0, 0, s, s * 0.09);
-      const gp = new Path2D(); gp.rect(s * 0.25, s * 0.29, s * 0.48, s * 0.48); P.hatch(x, gp, [s * 0.25, s * 0.29, s * 0.48, s * 0.48], { spacing: 9, alpha: 0.12, sketch: true, angle: -0.8, seed: 5 }); },
-    yarn(x, r, s, st) { // 실타래: 공 모양 + 풀린 실. 당긴 횟수에 따라 ㅅ → ㅈ → ㅊ꼴
-      const k = (st && st.pull) || 0; P.ring(x, s * 0.28, s * 0.3, s * 0.2, s * 0.19, { r, w: 1.8 }); const gp = new Path2D(); gp.ellipse(s * 0.28, s * 0.3, s * 0.19, s * 0.18, 0, 0, 6.28); P.hatch(x, gp, [s * 0.08, s * 0.1, s * 0.4, s * 0.4], { spacing: 6, alpha: 0.4, angle: 0.5, seed: 8 }); P.hatch(x, gp, [s * 0.08, s * 0.1, s * 0.4, s * 0.4], { spacing: 8, alpha: 0.25, angle: -0.9, seed: 9 });
-      const w = s * 0.08; bold(x, r, [[s * 0.5, s * 0.36], [s * 0.2, s * 0.96]], w); bold(x, r, [[s * 0.45, s * 0.6], [s * 0.86, s * 0.96]], w);
-      if (k >= 1) bold(x, r, [[s * 0.18, s * 0.4], [s * 0.82, s * 0.4]], w); if (k >= 2) bold(x, r, [[s * 0.5, s * 0.2], [s * 0.5, s * 0.36]], w * 0.8); if (k === 0) line(x, r, [[s * 0.46, s * 0.3], [s * 0.6, s * 0.2], [s * 0.9, s * 0.16]], { w: 1.4 }); },
-    candle(x, r, s) { // 촛대: 초와 받침이 ㄴ, 불꽃은 연필
-      jobj(x, r, 'ㄴ', 0, 0, s, s * 0.1); line(x, r, [[s * 0.2, s * 0.14], [s * 0.2, s * 0.02], [s * 0.26, s * 0.0], [s * 0.3, s * 0.1], [s * 0.24, s * 0.16]], { w: 1.2 }); line(x, r, [[s * 0.1, s * 0.86], [s * 0.94, s * 0.86]], { w: 1.2, alpha: 0.5 }); },
-    wax(x, r, s) { jobj(x, r, 'ㅁ', 0, 0, s, s * 0.08); x.fillStyle = '#2a2826'; x.globalAlpha = 0.5; for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(s * (0.3 + r() * 0.4), s * (0.3 + r() * 0.4), s * 0.03, 0, 6.28); x.fill(); } x.globalAlpha = 1; },
-    match(x, r, s) { jobj(x, r, 'ㅅ', 0, 0, s, s * 0.06); x.fillStyle = '#1d1c1a'; x.beginPath(); x.arc(s * 0.52, s * 0.15, s * 0.06, 0, 6.28); x.fill(); },
-    book(x, r, s) { // 책: 세워 둔 책의 등과 윗면이 ㄱ, 낱장은 연필
-      jobj(x, r, 'ㄱ', 0, 0, s, s * 0.1); for (let i = 0; i < 6; i++) line(x, r, [[s * 0.2, s * (0.3 + i * 0.09)], [s * 0.72, s * (0.3 + i * 0.09)]], { w: 1, alpha: 0.35, passes: 1 }); line(x, r, [[s * 0.16, s * 0.2], [s * 0.16, s * 0.86], [s * 0.78, s * 0.86]], { w: 1.4, alpha: 0.6 }); },
-    ribbon(x, r, s) { soft(x, r, 'ㄹ', 0, 0, s); },
-    glasses(x, r, s) { // 안경: 접은 다리가 ㅅ, 알은 연필 (양옆)
-      P.ring(x, s * 0.16, s * 0.5, s * 0.14, s * 0.14, { r, w: 1.8 }); P.ring(x, s * 0.84, s * 0.5, s * 0.14, s * 0.14, { r, w: 1.8 }); jobj(x, r, 'ㅅ', s * 0.18, s * 0.06, s * 0.64, s * 0.07); },
-    lensmark(x, r, s) { soft(x, r, 'ㄴ', 0, 0, s); const gp = new Path2D(); gp.rect(s * 0.2, s * 0.2, s * 0.66, s * 0.62); P.hatch(x, gp, [s * 0.2, s * 0.2, s * 0.66, s * 0.62], { spacing: 7, alpha: 0.18, sketch: true, seed: 4 }); },
-    ladder(x, r, s, st) { // 사다리: 천이 가린 자리에 따라 (위) ㄹ · (가운데) ㄷ꼴 · (아래) ㄱ꼴. 천을 위로 걷으면 여분 가로대가 가려진다
-      const k = st ? st.cloth : 1; line(x, r, [[s * 0.18, s * -0.34], [s * 0.18, s * 0.98]], { w: 2.2 }); line(x, r, [[s * 0.84, s * -0.34], [s * 0.84, s * 0.98]], { w: 2.2 });
-      jobj(x, r, 'ㄹ', 0, 0, s, s * 0.09); bold(x, r, [[s * 0.18, s * -0.16], [s * 0.82, s * -0.16]], s * 0.09);
-      const cy = k === 1 ? s * -0.36 : k === 0 ? s * 0.28 : s * 0.62; const cl = [[s * 0.05, cy], [s * 0.97, cy + s * 0.03], [s * 0.95, cy + s * 0.34], [s * 0.05, cy + s * 0.31]]; P.charcoal(x, P.polyPath(cl), [0, cy, s, s * 0.36], { r, pts: cl, base: 0.92, color: '#e0dcd3' }); P.hatch(x, P.polyPath(cl), [0, cy, s, s * 0.36], { spacing: 6, alpha: 0.5, angle: 0.3, seed: 7 }); },
-    umbrella(x, r, s) { // 우산: 접힌 몸통이 ㄷ, 손잡이 고리는 연필 ㄱ
-      jobj(x, r, 'ㄷ', 0, 0, s, s * 0.1); line(x, r, [[s * 0.84, s * 0.2], [s * 0.84, s * 0.02], [s * 0.66, s * -0.04]], { w: 1.8 }); for (let i = 0; i < 4; i++) line(x, r, [[s * 0.28, s * (0.3 + i * 0.13)], [s * 0.7, s * (0.32 + i * 0.13)]], { w: 1, alpha: 0.3, passes: 1 }); },
-    stand(x, r, s) { jobj(x, r, 'ㄴ', 0, 0, s, s * 0.07); },
-    bucket(x, r, s) { const b = [[s * 0.2, s * 0.24], [s * 0.8, s * 0.24], [s * 0.72, s * 0.9], [s * 0.28, s * 0.9]]; line(x, r, b.concat([b[0]]), { w: 2 }); P.ring(x, s * 0.5, s * 0.24, s * 0.3, s * 0.07, { r, w: 1.6 }); line(x, r, [[s * 0.22, s * 0.26], [s * 0.5, s * 0.02], [s * 0.78, s * 0.26]], { w: 1.6 }); },
-    mirror(x, r, s) { P.ring(x, s * 0.5, s * 0.5, s * 0.38, s * 0.46, { r, w: 2.2 }); P.ring(x, s * 0.5, s * 0.5, s * 0.33, s * 0.41, { r, w: 1, alpha: 0.45 }); line(x, r, [[s * 0.36, s * 0.22], [s * 0.3, s * 0.5]], { w: 1.2, alpha: 0.4 }); },
-    comb(x, r, s) { jobj(x, r, 'ㄴ', 0, 0, s, s * 0.07); for (let i = 0; i < 7; i++) line(x, r, [[s * (0.3 + i * 0.08), s * 0.8], [s * (0.3 + i * 0.08), s * 0.62]], { w: 1, alpha: 0.5, passes: 1 }); },
-    bulb(x, r, s) { P.ring(x, s * 0.5, s * 0.42, s * 0.28, s * 0.3, { r, w: 1.8 }); line(x, r, [[s * 0.4, s * 0.68], [s * 0.4, s * 0.86], [s * 0.6, s * 0.86], [s * 0.6, s * 0.68]], { w: 1.6 }); line(x, r, [[s * 0.44, s * 0.48], [s * 0.5, s * 0.36], [s * 0.56, s * 0.48]], { w: 1.2 }); },
-    cup(x, r, s) { const b = [[s * 0.18, s * 0.3], [s * 0.62, s * 0.3], [s * 0.58, s * 0.76], [s * 0.22, s * 0.76]]; line(x, r, b.concat([b[0]]), { w: 2 }); P.ring(x, s * 0.4, s * 0.3, s * 0.22, s * 0.06, { r, w: 1.4 }); jobj(x, r, 'ㄱ', s * 0.5, s * 0.22, s * 0.5, s * 0.09); },
-    saucer(x, r, s) { P.ring(x, s * 0.5, s * 0.5, s * 0.46, s * 0.14, { r, w: 1.8 }); P.ring(x, s * 0.5, s * 0.5, s * 0.24, s * 0.07, { r, w: 1, alpha: 0.5 }); },
-    cat(x, r, s) { // 고양이: 몸을 만 몸통이 ㄹ, 귀와 감은 눈은 연필
-      jobj(x, r, 'ㄹ', 0, 0, s, s * 0.12); x.fillStyle = '#1d1c1a'; [[s * 0.2, s * 0.1], [s * 0.34, s * 0.1]].forEach(([ex, ey]) => { x.beginPath(); x.moveTo(ex, ey + 4); x.lineTo(ex + s * 0.05, ey - s * 0.1); x.lineTo(ex + s * 0.1, ey + 4); x.closePath(); x.fill(); });
-      x.strokeStyle = '#e6e2da'; x.lineWidth = 1.6; x.globalAlpha = 0.9; [[s * 0.26, s * 0.16], [s * 0.36, s * 0.16]].forEach(([ex, ey]) => { x.beginPath(); x.arc(ex, ey, s * 0.03, 0.15 * Math.PI, 0.85 * Math.PI); x.stroke(); }); x.globalAlpha = 1; },
-    tail(x, r, s) { jobj(x, r, 'ㅁ', 0, 0, s, s * 0.09); },
-    cat2(x, r, s) { x.save(); x.translate(s, s); x.rotate(Math.PI); ICON.cat(x, r, s); x.restore(); },
-  };
-  const icon = (name, x, r, px, py, s, st) => { x.save(); x.translate(px, py); ICON[name](x, r, s, st); x.restore(); };
-  const HUBSZ = 150;
-  const hubOf = (name, hx, hy, opt) => { opt = opt || {}; const sz = opt.s || HUBSZ; return Object.assign({ x: hx, y: hy, w: sz + 40, h: sz + 40 + (opt.dy || 0), r: sz * 0.45, draw(x, r, solved, G) { icon(name, x, r, 20, 20 + (opt.dy || 0), sz); } }, opt); };
-
-  // ---------- 판 만들기 ----------
-  // spec: id, ans, icon(초성 사물), jong {icon, dx, dy}, decoys [{icon, dx, dy, s}], side(모음이 옆인지), angle, ink, src, need, light, mirror, hub, hints, extra(c,st,G)
-  const mk = spec => { const side = 'ㅏㅓㅣ'.includes(G.decompose(spec.ans)[1]); const ox = spec.ox || O.x, oy = spec.oy || O.y; const S = 220;
-    const p = {
-      id: spec.id, ans: spec.ans, angle: spec.angle || 0, src: spec.src || 'prev', ink: spec.ink || [], need: spec.need || null, light: spec.light || null, mirror: !!spec.mirror, hints: spec.hints, hub: spec.hub,
-      vowelAt: spec.vowelAt || (side ? [ox + 240, oy] : [ox, oy + 190]), obj: { x: ox, y: oy, s: S },
-      init(st) { Object.assign(st, spec.st || {}); },
-      draw(c, st, G) {
-        const key = 'sc-' + spec.id + (spec.stKey ? spec.stKey(st) : '') + (G.night ? 'n' : 'd');
-        const a = G.art(key, G.W, G.H, (x, r) => {
-          if (spec.room) spec.room(x, r, st); // 벽·바닥 등 배경
-          if (!spec.hideObj || !spec.hideObj(st, G)) icon(spec.icon, x, r, ox - S / 2, oy - S / 2, S, st);
-          if (spec.jong) { const j = spec.jong; const s = j.s || 150; icon(j.icon, x, r, ox + (j.dx == null ? (side ? 80 : 0) : j.dx) - s / 2, oy + (j.dy == null ? 320 : j.dy) - s / 2, s, st); }
-          (spec.decoys || []).forEach(d => { const s = d.s || 130; icon(d.icon, x, r, ox + d.dx - s / 2, oy + d.dy - s / 2, s, st); });
-          if (spec.extra) spec.extra(x, r, st, G);
-        }); G.ink(c, a, 0, 0);
-        if (spec.over) spec.over(c, st, G);
-      },
-      nightDraw: spec.nightDraw, down: spec.down, spec,
-    };
-    return p; };
-
-  // 공통 배경: 바닥선과 옅은 벽 그늘
-  const room = (x, r) => { P.stroke(x, [[C.x + 30, 760], [C.x + C.w - 30, 752]], { r, w: 2.2 }); P.smudge(x, C.x + 10, 640, C.w - 20, 120, { alpha: 0.14, seed: 2 }); };
-  const shelf = (x, r, y) => { const sh = [[C.x + 60, y], [C.x + C.w - 60, y - 4], [C.x + C.w - 60, y + 14], [C.x + 60, y + 18]]; P.charcoal(x, P.polyPath(sh), [C.x + 60, y - 4, C.w - 120, 22], { r, pts: sh }); };
+  const FLOOR = 760;
+  const floor = (x, r) => { P.stroke(x, [[C.x + 30, FLOOR], [C.x + C.w - 30, FLOOR - 6]], { r, w: 2 }); P.smudge(x, C.x + 10, FLOOR - 100, C.w - 20, 110, { alpha: 0.12, seed: 2 }); };
+  const slab = (x, r, x0, x1, y, h) => { const tb = [[x0, y], [x1, y - 3], [x1, y + h], [x0, y + h + 3]]; P.charcoal(x, P.polyPath(tb), [x0, y - 3, x1 - x0, h + 6], { r, pts: tb, base: 0.5 }); };
+  const near = (p, q, d) => Math.hypot(p.x - q[0], p.y - q[1]) < d;
+  const icons = {}; // 방에 그릴 작은 그림: id → (x, r, solved) 그리기, 카드 좌표계 상자
+  const reg = (spec, icon) => { G.reg(spec); icons[spec.id] = icon; };
 
   // =====================================================================
-  // 1막 — 초성과 중성. 투사지에 이미 획 하나(ㅣ)가 있다.
-  // =====================================================================
-  G.reg(mk({ id: 'p1', ans: '이', icon: 'bottle', hub: hubOf('bottle', 170, 200, { s: 120, tagDy: -110 }),
-    decoys: [{ icon: 'cork', dx: -230, dy: -40, s: 90 }],
-    ink: [{ v: 'ㅏ', u: [-10, -115], for: 'p2' }, { v: 'ㅡ', u: [0, 118], rot: 0 }, { v: 'ㄱ', u: [138, 40], rot: 0, L: 100 }],
-    room: (x, r) => { room(x, r); shelf(x, r, 524); },
-    hints: ['병의 두꺼운 밑바닥을 보라. 코르크는 옆에 있다.', '투사지의 접힌 귀퉁이를 그림의 접힌 자국에 맞춰라.', '투사지에 이미 그어진 획 하나가 이 글자의 모음이다.'] }));
-
-  G.reg(mk({ id: 'p2', ans: '다', icon: 'drawer', angle: 90, hub: hubOf('drawer', 150, 650, { s: 120 }),
-    ink: [{ v: 'ㅗ', u: [130, -20], for: 'p3' }, { v: 'ㅏ', u: [-130, -60], rot: 0 }, { v: 'ㅣ', u: [-130, 95], rot: 0 }],
-    room: (x, r) => { room(x, r); line(x, r, [[C.x + 200, 250], [C.x + 200, 760]], { w: 1.4, alpha: 0.4 }); line(x, r, [[C.x + 200, 250], [880, 250]], { w: 1.4, alpha: 0.4 }); line(x, r, [[880, 250], [880, 760]], { w: 1.4, alpha: 0.4 }); },
-    hints: ['빼낸 서랍을 옆에서 보면 한 글자다.', '이번엔 접힌 자국이 돌아가 있다. 투사지도 따라 돈다.', '앞 판에서 베낀 획이 돌아가면 다른 모음이 된다.'] }));
-
-  G.reg(mk({ id: 'p3', ans: '고', icon: 'frame', hub: hubOf('frame', 300, 110, { s: 120, tagDx: 60, tagDy: 40 }),
-    ink: [{ v: 'ㅣ', u: [-60, -120], for: 'p4' }, { v: 'ㅡ', u: [-110, 110], rot: 0 }, { v: 'ㅗ', u: [110, 120], rot: 0 }],
-    extra: (x, r) => { soft(x, r, 'ㄴ', 470, 300, 110); line(x, r, [[520, 140], [520, 270]], { w: 1.2, alpha: 0.4 }); P.ring(x, 520, 140, 5, 5, { r, w: 1.4 }); },
-    room: (x, r) => { room(x, r); },
-    hints: ['액자의 굵은 테는 두 변뿐이다. 유리에 비친 것은 거울상이다.', '모음이 아래에 오는 글자다.', '못과 끈은 먹으로 그려져 있다.'] }));
-
-  G.reg(mk({ id: 'p4', ans: '지', icon: 'yarn', hub: hubOf('yarn', 300, 700, { s: 110 }), st: { pull: 0 }, stKey: st => st.pull,
-    ink: [{ v: 'ㅏ', u: [-100, 110], for: 'p5' }, { v: 'ㅏ', u: [110, 115], rot: 0 }, { v: 'ㅡ', u: [120, -110], rot: 0 }],
-    room: (x, r) => { room(x, r); },
-    down(st, p, G) { if (Math.hypot(p.x - 520, p.y - 380) < 130) { st.pull = (st.pull + 1) % 3; G.Snd.scratch(6); G.toast(['실을 감았다', '실을 한 번 당겼다', '실을 두 번 당겼다'][st.pull]); } },
-    hints: ['실 끝을 당겨 보라. 당길 때마다 실이 풀린다.', '한 번이면 한 글자, 두 번이면 글자가 아니다.', '얼레의 먹선은 다음 판의 몫이다.'] }));
-
-  // =====================================================================
-  // 2막 — 받침. 둘째 사물은 첫째 사물 아래에 있다.
-  // =====================================================================
-  G.reg(mk({ id: 'p5', ans: '남', icon: 'candle', oy: 330, angle: 180, hub: hubOf('candle', 410, 200, { s: 110, tagDy: -110 }),
-    jong: { icon: 'wax', dx: 60, dy: 330, s: 140 }, decoys: [{ icon: 'match', dx: -230, dy: 40, s: 110 }],
-    ink: [{ v: 'ㅡ', u: [0, -110], for: 'p6' }, { v: 'ㅣ', u: [-130, -110], rot: 0 }, { v: 'ㅏ', u: [130, -80], rot: 0 }],
-    room: (x, r) => { room(x, r); },
-    hints: ['초와 받침이 한 글자. 성냥은 옆이지 아래가 아니다.', '초 아래 굳은 촛농이 받침이다.', '투사지가 거꾸로 붙는다. 앞 판에서 본 ㅓ는 여기서 ㅏ다.'] }));
-
-  G.reg(mk({ id: 'p6', ans: '그', icon: 'book', hub: hubOf('book', 720, 530, { s: 100 }),
-    decoys: [{ icon: 'ribbon', dx: 250, dy: 40, s: 120 }],
-    ink: [{ v: 'ㅓ', u: [130, -115], for: 'p7' }, { v: 'ㅏ', u: [-120, 0], rot: 0 }, { v: 'ㅡ', u: [0, 118], rot: 0 }],
-    room: (x, r) => { room(x, r); shelf(x, r, 600); },
-    hints: ['세워 둔 책의 등과 윗면. 책갈피는 옆에 있다.', '받침이 없는 글자.', '제목은 먹으로 쓰였다.'] }));
-
-  G.reg(mk({ id: 'p7', ans: '선', icon: 'glasses', oy: 330, hub: hubOf('glasses', 540, 210, { s: 110, tagDy: -110 }),
-    jong: { icon: 'lensmark', dx: 120, dy: 350, s: 150 },
-    ink: [{ v: 'ㅣ', u: [125, 100], for: 'p8' }, { v: 'ㅏ', u: [-20, 90], rot: 0 }, { v: 'ㅣ', u: [-125, 105], rot: 0 }],
-    room: (x, r) => { room(x, r); },
-    hints: ['접은 안경다리가 첫 글자. 알 두 개는 양옆에 있다.', '안경을 벗은 자리에 남은 자국이 받침이다.', '가로 먹선 하나가 다음 판에서 세로가 된다.'] }));
-
-  G.reg(mk({ id: 'p8', ans: '리', icon: 'ladder', angle: 270, hub: hubOf('ladder', 300, 460, { s: 140, dy: 50, tagDx: 60, tagDy: -140 }), st: { cloth: 0 }, stKey: st => st.cloth,
-    ink: [{ v: 'ㅓ', u: [-40, -110], for: 'p9' }, { v: 'ㅏ', u: [-10, 118], rot: 0 }, { v: 'ㅗ', u: [-130, 30], rot: 0 }],
-    room: (x, r) => { room(x, r); },
-    down(st, p, G) { if (Math.hypot(p.x - 520, p.y - 360) < 170) { st.cloth = (st.cloth + 1) % 3; G.Snd.paper(); G.toast(['천을 가운데로 내렸다', '천을 위로 걷었다', '천을 아래로 내렸다'][st.cloth]); } },
-    hints: ['사다리에 걸친 천을 눌러 옮겨 보라.', '가로대가 세 개만 보일 때 글자가 된다.', '접힌 자국이 옆으로 누워 있다. 투사지도 눕는다.'] }));
-
-  G.reg(mk({ id: 'p9', ans: '던', icon: 'umbrella', oy: 330, hub: hubOf('umbrella', 1160, 640, { s: 110, tagDx: -120 }),
-    jong: { icon: 'stand', dx: 20, dy: 340, s: 150 },
-    ink: [{ v: 'ㅜ', u: [-110, 115], for: 'p10' }, { v: 'ㅗ', u: [110, 115], rot: 0 }, { v: 'ㅡ', u: [120, -100], rot: 0 }],
-    room: (x, r) => { room(x, r); },
-    hints: ['접힌 우산의 몸통이 첫 글자. 손잡이 고리는 위에 있다.', '우산꽂이가 받침이다.', '우산살 먹선 둘 중 하나만 다음 판의 모음이다.'] }));
-
-  // =====================================================================
-  // 3막 — 밤. 전등을 끄면 창빛과 가로등만 남는다.
-  // =====================================================================
-  G.reg(mk({ id: 'p10', ans: '우', icon: 'bucket', need: 'night', light: { x: 520, y: 380, r: 300 }, hub: hubOf('bucket', 1050, 665, { s: 110, tagDx: -120 }),
-    ink: [{ v: 'ㅡ', u: [120, -100], for: 'p11' }, { v: 'ㅣ', u: [0, 112], rot: 0 }, { v: 'ㅏ', u: [125, 110], rot: 0 }],
-    room: (x, r) => { room(x, r); line(x, r, P.rectPts(760, 120, 300, 220), { w: 1.6, alpha: 0.5 }); line(x, r, [[760, 230], [1060, 230]], { w: 1, alpha: 0.4 }); },
-    nightDraw(c, st, G) { const a = G.art('p10-light', 300, 300, (x, r) => { P.ring(x, 150, 150, 84, 88, { r, w: 14, color: '#f2efe6', alpha: 0.85, passes: 2 }); }, { noGrain: true }); c.save(); c.globalCompositeOperation = 'screen'; c.drawImage(a, 520 - 150, 380 - 150); c.restore(); },
-    hints: ['낮에는 그냥 물통이다. 방의 전등을 꺼 보라.', '창밖 가로등이 물통 옆면에 무엇을 비추는가.', '손잡이는 먹선이다.'] }));
-
-  G.reg(mk({ id: 'p11', ans: '은', icon: 'mirror', oy: 330, need: 'night', mirror: true, light: { x: 520, y: 420, r: 340 }, hub: hubOf('mirror', 780, 160, { s: 120, tagDx: 60, tagDy: 50 }),
-    jong: { icon: 'comb', dx: 0, dy: 360, s: 150 },
-    room: (x, r) => { room(x, r); line(x, r, P.rectPts(280, 150, 500, 460), { w: 1.8, alpha: 0.6 }); line(x, r, [[530, 150], [530, 610]], { w: 1.2, alpha: 0.4 }); line(x, r, [[280, 380], [780, 380]], { w: 1.2, alpha: 0.4 }); },
-    nightDraw(c, st, G) { const a = G.art('p11-moon', 260, 260, (x, r) => { P.ring(x, 130, 130, 54, 58, { r, w: 12, color: '#f2efe6', alpha: 0.85, passes: 2 }); }, { noGrain: true }); c.save(); c.globalCompositeOperation = 'screen'; c.drawImage(a, 520 - 130, 330 - 130); c.restore(); },
-    hints: ['밤에만 거울에 비치는 것이 있다.', '거울 아래 빗이 받침이다.', '창에 댄 투사지는 뒤집혀 보인다. 뒤집혀도 같은 획만 남는다.'] }));
-
-  G.reg(mk({ id: 'p12', ans: '이', icon: 'bulb', angle: 90, src: 'hub', oy: 440, need: 'day', hub: hubOf('bulb', 940, 530, { s: 90 }),
-    hideObj: () => true,
-    ink: [{ v: 'ㅡ', u: [110, -120], for: 'p13' }, { v: 'ㅏ', u: [110, 120], rot: 0 }],
-    room: (x, r) => { room(x, r); line(x, r, [[520, 40], [520, 240]], { w: 1.4 }); icon('bulb', x, r, 520 - 60, 235, 120); },
-    extra: (x, r, st, G) => { if (!G.night) { const a0 = r() * 6.28; P.charcoal(x, P.polyPath(P.circlePts(520, 440, 78, 80)), [430, 350, 180, 180], { r, base: 0.5, soft: 8 }); const inner = P.circlePts(520, 440, 50, 52); x.save(); x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#000'; x.fill(P.polyPath(inner)); x.restore(); } },
-    hints: ['전구 자체는 글자가 아니다. 전구가 벽에 남기는 것을 보라.', '앞 판에는 베낄 먹선이 없다. 방으로 돌아가 보라.', '창틀 윗선을 베끼면 여기서 세로가 된다.'] }));
-
-  G.reg(mk({ id: 'p13', ans: '그', icon: 'cup', hub: hubOf('cup', 830, 530, { s: 100 }),
-    decoys: [{ icon: 'saucer', dx: 0, dy: 330, s: 200 }],
-    room: (x, r) => { room(x, r); shelf(x, r, 520); },
-    hints: ['찻잔의 손잡이. 받침 접시는 잔과 붙어 있지 않다.', '받침이 없는 글자.', '전선은 세로 먹선이다. 돌아간 투사지가 눕히면 가로가 된다.'] }));
-
-  G.reg(mk({ id: 'p14', ans: '림', icon: 'cat', oy: 330, src: 'hub', hub: hubOf('cat', 450, 690, { s: 120 }),
-    jong: { icon: 'tail', dx: 90, dy: 310, s: 130 }, decoys: [{ icon: 'cat2', dx: -260, dy: 60, s: 130 }],
-    room: (x, r) => { room(x, r); },
-    hints: ['몸을 만 고양이는 둘. 거꾸로 누운 쪽은 글자가 아니다.', '말린 꼬리가 받침이다.', '이 판의 모음은 앞 판이 아니라 방의 창살에서 온다.'] }));
-
-  // =====================================================================
-  // 허브 방: 선반·탁자·창(창살 먹선)·접힌 자국
-  // =====================================================================
-  G.HUB = {
-    lamp: { x: 560, y: 130 }, foldAt: [1040, 395], foldAngle: 0,
-    ink: [{ v: 'ㅣ', u: [60, 50], for: 'p14' }, { v: 'ㅣ', u: [-40, -115], for: 'p12' }, { v: 'ㄱ', u: [-60, 60], rot: 0, L: 110 }],
-    draw(x, r, G) {
-      P.smudge(x, C.x + 10, 600, C.w - 20, 150, { alpha: 0.2, seed: 2 });
-      P.stroke(x, [[C.x + 30, 740], [C.x + C.w - 30, 732]], { r, w: 2.6 });
-      const wall = new Path2D(); wall.rect(C.x, C.y, C.w, 700); P.hatch(x, wall, [C.x, C.y, C.w, 700], { angle: Math.PI / 2, spacing: 26, alpha: 0.07, sketch: true, seed: 4 });
-      // 선반
-      const sh = [[100, 262], [620, 256], [620, 274], [100, 280]]; P.charcoal(x, P.polyPath(sh), [100, 256, 520, 24], { r, pts: sh });
-      P.stroke(x, [[140, 278], [160, 312], [160, 278]], { r, w: 2 }); P.stroke(x, [[570, 274], [590, 308], [590, 274]], { r, w: 2 });
-      // 탁자
-      const tb = [[660, 580], [1000, 574], [1000, 600], [660, 606]]; P.charcoal(x, P.polyPath(tb), [660, 574, 340, 32], { r, pts: tb });
-      [[680, 604], [970, 600]].forEach(([lx, ly]) => { const leg = [[lx, ly], [lx + 14, ly], [lx + 12, 740], [lx + 2, 742]]; P.charcoal(x, P.polyPath(leg), [lx, ly, 20, 740 - ly], { r, pts: leg }); });
-      // 창: 틀은 연필, 창살은 먹 (드로잉은 engine.drawInk)
-      P.stroke(x, P.rectPts(930, 270, 220, 260), { r, w: 2.2 }); P.stroke(x, P.rectPts(942, 282, 196, 236), { r, w: 1, alpha: 0.4 });
-      const gp = new Path2D(); gp.rect(942, 282, 196, 236); P.hatch(x, gp, [942, 282, 196, 236], { spacing: 12, alpha: 0.1, sketch: true, angle: -1.2, seed: 6 });
-      // 벽의 빈자리(15판): 옅은 네모
-      P.stroke(x, P.rectPts(400, 330, 320, 200), { r, w: 0.9, alpha: 0.18, passes: 1 });
-    },
-  };
-
-  // =====================================================================
-  // 15. 벽 — 전등을 켜면 열네 사물의 그림자가 한 줄로 진다. 그림자의 순서대로 음절을 원고지에 놓는다.
+  // 1막 · 1. 모 — 엎어진 탁상 액자. 세우면 액자(ㅁ)와 받침(ㅗ)
   // =====================================================================
   (() => {
-    const SENT = '지우고남은선이그리던그림이다'.split('');
-    const ORDER = ['p4', 'p10', 'p3', 'p5', 'p11', 'p7', 'p1', 'p6', 'p8', 'p9', 'p13', 'p14', 'p12', 'p2'];
-    const TILES = ['다', '그', '이', '남', '지', '선', '림', '우', '은', '이', '고', '던', '리', '그'];
-    const cellRect = i => ({ x: C.x + 90 + i * 76, y: 560, s: 70 }); const tileRect = i => ({ x: C.x + 90 + i * 76, y: 700, s: 70 });
-    G.reg({
-      id: 'wall', ans: SENT.join(''), final: true, hints: ['그림자는 빛을 등진 쪽에서 읽는다.', '전등이 켜져 있어야 그림자가 진다.', '같은 글자는 자리를 바꿔도 같다.'],
-      hub: { x: 560, y: 430, w: 340, h: 220, r: 100, draw(x, r, solved, G) { const n = G.nSolved(); for (let i = 0; i < n; i++) { const p = G.puzzles.find(q => q.id === ORDER[i]); const s = 30; const k = P.mk(s + 20, s + 20), kx = k.getContext('2d'); icon(hubIconOf(p), kx, r, 10, 10, s); kx.globalCompositeOperation = 'source-in'; kx.fillStyle = '#26241f'; kx.fillRect(0, 0, k.width, k.height); x.save(); x.globalAlpha = 0.45; x.drawImage(k, 300 - i * 22 - s / 2, 95); x.restore(); } } },
-      init(st, G) { st.cells = (G.arr && G.arr.length === 14) ? G.arr.slice() : new Array(14).fill(null); st.pick = null; },
-      draw(c, st, G) {
-        const base = G.art('wall-base', G.W, G.H, (x, r) => { room(x, r); P.stroke(x, [[C.x + 60, 120], [C.x + C.w - 60, 116]], { r, w: 1.2, alpha: 0.3, passes: 1 });
-          // 원고지 열네 칸
-          for (let i = 0; i < 14; i++) { const cr = cellRect(i); P.stroke(x, P.rectPts(cr.x, cr.y, cr.s, cr.s), { r, w: 1, alpha: 0.4, passes: 1 }); }
-          P.stroke(x, [[C.x + 70, 680], [C.x + C.w - 70, 682]], { r, w: 0.8, alpha: 0.25, passes: 1 }); });
-        G.ink(c, base, 0, 0);
-        // 그림자: 낮에만. 오른쪽(등불 쪽)부터 문장 순서
-        if (!G.night) { const sh = G.art('wall-shadows', G.W, 400, (x, r) => { ORDER.forEach((id, i) => { const p = G.puzzles.find(q => q.id === id); const s = 62; const cx = C.x + C.w - 90 - i * 78, cy = 300;
-            const k = P.mk(s + 40, s + 40), kx = k.getContext('2d'); icon(hubIconOf(p), kx, r, 20, 20, s); kx.globalCompositeOperation = 'source-in'; kx.fillStyle = '#26241f'; kx.fillRect(0, 0, k.width, k.height);
-            x.save(); x.globalAlpha = 0.55; x.filter = 'blur(1.6px)'; x.drawImage(k, cx - s / 2 - 20, cy - s / 2 - 20 + Math.sin(i * 1.7) * 6); x.restore(); }); }, { noGrain: true });
-          c.save(); c.globalAlpha = 0.9; c.drawImage(sh, 0, 140); c.restore(); }
-        else { c.save(); c.fillStyle = 'rgba(28,30,38,.75)'; c.fillRect(C.x, C.y, C.w, C.h); c.restore(); }
-        // 놓인 글자와 타일
-        for (let i = 0; i < 14; i++) { const ch = st.cells[i]; if (!ch) continue; const cr = cellRect(i); const g = G.art('cell-' + ch, 80, 80, (x, r) => G.syl(x, ch, 10, 8, 60, { r, w: 3.5 })); G.ink(c, g, cr.x - 5, cr.y - 3); }
-        const used = st.cells.slice(); TILES.forEach((ch, i) => { const j = used.indexOf(ch); if (j >= 0) { used[j] = null; return; } const tr = tileRect(i); const g = G.art('tile-' + ch, 80, 80, (x, r) => G.syl(x, ch, 10, 8, 60, { r, w: 3.5 })); c.save(); if (st.pick === i) c.translate(0, -8); G.ink(c, g, tr.x - 5, tr.y - 3); c.restore(); });
-        c.save(); c.font = '30px "Nanum Pen Script", cursive'; c.fillStyle = '#3a3733'; c.textAlign = 'center'; c.globalAlpha = 0.75; c.fillText(st.cells.every(Boolean) ? '칸이 다 찼다 — 원고지를 누르면 읽는다' : '글자를 누르고, 놓을 칸을 누른다', C.x + C.w / 2, 660); c.restore();
-        if (G.solved.wall) { c.save(); c.globalAlpha = 0.9; c.font = '70px "Nanum Pen Script", cursive'; c.fillStyle = '#8a1f1f'; c.textAlign = 'center'; c.fillText('지우고 남은 선이 그리던 그림이다', C.x + C.w / 2, 480); c.restore(); }
-      },
-      down(st, p, G) { if (G.solved.wall) return; const lu = G.lockUntil.wall || 0; if (G.t < lu) { G.toast('종이가 번져 있다… ' + Math.ceil(lu - G.t) + '초'); G.Snd.wrong(); return; }
-        const used = st.cells.slice();
-        for (let i = 0; i < 14; i++) { const ch = TILES[i]; const j = used.indexOf(ch); if (j >= 0) { used[j] = null; continue; } const tr = tileRect(i); if (inR(p, tr.x, tr.y, tr.s, tr.s)) { st.pick = st.pick === i ? null : i; G.Snd.pick(); return; } }
-        for (let i = 0; i < 14; i++) { const cr = cellRect(i); if (!inR(p, cr.x, cr.y, cr.s, cr.s)) continue;
-          if (st.pick != null) { if (st.cells[i]) { G.toast('이미 글자가 있는 칸이다'); return; } st.cells[i] = TILES[st.pick]; st.pick = null; G.Snd.snap(); G.arr = st.cells.slice(); G.save(); return; }
-          if (st.cells[i]) { st.cells[i] = null; G.Snd.erase(); G.arr = st.cells.slice(); G.save(); return; }
-          if (st.cells.every(Boolean)) this.check(st, G); return; } },
-      check(st, G) { const wrong = st.cells.filter((ch, i) => ch !== SENT[i]).length;
-        if (wrong === 0) { G.solved.wall = true; G.save(); G.Snd.solved(); G.flash = 1; setTimeout(() => { if (G.cur && G.cur.id === 'wall') G.ending(); }, 2600); return; }
-        G.fail(this, wrong <= 2 ? '한두 칸이 그림자와 다르다' : '이대로는 문장이 되지 않는다'); },
-    });
-    const hubIconOf = p => ({ p1: 'bottle', p2: 'drawer', p3: 'frame', p4: 'yarn', p5: 'candle', p6: 'book', p7: 'glasses', p8: 'ladder', p9: 'umbrella', p10: 'bucket', p11: 'mirror', p12: 'bulb', p13: 'cup', p14: 'cat' })[p.id];
-    G.ORDER = ORDER; G.SENT = SENT; G.TILES = TILES; G.hubIconOf = hubIconOf;
+    const T = 650, HX = 520, HY = 540, FS = 220;
+    const draw = (x, r, h) => { slab(x, r, C.x + 120, C.x + C.w - 120, T + 4, 18);
+      bold(x, r, [[440, T], [600, T]], 14); bold(x, r, [[HX, T], [HX, HY]], 13);
+      if (h < 14) bold(x, r, [[HX - FS / 2, HY - h / 2], [HX + FS / 2, HY - h / 2]], 12);
+      else { bold(x, r, P.rectPts(HX - FS / 2, HY - h, FS, h), 12); if (h > 150) { const a = (h - 150) / 70; line(x, r, [[HX - 90, HY - 30], [HX - 40, HY - h + 60], [HX, HY - 60], [HX + 50, HY - h + 40], [HX + 90, HY - 30]], { w: 1.1, alpha: 0.5 * a }); P.ring(x, HX + 55, HY - h + 45, 12, 12, { r, w: 1, alpha: 0.4 * a }); } } };
+    reg({ id: 'frame', ans: '모',
+      hints: ['엎어진 액자를 위로 끌어 세워 보라.', '액자와 그 아래 받침대가 한 몸이다.', '받침대는 기둥과 발로 되어 있다.'],
+      init(st) { st.h = 6; st.drag = false; },
+      draw(c, st, G) { const h = Math.round(st.h / 4) * 4; G.ink(c, G.art('frame-' + h, G.W, G.H, (x, r) => { floor(x, r); draw(x, r, h); }), 0, 0); },
+      down(st, p, G) { if (p.x > HX - FS / 2 - 20 && p.x < HX + FS / 2 + 20 && p.y > HY - st.h - 50 && p.y < HY + 20) { st.drag = true; G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; const h = clamp(HY - p.y, 6, FS); if (h !== st.h) G.Snd.scratch(2); st.h = h; },
+      up(st) { st.drag = false; },
+    }, { box: [380, 300, 660, 680], draw: (x, r, s) => draw(x, r, s ? FS : 6) });
+  })();
+
+  // =====================================================================
+  // 1막 · 2. 그 — 세면대. 수도꼭지를 돌려 물이 세면대 안으로 떨어지게. 꼭지(ㄱ) + 세면대 테(ㅡ)
+  // =====================================================================
+  (() => {
+    const BX = 470, BY = 380, L = 210, DROP = 90, RIM = 540;
+    const basin = (x, r) => { floor(x, r); bold(x, r, [[400, RIM], [840, RIM]], 14);
+      line(x, r, [[420, RIM + 6], [470, RIM + 80], [620, RIM + 104], [770, RIM + 80], [820, RIM + 6]], { w: 1.8 }); line(x, r, [[580, RIM + 104], [590, FLOOR - 4]], { w: 1.6 }); line(x, r, [[660, RIM + 104], [650, FLOOR - 4]], { w: 1.6 });
+      line(x, r, [[C.x + 60, 250], [C.x + C.w - 60, 246]], { w: 1, alpha: 0.25 }); line(x, r, P.rectPts(BX - 16, BY - 30, 32, 60), { w: 1.6 }); };
+    const spout = (x, r, ph) => { const tx = BX + L * Math.cos(rad(ph)); bold(x, r, [[BX, BY], [tx, BY], [tx, BY + DROP]], 12); P.ring(x, BX, BY - 44, 14, 6, { r, w: 1.4 }); line(x, r, [[BX, BY - 38], [BX, BY - 30]], { w: 1.4 }); };
+    reg({ id: 'sink', ans: '그',
+      hints: ['물이 바닥으로 튄다. 수도꼭지를 끌어 돌려 보라.', '물이 세면대 안으로 떨어지는 쪽이 있다.', '꼭지와 세면대 테가 한 글자다.'],
+      init(st) { st.ph = 145; st.drag = false; st.pud = 0; },
+      update(st, dt) { const tx = BX + L * Math.cos(rad(st.ph)); if (tx < 425 || tx > 815) st.pud = Math.min(1, st.pud + dt * 0.08); },
+      draw(c, st, G) { G.ink(c, G.art('sink-b', G.W, G.H, basin), 0, 0); const ph = Math.round(st.ph / 3) * 3; G.ink(c, G.art('sink-s' + ph, G.W, G.H, (x, r) => spout(x, r, ph)), 0, 0);
+        const tx = BX + L * Math.cos(rad(st.ph)), inB = tx > 425 && tx < 815, y1 = inB ? RIM + 60 : FLOOR - 4;
+        c.save(); c.strokeStyle = 'rgba(110,128,146,.55)'; c.lineCap = 'round'; c.lineWidth = 5; c.beginPath(); for (let y = BY + DROP; y <= y1; y += 6) { const xx = tx + Math.sin(y * 0.2 + G.t * 22) * 1.5; y === BY + DROP ? c.moveTo(xx, y) : c.lineTo(xx, y); } c.stroke();
+        if (!inB) { c.lineWidth = 1.6; for (let i = 0; i < 6; i++) { const a = -Math.PI + (i + 0.5) * Math.PI / 6 + Math.sin(G.t * 9 + i) * 0.2; c.beginPath(); c.moveTo(tx, FLOOR - 6); c.lineTo(tx + Math.cos(a) * 22, FLOOR - 6 + Math.sin(a) * 14); c.stroke(); } }
+        if (st.pud > 0) { c.fillStyle = 'rgba(110,128,146,.22)'; c.beginPath(); c.ellipse(Math.min(tx, 400), FLOOR - 2, 30 + 90 * st.pud, 5 + 7 * st.pud, 0, 0, 6.28); c.fill(); } c.restore(); },
+      down(st, p, G) { const tx = BX + L * Math.cos(rad(st.ph)); if (near(p, [tx, BY + DROP / 2], 70) || (Math.abs(p.y - BY) < 34 && p.x > Math.min(BX, tx) - 20 && p.x < Math.max(BX, tx) + 20)) { st.drag = true; G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; st.ph = Math.acos(clamp((p.x - BX) / L, -1, 1)) * 180 / Math.PI; G.Snd.scratch(1); },
+      up(st) { st.drag = false; },
+    }, { box: [380, 300, 860, 770], draw: (x, r, s) => { basin(x, r); spout(x, r, s ? 0 : 145); } });
+  })();
+
+  // =====================================================================
+  // 1막 · 3. 을 — 풍선. 탁자(ㅡ)에 놓인 바람 빠진 풍선, 탁자 밑으로 늘어진 곱슬 리본(ㄹ). 불어서 둥글게(ㅇ). 너무 불면 터진다
+  // =====================================================================
+  (() => {
+    const TY = 560, CX = 600;
+    const table = (x, r) => { floor(x, r); bold(x, r, [[380, TY], [820, TY]], 14); line(x, r, [[400, TY + 8], [410, FLOOR - 4]], { w: 1.6 }); line(x, r, [[800, TY + 8], [790, FLOOR - 4]], { w: 1.6 });
+      // 곱슬 리본: 풍선 매듭에서 탁자 뒤로 내려와 탁자 밑에서 구불구불
+      bold(x, r, [[500, 606], [700, 606], [700, 652], [505, 652], [505, 700], [705, 700]], 8); line(x, r, [[600, TY + 4], [600, 606]], { w: 1.1, alpha: 0.4 }); };
+    const balloon = (x, r, s) => { if (s < 0.32) { const b = [[CX - 60, TY - 4], [CX - 30, TY - 26], [CX + 10, TY - 14], [CX + 40, TY - 30], [CX + 64, TY - 6]]; bold(x, r, b, 10); return; }
+      const R = 110 * s, ry = R * clamp(0.6 + 0.4 * s, 0.6, 1); const a0 = r() * 6.28; bold(x, r, P.circlePts(CX, TY - ry - 6, R, ry, a0, a0 + Math.PI * 2.05), 12); line(x, r, [[CX - 6, TY - 6], [CX, TY], [CX + 6, TY - 6]], { w: 1.4 }); if (s > 0.8) line(x, r, [[CX - R * 0.45, TY - ry * 1.5], [CX - R * 0.3, TY - ry * 1.75]], { w: 2, alpha: 0.35 }); };
+    reg({ id: 'balloon', ans: '을',
+      hints: ['풍선을 눌러 바람을 불어 넣는다.', '너무 불면 터진다. 둥글어지면 멈춘다.', '풍선, 탁자, 탁자 밑의 리본이 위에서부터 한 글자다.'],
+      init(st) { st.s = 0.15; st.pop = 0; },
+      update(st, dt) { st.pop = Math.max(0, st.pop - dt); },
+      draw(c, st, G) { G.ink(c, G.art('bal-t', G.W, G.H, table), 0, 0); const s = Math.round(st.s * 20) / 20; G.ink(c, G.art('bal-' + s, G.W, G.H, (x, r) => balloon(x, r, s)), 0, 0);
+        if (st.pop > 0) { c.save(); c.globalAlpha = st.pop; c.strokeStyle = '#2a2826'; c.lineWidth = 2; for (let i = 0; i < 10; i++) { const a = i * 0.628; c.beginPath(); c.moveTo(CX + Math.cos(a) * 60, TY - 120 + Math.sin(a) * 60); c.lineTo(CX + Math.cos(a) * 130, TY - 120 + Math.sin(a) * 130); c.stroke(); } c.restore(); } },
+      down(st, p, G) { if (Math.abs(p.x - CX) < 150 && p.y > TY - 260 && p.y < TY + 10) { st.s += 0.13; G.Snd.paper();
+          if (st.s > 1.42) { st.s = 0.15; st.pop = 1; G.Snd.wrong(); G.toast('펑! 너무 불었다. 새 풍선을 꺼냈다'); } } },
+    }, { box: [360, 250, 840, 770], draw: (x, r, s) => { table(x, r); balloon(x, r, s ? 1 : 0.15); } });
+  })();
+
+  // =====================================================================
+  // 2막 · 4. 는 — 책꽂이. 선반 위와 바닥에 쓰러진 북엔드(ㄴ). 바로 세워야 책이 일어선다. 거꾸로(ㄱ)는 책을 받치지 못한다
+  // =====================================================================
+  (() => {
+    const SH = 440, BE = [{ x: 430, y: SH }, { x: 430, y: FLOOR - 6 }], BW = 110, BH = 130;
+    // 북엔드 모양: 회전 k(0=ㄴ, 1, 2=ㄱ꼴, 3)
+    const bePts = (b, k) => { const x0 = b.x, y0 = b.y; const P0 = [[0, -BH], [0, 0], [BW, 0]]; const cx = BW / 2, cy = -BH / 2; return P0.map(([u, v]) => { let a = u - cx, bb = v - cy; for (let i = 0; i < k; i++) { const t = a; a = -bb; bb = t; } return [x0 + cx + a, y0 + cy + bb]; }); };
+    const books = (x, r, b, up) => { for (let i = 0; i < 6; i++) { const bx = b.x + 12 + i * 34; if (up) line(x, r, P.rectPts(bx + (BW + 6) - 12, b.y - 110 + (i % 3) * 6, 26, 110 - (i % 3) * 6), { w: 1.2 }); else { const a = 0.9 + i * 0.05; line(x, r, [[bx + 120, b.y], [bx + 120 + Math.cos(a) * 30, b.y - Math.sin(a) * 30], [bx + 120 + Math.cos(a) * 30 + 100 * Math.cos(a - 1.57), b.y - Math.sin(a) * 30 - 100 * Math.sin(a - 1.57)]], { w: 1.2, alpha: 0.9 }); } } };
+    const wall = (x, r) => { floor(x, r); bold(x, r, [[380, SH], [860, SH]], 14); line(x, r, [[400, SH + 8], [400, SH + 40], [440, SH + 8]], { w: 1.4 }); line(x, r, [[840, SH + 8], [840, SH + 40], [800, SH + 8]], { w: 1.4 }); };
+    reg({ id: 'bookend', ans: '는',
+      hints: ['쓰러진 책을 세우려면 받쳐 줄 것이 필요하다.', '북엔드를 누르면 돌아간다.', '선반 위와 바닥, 둘 다 책이 서야 한다.'],
+      init(st) { st.k = [1, 3]; },
+      draw(c, st, G) { G.ink(c, G.art('be-w', G.W, G.H, wall), 0, 0); const key = 'be-' + st.k.join(''); G.ink(c, G.art(key, G.W, G.H, (x, r) => { BE.forEach((b, i) => { bold(x, r, bePts(b, st.k[i]), 12); books(x, r, b, st.k[i] === 0); }); }), 0, 0); },
+      down(st, p, G) { BE.forEach((b, i) => { if (p.x > b.x - 30 && p.x < b.x + BW + 30 && p.y > b.y - BH - 30 && p.y < b.y + 20) { st.k[i] = (st.k[i] + 1) % 4; G.Snd.paper(); } }); },
+    }, { box: [360, 280, 880, 780], draw: (x, r, s) => { wall(x, r); BE.forEach((b, i) => { const k = s ? 0 : [1, 3][i]; bold(x, r, bePts(b, k), 12); books(x, r, b, k === 0); }); } });
+  })();
+
+  // =====================================================================
+  // 2막 · 5. 든 — 책상 정리. 벌어진 스테이플러를 닫으면 옆모습이 ㄷ, 책상 윗면 ㅡ, 책상 밑으로 밀어 넣은 의자 옆모습 ㄴ
+  // =====================================================================
+  (() => {
+    const DY = 470, SX = 530, SY = 455, CH = { home: 900, tuck: 520, seat: 650, back: 130, w: 110 };
+    const desk = (x, r) => { floor(x, r); bold(x, r, [[420, DY], [800, DY]], 14); line(x, r, [[440, DY + 8], [440, FLOOR - 4]], { w: 1.6 }); line(x, r, [[780, DY + 8], [780, FLOOR - 4]], { w: 1.6 }); line(x, r, P.rectPts(700, DY - 60, 70, 56), { w: 1.2, alpha: 0.5 }); };
+    const stapler = (x, r, open) => { bold(x, r, [[SX, SY], [SX + 125, SY]], 11); bold(x, r, [[SX, SY], [SX, SY - 50]], 11); const a = open ? rad(38) : 0; bold(x, r, [[SX, SY - 50], [SX + 125 * Math.cos(a), SY - 50 - 125 * Math.sin(a)]], 11); };
+    const chair = (x, r, cx) => { bold(x, r, [[cx, CH.seat - CH.back], [cx, CH.seat], [cx + CH.w, CH.seat]], 12); line(x, r, [[cx + 6, CH.seat + 6], [cx + 6, FLOOR - 4]], { w: 1.5 }); line(x, r, [[cx + CH.w - 6, CH.seat + 6], [cx + CH.w - 6, FLOOR - 4]], { w: 1.5 }); };
+    reg({ id: 'desk', ans: '든',
+      hints: ['책상을 정리해 보라. 벌어진 것은 닫고, 빠진 것은 넣는다.', '스테이플러를 누르면 닫힌다. 의자는 끌어서 옮긴다.', '책상 위, 책상, 책상 밑이 위에서부터 한 글자다.'],
+      init(st) { st.open = true; st.cx = CH.home; st.drag = null; },
+      draw(c, st, G) { G.ink(c, G.art('desk-d', G.W, G.H, desk), 0, 0); G.ink(c, G.art('desk-s' + (st.open ? 1 : 0), G.W, G.H, (x, r) => stapler(x, r, st.open)), 0, 0); const cx = Math.round(st.cx / 4) * 4; G.ink(c, G.art('desk-c' + cx, G.W, G.H, (x, r) => chair(x, r, cx)), 0, 0); },
+      down(st, p, G) { if (p.x > SX - 20 && p.x < SX + 150 && p.y > SY - 140 && p.y < SY + 16) { st.open = !st.open; G.Snd.click(); return; }
+        if (p.x > st.cx - 20 && p.x < st.cx + CH.w + 20 && p.y > CH.seat - CH.back - 20 && p.y < FLOOR) { st.drag = { dx: p.x - st.cx }; G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; const cx = clamp(p.x - st.drag.dx, CH.tuck, 1060); if (cx !== st.cx) G.Snd.scratch(2); st.cx = cx; },
+      up(st) { st.drag = null; },
+    }, { box: [400, 300, 1040, 780], draw: (x, r, s) => { desk(x, r); stapler(x, r, !s); chair(x, r, s ? CH.tuck : CH.home); } });
+  })();
+
+  // =====================================================================
+  // 2막 · 6. 다 — 창밖 호수. 난간(┌)과 물에 비친 모습(└)이 합쳐져 ㄷ, 말뚝과 비친 말뚝, 물가의 밧줄이 ㅏ.
+  //    창이 열려 바람이 불면 물결에 반영이 깨진다. 창을 닫으면 잔잔해진다
+  // =====================================================================
+  (() => {
+    const WX = 230, WY = 100, WW = 680, WH = 620, WL = 430, KNOB = [WX + WW + 60, 420];
+    const RAIL = [[430, WL], [430, 310], [565, 310]], POST = [[680, WL], [680, 330]], ROPE = [[680, WL], [745, WL]];
+    const view = (x, r) => { line(x, r, P.rectPts(WX, WY, WW, WH), { w: 2.4 }); line(x, r, P.rectPts(WX + 14, WY + 14, WW - 28, WH - 28), { w: 1, alpha: 0.45 }); line(x, r, [[WX - 20, WY + WH + 10], [WX + WW + 20, WY + WH + 10]], { w: 2.2 });
+      line(x, r, [[WX + 14, WL], [WX + WW - 14, WL]], { w: 1, alpha: 0.35 }); line(x, r, [[WX + 20, 300], [WX + 120, 250], [WX + 200, 290], [WX + 300, 240]], { w: 1, alpha: 0.28 }); line(x, r, [[WX + 480, 280], [WX + 560, 230], [WX + 660, 280]], { w: 1, alpha: 0.28 });
+      bold(x, r, RAIL, 12); bold(x, r, POST, 12); bold(x, r, ROPE, 8); line(x, r, [[745, WL], [790, WL - 8], [840, WL - 4]], { w: 1.2, alpha: 0.5 }); line(x, r, [[800, WL - 4], [850, WL - 26], [880, WL - 4]], { w: 1.4 }); };
+    const sash = (x, r, open) => { line(x, r, P.rectPts(KNOB[0] - 18, KNOB[1] - 40, 36, 80), { w: 1.6 }); bold(x, r, open ? [[KNOB[0], KNOB[1]], [KNOB[0] + 26, KNOB[1] - 20]] : [[KNOB[0], KNOB[1] - 26], [KNOB[0], KNOB[1] + 26]], 8); };
+    reg({ id: 'lake', ans: '다',
+      hints: ['물에 비친 모습도 모양이다.', '바람이 물결을 일으킨다. 창을 닫을 수 있다.', '난간과 비친 난간, 말뚝과 비친 말뚝을 함께 본다.'],
+      init(st) { st.open = true; st.wind = 1; },
+      update(st, dt) { st.wind = st.open ? Math.min(1, st.wind + dt * 0.6) : Math.max(0, st.wind - dt * 0.35); },
+      draw(c, st, G) { G.ink(c, G.art('lake-v', G.W, G.H, view), 0, 0); G.ink(c, G.art('lake-s' + (st.open ? 1 : 0), G.W, G.H, (x, r) => sash(x, r, st.open)), 0, 0);
+        // 반영: 물 위 모양을 물 표면 기준으로 뒤집는다. 물결 세기만큼 흔들리고 끊긴다
+        const amp = st.wind * 16; c.save(); c.beginPath(); c.rect(WX + 14, WL + 1, WW - 28, WH - 28 - (WL - WY) + 13); c.clip(); c.strokeStyle = 'rgba(28,27,25,.72)'; c.lineCap = 'round';
+        const refl = (pts, w) => { const Q = P.resample(pts.map(([a, b]) => [a, 2 * WL - b]), 5); c.lineWidth = w; for (let i = 0; i < Q.length - 1; i++) { const [a, b] = Q[i], [a2, b2] = Q[i + 1]; const d = b - WL; const off = Math.sin(d * 0.25 + G.t * 5) * amp * Math.min(1, d / 30 + 0.2); const off2 = Math.sin((b2 - WL) * 0.25 + G.t * 5) * amp * Math.min(1, (b2 - WL) / 30 + 0.2); if (amp > 2 && Math.sin(d * 0.6 + G.t * 7) > 0.3) continue; c.beginPath(); c.moveTo(a + off, b); c.lineTo(a2 + off2, b2); c.stroke(); } };
+        refl(RAIL, 11); refl(POST, 11); c.restore();
+        if (st.wind > 0.05) { c.save(); c.strokeStyle = 'rgba(40,38,36,.35)'; c.lineWidth = 1.3; for (let i = 0; i < 7; i++) { const y = WL + 20 + i * 34, ph = G.t * 3 + i; c.beginPath(); for (let xx = WX + 30; xx < WX + WW - 30; xx += 12) { const yy = y + Math.sin(xx * 0.05 + ph) * 3 * st.wind; xx === WX + 30 ? c.moveTo(xx, yy) : c.lineTo(xx, yy); } c.globalAlpha = st.wind; c.stroke(); } c.restore(); } },
+      down(st, p, G) { if (near(p, KNOB, 60)) { st.open = !st.open; G.Snd.click(); } },
+    }, { box: [210, 90, 960, 740], draw: (x, r, s) => { view(x, r); sash(x, r, !s); if (s) { bold(x, r, [[430, WL], [430, 550], [565, 550]], 12); bold(x, r, [[680, WL], [680, 530]], 12); } } });
+  })();
+
+  // =====================================================================
+  // 3막 — 그림자. 철사 조각의 윤곽을 빛에서 벽으로 실제 투영한다
+  //   맞는 조건에서 벽의 글자 점마다, 빛에서 그 점으로 가는 빛줄기 위의 한 점을 골라 조각을 만든다.
+  //   깊이는 철사를 따라 크게 굽이쳐서, 조건이 조금만 어긋나도 그림자가 흐트러진다
+  // =====================================================================
+  const FR = { x: 420, y: 150, w: 360, h: 290 }, TABLE = 720;
+  // 음절 획 (엔진의 손글씨 배치와 같은 자리)
+  const sylStrokes = (s, x, y, sz) => { const [ch, ju, jo] = G.decompose(s); const side = 'ㅏㅓㅣ'.includes(ju); const top = jo ? 0.62 : 1; const out = [];
+    const put = (c, px, py, sc) => { const d = JS[c]; if (d === 'O') { out.push(P.circlePts(px + sc / 2, py + sc / 2, sc * 0.32, sc * 0.34, -1.5, -1.5 + Math.PI * 2, 40)); return; } d.forEach(st => out.push(st.map(([a, b]) => [px + a * sc, py + b * sc]))); };
+    if (side) { put(ch, x + sz * 0.02, y + sz * (jo ? 0.04 : 0.08), sz * 0.52 * (jo ? 1 : 1.2)); put(ju, x + sz * 0.5, y, sz * top); }
+    else { put(ch, x + sz * 0.22, y - sz * 0.02, sz * 0.56 * (jo ? 0.85 : 1)); put(ju, x + sz * 0.05, y + sz * (jo ? 0.2 : 0.3), sz * 0.9 * (jo ? 0.72 : 0.9)); }
+    if (jo) put(jo, x + sz * 0.22, y + sz * 0.56, sz * 0.5); return out; };
+  const target = s => { const sz = 250; const st = sylStrokes(s, 0, 0, sz); const xs = st.flat().map(p => p[0]), ys = st.flat().map(p => p[1]); const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2; return st.map(s2 => s2.map(([a, b]) => [a - cx + FR.x + FR.w / 2, b - cy + FR.y + FR.h / 2])); };
+  // 조각 만들기: ray(w, z) → 3차원 점. 깊이 z는 철사를 따라 굽이친다
+  // 깊이는 철사를 따라 완만하게 바뀐다: 조금 어긋나면 글자가 휘고 밀릴 뿐, 많이 어긋나야 흐트러진다
+  const sculpt = (tgt, ray, z0, z1, seed, grow) => { let k = seed || 0; return tgt.map(st => P.resample(st, 11).map(w => { k++; const t = 0.5 + 0.42 * Math.sin(k * 0.11 + seed) + 0.08 * Math.sin(k * 0.29 + seed * 3); const z = z0 + (z1 - z0) * clamp(t, 0, 1);
+    // 손으로 구부린 흔들림: 벽 위에서 7px 안팎이 되도록, 빛에서 멀수록(그림자가 커질수록) 작게
+    const g = grow ? grow(z) : 1; const ex = (Math.sin(k * 0.21 + seed * 1.7) + 0.6 * Math.sin(k * 0.57 + seed)) * 4.5 / g, ey = (Math.cos(k * 0.19 + seed * 0.9) + 0.6 * Math.sin(k * 0.43 + seed * 2)) * 4.5 / g; const p = ray(w, z); return [p[0] + ex, p[1] + ey, p[2]]; })); };
+  const lowest = W => W.flat().reduce((a, p) => p[1] > a[1] ? p : a);
+  // 그림자: 3차원 점 → 벽의 점. 벽(탁자 위)에만 진다
+  const drawShadow = (c, strokes, proj, alpha, crisp, lw) => { c.save(); c.beginPath(); c.rect(C.x, C.y, C.w, TABLE - C.y); c.clip(); c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = 'rgba(28,26,24,' + alpha + ')'; c.lineWidth = lw || 10; c.filter = 'blur(' + (crisp || 2.6) + 'px)';
+    strokes.forEach(stp => { c.beginPath(); let started = false; stp.forEach(p => { const q = proj(p); if (!q) { started = false; return; } if (!started) { c.moveTo(q[0], q[1]); started = true; } else c.lineTo(q[0], q[1]); }); c.stroke(); }); c.restore(); };
+  // 앞에서 본 철사 (그림자와 달리 가늘고 또렷하다)
+  const drawWire = (c, strokes, view) => { c.save(); c.strokeStyle = '#1d1c1a'; c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = 2.6; strokes.forEach(stp => { c.beginPath(); stp.forEach((p, i) => { const [a, b] = view(p); i ? c.lineTo(a, b) : c.moveTo(a, b); }); c.stroke(); }); c.fillStyle = '#1d1c1a'; strokes.forEach(stp => [stp[0], stp[stp.length - 1]].forEach(p => { const [a, b] = view(p); c.beginPath(); c.arc(a, b, 3.4, 0, 6.28); c.fill(); })); c.restore(); };
+  const frameArt = (x, r) => { slab(x, r, C.x + 90, C.x + C.w - 90, TABLE, 18); line(x, r, P.rectPts(FR.x - 16, FR.y - 16, FR.w + 32, FR.h + 32), { w: 2.4 }); line(x, r, P.rectPts(FR.x, FR.y, FR.w, FR.h), { w: 1.2, alpha: 0.6 }); line(x, r, [[FR.x + FR.w / 2 - 30, FR.y - 16], [FR.x + FR.w / 2, FR.y - 66], [FR.x + FR.w / 2 + 30, FR.y - 16]], { w: 1.1, alpha: 0.5 }); P.ring(x, FR.x + FR.w / 2, FR.y - 68, 4, 4, { r, w: 1.3 }); };
+  const lightWall = (c, L, dark) => { c.save(); c.globalCompositeOperation = 'multiply'; const g = c.createRadialGradient(L[0], L[1], 30, L[0], L[1], 900); g.addColorStop(0, 'rgba(255,252,244,1)'); g.addColorStop(1, dark || 'rgba(92,86,78,1)'); c.fillStyle = g; c.fillRect(C.x, C.y, C.w, C.h); c.restore(); };
+  const flame = (c, lx, ly, G, s) => { s = s || 1; const f = 0.85 + 0.15 * Math.sin(G.t * 17) * Math.sin(G.t * 7.3); c.save(); c.globalCompositeOperation = 'screen'; const g = c.createRadialGradient(lx, ly - 6, 2, lx, ly - 6, 80 * s); g.addColorStop(0, 'rgba(255,240,200,.9)'); g.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = g; c.fillRect(lx - 90, ly - 96, 180, 180);
+    c.fillStyle = 'rgba(255,250,235,.95)'; c.beginPath(); c.moveTo(lx, ly - 26 * f * s); c.quadraticCurveTo(lx + 8 * s, ly - 4, lx, ly + 6); c.quadraticCurveTo(lx - 8 * s, ly - 4, lx, ly - 26 * f * s); c.fill(); c.restore(); };
+  const candleBody = (c, lx, ly, handle) => { c.save(); c.strokeStyle = '#1c1b19'; c.lineCap = 'round'; c.lineWidth = 12; c.beginPath(); c.moveTo(lx, ly + 16); c.lineTo(lx, ly + 90); c.stroke(); c.lineWidth = 3; c.beginPath(); c.moveTo(lx - 34, ly + 94); c.lineTo(lx + 34, ly + 94); c.stroke(); if (handle) { c.beginPath(); c.arc(lx + 44, ly + 84, 12, -1.6, 1.6); c.stroke(); } c.lineWidth = 1.6; c.beginPath(); c.moveTo(lx, ly + 16); c.lineTo(lx, ly + 6); c.stroke(); c.restore(); };
+  const ptProj = (L, LZ) => p => { if (p[2] >= LZ - 5) return null; const t = LZ / (LZ - p[2]); return [L[0] + (p[0] - L[0]) * t, L[1] + (p[1] - L[1]) * t]; };
+  const ptRay = (L, LZ) => (w, z) => { const f = z / LZ; return [w[0] + (L[0] - w[0]) * f, w[1] + (L[1] - w[1]) * f, z]; };
+  const iconWire = (W, view) => (x, r, s) => { frameArt(x, r); x.save(); x.strokeStyle = '#1d1c1a'; x.lineWidth = 5; x.lineCap = 'round'; W.forEach(stp => { x.beginPath(); stp.forEach((p, i) => { const [a, b] = view(p); i ? x.lineTo(a, b) : x.moveTo(a, b); }); x.stroke(); }); x.restore(); };
+  const ICONBOX = [380, 60, 1160, 760];
+
+  // ---------- 7. 자 — 천장에 매단 철사 모빌. 등은 그대로, 모빌을 돌린다 ----------
+  (() => {
+    const LZ = 520, L = [980, 470], PIV = [640, 250]; const tgt = target('자');
+    const W0 = sculpt(tgt, ptRay(L, LZ), 90, 400, 3, z => LZ / (LZ - z));
+    const rotY = (p, th) => { const c = Math.cos(rad(th)), s = Math.sin(rad(th)); const dx = p[0] - PIV[0], dz = p[2] - PIV[1]; return [PIV[0] + dx * c - dz * s, p[1], PIV[1] + dx * s + dz * c]; };
+    const hang = W0.flat().reduce((a, p) => (Math.hypot(p[0] - PIV[0], p[2] - PIV[1]) + (p[1] - 100) * 0.3 < Math.hypot(a[0] - PIV[0], a[2] - PIV[1]) + (a[1] - 100) * 0.3 ? p : a));
+    const lamp = (x, r) => { bold(x, r, [[L[0] + 60, TABLE], [L[0] + 60, L[1] - 10], [L[0] + 10, L[1] - 30]], 10); const sh = [[L[0] - 6, L[1] - 44], [L[0] + 26, L[1] - 30], [L[0] + 14, L[1] + 4], [L[0] - 22, L[1] - 14]]; P.charcoal(x, P.polyPath(sh), [L[0] - 26, L[1] - 48, 56, 56], { r, pts: sh, base: 0.9 }); line(x, r, [[L[0] + 20, TABLE], [L[0] + 100, TABLE]], { w: 3 }); };
+    reg({ id: 'mobile', ans: '자',
+      hints: ['벽의 그림자는 모빌의 그림자다.', '모빌을 좌우로 끌면 돈다. 그림자도 따라 바뀐다.', '그림자가 빈 액자 안에 들어와 무언가로 읽히는 각도가 있다.'],
+      init(st) { st.th = 64; st.drag = null; st.ok = false; },
+      draw(c, st, G) { G.ink(c, G.art('mob-w', G.W, G.H, (x, r) => { frameArt(x, r); lamp(x, r); }), 0, 0);
+        const W = W0.map(s => s.map(p => rotY(p, st.th))); const hp = rotY(hang, st.th); const thread = [[hp[0], C.y, hp[2]], hp];
+        drawShadow(c, W, ptProj(L, LZ), 0.58, 2.2); drawShadow(c, [thread], ptProj(L, LZ), 0.45, 2.2, 2); lightWall(c, L); drawWire(c, W, p => p); c.save(); c.strokeStyle = 'rgba(30,28,26,.6)'; c.lineWidth = 1; c.beginPath(); c.moveTo(hp[0], C.y); c.lineTo(hp[0], hp[1]); c.stroke(); c.restore();
+        c.save(); c.globalCompositeOperation = 'screen'; const g = c.createRadialGradient(L[0], L[1] - 10, 2, L[0], L[1] - 10, 90); g.addColorStop(0, 'rgba(255,246,220,.85)'); g.addColorStop(1, 'rgba(255,246,220,0)'); c.fillStyle = g; c.fillRect(L[0] - 100, L[1] - 110, 200, 200); c.restore();
+ },
+      down(st, p, G) { if (Math.abs(p.x - PIV[0]) < 260 && p.y > 150 && p.y < 650) { st.drag = { x0: p.x, th0: st.th }; G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; let th = st.drag.th0 + (p.x - st.drag.x0) * 0.35; th = ((th + 540) % 360) - 180; st.ok = Math.abs(th) < 4; st.th = th; G.Snd.scratch(1); },
+      up(st) { st.drag = null; },
+    }, { box: ICONBOX, draw: (x, r, s) => { lamp(x, r); iconWire(W0.map(q => q.map(p => rotY(p, s ? 0 : 64))), p => p)(x, r, s); } });
+  })();
+
+  // ---------- 8. 등 — 도르래에 매단 등불. 등불을 올리고 내린다 ----------
+  (() => {
+    const LZ = 540, LX = 900, LY0 = 430, PUL = [LX, 70]; const tgt = target('등');
+    const W0 = sculpt(tgt, ptRay([LX, LY0], LZ), 100, 420, 11, z => LZ / (LZ - z)); const low = lowest(W0); const ROD = [[low[0], low[1], low[2]], [low[0], TABLE - 4, low[2]]];
+    const rig = (x, r) => { P.ring(x, PUL[0], PUL[1], 16, 16, { r, w: 2 }); line(x, r, [[PUL[0], C.y + 10], [PUL[0], PUL[1] - 16]], { w: 2 }); line(x, r, [[PUL[0] + 16, PUL[1]], [PUL[0] + 16, 560], [PUL[0] + 70, 580]], { w: 1.4 }); line(x, r, [[low[0] - 34, TABLE - 2], [low[0] + 34, TABLE - 2]], { w: 3 }); };
+    const lantern = (c, ly) => { c.save(); c.strokeStyle = '#1c1b19'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(PUL[0] - 16, PUL[1]); c.lineTo(LX - 16, ly - 40); c.moveTo(LX - 16, ly - 40); c.lineTo(LX + 16, ly - 40); c.stroke(); c.lineWidth = 3; c.strokeRect(LX - 22, ly - 36, 44, 58); c.beginPath(); c.moveTo(LX - 26, ly - 36); c.lineTo(LX, ly - 52); c.lineTo(LX + 26, ly - 36); c.stroke(); c.restore(); };
+    reg({ id: 'lantern', ans: '등',
+      hints: ['등불은 도르래에 매달려 있다. 끌어서 올리고 내린다.', '등불이 높으면 그림자가 아래로, 낮으면 위로 간다.', '그림자가 빈 액자 안에 들어와 무언가로 읽히는 높이가 있다.'],
+      init(st) { st.ly = 230; st.drag = null; st.ok = false; },
+      draw(c, st, G) { G.ink(c, G.art('lan-w', G.W, G.H, (x, r) => { frameArt(x, r); rig(x, r); }), 0, 0); const L = [LX, st.ly];
+        drawShadow(c, W0, ptProj(L, LZ), 0.58, 3.2); drawShadow(c, [ROD], ptProj(L, LZ), 0.58, 3.2, 4); lightWall(c, L); drawWire(c, W0.concat([ROD]), p => p); lantern(c, st.ly); flame(c, LX, st.ly + 6, G, 0.7);
+ },
+      down(st, p, G) { if (Math.abs(p.x - LX) < 60 && Math.abs(p.y - st.ly) < 70) { st.drag = { dy: p.y - st.ly }; G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; const ly = clamp(p.y - st.drag.dy, 150, 640); st.ok = Math.abs(ly - LY0) < 10; st.ly = ly; G.Snd.scratch(1); },
+      up(st) { st.drag = null; },
+    }, { box: ICONBOX, draw: (x, r, s) => { rig(x, r); iconWire(W0.concat([ROD]), p => p)(x, r, s); } });
+  })();
+
+  // ---------- 9. 림 — 손잡이 달린 촛대. 촛불을 옮긴다 (좌우·위아래) ----------
+  (() => {
+    const LZ = 520, LC = [930, 560]; const tgt = target('림');
+    const W0 = sculpt(tgt, ptRay(LC, LZ), 60, 420, 21, z => LZ / (LZ - z)); const low = lowest(W0); const ROD = [[low[0], low[1], low[2]], [low[0], TABLE - 4, low[2]]];
+    reg({ id: 'candle', ans: '림',
+      hints: ['촛대를 끌어 옮기면 그림자가 반대쪽으로 움직인다.', '가까이 대면 커지고, 멀면 작아진다.', '그림자가 빈 액자 안에 들어와 무언가로 읽히는 자리가 있다.'],
+      init(st) { st.L = [1120, 420]; st.drag = null; st.ok = false; },
+      draw(c, st, G) { G.ink(c, G.art('cdl-w', G.W, G.H, (x, r) => { frameArt(x, r); line(x, r, [[low[0] - 34, TABLE - 2], [low[0] + 34, TABLE - 2]], { w: 3 }); }), 0, 0);
+        drawShadow(c, W0, ptProj(st.L, LZ), 0.58, 3.4); drawShadow(c, [ROD], ptProj(st.L, LZ), 0.58, 3.4, 4); lightWall(c, st.L); drawWire(c, W0.concat([ROD]), p => p); candleBody(c, st.L[0], st.L[1], true); flame(c, st.L[0], st.L[1], G);
+ },
+      down(st, p, G) { const L = st.L; if (Math.abs(p.x - L[0]) < 60 && p.y > L[1] - 50 && p.y < L[1] + 110) { st.drag = { dx: p.x - L[0], dy: p.y - L[1] }; G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; const lx = clamp(p.x - st.drag.dx, 820, 1180), ly = clamp(p.y - st.drag.dy, 300, TABLE - 100); st.ok = Math.hypot(lx - LC[0], ly - LC[1]) < 22; st.L = [lx, ly]; G.Snd.scratch(1); },
+      up(st) { st.drag = null; },
+    }, { box: ICONBOX, draw: (x, r, s) => { iconWire(W0.concat([ROD]), p => p)(x, r, s); } });
+  })();
+
+  // ---------- 10. 불 — 촛불이 둘. 조각을 받침째 옮기고, 방해하는 촛불 하나를 끈다 ----------
+  (() => {
+    const LZ = 520, L1 = [960, 560], L2 = [1110, 470], DX0 = 0; const tgt = target('불');
+    const W0 = sculpt(tgt, ptRay(L1, LZ), 70, 400, 31, z => LZ / (LZ - z)); const low = lowest(W0); const ROD = [[low[0], low[1], low[2]], [low[0], TABLE - 4, low[2]]];
+    const moved = dx => W0.concat([ROD]).map(s => s.map(p => [p[0] + dx, p[1], p[2]])); G.TWIN_LOW = low[0];
+    reg({ id: 'twin', ans: '불',
+      hints: ['조각은 받침째 좌우로 옮길 수 있다.', '촛불이 둘이면 그림자도 둘이다. 불꽃을 누르면 끄고 켤 수 있다.', '한 촛불의 그림자만 남겨야 읽힌다.'],
+      init(st) { st.dx = -170; st.on = [true, true]; st.drag = null; st.ok = false; },
+      check(st, G) { st.ok = Math.abs(st.dx - DX0) < 12 && st.on[0] && !st.on[1]; },
+      draw(c, st, G) { G.ink(c, G.art('twin-w', G.W, G.H, frameArt), 0, 0); const W = moved(st.dx); const n = st.on.filter(Boolean).length; const al = n === 2 ? 0.34 : 0.62;
+        [L1, L2].forEach((L, i) => { if (st.on[i]) { drawShadow(c, W.slice(0, -1), ptProj(L, LZ), al, 3.4); drawShadow(c, W.slice(-1), ptProj(L, LZ), al, 3.4, 4); } });
+        const lit = st.on[0] ? L1 : st.on[1] ? L2 : null; if (lit) lightWall(c, lit); else { c.save(); c.fillStyle = 'rgba(16,16,20,.82)'; c.fillRect(C.x, C.y, C.w, C.h); c.restore(); }
+        drawWire(c, W, p => p); c.save(); c.strokeStyle = '#1d1c1a'; c.lineWidth = 3; c.beginPath(); c.moveTo(low[0] + st.dx - 40, TABLE - 2); c.lineTo(low[0] + st.dx + 40, TABLE - 2); c.stroke(); c.restore();
+        [L1, L2].forEach((L, i) => { candleBody(c, L[0], L[1]); if (st.on[i]) flame(c, L[0], L[1], G); else { c.save(); c.strokeStyle = 'rgba(120,118,112,.5)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(L[0], L[1] + 4); c.bezierCurveTo(L[0] - 10, L[1] - 20, L[0] + 12, L[1] - 40, L[0] - 4, L[1] - 64); c.stroke(); c.restore(); } });
+ },
+      down(st, p, G) { const hit = [L1, L2].findIndex(L => near(p, [L[0], L[1] - 6], 40)); if (hit >= 0) { st.on[hit] = !st.on[hit]; G.Snd.paper(); G.toast(st.on[hit] ? '촛불을 켰다' : '촛불을 껐다'); this.check(st, G); return; }
+        if (Math.abs(p.x - (low[0] + st.dx)) < 70 && p.y > TABLE - 90 && p.y < TABLE + 30) { st.drag = { dx: p.x - st.dx }; G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; const dx = clamp(p.x - st.drag.dx, -260, 120); if (dx !== st.dx) G.Snd.scratch(1); st.dx = dx; this.check(st, G); },
+      up(st) { st.drag = null; },
+    }, { box: ICONBOX, draw: (x, r, s) => { iconWire(moved(s ? 0 : -170), p => p)(x, r, s); } });
+  })();
+
+  // ---------- 11. 진 — 창으로 드는 햇빛(평행광). 벽시계를 돌려 시각을 바꾸면 해의 기울기가 바뀐다 ----------
+  (() => {
+    const H0 = 17, CLK = [200, 250];
+    const dirOf = h => [-0.6 - 0.1 * (h - 7), 1.6 - 0.1 * (h - 7)]; // 깊이 1당 그림자가 옮겨 가는 양 (가로, 세로)
+    const [a0, b0] = dirOf(H0); const tgt = target('진');
+    const W0 = sculpt(tgt, (w, z) => [w[0] - a0 * z, w[1] - b0 * z, z], 40, 210, 41); const low = lowest(W0); const ROD = [[low[0], low[1], low[2]], [low[0], TABLE - 4, low[2]]];
+    const proj = h => { const [a, b] = dirOf(h); return p => [p[0] + a * p[2], p[1] + b * p[2]]; };
+    const clockArt = (x, r) => { P.ring(x, CLK[0], CLK[1], 70, 70, { r, w: 2.4 }); for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; line(x, r, [[CLK[0] + Math.cos(a) * 58, CLK[1] + Math.sin(a) * 58], [CLK[0] + Math.cos(a) * 64, CLK[1] + Math.sin(a) * 64]], { w: 1.4 }); } };
+    const winArt = (x, r) => { line(x, r, P.rectPts(1060, 120, 140, 300), { w: 2 }); line(x, r, [[1130, 120], [1130, 420]], { w: 1.2 }); line(x, r, [[1060, 270], [1200, 270]], { w: 1.2 }); line(x, r, [[low[0] - 34, TABLE - 2], [low[0] + 34, TABLE - 2]], { w: 3 }); };
+    reg({ id: 'sun', ans: '진',
+      hints: ['햇빛은 창에서 들어온다. 해는 시각에 따라 기운다.', '벽시계의 짧은 바늘을 끌어 시각을 바꿔 보라.', '그림자가 빈 액자 안에서 읽히는 시각이 하루에 한 번 있다.'],
+      init(st) { st.h = 10; st.drag = false; st.ok = false; },
+      draw(c, st, G) { G.ink(c, G.art('sun-w', G.W, G.H, (x, r) => { frameArt(x, r); clockArt(x, r); winArt(x, r); }), 0, 0);
+        drawShadow(c, W0, proj(st.h), 0.55, 2.8); drawShadow(c, [ROD], proj(st.h), 0.55, 2.8, 4);
+        // 햇빛: 시각이 늦을수록 붉고 어둡다
+        const k = (st.h - 7) / 12; c.save(); c.globalCompositeOperation = 'multiply'; const g = c.createLinearGradient(C.x + C.w, 0, C.x, 0); g.addColorStop(0, 'rgba(255,250,238,1)'); g.addColorStop(1, `rgba(${200 - 40 * k},${188 - 60 * k},${170 - 80 * k},1)`); c.fillStyle = g; c.fillRect(C.x, C.y, C.w, C.h); c.restore();
+        drawWire(c, W0.concat([ROD]), p => p);
+        // 시곗바늘: 짧은 바늘은 시각, 긴 바늘은 분
+        const ha = rad((st.h % 12) * 30 - 90), ma = rad((st.h % 1) * 360 - 90); c.save(); c.strokeStyle = '#1c1b19'; c.lineCap = 'round'; c.lineWidth = 6; c.beginPath(); c.moveTo(CLK[0], CLK[1]); c.lineTo(CLK[0] + Math.cos(ha) * 38, CLK[1] + Math.sin(ha) * 38); c.stroke(); c.lineWidth = 3; c.beginPath(); c.moveTo(CLK[0], CLK[1]); c.lineTo(CLK[0] + Math.cos(ma) * 56, CLK[1] + Math.sin(ma) * 56); c.stroke(); c.restore();
+ },
+      down(st, p, G) { if (near(p, CLK, 90)) { st.drag = true; st.prevA = Math.atan2(p.y - CLK[1], p.x - CLK[0]); G.Snd.pick(); } },
+      move(st, p, G) { if (!st.drag) return; const a = Math.atan2(p.y - CLK[1], p.x - CLK[0]); let d = a - st.prevA; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; st.prevA = a;
+        st.raw = clamp((st.raw == null ? st.h : st.raw) + d / (Math.PI / 6), 7, 19); st.h = st.raw; st.ok = Math.abs(st.h - H0) < 0.12; G.Snd.scratch(1); },
+      up(st) { st.drag = false; st.raw = null; },
+    }, { box: ICONBOX, draw: (x, r, s) => { clockArt(x, r); winArt(x, r); iconWire(W0.concat([ROD]), p => p)(x, r, s); } });
+  })();
+
+  // =====================================================================
+  // 방: 사물은 풀기 전에는 흐린 밑그림, 풀면 진하게 그려진다 (글자는 보이지 않는다)
+  // =====================================================================
+  const SPOTS = { frame: [170, 230], sink: [390, 230], balloon: [610, 230], bookend: [830, 230], desk: [1060, 230], lake: [190, 560], mobile: [400, 560], lantern: [600, 560], candle: [800, 560], twin: [1000, 560], sun: [1150, 470] };
+  const HB = 190;
+  G.puzzles.forEach(p => { const ic = icons[p.id], [hx, hy] = SPOTS[p.id]; const [x0, y0, x1, y1] = ic.box; const k = Math.min(HB / (x1 - x0), HB / (y1 - y0));
+    p.hub = { x: hx, y: hy, w: HB + 20, h: HB + 20, r: HB * 0.5, draw(x, r, G) { x.save(); x.translate(10 + (HB - (x1 - x0) * k) / 2, 10 + (HB - (y1 - y0) * k) / 2); x.scale(k, k); x.translate(-x0, -y0); ic.draw(x, r, false); x.restore(); } }; }); // 방에서는 늘 처음 모습 (맞춘 모습은 곧 답이다)
+  G.HUB = { draw(x, r) {
+    P.smudge(x, C.x + 10, 690, C.w - 20, 120, { alpha: 0.18, seed: 2 }); P.stroke(x, [[C.x + 30, 780], [C.x + C.w - 30, 772]], { r, w: 2.4 });
+    const wall = new Path2D(); wall.rect(C.x, C.y, C.w, 740); P.hatch(x, wall, [C.x, C.y, C.w, 740], { angle: Math.PI / 2, spacing: 26, alpha: 0.06, sketch: true, seed: 4 });
+    const sh = [[70, 342], [1190, 336], [1190, 352], [70, 358]]; P.charcoal(x, P.polyPath(sh), [70, 336, 1120, 22], { r, pts: sh, base: 0.4 }); } };
+
+  // =====================================================================
+  // 마지막: 원고지 2·4·2·3칸에 열한 글자를 늘어놓는다
+  // =====================================================================
+  (() => {
+    const SENT = ['모든', '그림자는', '불을', '등진다']; const FLAT = SENT.join('').split('');
+    const ORDER = ['림', '다', '모', '을', '진', '는', '그', '불', '든', '등', '자']; // 늘어놓기 전 순서 (문장과 무관)
+    const CS = 78; const slots = []; let x = 150; SENT.forEach(wd => { for (let i = 0; i < wd.length; i++) { slots.push({ x, y: 330 }); x += CS; } x += 40; });
+    const tile = i => ({ x: 170 + i * 88, y: 590 });
+    G.FINAL = { id: 'final', ans: SENT.join(' '), noPad: true, hints: ['띄어쓰기가 칸을 나눈다. 넉 자 낱말과 석 자 낱말부터.', '그림자는 늘 어느 쪽에 생겼는가.', '모든 ○○○○ ○○ ○○○.'],
+      init(st, G) { st.cells = new Array(11).fill(null); st.pick = null; st.drag = null; },
+      glyph(G, ch) { return G.art('fc-' + ch, 90, 90, (x, r) => G.syl(x, ch, 12, 8, 60, { r, w: 3.5 })); },
+      slotAt(p) { return slots.findIndex(s => p.x > s.x - 8 && p.x < s.x + CS + 4 && p.y > s.y - 14 && p.y < s.y + CS + 14); },
+      tileAt(st, p) { for (let i = 0; i < 11; i++) { if (st.cells.includes(i)) continue; const tr = tile(i); if (p.x > tr.x && p.x < tr.x + 76 && p.y > tr.y && p.y < tr.y + 80) return i; } return -1; },
+      draw(c, st, G) { const base = G.art('final-base', G.W, G.H, (x, r) => { slots.forEach(s => P.stroke(x, P.rectPts(s.x, s.y, CS - 4, CS - 4), { r, w: 1.2, alpha: 0.5, passes: 1 })); P.stroke(x, [[C.x + 80, 520], [C.x + C.w - 80, 516]], { r, w: 0.8, alpha: 0.25, passes: 1 }); }); G.ink(c, base, 0, 0);
+        c.save(); c.font = '34px "Nanum Pen Script", cursive'; c.fillStyle = '#3a3733'; c.textAlign = 'center'; c.fillText('찾은 열한 글자를 원고지에 늘어놓는다. 칸 사이 띈 자리는 띄어쓰기다.', C.x + C.w / 2, 200); c.restore();
+        const d = st.drag; const hov = d && d.moved ? this.slotAt(d) : -1;
+        if (hov >= 0) { c.save(); c.fillStyle = 'rgba(40,38,34,.08)'; c.fillRect(slots[hov].x, slots[hov].y, CS - 4, CS - 4); c.restore(); }
+        st.cells.forEach((t, i) => { if (t == null || (d && d.moved && d.fromCell === i)) return; G.ink(c, this.glyph(G, ORDER[t]), slots[i].x - 6, slots[i].y - 2); });
+        ORDER.forEach((ch, i) => { if (st.cells.includes(i) || (d && d.moved && d.t === i)) return; const tr = tile(i); c.save(); if (st.pick === i) c.translate(0, -10); G.ink(c, this.glyph(G, ch), tr.x - 6, tr.y - 2); c.restore(); });
+        if (d && d.moved) { c.save(); c.shadowColor = 'rgba(0,0,0,.25)'; c.shadowBlur = 12; c.shadowOffsetY = 6; G.ink(c, this.glyph(G, ORDER[d.t]), d.x - 45, d.y - 50); c.restore(); }
+        c.save(); c.font = '28px "Nanum Pen Script", cursive'; c.fillStyle = '#55514b'; c.textAlign = 'center'; c.fillText('글자를 끌어 칸에 놓는다 · 놓인 글자를 끌어 옮기거나 칸 밖으로 빼낸다', C.x + C.w / 2, 720); c.restore(); },
+      down(st, p, G) { const lu = G.lockUntil.final || 0; if (G.t < lu) { G.toast('종이가 번져 있다… ' + Math.ceil(lu - G.t) + '초'); return; }
+        const ti = this.tileAt(st, p); if (ti >= 0) { st.drag = { t: ti, fromCell: -1, x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false }; G.Snd.pick(); return; }
+        const si = this.slotAt(p); if (si >= 0 && st.cells[si] != null) { st.drag = { t: st.cells[si], fromCell: si, x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false }; G.Snd.pick(); return; }
+        // 누르기 방식: 고른 글자가 있으면 빈 칸에 놓는다
+        if (si >= 0 && st.pick != null) { this.put(st, st.pick, si, -1, G); st.pick = null; } },
+      move(st, p) { const d = st.drag; if (!d) return; d.x = p.x; d.y = p.y; if (Math.hypot(p.x - d.sx, p.y - d.sy) > 8) d.moved = true; },
+      up(st, p, G) { const d = st.drag; if (!d) return; st.drag = null;
+        if (!d.moved) { if (d.fromCell >= 0) { st.cells[d.fromCell] = null; G.Snd.erase(); } else st.pick = st.pick === d.t ? null : d.t; return; }
+        const si = this.slotAt(p); if (si < 0) { if (d.fromCell >= 0) { st.cells[d.fromCell] = null; G.Snd.erase(); } return; }
+        this.put(st, d.t, si, d.fromCell, G); },
+      // 칸 si에 글자 t를 놓는다. 칸에 글자가 있으면 옮겨 온 자리와 맞바꾸거나 밖으로 뺀다
+      put(st, t, si, from, G) { const prev = st.cells[si]; if (from >= 0) st.cells[from] = prev != null ? prev : null; st.cells[si] = t; st.pick = null; G.Snd.snap();
+        if (st.cells.every(v => v != null)) { const wrong = st.cells.filter((tt, j) => ORDER[tt] !== FLAT[j]).length; if (!wrong) { G.solved.final = true; G.save(); G.Snd.solved(); G.flash = 1; setTimeout(() => G.ending(), 2200); } else G.fail(this, wrong + '칸이 맞지 않는다'); } },
+    };
+    G.FLAT = FLAT; G.ORDER = ORDER;
   })();
 })(window.MG);
 </script>
