@@ -4,6 +4,7 @@ S='shots'; O='out/intro'; R='classroom-games'
 plan={
  'mango':['mango-0.png','mango-1.png',R+'/mango/img/scene-02-board.webp'],
  'mitgeurim':['mitgeurim-0.png','mitgeurim-1.png'],
+ 'mitgeurim2':['mitgeurim2-0.png','mitgeurim2-1.png'],
  'myungyun':['myungyun-0.png','myungyun-1.png'],
  'sky1945':['sky1945-0.png','sky1945-1.png'],
  'puzzle25':['puzzle25-0.png','puzzle25-1.png','puzzle25-2.png'],
