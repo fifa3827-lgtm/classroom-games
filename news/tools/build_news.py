@@ -85,7 +85,7 @@ def article(i, p):
     older = POSTS[i + 1] if i + 1 < len(POSTS) else None
     nav = '<nav class="nav2">'
     nav += f'<a href="/news/{older["slug"]}/">← {E(older["title"])}</a>' if older else "<span></span>"
-    nav += f'<a href="/news/{newer["slug"]}/">{E(newer["title"])} →</a>' if newer else '<a href="/news/">소식 목록 →</a>'
+    nav += f'<a href="/news/{newer["slug"]}/">{E(newer["title"])} →</a>' if newer else '<span></span>'  # 맨 위 글: 아래 「← 소식 목록으로」와 겹치지 않게 비워 둔다
     nav += "</nav>"
     return (head(f"{p['title']} · 달빛 오락실 소식", p["summary"], url, p["cover"],
                  f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>')
