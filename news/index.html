@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>오락실 소식 · 달빛 오락실</title>
+<meta name="description" content="달빛 오락실에 새로 들어온 게임, 바뀐 것, 만드는 이야기를 모아 두는 곳이에요.">
+<link rel="canonical" href="https://game.edoori.co.kr/news/">
+<meta name="theme-color" content="#17153a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌙</text></svg>">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="달빛 오락실">
+<meta property="og:title" content="오락실 소식 · 달빛 오락실">
+<meta property="og:description" content="달빛 오락실에 새로 들어온 게임, 바뀐 것, 만드는 이야기를 모아 두는 곳이에요.">
+<meta property="og:url" content="https://game.edoori.co.kr/news/">
+<meta property="og:image" content="https://game.edoori.co.kr/intro/neon-dash/shot1.webp">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/intro/intro.css">
+<link rel="stylesheet" href="/news/news.css">
+
+</head>
+<body class="landscape">
+<div class="sky" aria-hidden="true"></div>
+<header class="top">
+  <a class="home" href="/"><span class="moon" aria-hidden="true"></span>달빛 오락실</a>
+  <a class="crumb" href="/news/" style="text-decoration:none">📰 소식</a>
+</header>
+<main>
+<section class="head"><h1>📰 오락실 소식</h1><p>새로 들어온 게임, 바뀐 것, 만드는 이야기를 모아 두는 곳이에요.</p>
+<div class="tabs" role="group" aria-label="분류"><button type="button" data-f="all" aria-pressed="true">전체</button><button type="button" data-f="new" aria-pressed="false">새 게임</button><button type="button" data-f="update" aria-pressed="false">업데이트</button><button type="button" data-f="story" aria-pressed="false">만드는 이야기</button></div></section>
+<div class="list"><a class="post big" href="/news/2026-09-26-party-games/" data-cat="new">
+<img src="/intro/neon-dash/shot1.webp" alt="" loading="eager">
+<div class="b"><div class="meta"><span class="chip new">새 게임</span>2026.09.26</div>
+<h2>여럿이 하는 게임 두 대가 들어왔어요</h2><p>화면을 두드려 달리는 「DASH! 전력질주!」와 90초 네온 뱀 대결 「네온 스네이크 아레나」. 최대 6명이 함께하고, 큰 화면으로 중계할 수 있어요.</p></div></a><a class="post" href="/news/2026-09-26-intro-pages/" data-cat="update">
+<img src="/intro/lanternfall/og.jpg" alt="" loading="lazy">
+<div class="b"><div class="meta"><span class="chip update">업데이트</span>2026.09.26</div>
+<h2>게임마다 소개 화면이 생겼어요</h2><p>이제 게임기를 누르면 어떤 게임인지, 어떤 기기에서 잘 되는지 먼저 보고 시작할 수 있어요.</p></div></a><a class="post" href="/news/2026-09-25-open/" data-cat="story">
+<img src="/intro/myungyun/og.jpg" alt="" loading="lazy">
+<div class="b"><div class="meta"><span class="chip story">만드는 이야기</span>2026.09.25</div>
+<h2>달빛 오락실이 문을 열었어요</h2><p>보름달 아래 작은 게임기들이 불을 켰어요. 설치도 회원가입도 없이, 누르면 바로 시작되는 무료 웹게임 오락실이에요.</p></div></a></div>
+<a class="back" href="/">← 달빛 오락실 입구로</a>
+</main>
+<script>
+(function(){var bs=document.querySelectorAll('.tabs button'),ps=document.querySelectorAll('.post');
+bs.forEach(function(b){b.addEventListener('click',function(){var f=b.dataset.f;
+bs.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+ps.forEach(function(p){p.hidden=!(f==='all'||p.dataset.cat===f)});});});})();
+</script>
+<footer>달빛 오락실 · 설치 없이 바로 하는 무료 웹게임</footer>
+</body>
+</html>

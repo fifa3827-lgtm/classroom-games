@@ -1,0 +1,50 @@
+/* 오락실 소식 — intro.css 위에 더하는 모양 */
+main{display:block !important}
+.head h1{font-size:clamp(30px,7vw,44px);margin:8px 0 6px}
+.head p{color:var(--dim);margin:0 0 18px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tabs button{font:inherit;font-size:14.5px;color:var(--text);padding:6px 15px;border-radius:999px;background:var(--card);border:1px solid var(--line);cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--gold);color:var(--night);border-color:var(--gold);font-weight:700}
+.tabs button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.list{display:grid;gap:16px;margin:0 0 30px}
+.post{display:grid;background:linear-gradient(var(--card),var(--night2));border:1px solid var(--line);border-radius:18px;overflow:hidden;text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s}
+.post:hover{border-color:var(--gold);transform:translateY(-2px)}
+.post:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.post img{width:100%;aspect-ratio:16/9;object-fit:cover;object-position:top;display:block;background:#0e0c26}
+.post .b{padding:16px 18px 18px}
+.meta{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--dim);margin-bottom:6px}
+.chip{border-radius:999px;padding:1px 10px;font-weight:700;font-size:12.5px;color:var(--night);background:var(--gold)}
+.chip.update{background:#8fc3ff}.chip.story{background:#7fd8a6}
+.post h2{font-size:22px;color:var(--title);margin:0 0 6px}
+.post p{margin:0;font-size:15.5px;color:var(--dim)}
+.empty{color:var(--dim)}
+@media(min-width:900px){
+  .top,main{max-width:1200px}
+  .list{grid-template-columns:1fr 1fr}
+  .post.big{grid-column:1/-1;grid-template-columns:1.3fr 1fr}
+  .post.big img{height:100%;aspect-ratio:auto}
+  .post.big .b{padding:26px 30px;align-self:center}
+  .post.big h2{font-size:30px}
+}
+/* 글 한 편 */
+.article{max-width:760px;margin:0 auto 30px}
+.article h1{font-size:clamp(28px,6.5vw,42px);margin:6px 0 10px}
+.article .lead{color:var(--dim);font-size:17.5px;margin:0 0 18px}
+.article .cover{width:100%;border-radius:18px;border:1px solid var(--line);display:block;margin:0 0 22px}
+.article h2{font-size:24px;color:var(--gold);margin:28px 0 10px}
+.article p{margin:0 0 14px}
+.article ul,.article ol{margin:0 0 16px;padding-left:1.2em}
+.article li{margin:5px 0}
+.article li::marker{color:var(--gold)}
+.article figure{margin:6px 0 18px}
+.article figure img{width:100%;border-radius:14px;border:1px solid var(--line);display:block}
+.article figcaption{font-size:13.5px;color:var(--dim);text-align:center;margin-top:6px}
+.gcard{display:grid;gap:14px;background:linear-gradient(var(--card),var(--night2));border:1px solid var(--line);border-radius:18px;padding:16px;margin:0 0 16px}
+.gcard img{width:100%;border-radius:12px;display:block;aspect-ratio:16/9;object-fit:cover}
+.gcard h3{font-size:22px;margin:0 0 6px}
+.gcard p{margin:0 0 12px;color:var(--text)}
+.gcard .start{min-height:48px;font-size:19px;padding:0 22px}
+@media(min-width:760px){.gcard{grid-template-columns:1fr 1.1fr;align-items:center;padding:18px}}
+.article .btnrow{margin:22px 0 6px}
+.nav2{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:26px 0 0;padding-top:18px;border-top:1px solid var(--line)}
+.nav2 a{color:var(--dim);text-decoration:none}.nav2 a:hover{color:var(--gold)}
