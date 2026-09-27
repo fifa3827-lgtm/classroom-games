@@ -220,6 +220,11 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
     save() { try { localStorage.setItem('mitgeurim.v1', JSON.stringify({ solved: this.solved, wrongs: this.wrongs, leaves: this.leaves, night: this.night, hintN: this.hintN, done: this.done })); } catch (e) { } },
     load() { try { const s = JSON.parse(localStorage.getItem('mitgeurim.v1') || 'null'); if (s) { this.solved = s.solved || {}; this.wrongs = s.wrongs || {}; this.leaves = s.leaves || 0; this.night = !!s.night; this.hintN = s.hintN || {}; this.done = !!s.done; } } catch (e) { } },
     nSolved() { return this.puzzles.filter(p => !p.final && this.solved[p.id]).length; },
+    hasProgress() { return this.done || Object.keys(this.solved).length > 0 || Object.keys(this.wrongs).length > 0; },
+    // 처음부터 새로: 찾은 글자·틀린 기록·힌트·잎을 모두 지우고 판도 처음 상태로 되돌린다
+    reset() { this.solved = {}; this.wrongs = {}; this.leaves = 0; this.hintN = {}; this.done = false; this.night = false; this.lockUntil = {}; this.puzT = {}; this.entry = []; this.resetAsk = 0;
+      this.puzzles.forEach(p => { p.st = null; }); try { localStorage.removeItem('mitgeurim.v1'); } catch (e) { } this.save(); },
+    startFresh() { this.reset(); this.mode = 'hub'; this.cur = null; Snd.paper(); this.toast('새 종이다. 처음부터 찾아보자'); },
 
     // ---------- 전환 ----------
     open(p) { if (p.final && this.nSolved() < this.puzzles.filter(q => !q.final).length) { this.toast('나무가 아직 다 자라지 않았다'); return; }
@@ -229,8 +234,12 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
 
     // ---------- 입력 ----------
     down(p) { this.pd = p;
-      if (this.mode === 'title') { this.mode = 'hub'; Snd.paper(); this.wantFull = this.touchDev; return; }
-      if (this.mode === 'end') { return; }
+      if (this.mode === 'title') { this.wantFull = this.touchDev;
+        if (this.hasProgress() && Math.abs(p.x - (CARD.x + CARD.w / 2)) < 230 && Math.abs(p.y - 812) < 30) {
+          if (this.resetAsk && this.t < this.resetAsk) { this.startFresh(); } else { this.resetAsk = this.t + 4; Snd.click(); } return; }
+        this.resetAsk = 0; this.mode = 'hub'; Snd.paper(); return; }
+      if (this.mode === 'end') { if ((this.endT || 0) < 9.5) return; const cx0 = CARD.x + CARD.w / 2;
+        if (Math.abs(p.y - 815) < 36) { if (Math.abs(p.x - (cx0 - 190)) < 150) { this.startFresh(); return; } if (Math.abs(p.x - (cx0 + 190)) < 150) { this.toHub(); return; } } return; }
       // 오른쪽 띠: 자음판, 모래시계
       if (p.x > 1250) { this.stripDown(p); return; }
       if (this.mode === 'hub') { this.hubDown(p); return; }
@@ -316,7 +325,11 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
         P.stroke(x, [[px - 330, py + 70], [px - 200, py + 52], [px - 60, py + 20], [px - 46, py + 8]], { r, w: 1.4, alpha: 0.7 }); m.width = 0; f.width = 0;
       }); this.ink(c, a, 0, 0);
       c.font = '30px "Gowun Batang", serif'; c.textAlign = 'center'; c.fillStyle = '#4a4640'; c.fillText('선 밑에 숨은 글자를 찾는 열 장의 그림', cx0, 510);
-      c.font = '38px "Nanum Pen Script", cursive'; c.fillStyle = '#55514b'; c.globalAlpha = 0.65 + 0.35 * Math.sin(this.t * 2.2); c.fillText('종이를 눌러 시작', cx0, 740); c.restore();
+      c.font = '38px "Nanum Pen Script", cursive'; c.fillStyle = '#55514b'; c.globalAlpha = 0.65 + 0.35 * Math.sin(this.t * 2.2); c.fillText(this.hasProgress() ? '종이를 눌러 이어서 하기' : '종이를 눌러 시작', cx0, 740); c.globalAlpha = 1;
+      if (this.hasProgress()) { const ask = this.resetAsk && this.t < this.resetAsk; c.font = '26px "Gowun Batang", serif'; c.fillStyle = ask ? '#8a1f1f' : '#6b665e';
+        const tx = ask ? '한 번 더 누르면 찾은 글자가 모두 지워져요' : '처음부터 새로 하기'; c.fillText(tx, cx0, 820); const tw = c.measureText(tx).width;
+        c.strokeStyle = c.fillStyle; c.globalAlpha = 0.5; c.lineWidth = 1.2; c.beginPath(); c.moveTo(cx0 - tw / 2, 828); c.lineTo(cx0 + tw / 2, 828); c.stroke(); }
+      c.restore();
       this.drawStrip(c); },
     drawStrip(c) {
       // 모래시계
@@ -380,6 +393,8 @@ button{font-family:inherit;color:var(--ink);background:rgba(0,0,0,.5);border:1px
       const k2 = clamp((t - 7.5) / 2, 0, 1); if (k2 > 0) { c.save(); c.globalAlpha = k2; c.textAlign = 'center'; c.fillStyle = '#1c1b19';
         c.font = '58px "Nanum Pen Script", cursive'; ['그림자 — 빛이 있어야 보이는 그림.', '지우고 남은 것이', '처음부터 그려져 있던 밑그림이었다.'].forEach((l, i) => c.fillText(l, CARD.x + CARD.w / 2, 500 + i * 66));
         const wr = Object.values(this.wrongs || {}).reduce((a, b) => a + b, 0); c.font = '26px "Gowun Batang", serif'; c.fillStyle = '#55514b'; c.fillText('열 장 모두 · 떨어진 잎 ' + wr + '장', CARD.x + CARD.w / 2, 760); c.restore(); }
+      const k3 = clamp((t - 9.5) / 1, 0, 1); if (k3 > 0) { const cx0 = CARD.x + CARD.w / 2; c.save(); c.globalAlpha = k3; c.textAlign = 'center'; c.font = '38px "Nanum Pen Script", cursive'; c.fillStyle = '#1c1b19'; c.strokeStyle = '#1c1b19'; c.lineWidth = 1.4;
+        [['처음부터 다시', cx0 - 190], ['방으로 돌아가기', cx0 + 190]].forEach(([tx, bx]) => { c.fillText(tx, bx, 826); const tw = c.measureText(tx).width; c.globalAlpha = k3 * 0.55; c.beginPath(); c.moveTo(bx - tw / 2 - 6, 836); c.lineTo(bx + tw / 2 + 6, 833); c.stroke(); c.globalAlpha = k3; }); c.restore(); }
       c.restore(); this.drawStrip(c); },
   };
   root.MG = G;
