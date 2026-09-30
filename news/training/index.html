@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>클로드로 수업 게임 만들기 — 교사 연수</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{color-scheme:light;--paper:#fbf6ec;--card:#fffdf8;--ink:#2b2a33;--ink2:#5b5866;--ink3:#9a95a3;--line:#eee4d2;
+--butter:#ffe7a3;--butter2:#f5c64a;--mint:#cfeadc;--mint2:#3f9a6b;--sky:#d9e8fb;--sky2:#4a7fd0;--lilac:#e9ddf8;--lilac2:#8a5cc9;--peach:#ffdccb;--peach2:#e0795a;
+--round:"Jua","Pretendard Variable",Pretendard,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);word-break:keep-all;-webkit-font-smoothing:antialiased;font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background-color:var(--paper);background-image:radial-gradient(#e9dfcc 1.1px,transparent 1.2px);background-size:22px 22px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 22px 40px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top .home{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;color:var(--ink2);text-decoration:none}
+.top h1{font-family:var(--round);font-weight:400;font-size:clamp(24px,3.4vw,34px);margin:0;flex:1}
+.top h1 .mark{position:relative;display:inline-block;z-index:0}
+.top h1 .mark::after{content:"";position:absolute;left:-4px;right:-6px;bottom:.08em;height:.36em;background:var(--peach);border-radius:10px;z-index:-1;rotate:-1.5deg}
+.mode{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;background:var(--card);overflow:hidden}
+.mode button{border:0;background:transparent;font:inherit;font-weight:700;font-size:13px;padding:7px 14px;color:var(--ink2);cursor:pointer}
+.mode button.on{background:var(--peach);color:#7a3a25}
+/* 슬라이드 */
+.deck{margin-top:16px;position:relative}
+.slide{background:var(--card);border:1.5px solid var(--line);border-radius:26px;padding:26px 30px 28px;box-shadow:0 2px 0 var(--line);min-height:520px}
+.slide h2{font-family:var(--round);font-weight:400;font-size:clamp(24px,3.2vw,36px);margin:4px 0 14px;letter-spacing:-.005em}
+.tag{display:inline-block;font-size:12.5px;font-weight:800;color:var(--peach2);background:color-mix(in srgb,var(--peach) 70%,white);border-radius:999px;padding:4px 10px}
+.mode-slide .slide{display:none} .mode-slide .slide.on{display:block;animation:in .3s}
+@keyframes in{from{opacity:0;translate:12px 0}}
+.mode-all .slide{margin-bottom:18px;min-height:0}
+.nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px}
+.mode-all .nav{display:none}
+.nav button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;width:46px;height:46px;font-size:20px;cursor:pointer;color:var(--ink2);box-shadow:0 2px 0 var(--line)}
+.nav button:hover{border-color:var(--peach2);color:var(--peach2)}
+.dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:60vw}
+.dots button{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--peach2);background:transparent;padding:0;cursor:pointer;box-shadow:none}
+.dots button.on{background:var(--peach2)}
+.counter{font-weight:800;color:var(--ink3);font-size:14px;min-width:60px;text-align:center}
+.toc{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.mode-all .toc{display:none}
+.toc button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink2);cursor:pointer}
+.toc button.on{background:var(--butter);border-color:var(--butter2);color:#6b4d00}
+/* 내용 */
+.lead{font-size:clamp(17px,2.2vw,22px);line-height:1.6;font-weight:600;color:var(--ink);background:var(--butter);border-radius:18px;padding:16px 20px;margin:0 0 18px}
+.flow{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.flow li{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:4px}
+.flow b{font-family:var(--round);font-weight:400;color:var(--peach2);font-size:15px} .flow span{font-size:13px;color:var(--ink2);line-height:1.4}
+.hint{color:var(--ink3);font-size:13.5px;margin:16px 0 0}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 18px}
+.three div{background:var(--paper);border:1.5px solid var(--line);border-radius:20px;padding:18px 16px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.three i{font-style:normal;font-family:var(--round);background:var(--peach);color:#7a3a25;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px}
+.three b{font-size:20px;font-family:var(--round);font-weight:400} .three span{color:var(--ink2);font-size:14.5px;line-height:1.55}
+.three.small b{font-size:18px} .three.small div{padding:14px}
+.note{background:var(--sky);border-radius:16px;padding:12px 16px;font-size:15px;line-height:1.65;color:#2d3f5c;margin:10px 0 0}
+.sub{font-family:var(--round);font-size:18px;margin:16px 0 8px;color:var(--ink2)}
+.steps{margin:0;padding:0 0 0 0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:10px}
+.steps li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:12px 16px;font-size:16px;line-height:1.6}
+.steps li::before{content:counter(s);font-family:var(--round);background:var(--mint);color:#1f5d3d;width:32px;height:32px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:17px}
+.steps.wide li{flex-direction:column;gap:4px} .steps.wide li b{font-family:var(--round);font-weight:400;font-size:18px;color:var(--mint2)}
+.steps.wide li{display:grid;grid-template-columns:32px 1fr;column-gap:14px} .steps.wide li::before{grid-row:1/3} .steps.wide li span{grid-column:2}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:15.5px;border:1.5px solid var(--line);border-radius:18px;overflow:hidden}
+.tbl th,.tbl td{padding:12px 14px;text-align:left;border-bottom:1.5px solid var(--line);vertical-align:top;line-height:1.5}
+.tbl thead th{background:var(--peach);font-family:var(--round);font-weight:400;color:#7a3a25;font-size:16px}
+.tbl tbody th{background:var(--paper);font-weight:800;color:var(--ink);width:24%} .tbl td.ex{color:#7a3a25;font-weight:600}
+.tbl tr:last-child th,.tbl tr:last-child td{border-bottom:0}
+.rules{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rules li{background:var(--paper);border:1.5px solid var(--line);border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.rules b{font-family:var(--round);font-weight:400;font-size:20px;color:var(--peach2)} .rules span{color:var(--ink2);line-height:1.6;font-size:15px}
+.pbox{position:relative;background:#fff4e0;border:1.5px solid #f2dcb5;border-radius:16px;padding:14px 16px 46px;margin:6px 0}
+.pbox pre{margin:0;white-space:pre-wrap;font-family:inherit;font-size:15px;line-height:1.65;color:#4a3a22}
+.pbox.big pre{font-size:16.5px}
+.copy{position:absolute;right:12px;bottom:10px;display:inline-flex;align-items:center;gap:6px;border:0;background:var(--peach2);color:#fff;font:inherit;font-weight:800;font-size:13.5px;border-radius:999px;padding:8px 14px;cursor:pointer;box-shadow:0 3px 0 #b85a40}
+.copy:active{translate:0 2px;box-shadow:none} .copy.ok{background:var(--mint2);box-shadow:0 3px 0 #2c6e4b}
+.edits{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.edits li{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:start} .edits .n{font-family:var(--round);background:var(--lilac);color:#5a3a8a;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;margin-top:8px}
+.edits .pbox{padding-bottom:42px} .edits .pbox pre{font-size:14.5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px} .card2 b{font-family:var(--round);font-weight:400;font-size:20px;display:block;margin:6px 0 2px;color:var(--sky2)}
+.ideas{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 14px} .ideas b{font-size:13.5px;color:var(--ink3);font-weight:800} .ideas .pbox{padding:10px 14px 40px;margin:2px 0 6px} .ideas .pbox pre{font-size:14px}
+.faq details{border:1.5px solid var(--line);border-radius:14px;background:var(--paper);margin:6px 0;padding:8px 14px} .faq summary{cursor:pointer;font-weight:700} .faq p{margin:6px 0 4px;color:var(--ink2);line-height:1.6;font-size:14.5px}
+.center{text-align:center;margin:16px 0 0}
+.big-thanks{font-family:var(--round);font-size:26px;margin-top:26px;color:var(--peach2)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;background:var(--peach2);color:#fff;font:inherit;font-weight:800;font-size:15px;border-radius:999px;padding:11px 20px;cursor:pointer;text-decoration:none;box-shadow:0 3px 0 #b85a40}
+.btn.ghost{background:var(--card);color:var(--peach2);border:1.5px solid var(--peach2);box-shadow:0 2px 0 var(--line)}
+.btn.small{padding:7px 12px;font-size:13px}
+/* 갤러리 */
+.upform{border:2px dashed #e2d6c0;border-radius:20px;padding:16px;background:rgba(255,253,248,.6);margin-bottom:14px}
+.drop{display:block;border-radius:14px;background:var(--paper);padding:26px 16px;text-align:center;color:var(--ink2);font-weight:600;cursor:pointer;border:1.5px solid var(--line)}
+.drop.over{background:var(--mint);border-color:var(--mint2)} .drop input{display:none}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap} .row input{flex:1;min-width:160px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+.msg{margin:8px 0 0;font-size:14px;font-weight:700;color:var(--mint2);min-height:1.2em} .msg.err{color:#c0392b}
+.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.game{background:var(--paper);border:1.5px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:translate .15s,border-color .15s;text-align:left;font:inherit}
+.game:hover{translate:0 -3px;border-color:var(--peach2)}
+.game b{font-family:var(--round);font-weight:400;font-size:17px} .game span{font-size:13px;color:var(--ink3)}
+.game .who{color:var(--peach2);font-weight:800;font-size:13.5px}
+.empty{grid-column:1/-1;text-align:center;color:var(--ink3);padding:20px;font-size:14.5px}
+.viewer{margin-top:14px;border:1.5px solid var(--line);border-radius:20px;overflow:hidden;background:#fff}
+.vbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper);border-bottom:1.5px solid var(--line);flex-wrap:wrap}
+.vbar b{font-family:var(--round);font-weight:400;font-size:18px;flex:1} .vbar span{color:var(--ink3);font-size:13px}
+.viewer iframe{width:100%;height:min(72vh,720px);border:0;display:block;background:#fff}
+.toast{position:fixed;left:50%;bottom:28px;translate:-50% 0;background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50} .toast.on{opacity:1}
+@media (max-width:820px){
+ .wrap{padding:14px 14px 30px} .slide{padding:20px 18px 22px;min-height:0}
+ .flow{grid-template-columns:repeat(3,1fr)} .three,.rules,.edits,.two,.ideas{grid-template-columns:1fr}
+ .tbl{font-size:14px} .tbl th,.tbl td{padding:9px 10px} .tbl tbody th{width:auto}
+ .dots{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="home">🎓 교사 연수</span>
+    <h1><span class="mark">클로드</span>로 수업 게임 만들기</h1>
+    <div class="mode" role="group" aria-label="보기 방식"><button type="button" id="mSlide" class="on">슬라이드</button><button type="button" id="mAll">한 장으로</button></div>
+  </div>
+  <div class="deck mode-slide" id="deck">
+    <section class="slide cover" data-title="클로드로 수업 게임 만들기"><span class=tag>교직원 연수 · 2026. 9. 30.</span><h2>클로드로 수업 게임 만들기</h2>
+<p class="lead">오늘 이 자료를 따라 하시면, 1시간 뒤 선생님 손으로 만든 「붕어빵 뒤집기」 게임 파일이 하나 생깁니다. 하실 일은 복사, 붙여넣기, 그리고 우리말로 부탁하기 — 세 가지뿐입니다.</p>
+<ol class="flow"><li><b>00~05분</b><span>오늘의 목표</span></li><li><b>05~15분</b><span>클로드 기본 사용법</span></li><li><b>15~20분</b><span>꼭 지킬 네 가지</span></li><li><b>20~45분</b><span>실습 — 붕어빵 뒤집기 게임 만들기</span></li><li><b>45~55분</b><span>함께 해 보기</span></li><li><b>55~60분</b><span>정리·설문</span></li></ol>
+<p class="hint">← → 화살표 키, 화면 옆 단추, 손가락으로 밀어 넘길 수 있어요. 오른쪽 위 「한 장으로」를 누르면 전부 펼쳐 봅니다.</p></section><section class="slide " data-title="오늘 하실 일은 세 가지뿐"><span class=tag>여는 말 · 5분</span><h2>오늘 하실 일은 세 가지뿐</h2>
+<div class="three">
+ <div><i>1</i><b>복사</b><span>이 화면의 프롬프트를 「복사하기」 단추로</span></div>
+ <div><i>2</i><b>붙여넣기</b><span>클로드 대화창에 붙여넣고 엔터</span></div>
+ <div><i>3</i><b>우리말로 부탁</b><span>"더 크게", "문제 바꿔 줘" 하고 이어 말하기</span></div>
+</div>
+<p class="note">클로드는 글로 대화하는 인공지능입니다. 오늘은 글만 쓰는 게 아니라 <b>움직이는 게임 화면</b>까지 만들어 준다는 걸 직접 해 봅니다.</p>
+<p class="center"><a class="btn ghost" href="demo.html" target="_blank" rel="noopener">🐟 오늘 만들 게임 미리 보기</a></p></section><section class="slide " data-title="접속하기"><span class=tag>기본 사용법 · 10분</span><h2>접속하기</h2><ol class="steps"><li>인터넷 주소창에  claude.ai  를 입력합니다.</li><li>「Continue with Google」을 눌러 구글 계정으로 가입·로그인합니다. (휴대전화 인증이 뜰 수 있습니다)</li><li>화면 아래쪽 대화창에 글을 쓰고 엔터를 치면 답이 옵니다. 왼쪽에는 지난 대화 목록이 있습니다.</li><li>새 주제를 시작할 때는 왼쪽 위 「새 대화(+)」를 누릅니다.</li></ol><p class="note">주소: <b>claude.ai</b> — 무료 계정으로 오늘 실습을 모두 할 수 있어요.</p></section><section class="slide " data-title="잘 부탁하는 요령 세 가지"><span class=tag>기본 사용법</span><h2>잘 부탁하는 요령 세 가지</h2><table class="tbl"><thead><tr><th>요령</th><th>이렇게 말하면</th><th>이런 점이 좋아요</th></tr></thead><tbody><tr><th>① 누구인지</th><td class="ex">&quot;초등 3학년 담임교사야&quot;</td><td>내 입장에 맞는 답이 나옵니다</td></tr><tr><th>② 어떤 상황인지</th><td class="ex">&quot;다음 주 현장체험학습 안내문인데&quot;</td><td>엉뚱한 방향으로 가지 않습니다</td></tr><tr><th>③ 어떤 모양으로</th><td class="ex">&quot;여섯 줄로, 학부모께 정중하게&quot;</td><td>길이와 말투가 원하는 대로 나옵니다</td></tr></tbody></table><p class="note">한 번에 완벽하게 안 나와도 괜찮습니다. &quot;좀 더 짧게&quot;, &quot;더 부드럽게&quot;, &quot;오류가 났어, 고쳐 줘&quot; — 이렇게 이어서 말하면 고쳐 줍니다. 대화니까요.</p></section><section class="slide " data-title="시연 — 가정통신문 문구 다듬기"><span class=tag>시연 · 2분</span><h2>시연 — 가정통신문 문구 다듬기</h2><p class="sub">시연 ① 프롬프트</p><div class="pbox"><pre>초등학교 4학년 담임교사야. 다음 주 금요일 현장체험학습(과학관) 가정통신문에 넣을 안내 문구를 써 줘. 준비물(도시락, 물, 편한 옷), 출발 9시·도착 15시, 학부모께 정중한 말투로 6~7줄 정도.</pre><button class="copy" type="button" data-copy="초등학교 4학년 담임교사야. 다음 주 금요일 현장체험학습(과학관) 가정통신문에 넣을 안내 문구를 써 줘. 준비물(도시락, 물, 편한 옷), 출발 9시·도착 15시, 학부모께 정중한 말투로 6~7줄 정도.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div><p class="sub">이어서 말하기</p><div class="pbox"><pre>너무 딱딱해. 조금 따뜻한 말투로, 마지막 줄은 인사말로 끝내 줘.</pre><button class="copy" type="button" data-copy="너무 딱딱해. 조금 따뜻한 말투로, 마지막 줄은 인사말로 끝내 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></section><section class="slide " data-title="꼭 지킬 네 가지"><span class=tag>유의사항 · 5분</span><h2>꼭 지킬 네 가지</h2><ul class="rules"><li><b>개인정보는 넣지 않기</b><span>학생 이름·생년월일·주소·사진은 절대 넣지 않습니다. &quot;우리 반 학생 A&quot;처럼 바꿔 씁니다.</span></li><li><b>결과는 내가 확인하기</b><span>그럴듯하게 틀릴 수 있습니다. 사실·숫자·성취기준은 꼭 확인합니다.</span></li><li><b>학생이 직접 쓰게 하지 않기</b><span>클로드는 만 18세 이상만 가입할 수 있습니다. 선생님이 만든 결과물을 수업에 씁니다.</span></li><li><b>저작물 통째로 넣지 않기</b><span>교과서 본문 등 남의 저작물을 통째로 넣어 베끼게 하지 않고, 참고 자료에는 출처를 남깁니다.</span></li></ul></section><section class="slide " data-title="실습 — 붕어빵 뒤집기 게임 만들기"><span class=tag>실습 · 25분</span><h2>실습 — 붕어빵 뒤집기 게임 만들기</h2><ol class="steps wide"><li><b>1단계</b><span>아래 「기본 프롬프트」 상자의 글을 그대로 복사해 대화창에 붙여넣고 엔터. 1분쯤 기다리면 오른쪽에 게임 화면이 나타납니다. 안 보이면 대화 안의 게임 제목 카드를 클릭하세요.</span></li><li><b>2단계</b><span>한 판 해 봅니다. 그다음 아래 「고치기 프롬프트」 중 마음에 드는 것을 골라 이어서 말합니다. 세 번쯤 고쳐 보세요.</span></li><li><b>3단계</b><span>마음에 들면 게임 화면 오른쪽 위 다운로드(↓) 단추를 눌러 html 파일로 저장합니다. 저장된 파일은 교실 컴퓨터에서 두 번 클릭하면 바로 열립니다.</span></li></ol></section><section class="slide " data-title="① 기본 프롬프트 — 그대로 복사해 붙여넣으세요"><span class=tag>실습 1단계</span><h2>① 기본 프롬프트 — 그대로 복사해 붙여넣으세요</h2><div class="pbox big"><pre>초등학교 교사야. 수업 자투리 시간에 TV 화면에 띄우거나 학생이 태블릿으로 하는 「붕어빵 뒤집기」 게임을 html 한 파일로 만들어 줘.
+- 화면에 붕어빵 틀 4칸이 있고, 각 칸의 붕어빵이 시간이 지나면서 「반죽(연한색) → 노릇노릇(황금색) → 탐(검게)」으로 색이 변해.
+- 붕어빵을 누르면(클릭·터치) 뒤집혀. 노릇노릇할 때 뒤집으면 +10점과 반짝 효과, 너무 일찍 뒤집으면 0점, 타 버리면 -5점에 연기 효과가 나와.
+- 붕어빵은 캔버스나 CSS로 귀엽게 그려 줘(물고기 모양, 눈, 지느러미). 사진은 쓰지 마.
+- 위쪽에 점수와 남은 시간(60초)이 크게 보이고, 시간이 끝나면 점수와 「사장님 등급」(견습생·숙련공·붕어빵 명인)이 나오는 결과 화면과 「다시 하기」 단추가 나와.
+- 시간이 지날수록 익는 속도가 조금씩 빨라져서 점점 바빠지게 해 줘.
+- 글자는 아주 크게, 색은 따뜻한 겨울 붕어빵 가게 느낌(갈색·노란색·붉은색)으로, 뒤집을 때 「촥」 하는 짧은 효과음도 넣어 줘.</pre><button class="copy" type="button" data-copy="초등학교 교사야. 수업 자투리 시간에 TV 화면에 띄우거나 학생이 태블릿으로 하는 「붕어빵 뒤집기」 게임을 html 한 파일로 만들어 줘.
+- 화면에 붕어빵 틀 4칸이 있고, 각 칸의 붕어빵이 시간이 지나면서 「반죽(연한색) → 노릇노릇(황금색) → 탐(검게)」으로 색이 변해.
+- 붕어빵을 누르면(클릭·터치) 뒤집혀. 노릇노릇할 때 뒤집으면 +10점과 반짝 효과, 너무 일찍 뒤집으면 0점, 타 버리면 -5점에 연기 효과가 나와.
+- 붕어빵은 캔버스나 CSS로 귀엽게 그려 줘(물고기 모양, 눈, 지느러미). 사진은 쓰지 마.
+- 위쪽에 점수와 남은 시간(60초)이 크게 보이고, 시간이 끝나면 점수와 「사장님 등급」(견습생·숙련공·붕어빵 명인)이 나오는 결과 화면과 「다시 하기」 단추가 나와.
+- 시간이 지날수록 익는 속도가 조금씩 빨라져서 점점 바빠지게 해 줘.
+- 글자는 아주 크게, 색은 따뜻한 겨울 붕어빵 가게 느낌(갈색·노란색·붉은색)으로, 뒤집을 때 「촥」 하는 짧은 효과음도 넣어 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>프롬프트 복사하기</button></div><p class="center"><a class="btn ghost" href="demo.html" target="_blank" rel="noopener">완성 예시 열어 보기</a></p></section><section class="slide " data-title="② 고치기 프롬프트 — 골라서 이어 말해 보세요"><span class=tag>실습 2단계</span><h2>② 고치기 프롬프트 — 골라서 이어 말해 보세요</h2><ul class="edits"><li><span class="n">1</span><div class="pbox"><pre>붕어빵 틀을 6칸으로 늘리고, 타는 시간을 조금 더 여유 있게 해 줘.</pre><button class="copy" type="button" data-copy="붕어빵 틀을 6칸으로 늘리고, 타는 시간을 조금 더 여유 있게 해 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><span class="n">2</span><div class="pbox"><pre>붕어빵마다 구구단 문제(예: 7×8)가 붙어 있고, 정답 단추를 눌러야 뒤집히게 바꿔 줘. 3학년용으로 2~9단.</pre><button class="copy" type="button" data-copy="붕어빵마다 구구단 문제(예: 7×8)가 붙어 있고, 정답 단추를 눌러야 뒤집히게 바꿔 줘. 3학년용으로 2~9단.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><span class="n">3</span><div class="pbox"><pre>파랑팀·빨강팀이 왼쪽·오른쪽 틀을 맡아 동시에 하는 두 팀 대결로 바꿔 주고, 끝나면 이긴 팀을 크게 보여 줘.</pre><button class="copy" type="button" data-copy="파랑팀·빨강팀이 왼쪽·오른쪽 틀을 맡아 동시에 하는 두 팀 대결로 바꿔 주고, 끝나면 이긴 팀을 크게 보여 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><span class="n">4</span><div class="pbox"><pre>팥·슈크림·피자 붕어빵 세 종류가 나오고, 손님이 주문한 종류를 맞게 뒤집어 건네면 점수가 더 올라가게 해 줘.</pre><button class="copy" type="button" data-copy="팥·슈크림·피자 붕어빵 세 종류가 나오고, 손님이 주문한 종류를 맞게 뒤집어 건네면 점수가 더 올라가게 해 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><span class="n">5</span><div class="pbox"><pre>다 익힌 붕어빵을 종이봉투에 담는 단추를 넣고, 봉투에 붕어빵이 쌓이는 그림이 보이게 해 줘.</pre><button class="copy" type="button" data-copy="다 익힌 붕어빵을 종이봉투에 담는 단추를 넣고, 봉투에 붕어빵이 쌓이는 그림이 보이게 해 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><span class="n">6</span><div class="pbox"><pre>배경을 눈 내리는 겨울밤 노점 풍경으로, 붕어빵을 더 크게, 명인 등급이 나오면 폭죽을 터뜨려 줘.</pre><button class="copy" type="button" data-copy="배경을 눈 내리는 겨울밤 노점 풍경으로, 붕어빵을 더 크게, 명인 등급이 나오면 폭죽을 터뜨려 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li></ul></section><section class="slide " data-title="빨리 끝난 분을 위한 두 번째 게임"><span class=tag>실습 여유</span><h2>빨리 끝난 분을 위한 두 번째 게임</h2><div class="two"><div class="card2"><b>틀린 그림 찾기</b><div class="pbox"><pre>초등학생용 「틀린 그림 찾기」 게임을 html 한 파일로 만들어 줘. 캔버스에 직접 그린 교실 풍경 두 장이 나란히 나오고, 오른쪽 그림에 다른 곳 5개(색·개수·위치)가 있어. 다른 곳을 누르면 동그라미가 그려지고, 5개 다 찾으면 축하 화면. 찾은 개수와 힌트 단추도 넣어 줘.</pre><button class="copy" type="button" data-copy="초등학생용 「틀린 그림 찾기」 게임을 html 한 파일로 만들어 줘. 캔버스에 직접 그린 교실 풍경 두 장이 나란히 나오고, 오른쪽 그림에 다른 곳 5개(색·개수·위치)가 있어. 다른 곳을 누르면 동그라미가 그려지고, 5개 다 찾으면 축하 화면. 찾은 개수와 힌트 단추도 넣어 줘.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></div><div class="card2"><b>구구단 외자</b><div class="pbox"><pre>「구구단 외자」 게임을 html 한 파일로 만들어 줘. 문제(예: 6×7)가 크게 나오고 보기 4개 중 정답을 누르면 다음 문제로 넘어가. 60초 동안 몇 개 맞히는지 세고, 맞히면 별이 하나씩 쌓이는 그림이 보여. 3학년용, 2~9단 섞어서.</pre><button class="copy" type="button" data-copy="「구구단 외자」 게임을 html 한 파일로 만들어 줘. 문제(예: 6×7)가 크게 나오고 보기 4개 중 정답을 누르면 다음 문제로 넘어가. 60초 동안 몇 개 맞히는지 세고, 맞히면 별이 하나씩 쌓이는 그림이 보여. 3학년용, 2~9단 섞어서.">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></div></div></section><section class="slide " data-title="③ 저장하고 교실에서 쓰기"><span class=tag>실습 3단계</span><h2>③ 저장하고 교실에서 쓰기</h2><ol class="steps"><li>게임 화면 오른쪽 위 <b>다운로드(↓)</b> 단추 → html 파일로 저장</li><li>저장한 파일(예: 붕어빵뒤집기.html)을 USB나 학교 메신저로 교실 컴퓨터에 옮깁니다.</li><li>두 번 클릭하면 크롬·엣지 같은 브라우저에서 열립니다. 한글 프로그램으로 열면 안 됩니다.</li><li>태블릿에서도 같은 파일을 열면 손가락 터치로 할 수 있습니다.</li></ol>
+<p class="note">그리고 다음 장의 <b>「내 게임 올리기」</b>에 올려 주시면 함께 볼 수 있어요.</p></section><section class="slide gallery" data-title="나눔 — 선생님들이 만든 게임"><span class=tag>나눔 · 10분</span><h2>나눔 — 선생님들이 만든 게임</h2>
+<div id="gal">
+  <form id="upForm" class="upform" hidden>
+    <label class="drop" id="drop"><input type="file" id="file" accept=".html,.htm,text/html"><span id="dropText">여기에 게임 파일(.html)을 끌어다 놓거나 눌러서 고르세요</span></label>
+    <div class="row"><input id="author" maxlength="20" placeholder="선생님 이름 (예: 3-1 김○○)" required><input id="title" maxlength="40" placeholder="게임 이름 (예: 붕어빵 뒤집기 — 구구단판)" required><input id="pin" maxlength="20" placeholder="비밀번호" type="password" hidden><button class="btn" type="submit">올리기</button></div>
+    <p class="msg" id="msg" role="status"></p>
+  </form>
+  <div id="local" class="upform" hidden>
+    <label class="drop" id="drop2"><input type="file" id="file2" accept=".html,.htm,text/html" multiple><span>여기에 게임 파일(.html)을 끌어다 놓으면 바로 화면에 띄워 봅니다 (이 컴퓨터에서만 보여요)</span></label>
+  </div>
+  <div class="games" id="games"></div>
+  <div class="viewer" id="viewer" hidden><div class="vbar"><b id="vtitle"></b><span id="vauthor"></span><a id="vopen" class="btn ghost small" target="_blank" rel="noopener">새 창에서 크게</a><button class="btn ghost small" type="button" id="vclose">닫기</button></div><iframe id="frame" sandbox="allow-scripts allow-pointer-lock" title="게임"></iframe></div>
+</div></section><section class="slide last" data-title="정리 — 세 가지만 기억하세요"><span class=tag>정리 · 5분</span><h2>정리 — 세 가지만 기억하세요</h2>
+<div class="three small"><div><i>1</i><b>사람에게 말하듯</b><span>누구인지·상황·모양</span></div><div><i>2</i><b>이어서 고치기</b><span>"더 짧게", "오류 고쳐 줘"</span></div><div><i>3</i><b>개인정보는 넣지 않기</b><span>학생 이름 대신 "학생 A"</span></div></div>
+<p class="sub">내일 한 가지만 해 보세요</p><ul class="ideas"><li><b>수업</b><div class="pbox"><pre>&quot;5학년 사회 「우리나라의 경제」 단원 도입에 쓸 5분짜리 OX 퀴즈 10문제 만들어 줘&quot;</pre><button class="copy" type="button" data-copy="&quot;5학년 사회 「우리나라의 경제」 단원 도입에 쓸 5분짜리 OX 퀴즈 10문제 만들어 줘&quot;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><b>학급 운영</b><div class="pbox"><pre>&quot;학급 규칙 5가지를 아이들이 좋아할 만한 짧은 구호로 바꿔 줘&quot;</pre><button class="copy" type="button" data-copy="&quot;학급 규칙 5가지를 아이들이 좋아할 만한 짧은 구호로 바꿔 줘&quot;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><b>가정통신문</b><div class="pbox"><pre>&quot;독서 주간 안내 가정통신문 초안, 따뜻한 말투로 8줄&quot;</pre><button class="copy" type="button" data-copy="&quot;독서 주간 안내 가정통신문 초안, 따뜻한 말투로 8줄&quot;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li><li><b>평가</b><div class="pbox"><pre>&quot;미술 「우리 동네 그리기」 활동의 관찰 평가 문구를 3단계로 써 줘&quot;</pre><button class="copy" type="button" data-copy="&quot;미술 「우리 동네 그리기」 활동의 관찰 평가 문구를 3단계로 써 줘&quot;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>복사하기</button></div></li></ul>
+<p class="sub">막힐 때는</p><div class="faq"><details><summary>가입이 안 돼요</summary><p>구글 계정으로 「Continue with Google」을 누르게 한다. 휴대전화 인증이 필요할 수 있다.</p></details><details><summary>게임이 화면에 안 보여요</summary><p>대화 중간의 게임 제목 카드를 클릭하면 오른쪽에 열린다. 창이 좁으면 미리보기가 숨겨지니 브라우저를 최대화한다.</p></details><details><summary>&quot;사용량 제한&quot; 안내가 떠요</summary><p>무료 계정은 짧은 시간에 요청이 많으면 잠시 쉬어야 한다. 옆 선생님 계정에서 함께 진행하고, 나중에 다시 하면 된다.</p></details><details><summary>영어로 답해요</summary><p>&quot;한국어로 답해 줘&quot;라고 한 번 말하면 계속 한국어로 답한다.</p></details><details><summary>고쳤더니 이상해졌어요</summary><p>&quot;방금 전 상태로 되돌려 줘&quot;라고 말하거나, 대화 안의 이전 게임 카드를 클릭하면 예전 버전이 남아 있다.</p></details><details><summary>저장한 파일이 안 열려요</summary><p>파일 이름이 .html로 끝나는지 확인하고, 크롬·엣지 같은 브라우저로 연다. 한글 프로그램으로 열면 안 된다.</p></details></div>
+<p class="center big-thanks">오늘도 많이 웃으세요. 🙂</p></section>
+    <div class="nav"><button type="button" id="prev" aria-label="이전">‹</button><span class="counter" id="counter"></span><div class="dots" id="dots"></div><button type="button" id="next" aria-label="다음">›</button></div>
+    <div class="toc" id="toc"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+// ── 슬라이드
+const deck=document.getElementById('deck'), slides=[...deck.querySelectorAll('.slide')];
+let cur=Math.max(0,Math.min(slides.length-1,(parseInt(location.hash.slice(1))||1)-1));
+const dots=document.getElementById('dots'), toc=document.getElementById('toc');
+slides.forEach((s,i)=>{const d=document.createElement('button');d.type='button';d.setAttribute('aria-label',(i+1)+'장');d.onclick=()=>go(i);dots.appendChild(d);
+ const t=document.createElement('button');t.type='button';t.textContent=(i+1)+'. '+s.dataset.title.replace(/ — .*$/,'').slice(0,24);t.onclick=()=>go(i);toc.appendChild(t);});
+function go(i){cur=(i+slides.length)%slides.length;slides.forEach((s,k)=>s.classList.toggle('on',k===cur));
+ [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===cur));[...toc.children].forEach((d,k)=>d.classList.toggle('on',k===cur));
+ document.getElementById('counter').textContent=(cur+1)+' / '+slides.length;history.replaceState(null,'','#'+(cur+1));
+ if(deck.classList.contains('mode-slide'))window.scrollTo({top:0,behavior:'smooth'});}
+document.getElementById('prev').onclick=()=>go(cur-1);document.getElementById('next').onclick=()=>go(cur+1);
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea'))return;if(!deck.classList.contains('mode-slide'))return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();go(cur+1)} if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1)} if(e.key==='Home')go(0);if(e.key==='End')go(slides.length-1);});
+let tx=null;deck.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+deck.addEventListener('touchend',e=>{if(tx===null||!deck.classList.contains('mode-slide'))return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>60)go(cur+(dx<0?1:-1));tx=null;});
+function setMode(all){deck.classList.toggle('mode-all',all);deck.classList.toggle('mode-slide',!all);document.getElementById('mAll').classList.toggle('on',all);document.getElementById('mSlide').classList.toggle('on',!all);try{localStorage.setItem('trainMode',all?'all':'slide')}catch(e){}}
+document.getElementById('mAll').onclick=()=>setMode(true);document.getElementById('mSlide').onclick=()=>setMode(false);
+let pref=null;try{pref=localStorage.getItem('trainMode')}catch(e){}
+setMode(pref?pref==='all':window.innerWidth<820);go(cur);
+// ── 복사
+const toast=document.getElementById('toast');let tt;
+function say(m){toast.textContent=m;toast.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove('on'),1600)}
+document.querySelectorAll('.copy').forEach(b=>b.onclick=async()=>{const t=b.dataset.copy;try{await navigator.clipboard.writeText(t)}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+ b.classList.add('ok');const old=b.innerHTML;b.innerHTML='✓ 복사됐어요';say('복사됐어요. 클로드 대화창에 붙여넣으세요.');setTimeout(()=>{b.classList.remove('ok');b.innerHTML=old},1800);});
+// ── 갤러리 (서버 api.php가 있으면 올리기·목록, 없으면 이 컴퓨터에서 바로 띄워 보기)
+const API='api.php', games=document.getElementById('games'), viewer=document.getElementById('viewer'), frame=document.getElementById('frame');
+const upForm=document.getElementById('upForm'), local=document.getElementById('local'), msg=document.getElementById('msg');
+let serverOK=false, localGames=[];
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function render(list){games.innerHTML='';if(!list.length){games.innerHTML='<div class="empty">'+(serverOK?'아직 올라온 게임이 없어요. 첫 번째 게임을 올려 주세요!':'끌어다 놓은 게임이 여기에 나타나요.')+'</div>';return}
+ list.forEach(g=>{const b=document.createElement('button');b.type='button';b.className='game';b.innerHTML='<b>🐟 '+esc(g.title)+'</b><span class="who">'+esc(g.author)+'</span><span>'+esc(g.time||'')+'</span>';b.onclick=()=>show(g);games.appendChild(b);});}
+function show(g){document.getElementById('vtitle').textContent=g.title;document.getElementById('vauthor').textContent=g.author;frame.src=g.url;document.getElementById('vopen').href=g.url;viewer.hidden=false;viewer.scrollIntoView({behavior:'smooth',block:'start'});}
+document.getElementById('vclose').onclick=()=>{viewer.hidden=true;frame.src='about:blank'};
+async function loadList(){try{const r=await fetch(API+'?list=1',{cache:'no-store'});const ct=r.headers.get('content-type')||'';if(!r.ok||!ct.includes('json'))throw 0;const j=await r.json();if(!j.ok||!j.canWrite)throw 0;
+ serverOK=true;upForm.hidden=false;local.hidden=true;document.getElementById('pin').hidden=!j.pinRequired;render(j.games.map(g=>({...g,url:'uploads/'+g.file})));}catch(e){serverOK=false;upForm.hidden=true;local.hidden=false;render(localGames);}}
+function pickFile(inp){return inp.files&&inp.files[0]}
+const drop=document.getElementById('drop'),file=document.getElementById('file'),dropText=document.getElementById('dropText');
+file.onchange=()=>{const f=pickFile(file);if(f)dropText.textContent='선택됨: '+f.name+' ('+Math.round(f.size/1024)+'KB)';};
+for(const d of [drop,document.getElementById('drop2')]){d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('over')});d.addEventListener('dragleave',()=>d.classList.remove('over'));}
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0]){file.files=e.dataTransfer.files;file.onchange();}});
+upForm.onsubmit=async e=>{e.preventDefault();const f=pickFile(file);if(!f){msg.className='msg err';msg.textContent='게임 파일(.html)을 먼저 골라 주세요.';return}
+ if(f.size>3*1024*1024){msg.className='msg err';msg.textContent='파일이 3MB를 넘어요.';return}
+ const fd=new FormData();fd.append('file',f);fd.append('author',document.getElementById('author').value.trim());fd.append('title',document.getElementById('title').value.trim());fd.append('pin',document.getElementById('pin').value);
+ msg.className='msg';msg.textContent='올리는 중…';try{const r=await fetch(API,{method:'POST',body:fd});const j=await r.json();if(!j.ok)throw new Error(j.error||'실패');msg.textContent='올렸어요! 아래 목록에서 눌러 보세요.';upForm.reset();dropText.textContent='여기에 게임 파일(.html)을 끌어다 놓거나 눌러서 고르세요';await loadList();}catch(err){msg.className='msg err';msg.textContent='올리지 못했어요: '+err.message;}};
+// 서버 없을 때: 이 컴퓨터에서 바로 띄워 보기
+const drop2=document.getElementById('drop2'),file2=document.getElementById('file2');
+function addLocal(files){[...files].forEach(f=>{if(!/\.html?$/i.test(f.name))return;const url=URL.createObjectURL(new Blob([f],{type:'text/html'}));const g={title:f.name.replace(/\.html?$/i,''),author:'이 컴퓨터',time:new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}),url};localGames.unshift(g);});render(localGames);if(localGames[0])show(localGames[0]);}
+file2.onchange=()=>addLocal(file2.files);drop2.addEventListener('drop',e=>{e.preventDefault();drop2.classList.remove('over');addLocal(e.dataTransfer.files);});
+loadList();
+</script>
+</body>
+</html>
