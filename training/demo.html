@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>붕어빵 뒤집기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+  body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; background: radial-gradient(ellipse at top, #3b2a4a, #1d1530 70%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 16px; color: #fff; overflow: hidden; }
+  h1 { font-size: 40px; color: #ffd166; text-shadow: 0 3px 0 #7a4b12; margin: 6px 0 4px; }
+  .hud { display: flex; gap: 36px; font-size: 30px; font-weight: bold; margin-bottom: 14px; }
+  .hud b { color: #ffd166; }
+  .grill { background: linear-gradient(#5a3a22, #3a2412); border: 10px solid #2a1a0c; border-radius: 30px; padding: 24px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; box-shadow: 0 16px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(0,0,0,.5); }
+  .slot { width: min(38vw, 250px); height: min(24vw, 150px); background: #24160a; border-radius: 80px / 50px; box-shadow: inset 0 6px 14px rgba(0,0,0,.8); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+  canvas.fish { width: 88%; height: 88%; transition: transform .25s; }
+  .slot.flip canvas.fish { transform: rotateX(180deg); }
+  .pop { position: absolute; top: -10px; font-size: 34px; font-weight: bold; animation: rise 1s forwards; pointer-events: none; text-shadow: 0 2px 4px #000; }
+  @keyframes rise { to { transform: translateY(-70px); opacity: 0; } }
+  .smoke { position: absolute; font-size: 40px; animation: rise 1.4s forwards; pointer-events: none; }
+  .guide { margin-top: 14px; font-size: 20px; color: #ddd; text-align: center; }
+  .guide span { display: inline-block; width: 22px; height: 22px; border-radius: 6px; vertical-align: middle; margin: 0 4px 0 12px; }
+  #over { display: none; position: fixed; inset: 0; background: rgba(20,12,30,.94); flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  #over h2 { font-size: 34px; color: #ddd; }
+  #over .score { font-size: 80px; color: #ffd166; font-weight: bold; margin: 8px 0; }
+  #over .rank { font-size: 46px; color: #ff9f68; font-weight: bold; margin-bottom: 24px; }
+  button { font-size: 28px; padding: 14px 40px; border: none; border-radius: 40px; background: #e76f51; color: #fff; font-weight: bold; cursor: pointer; box-shadow: 0 6px 0 #a3432d; }
+  button:active { transform: translateY(5px); box-shadow: none; }
+  #start { display: flex; position: fixed; inset: 0; background: rgba(20,12,30,.94); flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 18px; }
+  #start p { font-size: 24px; line-height: 1.6; color: #eee; }
+  #fx { position: fixed; inset: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<h1>🐟 붕어빵 뒤집기</h1>
+<div class="hud"><span>점수 <b id="score">0</b></span><span>남은 시간 <b id="time">60</b>초</span></div>
+<div class="grill" id="grill"></div>
+<div class="guide"><span style="background:#f3d9a4"></span>반죽 → <span style="background:#e0a340"></span>노릇노릇 (지금 뒤집기! +10) → <span style="background:#3a2a1a"></span>탐 (-5)</div>
+
+<div id="start"><h1>🐟 붕어빵 뒤집기</h1><p>붕어빵이 <b style="color:#ffd166">노릇노릇 황금색</b>일 때 눌러서 뒤집으세요!<br>너무 빠르면 0점, 타 버리면 -5점.<br>60초 동안 최고의 붕어빵 사장님이 되어 보세요.</p><button onclick="start()">장사 시작!</button></div>
+<div id="over"><h2>영업 종료!</h2><div class="score" id="final">0</div><div class="rank" id="rank"></div><button onclick="start()">다시 하기</button></div>
+<canvas id="fx"></canvas>
+
+<script>
+const N = 4, TOTAL = 60;
+let score = 0, timeLeft = TOTAL, slots = [], loop, tick, running = false, elapsed = 0;
+const grill = document.getElementById('grill');
+const AC = window.AudioContext || window.webkitAudioContext; let actx;
+function beep(f, d = .1, type = 'sine', v = .15) { try { actx = actx || new AC(); const o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.frequency.setValueAtTime(f, actx.currentTime); g.gain.value = v; o.connect(g); g.connect(actx.destination); o.start(); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + d); o.stop(actx.currentTime + d); } catch (e) {} }
+const lerp = (a, b, t) => a + (b - a) * t;
+const mix = (c1, c2, t) => c1.map((v, i) => Math.round(lerp(v, c2[i], t)));
+const RAW = [243, 217, 164], GOLD = [224, 163, 64], BURNT = [58, 42, 26];
+function colorFor(p) { // p: 0~1 cook progress
+  if (p < .55) return mix(RAW, GOLD, p / .55);
+  if (p < .8) return GOLD;
+  return mix(GOLD, BURNT, Math.min(1, (p - .8) / .2));
+}
+function drawFish(cv, p, flipped) {
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  const c = colorFor(p); const fill = `rgb(${c.join(',')})`;
+  ctx.save(); ctx.translate(W / 2, H / 2); if (flipped) ctx.scale(1, -1);
+  // body
+  ctx.fillStyle = fill; ctx.strokeStyle = 'rgba(80,40,10,.5)'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(-W * .42, 0);
+  ctx.bezierCurveTo(-W * .3, -H * .42, W * .1, -H * .42, W * .25, -H * .05);
+  ctx.lineTo(W * .42, -H * .35); ctx.lineTo(W * .36, 0); ctx.lineTo(W * .42, H * .35); ctx.lineTo(W * .25, H * .05);
+  ctx.bezierCurveTo(W * .1, H * .42, -W * .3, H * .42, -W * .42, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // scales
+  ctx.strokeStyle = 'rgba(90,50,10,.35)'; ctx.lineWidth = 2;
+  for (let x = -W * .15; x < W * .2; x += W * .09) for (let y = -H * .2; y <= H * .2; y += H * .18) { ctx.beginPath(); ctx.arc(x, y, W * .045, Math.PI * .15, Math.PI * .85); ctx.stroke(); }
+  // fin
+  ctx.beginPath(); ctx.moveTo(-W * .05, -H * .3); ctx.lineTo(W * .08, -H * .48); ctx.lineTo(W * .15, -H * .25); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.stroke();
+  // eye & mouth
+  ctx.fillStyle = '#3a2410'; ctx.beginPath(); ctx.arc(-W * .26, -H * .08, W * .03, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-W * .27, -H * .1, W * .011, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(-W * .34, H * .04, W * .04, Math.PI * .1, Math.PI * .6); ctx.stroke();
+  if (p >= .55 && p < .8) { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = `${W * .12}px sans-serif`; ctx.fillText('✦', W * .05, -H * .15); }
+  ctx.restore();
+}
+function makeSlot(i) {
+  const d = document.createElement('div'); d.className = 'slot';
+  const cv = document.createElement('canvas'); cv.className = 'fish'; cv.width = 300; cv.height = 180; d.appendChild(cv);
+  const s = { el: d, cv, p: 0, delay: Math.random() * 3 + i * .8, speed: 1, flipped: false, side: 0 };
+  d.onclick = () => flip(s); return s;
+}
+function reset(s) { s.p = 0; s.delay = Math.random() * 2 + .5; s.flipped = false; s.side = 0; s.el.classList.remove('flip'); }
+function say(s, txt, color) { const e = document.createElement('div'); e.className = 'pop'; e.textContent = txt; e.style.color = color; s.el.appendChild(e); setTimeout(() => e.remove(), 1000); }
+function flip(s) {
+  if (!running || s.delay > 0) return;
+  beep(900, .08, 'triangle', .2); beep(300, .12, 'square', .08);
+  s.el.classList.toggle('flip');
+  if (s.p >= 1) { score -= 5; say(s, '탔다! -5', '#ff6b6b'); const e = document.createElement('div'); e.className = 'smoke'; e.textContent = '💨'; s.el.appendChild(e); setTimeout(() => e.remove(), 1400); beep(120, .3, 'sawtooth', .1); }
+  else if (s.p >= .55 && s.p < .8) { score += 10; say(s, '노릇노릇! +10', '#ffd166'); beep(1200, .15); beep(1600, .25); }
+  else if (s.p < .55) { score = Math.max(0, score); say(s, '아직 반죽…', '#ccc'); }
+  else { score += 3; say(s, '살짝 진했네 +3', '#ffb37a'); }
+  document.getElementById('score').textContent = score;
+  reset(s);
+}
+function step(dt) {
+  elapsed += dt; const accel = 1 + elapsed / TOTAL * .8;
+  slots.forEach(s => {
+    if (s.delay > 0) { s.delay -= dt; drawFish(s.cv, 0, false); return; }
+    s.p += dt / 6 * accel;
+    if (s.p > 1.35) { score -= 5; say(s, '새까맣게 탔다 -5', '#ff6b6b'); document.getElementById('score').textContent = score; beep(120, .3, 'sawtooth', .1); reset(s); return; }
+    drawFish(s.cv, Math.min(1, s.p), false);
+  });
+}
+function start() {
+  document.getElementById('start').style.display = 'none'; document.getElementById('over').style.display = 'none';
+  score = 0; timeLeft = TOTAL; elapsed = 0; running = true;
+  document.getElementById('score').textContent = 0; document.getElementById('time').textContent = TOTAL;
+  grill.innerHTML = ''; slots = Array.from({ length: N }, (_, i) => makeSlot(i)); slots.forEach(s => grill.appendChild(s.el));
+  let last = performance.now(); cancelAnimationFrame(loop); clearInterval(tick);
+  (function frame(now) { const dt = Math.min(.05, (now - last) / 1000); last = now; if (running) { step(dt); loop = requestAnimationFrame(frame); } })(last);
+  tick = setInterval(() => { timeLeft--; document.getElementById('time').textContent = timeLeft; if (timeLeft <= 5) beep(700, .05); if (timeLeft <= 0) end(); }, 1000);
+}
+function end() {
+  running = false; clearInterval(tick);
+  const r = score >= 150 ? '🏆 붕어빵 명인' : score >= 80 ? '🔥 숙련공' : '🐣 견습생';
+  document.getElementById('final').textContent = score + '점'; document.getElementById('rank').textContent = r;
+  document.getElementById('over').style.display = 'flex';
+  [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .3), i * 180));
+  if (score >= 150) confetti();
+}
+function confetti() {
+  const cv = document.getElementById('fx'), ctx = cv.getContext('2d'); cv.width = innerWidth; cv.height = innerHeight;
+  const ps = Array.from({ length: 160 }, () => ({ x: Math.random() * cv.width, y: -20 - Math.random() * cv.height, vy: 2 + Math.random() * 4, vx: Math.random() * 2 - 1, s: 6 + Math.random() * 8, c: `hsl(${Math.random() * 60 + 10},95%,60%)`, r: Math.random() * 6 }));
+  let n = 0; (function draw() { ctx.clearRect(0, 0, cv.width, cv.height); ps.forEach(p => { p.y += p.vy; p.x += p.vx; p.r += .1; ctx.fillStyle = p.c; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); ctx.restore(); }); if (++n < 260) requestAnimationFrame(draw); else ctx.clearRect(0, 0, cv.width, cv.height); })();
+}
+// 시작 화면 뒤에 미리 그려 두기
+slots = Array.from({ length: N }, (_, i) => makeSlot(i)); slots.forEach(s => { grill.appendChild(s.el); drawFish(s.cv, 0, false); });
+</script>
+</body>
+</html>
