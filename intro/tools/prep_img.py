@@ -5,6 +5,7 @@ plan={
  'hogol':['hogol-0.png','hogol-1.png','hogol-2.png','hogol-3.png'],
  'mango':['mango-0.png','mango-1.png',R+'/mango/img/scene-02-board.webp'],
  'mitgeurim':['mitgeurim-0.png','mitgeurim-1.png'],
+ 'omok':['omok-0.png','omok-1.png'],
  'mitgeurim2':['mitgeurim2-0.png','mitgeurim2-1.png'],
  'myungyun':['myungyun-0.png','myungyun-1.png'],
  'sky1945':['sky1945-0.png','sky1945-1.png'],
