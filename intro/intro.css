@@ -102,7 +102,7 @@ main{max-width:1080px; margin:0 auto; padding:0 16px}
 .dev small{color:var(--dim)}
 .dev p{margin:2px 0 0; font-size:15.5px}
 .badge{flex:none; font-size:13px; padding:3px 10px; border-radius:999px; font-weight:700; color:#17153a; margin-top:3px; white-space:nowrap}
-.badge.ok{background:var(--ok)} .badge.good{background:var(--good)} .badge.soso{background:var(--soso)}
+.badge.ok{background:var(--ok)} .badge.good{background:var(--good)} .badge.soso{background:var(--soso)} .badge.no{background:#b9b3cf}
 .warn{padding:12px 14px; border-radius:12px; background:#ff9f7a14; border:1px solid #ff9f7a55}
 .warn p{margin:4px 0 0; font-size:15.5px}
 .ios{list-style:none; padding:0; margin:0; display:grid; gap:10px}

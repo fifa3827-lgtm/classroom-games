@@ -14,7 +14,7 @@ OUT = "out/intro"
 with open("intro.css", "rb") as _f:
     CSSV = hashlib.md5(_f.read()).hexdigest()[:8]
 E = html.escape
-BADGE = {"ok": ("가장 좋아요", "ok"), "good": ("좋아요", "good"), "soso": ("괜찮아요", "soso")}
+BADGE = {"ok": ("가장 좋아요", "ok"), "good": ("좋아요", "good"), "soso": ("괜찮아요", "soso"), "no": ("아직 어려워요", "no")}
 NUM = "①②③④⑤⑥⑦⑧⑨"
 
 
