@@ -913,9 +913,20 @@ function jellyIcon(cvs, tier, px, opt = {}) {
 function jarIcon(cvs, key, px) {
   const d = Math.min(3, window.devicePixelRatio || 1); cvs.width = cvs.height = Math.round(px * d);
   const c = cvs.getContext('2d'); c.scale(d, d);
-  const keep = JAR; JAR = JARS[key];
+  const keep = { JAR, walls, pegs, bodies };
+  JAR = JARS[key]; buildWalls();
   const sc = px / (Math.max(11, JAR.H + 1)), ox = (px - 10 * sc) / 2, oy = (px - JAR.H * sc) / 2;
-  drawJar(c, 0, sc, ox, oy); JAR = keep;
+  const w = JAR.wall;
+  c.save(); c.lineJoin = 'round'; c.lineCap = 'round'; c.beginPath();
+  w.forEach(([x, y], i) => i ? c.lineTo(ox + x * sc, oy + y * sc) : c.moveTo(ox + x * sc, oy + y * sc));
+  (JAR.segs || []).forEach(([p, q]) => { c.moveTo(ox + p[0] * sc, oy + p[1] * sc); c.lineTo(ox + q[0] * sc, oy + q[1] * sc); });
+  c.strokeStyle = 'rgba(214,120,170,0.55)'; c.lineWidth = sc * 0.75; c.stroke(); c.restore();
+  drawJar(c, 0, sc, ox, oy);
+  const [xa, xb] = openX(), mid = (xa + xb) / 2;
+  bodies = [[6, mid - 1.5, JAR.H - 4], [4, mid + 1.8, JAR.H - 5], [3, mid + 0.3, JAR.H - 8], [2, mid - 2.6, JAR.H - 9]].map(([t, x, y]) => newBody(x, y, t));
+  for (let i = 0; i < 400; i++) physics(1 / 240);
+  for (const b of bodies) { b.happy = 1e12; b.wob = 0; const [cx, cy, R] = blobPath(c, b, 0, sc, ox, oy); fillJelly(c, b, cx, cy, R, 0); drawFace(c, b, cx, cy, R, 0); }
+  JAR = keep.JAR; walls = keep.walls; pegs = keep.pegs; bodies = keep.bodies;
 }
 function buildEvo(pop) {
   const e = $('#evo'); e.innerHTML = '';
