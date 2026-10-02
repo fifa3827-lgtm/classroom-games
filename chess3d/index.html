@@ -1036,7 +1036,9 @@ function seatView(top){
   camera.fov=asp<1?55:45; camera.updateProjectionMatrix();
   const half=Math.tan(camera.fov*Math.PI/360);
   let d=Math.max(13.5, 6.4/(half*asp));
-  const elev=top?1.35:0.8;
+  let elev=top?1.35:0.8;
+  // 세로 화면은 멀리서 봐야 해서, 기둥 고리 밖으로 나가지 않도록 더 위에서 내려다본다
+  if(d*Math.cos(elev)>11.5) elev=Math.acos(11.5/d);
   controls.maxDistance=Math.max(26,d*1.4);
   return new THREE.Vector3(0,d*Math.sin(elev),d*Math.cos(elev)*playerColor);
 }
