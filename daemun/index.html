@@ -29,7 +29,7 @@
     min-height: 100%;
     font-family: var(--sans); color: var(--text);
     word-break: keep-all; -webkit-font-smoothing: antialiased;
-    padding: calc(env(safe-area-inset-top, 0px) + 26px) 16px calc(env(safe-area-inset-bottom, 0px) + 36px);
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 36px);
     overflow-x: hidden;
   }
   body::before {
@@ -48,10 +48,10 @@
   main { position: relative; max-width: 1180px; margin: 0 auto; }
 
   /* 간판 */
-  .sign { position: relative; text-align: center; padding: 84px 0 30px; }
+  .sign { position: relative; text-align: center; padding: 66px 0 22px; }
   .moon {
     position: absolute; z-index: 0; pointer-events: none;
-    width: 64px; height: 64px; border-radius: 50%;
+    width: 52px; height: 52px; border-radius: 50%;
     left: 50%; top: 0; transform: translateX(-50%);
     background:
       radial-gradient(circle at 64% 38%, rgba(190,172,120,.35) 0 9%, transparent 10%),
@@ -477,7 +477,7 @@ var PLANE_COVER = 'data:image/webp;base64,UklGRlQuAABXRUJQVlA4IEguAAAwRAGdASocAu
     top.forEach(function (f) {
       if (hits.length >= 5) return;
       var g = live.filter(function (x) { return x.folder === String(f); })[0];
-      if (g) hits.push(g);
+      if (g && g.cat !== 'party') hits.push(g);   // 행사용 게임은 한꺼번에 눌려서 HIT 에서 빼요
     });
     if (hits.length < 3) hits = [];
     var isHit = function (g) { return hits.indexOf(g) >= 0; };
@@ -603,6 +603,6 @@ var PLANE_COVER = 'data:image/webp;base64,UklGRlQuAABXRUJQVlA4IEguAAAwRAGdASocAu
   window.addEventListener('pageshow', function () { cabs.forEach(function (a) { a.classList.remove('on'); }); });
 })();
 </script>
-<script src="news/banner.js" defer></script>
+<script src="news/banner.js?v=2610051100" defer></script>
 </body>
 </html>
