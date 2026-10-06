@@ -972,7 +972,14 @@ function checkResult(){
   let result=null, reason='';
   if(!legal.length){
     if(game.inCheck(game.side)){ result=game.side===playerColor?'lose':'win'; reason='체크메이트'; }
-    else { result='draw'; reason='스테일메이트 (더 이상 둘 곳이 없어요)'; }
+    else {
+      // 스테일메이트: 왕이 갇혀 보여서 외통수(체크메이트)로 착각하기 쉬우므로 차이를 풀어서 알려 준다
+      result='draw';
+      reason=game.side!==playerColor
+        ? '<b>스테일메이트</b>예요.<br>상대 왕이 <b>체크를 받지 않은 채</b> 더 이상 움직일 곳이 없으면, 체스 규칙에서는 무승부가 돼요.'
+          +'<div class="bq">💡 이기려면 왕을 가두면서 <b>체크까지 걸어야</b> 해요 (체크메이트). 상대에게 움직일 칸을 하나 남겨 두고 조여 가 보세요!</div>'
+        : '<b>스테일메이트</b>예요.<br>내 왕이 <b>체크를 받지 않았는데</b> 둘 수 있는 수가 하나도 없어서 무승부가 됐어요.';
+    }
   } else if(game.half>=100){ result='draw'; reason='50수 동안 잡거나 폰을 움직이지 않았어요'; }
   else if((posCount.get(game.key())||0)>=3){ result='draw'; reason='같은 장면이 세 번 반복됐어요'; }
   else if(insufficient()){ result='draw'; reason='양쪽 모두 체크메이트할 말이 부족해요'; }
@@ -1360,6 +1367,7 @@ async function endGame(result,reason){
   } else {
     title='무승부'; msg=reason;
     btns.push(['다시 하기','big',()=>startGame(level,playerColor)]);
+    btns.push(['↶ 무르고 이어 두기','ghost',()=>$('bUndo').onclick()]);
   }
   btns.push(['메뉴','ghost',showMenu]);
   $('endTitle').textContent=title; $('endMsg').innerHTML=msg;
