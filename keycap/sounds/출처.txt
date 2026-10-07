@@ -1,0 +1,77 @@
+키보드 녹음 소리 출처 (2026-10-06 받음)
+모음: Freesound StavSounds 「Mechanical Keyboards」 https://freesound.org/people/StavSounds/packs/42151/
+사용 허락: 모든 파일 CC0 1.0 (출처 표시 없이 자유롭게 사용 가능) — 파일마다 소리 페이지에서 확인함
+받은 파일: 각 소리의 고음질 미리듣기 mp3
+원본 mp3는 게임 폴더 밖 「새 게/_out/keycap_sound_raw/stavsounds」에 보관함. 게임은 이 원본을 잘라 js/sounddata.js에 담아 씀(갈축은 2026-10-07 원본에서 다시 자름).
+
+Keyboard_Clicky_1.mp3  https://freesound.org/people/StavSounds/sounds/766605/
+Keyboard_Clicky_10.mp3  https://freesound.org/people/StavSounds/sounds/766606/
+Keyboard_Clicky_11.mp3  https://freesound.org/people/StavSounds/sounds/766607/
+Keyboard_Clicky_12.mp3  https://freesound.org/people/StavSounds/sounds/766608/
+Keyboard_Clicky_13.mp3  https://freesound.org/people/StavSounds/sounds/766609/
+Keyboard_Clicky_14.mp3  https://freesound.org/people/StavSounds/sounds/766610/
+Keyboard_Clicky_15.mp3  https://freesound.org/people/StavSounds/sounds/766611/
+Keyboard_Clicky_16.mp3  https://freesound.org/people/StavSounds/sounds/766612/
+Keyboard_Clicky_17.mp3  https://freesound.org/people/StavSounds/sounds/766613/
+Keyboard_Clicky_18.mp3  https://freesound.org/people/StavSounds/sounds/766614/
+Keyboard_Clicky_2.mp3  https://freesound.org/people/StavSounds/sounds/766617/
+Keyboard_Clicky_3.mp3  https://freesound.org/people/StavSounds/sounds/766618/
+Keyboard_Clicky_4.mp3  https://freesound.org/people/StavSounds/sounds/766619/
+Keyboard_Clicky_5.mp3  https://freesound.org/people/StavSounds/sounds/766620/
+Keyboard_Clicky_6.mp3  https://freesound.org/people/StavSounds/sounds/766621/
+Keyboard_Clicky_7.mp3  https://freesound.org/people/StavSounds/sounds/766622/
+Keyboard_Clicky_8.mp3  https://freesound.org/people/StavSounds/sounds/766623/
+Keyboard_Clicky_9.mp3  https://freesound.org/people/StavSounds/sounds/766624/
+Keyboard_Tactile_1.mp3  https://freesound.org/people/StavSounds/sounds/766625/
+Keyboard_Tactile_10.mp3  https://freesound.org/people/StavSounds/sounds/766626/
+Keyboard_Tactile_11.mp3  https://freesound.org/people/StavSounds/sounds/766627/
+Keyboard_Tactile_12.mp3  https://freesound.org/people/StavSounds/sounds/766628/
+Keyboard_Tactile_13.mp3  https://freesound.org/people/StavSounds/sounds/766629/
+Keyboard_Tactile_14.mp3  https://freesound.org/people/StavSounds/sounds/766630/
+Keyboard_Tactile_15.mp3  https://freesound.org/people/StavSounds/sounds/766631/
+Keyboard_Tactile_2.mp3  https://freesound.org/people/StavSounds/sounds/766632/
+Keyboard_Tactile_3.mp3  https://freesound.org/people/StavSounds/sounds/766633/
+Keyboard_Tactile_4.mp3  https://freesound.org/people/StavSounds/sounds/766634/
+Keyboard_Tactile_5.mp3  https://freesound.org/people/StavSounds/sounds/766635/
+Keyboard_Tactile_6.mp3  https://freesound.org/people/StavSounds/sounds/766637/
+Keyboard_Tactile_7.mp3  https://freesound.org/people/StavSounds/sounds/766638/
+Keyboard_Tactile_8.mp3  https://freesound.org/people/StavSounds/sounds/766639/
+Keyboard_Tactile_9.mp3  https://freesound.org/people/StavSounds/sounds/766640/
+
+# 2026-10-06 추가: js/sounddata.js 에 넣은 소리 (원본은 게임 폴더 밖 「새 게/_out/keycap_sound_raw/<묶음>/」)
+# 모두 CC0 1.0 (출처 표시 의무 없음) — 각 소리 페이지에서 사용 허락 확인함. CC-BY 소리는 쓰지 않음.
+linear | Keyboard clicking typing Cherry Red Mechanical | handygaber | https://freesound.org/people/handygaber/sounds/499773/ | CC0 1.0
+topre | Keyboard Typing 2 (HHKB, Topre) | grcekh | https://freesound.org/people/grcekh/sounds/546033/ | CC0 1.0
+topre | Keyboard Typing 1 (HHKB, Topre) | grcekh | https://freesound.org/people/grcekh/sounds/546032/ | CC0 1.0
+ibm | buckling spring keyboard typing | nakkivene66 | https://freesound.org/people/nakkivene66/sounds/551404/ | CC0 1.0
+alps | Keyboard Typing Sounds | zrrion | https://freesound.org/people/zrrion/sounds/469013/ | CC0 1.0
+typewriter | Typewriter | exterminat | https://freesound.org/people/exterminat/sounds/164807/ | CC0 1.0
+laptop | Typing on a Laptop Keyboard | unfa | https://freesound.org/people/unfa/sounds/184433/ | CC0 1.0
+ceramic | Ceramic Cup Hit.wav | johnnydekk | https://freesound.org/people/johnnydekk/sounds/615308/ | CC0 1.0
+ceramic | Small mug tapped with objects.wav | itinerantmonk108 | https://freesound.org/people/itinerantmonk108/sounds/553899/ | CC0 1.0
+metal | Spoon hit 2 | MBPL | https://freesound.org/people/MBPL/sounds/667186/ | CC0 1.0
+metal | Metal Hit | BenjaminNelan | https://freesound.org/people/BenjaminNelan/sounds/410364/ | CC0 1.0
+metal | metal spoon against mug.WAV | julietclarke | https://freesound.org/people/julietclarke/sounds/469292/ | CC0 1.0
+wood | Wood Knock | Mrguff | https://freesound.org/people/Mrguff/sounds/369710/ | CC0 1.0
+wood | Wooden Tap | AidanSounds | https://freesound.org/people/AidanSounds/sounds/704935/ | CC0 1.0
+wood | finger tap table counter wood various.wav | kyles | https://freesound.org/people/kyles/sounds/452621/ | CC0 1.0
+glass | Glass Tap.wav | Unicornaphobist | https://freesound.org/people/Unicornaphobist/sounds/262958/ | CC0 1.0
+glass | Glass Tap | zembacraftworks | https://freesound.org/people/zembacraftworks/sounds/427389/ | CC0 1.0
+shopbell | Ryuuzan_shop_door_bell00.wav | ryuuzan | https://freesound.org/people/ryuuzan/sounds/192761/ | CC0 1.0
+shopbell | Shop door bell.wav | 775noise | https://freesound.org/people/775noise/sounds/494565/ | CC0 1.0
+meow | Cat Meow | Mafon2 | https://freesound.org/people/Mafon2/sounds/436541/ | CC0 1.0
+meow | Cute Kitten Meow | Breviceps | https://freesound.org/people/Breviceps/sounds/448084/ | CC0 1.0
+paper | rustling paper.wav | keweldog | https://freesound.org/people/keweldog/sounds/181774/ | CC0 1.0
+ding | Typewriter ding_near_mono.wav | _stubb | https://freesound.org/people/_stubb/sounds/406243/ | CC0 1.0
+chime | Small Bell #2 | steffcaffrey | https://freesound.org/people/steffcaffrey/sounds/452379/ | CC0 1.0
+spacebar | Keychron k10 space_bar | Sadiquecat | https://freesound.org/people/Sadiquecat/sounds/789630/ | CC0 1.0
+spacebar | Spacebar | Kodack | https://freesound.org/people/Kodack/sounds/256515/ | CC0 1.0
+spacebar | Pressing Spacebar 3 | HunteR4708 | https://freesound.org/people/HunteR4708/sounds/256439/ | CC0 1.0
+oldpc | Keyboard Soundpack #1 [Typing and Single Keystrokes] (Single Keys) | unicaegames | https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes | CC0 1.0
+glass | Impact Sounds (impactGlass_light_000) | Kenney | https://kenney.nl/assets/impact-sounds | CC0 1.0
+meow | Meow (Meow.ogg) | ignasd | https://opengameart.org/content/meow | CC0 1.0
+paper | Various paper sound effects (paper_sound_-_1.mp3) | luckius | https://opengameart.org/content/various-paper-sound-effects | CC0 1.0
+tactile, clicky | (위 StavSounds 파일 재사용) | StavSounds | https://freesound.org/people/StavSounds/packs/42151/ | CC0 1.0
+
+
+※ 원본 녹음(후보로 받았다가 쓰지 않은 CC-BY 파일 포함)은 게임 폴더 밖 「새 게/_out/keycap_sound_raw/」로 옮겼습니다. 게임은 js/sounddata.js만 쓰며, 그 안의 소리는 모두 CC0입니다.
