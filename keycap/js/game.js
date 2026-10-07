@@ -78,7 +78,9 @@ const Game = (() => {
     }).join('');
   }
   function hud(goals){
-    $('pz-goals').innerHTML = goalChips(goals || G.st.goals);
+    const gs = goals || G.st.goals;
+    $('pz-goals').innerHTML = goalChips(gs);
+    $('pz-goals').classList.toggle('two', Object.keys(gs).length >= 4);   // 목표 4개는 2개씩 두 줄로
     $('pz-moves').querySelector('b').textContent = Math.max(0, G.st.moves);
     $('pz-moves').classList.toggle('low', G.st.moves <= 3);
     const coffee = G.st.keys.filter(k => k.ob && k.ob.t === 'coffee').length;
