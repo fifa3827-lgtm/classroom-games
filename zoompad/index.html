@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#FBF7EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="휴대폰 펜">
 <title>ZoomIt+ 휴대폰 펜</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
@@ -18,7 +22,8 @@
   body { display: flex; flex-direction: column; height: 100dvh;
     padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0); }
 
-  header { display: flex; align-items: center; gap: 10px; padding: 10px 14px 6px; }
+  header { display: flex; align-items: center; gap: 10px; padding: 6px 12px 2px; }
+  .app { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .logo { width: 26px; height: 20px; border-radius: 5px; background: var(--board); position: relative; flex: none;
     box-shadow: inset 0 -3px 0 #C9A46E; }
   .logo::after { content: ""; position: absolute; left: 6px; top: 6px; width: 13px; height: 5px;
@@ -30,7 +35,7 @@
   .status.ok { background: var(--acc-bg); color: var(--acc); }
   .status.wait { background: var(--warn-bg); color: var(--warn); }
 
-  main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 6px 12px; }
+  main { flex: 1; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 4px; position: relative; }
   .stage { position: relative; background: #fff; border-radius: 14px; overflow: hidden; touch-action: none;
     box-shadow: 0 1px 0 var(--line), 0 10px 26px -14px rgba(48,42,32,.45); outline: 1px solid var(--line); }
   .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; pointer-events: none; }
@@ -40,7 +45,8 @@
   .rotate { font-size: 12px; color: var(--sub); text-align: center; padding: 0 12px 4px; }
   @media (orientation: landscape) { .rotate { display: none; } }
 
-  .bar { display: flex; gap: 8px; overflow-x: auto; padding: 8px 12px 12px; scrollbar-width: none; }
+  .bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 6px 8px; scrollbar-width: none; flex: none; }
+  :fullscreen body, body.fs { padding: 0; }
   .bar::-webkit-scrollbar { display: none; }
   .group { display: flex; gap: 4px; padding: 5px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; flex: none; }
   .btn { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 11px; font-weight: 700;
@@ -63,6 +69,29 @@
   .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(43,48,64,.92); color: #fff;
     font-size: 13px; padding: 8px 14px; border-radius: 99px; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.show { opacity: 1; }
+  .sheet { position: fixed; inset: 0; background: rgba(30,28,24,.35); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+  .sheet[hidden] { display: none; }
+  .sheet .box { width: min(560px, 100%); background: var(--card); border-radius: 18px 18px 0 0; padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0));
+    box-shadow: 0 -10px 30px -12px rgba(0,0,0,.35); }
+  .sheet .box h2 { margin: 0 0 8px; font-size: 15px; color: var(--board); }
+  .sheet textarea { width: 100%; min-height: 64px; max-height: 30vh; resize: none; font: inherit; font-size: 18px; padding: 10px 12px;
+    border-radius: 12px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); }
+  .sheet .row { display: flex; gap: 8px; margin-top: 10px; }
+  .sheet .row button { flex: 1; height: 46px; border: 0; border-radius: 12px; font: inherit; font-size: 16px; }
+  .sheet .ok { background: var(--board); color: #fff; } .sheet .no { background: var(--chip); color: var(--sub); }
+  /* 가로 화면: 머리말을 숨기고 도구를 오른쪽 세로 막대로 → 도화지가 가장 크게 */
+  @media (orientation: landscape) {
+    header { position: absolute; top: 6px; left: 8px; z-index: 5; padding: 0; pointer-events: none; }
+    header .logo, header h1 { display: none; }
+    header .status { pointer-events: auto; opacity: .92; font-size: 11px; padding: 4px 9px; }
+    .app { flex-direction: row; }
+    .bar { flex-direction: column; overflow-x: hidden; overflow-y: auto; padding: 4px 4px 4px 0; width: 70px; }
+    .group { flex-direction: column; align-items: center; }
+    .group.colors { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .sw { width: 28px; height: 34px; } .sw i { width: 20px; height: 20px; }
+    .wd { width: 52px; height: 36px; }
+    .btn { min-width: 56px; height: 46px; font-size: 10px; }
+  }
 </style>
 </head>
 <body>
@@ -78,6 +107,7 @@
   <button id="go">연결하기</button>
 </div>
 
+<div class="app">
 <main id="mainBox">
   <div class="stage" id="stage">
     <img id="shot" alt="">
@@ -85,25 +115,35 @@
     <div class="empty" id="empty">교실 화면을 불러오는 중이에요…<br>여기에 쓰면 TV에 바로 써져요.</div>
   </div>
 </main>
-<div class="rotate" id="rotateHint">휴대폰을 가로로 돌리면 더 크게 쓸 수 있어요</div>
 
 <nav class="bar" id="bar">
   <div class="group" id="tools">
     <button class="btn on" data-tool="pen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 18c4-9 7 4 11-4s4-6 7-8"/></svg>펜</button>
     <button class="btn" data-tool="hl"><svg viewBox="0 0 24 24"><path d="M3 14h18" stroke="#FFC400" stroke-width="7" opacity=".75"/><path d="M4 14h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>형광펜</button>
+    <button class="btn" data-tool="tx"><svg viewBox="0 0 24 24"><text x="12" y="18" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor" font-family="sans-serif">가</text></svg>글자</button>
     <button class="btn" data-tool="er"><svg viewBox="0 0 24 24"><g transform="rotate(-35 12 12)"><rect x="3" y="8" width="9" height="8" rx="2" fill="#F4A7B9"/><rect x="12" y="8" width="9" height="8" rx="2" fill="#fff"/><rect x="3" y="8" width="18" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/></g></svg>지우개</button>
   </div>
-  <div class="group" id="colors"></div>
+  <div class="group colors" id="colors"></div>
   <div class="group" id="widths"></div>
   <div class="group">
     <button class="btn" data-cmd="undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H4V2"/><path d="M4 7a9 9 0 1 1-1 7"/></svg>되돌리기</button>
     <button class="btn" data-cmd="clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 2h6M5 9l1.5 13h11L19 9"/></svg>모두 지우기</button>
     <button class="btn" data-cmd="board"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2.5" fill="#2F5D4A" stroke="#B08A5A" stroke-width="1.6"/><path d="M6 13c2-5 4 2 6-2s3-3 6-3" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>판 바꾸기</button>
     <button class="btn" data-cmd="snap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2 5.3"/><path d="M20 4v7h-7"/></svg>화면 새로</button>
+    <button class="btn" id="fsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>전체 화면</button>
     <button class="btn danger" data-cmd="esc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>판서 끝</button>
   </div>
 </nav>
+</div>
+<div class="rotate" id="rotateHint">휴대폰을 가로로 돌리고 [전체 화면]을 누르면 가장 크게 쓸 수 있어요</div>
 <div class="toast" id="toast"></div>
+<div class="sheet" id="sheet" hidden>
+  <div class="box">
+    <h2>누른 자리에 글자 넣기</h2>
+    <textarea id="txt" rows="2" placeholder="여기에 입력하세요"></textarea>
+    <div class="row"><button class="no" id="txNo">취소</button><button class="ok" id="txOk">넣기</button></div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -123,7 +163,7 @@
 
   // ── 방 번호 입력
   if (!/^\d{6}$/.test(room)) {
-    $('joinBox').hidden = false; $('mainBox').hidden = true; $('bar').hidden = true; $('rotateHint').hidden = true;
+    $('joinBox').hidden = false; document.querySelector('.app').hidden = true; $('rotateHint').hidden = true;
     $('go').onclick = () => {
       const v = $('code').value.replace(/\D/g, '');
       if (v.length === 6) location.search = '?r=' + v;
@@ -184,8 +224,8 @@
   const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
   function layout() {
     const box = $('mainBox').getBoundingClientRect();
-    let w = box.width - 24, h = w / aspect;
-    if (h > box.height - 12) { h = box.height - 12; w = h * aspect; }
+    let w = box.width - 8, h = w / aspect;
+    if (h > box.height - 8) { h = box.height - 8; w = h * aspect; }
     stage.style.width = Math.max(100, w) + 'px';
     stage.style.height = Math.max(60, h) + 'px';
     const dpr = window.devicePixelRatio || 1;
@@ -217,7 +257,7 @@
     if (pts.length === 1) ctx.lineTo(pts[0][0] * cv.width + 0.1, pts[0][1] * cv.height);
     ctx.stroke(); ctx.restore();
   }
-  function previewRedraw() { ctx.clearRect(0, 0, cv.width, cv.height); for (const s of previews) drawPreview(s, 0); }
+  function previewRedraw() { ctx.clearRect(0, 0, cv.width, cv.height); for (const s of previews) { if (s.kind === 'text') drawTextPreview(s); else drawPreview(s, 0); } }
 
   // ── 쓰기
   let curStroke = null, pending = [], raf = 0;
@@ -234,8 +274,35 @@
     pending = [];
     setPath('/in', { s: sid, n: ++n, k: 'm', p });
   }
+  let textAt = null;
+  function drawTextPreview(t) {
+    const px = (18 + WID[t.w] * 2.4) * (cv.height / 1080);
+    ctx.save(); ctx.fillStyle = PAL[t.c]; ctx.font = 'bold ' + px + 'px "Gowun Dodum", sans-serif'; ctx.textBaseline = 'top';
+    t.text.split('\n').forEach((line, i) => ctx.fillText(line, t.x * cv.width, t.y * cv.height + i * px * 1.25));
+    ctx.restore();
+  }
+  function openText(p) {
+    textAt = p;
+    $('txt').value = '';
+    $('sheet').hidden = false;
+    setTimeout(() => $('txt').focus(), 50);
+  }
+  function closeText() { $('sheet').hidden = true; $('txt').blur(); textAt = null; }
+  $('txNo').onclick = closeText;
+  $('txOk').onclick = () => {
+    const text = $('txt').value.trim();
+    if (text && textAt) {
+      const t = { text, x: r4(textAt[0]), y: r4(textAt[1]), c: color, w: width };
+      setPath('/in', { s: sid, n: ++n, k: 't', text: t.text, x: t.x, y: t.y, c: t.c, w: t.w });
+      previews.push({ kind: 'text', ...t });
+      drawTextPreview(t);
+      toast('글자를 넣었어요');
+    }
+    closeText();
+  };
   stage.addEventListener('pointerdown', e => {
     if (curStroke) return;
+    if (tool === 'tx') { openText(norm(e)); e.preventDefault(); return; }
     stage.setPointerCapture(e.pointerId);
     const p = norm(e);
     const c = tool === 'hl' ? hlColor : color;
@@ -300,6 +367,25 @@
     if (c === 'undo' || c === 'clear' || c === 'esc') clearPreview();
     toast(LABEL[c] || '');
   });
+
+  // ── 전체 화면 (안드로이드는 바로, 아이폰은 홈 화면에 추가해서 열면 전체 화면)
+  const fsEl = document.documentElement;
+  const canFs = !!(fsEl.requestFullscreen || fsEl.webkitRequestFullscreen);
+  function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  $('fsBtn').onclick = async () => {
+    if (!canFs) { toast('아이폰은 공유 → 홈 화면에 추가 후 열면 전체 화면이에요'); return; }
+    try {
+      if (isFs()) { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+      else {
+        await (fsEl.requestFullscreen || fsEl.webkitRequestFullscreen).call(fsEl, { navigationUI: 'hide' });
+        try { await screen.orientation.lock('landscape'); } catch (_) {}
+      }
+    } catch (_) { toast('전체 화면을 열 수 없어요'); }
+  };
+  function onFs() { document.body.classList.toggle('fs', isFs()); setTimeout(layout, 120); }
+  document.addEventListener('fullscreenchange', onFs);
+  document.addEventListener('webkitfullscreenchange', onFs);
+  window.visualViewport && window.visualViewport.addEventListener('resize', () => setTimeout(layout, 50));
 
   renderColors(); renderWidths();
   layout();
