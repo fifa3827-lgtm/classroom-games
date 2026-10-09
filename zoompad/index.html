@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#FBF7EE">
+<title>ZoomIt+ 휴대폰 펜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FBF7EE; --card: #FFFDF8; --ink: #3F3A36; --sub: #7A7268; --line: #E6DDCB;
+    --acc: #23704F; --acc-bg: #E2F3EA; --acc-line: #9AD0B5; --chip: #F2ECE1; --board: #2F5D4A; --warn: #9A7A30; --warn-bg: #FFF4DA;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink);
+    font-family: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; height: 100dvh;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0); }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 14px 6px; }
+  .logo { width: 26px; height: 20px; border-radius: 5px; background: var(--board); position: relative; flex: none;
+    box-shadow: inset 0 -3px 0 #C9A46E; }
+  .logo::after { content: ""; position: absolute; left: 6px; top: 6px; width: 13px; height: 5px;
+    border: 2px solid #fff; border-color: #fff transparent transparent transparent; border-radius: 50%; }
+  h1 { font-size: 17px; margin: 0; color: var(--board); letter-spacing: -0.3px; }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700;
+    padding: 6px 11px; border-radius: 99px; background: var(--chip); color: var(--sub); white-space: nowrap; }
+  .status i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .status.ok { background: var(--acc-bg); color: var(--acc); }
+  .status.wait { background: var(--warn-bg); color: var(--warn); }
+
+  main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 6px 12px; }
+  .stage { position: relative; background: #fff; border-radius: 14px; overflow: hidden; touch-action: none;
+    box-shadow: 0 1px 0 var(--line), 0 10px 26px -14px rgba(48,42,32,.45); outline: 1px solid var(--line); }
+  .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; pointer-events: none; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--sub);
+    font-size: 14px; line-height: 1.6; padding: 20px; pointer-events: none; }
+  .rotate { font-size: 12px; color: var(--sub); text-align: center; padding: 0 12px 4px; }
+  @media (orientation: landscape) { .rotate { display: none; } }
+
+  .bar { display: flex; gap: 8px; overflow-x: auto; padding: 8px 12px 12px; scrollbar-width: none; }
+  .bar::-webkit-scrollbar { display: none; }
+  .group { display: flex; gap: 4px; padding: 5px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; flex: none; }
+  .btn { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 11px; font-weight: 700;
+    min-width: 50px; height: 50px; border-radius: 12px; display: grid; place-items: center; gap: 0; padding: 4px 6px; cursor: pointer; }
+  .btn svg { width: 22px; height: 22px; display: block; margin: 0 auto 1px; }
+  .btn.on { background: var(--acc-bg); color: var(--acc); box-shadow: inset 0 0 0 1.3px var(--acc-line); }
+  .btn:active { transform: scale(.94); }
+  .btn.danger { color: #D9534F; }
+  .sw { width: 34px; height: 50px; display: grid; place-items: center; border: 0; background: none; padding: 0; }
+  .sw i { width: 24px; height: 24px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .sw.on i { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c); }
+  .wd { width: 40px; height: 50px; border: 0; background: none; display: grid; place-items: center; border-radius: 12px; }
+  .wd i { border-radius: 50%; background: var(--ink); display: block; }
+  .wd.on { background: var(--acc-bg); box-shadow: inset 0 0 0 1.3px var(--acc-line); }
+
+  .join { max-width: 320px; margin: auto; text-align: center; padding: 24px; }
+  .join input { width: 100%; font: inherit; font-size: 28px; letter-spacing: 6px; text-align: center; padding: 12px;
+    border-radius: 14px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); }
+  .join button { margin-top: 12px; width: 100%; height: 50px; border: 0; border-radius: 14px; background: var(--board); color: #fff; font: inherit; font-size: 17px; }
+  .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(43,48,64,.92); color: #fff;
+    font-size: 13px; padding: 8px 14px; border-radius: 99px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo" aria-hidden="true"></span>
+  <h1>휴대폰 펜</h1>
+  <span class="status wait" id="status"><i></i><span>연결하는 중</span></span>
+</header>
+
+<div id="joinBox" class="join" hidden>
+  <p>교실 화면의 ZoomIt+ 카드에 나온<br><b>방 번호 6자리</b>를 넣어 주세요.</p>
+  <input id="code" inputmode="numeric" maxlength="6" placeholder="000000">
+  <button id="go">연결하기</button>
+</div>
+
+<main id="mainBox">
+  <div class="stage" id="stage">
+    <img id="shot" alt="">
+    <canvas id="cv"></canvas>
+    <div class="empty" id="empty">교실 화면을 불러오는 중이에요…<br>여기에 쓰면 TV에 바로 써져요.</div>
+  </div>
+</main>
+<div class="rotate" id="rotateHint">휴대폰을 가로로 돌리면 더 크게 쓸 수 있어요</div>
+
+<nav class="bar" id="bar">
+  <div class="group" id="tools">
+    <button class="btn on" data-tool="pen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 18c4-9 7 4 11-4s4-6 7-8"/></svg>펜</button>
+    <button class="btn" data-tool="hl"><svg viewBox="0 0 24 24"><path d="M3 14h18" stroke="#FFC400" stroke-width="7" opacity=".75"/><path d="M4 14h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>형광펜</button>
+    <button class="btn" data-tool="er"><svg viewBox="0 0 24 24"><g transform="rotate(-35 12 12)"><rect x="3" y="8" width="9" height="8" rx="2" fill="#F4A7B9"/><rect x="12" y="8" width="9" height="8" rx="2" fill="#fff"/><rect x="3" y="8" width="18" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/></g></svg>지우개</button>
+  </div>
+  <div class="group" id="colors"></div>
+  <div class="group" id="widths"></div>
+  <div class="group">
+    <button class="btn" data-cmd="undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H4V2"/><path d="M4 7a9 9 0 1 1-1 7"/></svg>되돌리기</button>
+    <button class="btn" data-cmd="clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 2h6M5 9l1.5 13h11L19 9"/></svg>모두 지우기</button>
+    <button class="btn" data-cmd="board"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2.5" fill="#2F5D4A" stroke="#B08A5A" stroke-width="1.6"/><path d="M6 13c2-5 4 2 6-2s3-3 6-3" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>판 바꾸기</button>
+    <button class="btn" data-cmd="snap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2 5.3"/><path d="M20 4v7h-7"/></svg>화면 새로</button>
+    <button class="btn danger" data-cmd="esc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>판서 끝</button>
+  </div>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // 서버 주소: 기본은 달빛 오락실 게임 서버. 주소 뒤 #ws=... 로 바꿔 시험할 수 있음.
+  const hashWs = new URLSearchParams(location.hash.slice(1)).get('ws');
+  const SERVER = hashWs || 'wss://game.edoori.co.kr/ws';
+  const PAL = ['#E53935', '#1E63D6', '#2E9E4F', '#FFC400', '#222222', '#FFFFFF'];
+  const WID = [2, 4, 6, 9, 13, 18];
+  const WIDTH_CHOICES = [1, 2, 4];            // 가늘게 · 보통 · 굵게
+  const $ = id => document.getElementById(id);
+
+  let room = new URLSearchParams(location.search).get('r') || '';
+  const sid = Math.random().toString(36).slice(2, 10);
+  let n = 0, ws = null, open = false, pcOn = false;
+  let tool = 'pen', color = 0, hlColor = 3, width = 2;
+  let aspect = 16 / 9;
+
+  // ── 방 번호 입력
+  if (!/^\d{6}$/.test(room)) {
+    $('joinBox').hidden = false; $('mainBox').hidden = true; $('bar').hidden = true; $('rotateHint').hidden = true;
+    $('go').onclick = () => {
+      const v = $('code').value.replace(/\D/g, '');
+      if (v.length === 6) location.search = '?r=' + v;
+    };
+    setStatus('wait', '방 번호를 넣어 주세요');
+    return;
+  }
+  const root = 'zp/' + room;
+
+  // ── 연결
+  function send(m) { if (open) ws.send(JSON.stringify(m)); }
+  function setPath(p, val) { send({ t: 'set', path: root + p, val }); }
+  function connect() {
+    setStatus('wait', '연결하는 중');
+    ws = new WebSocket(SERVER);
+    ws.onopen = () => {
+      open = true;
+      send({ t: 'sub', path: root + '/pc', id: 1 });
+      send({ t: 'sub', path: root + '/img', id: 2 });
+      send({ t: 'ondc', path: root + '/ph' });
+      setPath('/ph', { on: 1, t: Date.now() });
+      refreshStatus();
+    };
+    ws.onmessage = e => {
+      let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+      if (m.t !== 'w' && m.t !== 'snap') return;
+      if (m.path === root + '/pc') onPc(m.val);
+      else if (m.path === root + '/img') onImg(m.val);
+      else if (m.path === root && m.val == null) { onPc(null); }
+    };
+    ws.onclose = () => { open = false; setStatus('wait', '다시 연결하는 중'); setTimeout(connect, 1500); };
+    ws.onerror = () => {};
+  }
+  setInterval(() => { if (open) setPath('/ph', { on: 1, t: Date.now() }); }, 20000);
+
+  function setStatus(kind, text) {
+    const s = $('status'); s.className = 'status ' + kind; s.lastElementChild.textContent = text;
+  }
+  function refreshStatus() {
+    if (!open) return;
+    if (pcOn) setStatus('ok', '교실 화면 연결됨');
+    else setStatus('wait', 'ZoomIt+가 꺼져 있어요');
+  }
+  function onPc(v) {
+    pcOn = !!(v && v.on);
+    if (pcOn && v.w && v.h) { aspect = v.w / v.h; layout(); }
+    refreshStatus();
+  }
+  function onImg(v) {
+    if (!v || !v.d) return;
+    if (v.w && v.h) { aspect = v.w / v.h; layout(); }
+    $('shot').src = v.d;
+    $('empty').hidden = true;
+    clearPreview();
+  }
+
+  // ── 도화지 크기
+  const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+  function layout() {
+    const box = $('mainBox').getBoundingClientRect();
+    let w = box.width - 24, h = w / aspect;
+    if (h > box.height - 12) { h = box.height - 12; w = h * aspect; }
+    stage.style.width = Math.max(100, w) + 'px';
+    stage.style.height = Math.max(60, h) + 'px';
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    previewRedraw();
+  }
+  window.addEventListener('resize', layout);
+  window.addEventListener('orientationchange', () => setTimeout(layout, 300));
+
+  // ── 휴대폰 화면에 미리 보이는 선 (다음 화면 사진이 오면 지움)
+  let previews = [];
+  function clearPreview() { previews = []; ctx.clearRect(0, 0, cv.width, cv.height); }
+  function strokeStyle(s) {
+    const scale = cv.height / 1080;
+    let lw = WID[s.w] * scale * 1.0;
+    let col = PAL[s.c];
+    if (s.tool === 'hl') { lw = Math.max(lw * 3.2, 18 * scale); }
+    return { lw: Math.max(1.5, lw), col, alpha: s.tool === 'hl' ? 0.45 : 1 };
+  }
+  function drawPreview(s, from) {
+    if (s.tool === 'er') return;
+    const st = strokeStyle(s);
+    ctx.save(); ctx.globalAlpha = st.alpha; ctx.strokeStyle = st.col; ctx.lineWidth = st.lw;
+    ctx.lineCap = s.tool === 'hl' ? 'square' : 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const pts = s.pts, i0 = Math.max(0, (from || 0) - 1);
+    ctx.moveTo(pts[i0][0] * cv.width, pts[i0][1] * cv.height);
+    for (let i = i0 + 1; i < pts.length; i++) ctx.lineTo(pts[i][0] * cv.width, pts[i][1] * cv.height);
+    if (pts.length === 1) ctx.lineTo(pts[0][0] * cv.width + 0.1, pts[0][1] * cv.height);
+    ctx.stroke(); ctx.restore();
+  }
+  function previewRedraw() { ctx.clearRect(0, 0, cv.width, cv.height); for (const s of previews) drawPreview(s, 0); }
+
+  // ── 쓰기
+  let curStroke = null, pending = [], raf = 0;
+  function norm(e) {
+    const r = stage.getBoundingClientRect();
+    return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))];
+  }
+  const r4 = v => Math.round(v * 10000) / 10000;
+  function flush() {
+    raf = 0;
+    if (!pending.length) return;
+    const p = [];
+    for (const q of pending) p.push(r4(q[0]), r4(q[1]));
+    pending = [];
+    setPath('/in', { s: sid, n: ++n, k: 'm', p });
+  }
+  stage.addEventListener('pointerdown', e => {
+    if (curStroke) return;
+    stage.setPointerCapture(e.pointerId);
+    const p = norm(e);
+    const c = tool === 'hl' ? hlColor : color;
+    curStroke = { id: e.pointerId, tool, c, w: width, pts: [p] };
+    if (tool !== 'er') previews.push(curStroke);
+    setPath('/in', { s: sid, n: ++n, k: 'd', x: r4(p[0]), y: r4(p[1]), tool, c, w: width });
+    drawPreview(curStroke, 0);
+    e.preventDefault();
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!curStroke || e.pointerId !== curStroke.id) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    const from = curStroke.pts.length;
+    for (const ev of evs) { const p = norm(ev); curStroke.pts.push(p); pending.push(p); }
+    drawPreview(curStroke, from);
+    if (!raf) raf = requestAnimationFrame(flush);
+    e.preventDefault();
+  });
+  function up(e) {
+    if (!curStroke || e.pointerId !== curStroke.id) return;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    flush();
+    setPath('/in', { s: sid, n: ++n, k: 'u' });
+    curStroke = null;
+  }
+  stage.addEventListener('pointerup', up);
+  stage.addEventListener('pointercancel', up);
+
+  // ── 도구 막대
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1400); }
+  function renderColors() {
+    const box = $('colors'); box.innerHTML = '';
+    const cur = tool === 'hl' ? hlColor : color;
+    PAL.forEach((c, i) => {
+      const b = document.createElement('button'); b.className = 'sw' + (i === cur ? ' on' : ''); b.style.setProperty('--c', c === '#FFFFFF' ? '#CFC8BB' : c);
+      b.innerHTML = '<i style="background:' + c + '"></i>'; b.setAttribute('aria-label', '색 ' + (i + 1));
+      b.onclick = () => { if (tool === 'hl') hlColor = i; else { color = i; if (tool === 'er') setTool('pen'); } renderColors(); renderWidths(); };
+      box.appendChild(b);
+    });
+  }
+  function renderWidths() {
+    const box = $('widths'); box.innerHTML = '';
+    WIDTH_CHOICES.forEach(wi => {
+      const b = document.createElement('button'); b.className = 'wd' + (wi === width ? ' on' : '');
+      const d = 4 + WID[wi] * 0.9;
+      const col = PAL[tool === 'hl' ? hlColor : color];
+      b.innerHTML = '<i style="width:' + d + 'px;height:' + d + 'px;background:' + (col === '#FFFFFF' ? '#CFC8BB' : col) + '"></i>';
+      b.onclick = () => { width = wi; renderWidths(); };
+      box.appendChild(b);
+    });
+  }
+  function setTool(t) {
+    tool = t;
+    document.querySelectorAll('#tools .btn').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+    renderColors(); renderWidths();
+  }
+  document.querySelectorAll('#tools .btn').forEach(b => b.onclick = () => setTool(b.dataset.tool));
+  const LABEL = { undo: '되돌렸어요', clear: '모두 지웠어요', board: '판을 바꿨어요', snap: '화면을 새로 받는 중', esc: '판서를 끝냈어요' };
+  document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => {
+    const c = b.dataset.cmd;
+    setPath('/in', { s: sid, n: ++n, k: 'c', c });
+    if (c === 'undo' || c === 'clear' || c === 'esc') clearPreview();
+    toast(LABEL[c] || '');
+  });
+
+  renderColors(); renderWidths();
+  layout();
+  connect();
+})();
+</script>
+</body>
+</html>
