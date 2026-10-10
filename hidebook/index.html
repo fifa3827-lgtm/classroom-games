@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>숨바꼭질 그림책</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6efe0; --ink:#3b2f25; --accent:#e0703a; --tray:#fffaf0; --good:#2f9e5b; --bad:#d64040;
+    --ch1:#e9a23b; --ch2:#3f8f8a; --ch3:#5b4a9e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+    font-family:'Jua',system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+  button{font-family:inherit;color:inherit;cursor:pointer}
+  .screen{position:fixed;inset:0;display:none;height:100dvh}
+  .screen.on{display:flex}
+  .pill{border:3px solid var(--ink);border-radius:999px;background:#fff;padding:4px 10px;font-size:18px;min-height:40px;min-width:40px;
+    display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+  .pill:disabled{opacity:.4;cursor:default}
+  .btn{border:3px solid var(--ink);border-radius:14px;padding:10px 14px;font-size:20px;background:#fff;box-shadow:0 4px 0 var(--ink)}
+  .btn.main{background:var(--accent);color:#fff}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+
+  /* 첫 화면 */
+  #title{flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;text-align:center}
+  #title .bg{position:fixed;inset:-20px;background:url(img/s/01.webp) center/cover;filter:blur(5px) brightness(.7);z-index:-1}
+  #title h1{margin:0;font-size:clamp(40px,9vw,88px);color:#fff;font-weight:400;text-shadow:0 4px 0 var(--ink),0 0 24px rgba(0,0,0,.4);letter-spacing:2px}
+  #title p{margin:0;color:#fff;font-size:clamp(16px,3.4vw,22px);text-shadow:0 2px 6px rgba(0,0,0,.6)}
+  #title .btn{font-size:26px;padding:12px 40px}
+
+  /* 지도 */
+  #map{flex-direction:column;overflow-y:auto;padding:12px 16px 28px;gap:14px}
+  #map header{display:flex;align-items:center;gap:8px}
+  #map header h2{flex:1;margin:0;font-weight:400;font-size:26px}
+  #chapters{display:flex;flex-direction:column;gap:16px}
+  .chapter{border:4px solid var(--ink);border-radius:20px;background:var(--tray);padding:12px;box-shadow:0 5px 0 var(--ink)}
+  .chapter h3{margin:0 0 4px;font-weight:400;font-size:22px}
+  .chapter .sub{font-size:15px;opacity:.7;margin-bottom:10px}
+  .stagegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+  .sbtn{border:3px solid var(--ink);border-radius:14px;background:#fff;padding:0;overflow:hidden;text-align:center;font-size:14px;position:relative}
+  .sbtn .th{height:56px;background-size:cover;background-position:center;border-bottom:2px solid var(--ink)}
+  .sbtn .nm{padding:3px 2px 0;line-height:1.2;min-height:2.4em;display:flex;align-items:center;justify-content:center;word-break:keep-all}
+  .sbtn .st{font-size:13px;color:#d79a00;min-height:18px}
+  .sbtn.locked{opacity:.5;cursor:default}
+  .sbtn.locked .th{filter:grayscale(1) blur(2px)}
+  .sbtn .lock{position:absolute;left:50%;top:18px;transform:translateX(-50%);font-size:22px}
+  .endingBtn{align-self:center}
+
+  /* 게임 */
+  #game{flex-direction:column}
+  .top{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--tray);border-bottom:3px solid var(--ink);z-index:2}
+  .top .name{flex:1;font-size:18px;line-height:1.15;min-width:0;word-break:keep-all;overflow-wrap:anywhere}
+  .hearts{font-size:20px;letter-spacing:1px;color:var(--bad)}
+  .hearts.shake{animation:shake .35s}
+  @keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  #view{flex:1;position:relative;overflow:hidden;background:#2b2520;touch-action:none;cursor:grab}
+  #view.drag{cursor:grabbing}
+  #view.flash::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 6px var(--bad);pointer-events:none}
+  #stagebox{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+  #stagebox img{display:block;pointer-events:none;-webkit-user-drag:none}
+  .mark{position:absolute;border:5px solid var(--good);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 3px #fff;pointer-events:none;animation:pop .35s ease-out}
+  .miss{position:absolute;transform:translate(-50%,-50%);color:var(--bad);line-height:1;text-shadow:0 0 6px #fff;pointer-events:none;animation:fade .8s forwards}
+  .hint{position:absolute;border:6px dashed #ffd23f;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;animation:pulse 1s ease-in-out 3}
+  @keyframes pop{from{transform:translate(-50%,-50%) scale(1.8);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+  @keyframes fade{0%{opacity:1}100%{opacity:0;transform:translate(-50%,-80%)}}
+  @keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.25);opacity:.6}}
+  .tip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;padding:6px 14px;border-radius:999px;
+    font-size:15px;pointer-events:none;transition:opacity .6s;white-space:nowrap;opacity:0}
+  .tray{display:flex;gap:6px;padding:6px 8px;background:var(--tray);border-top:3px solid var(--ink);overflow-x:auto;z-index:2}
+  .item{flex:0 0 auto;width:70px;text-align:center;font-size:14px;position:relative}
+  .item img{width:56px;height:56px;display:block;margin:0 auto 2px;border:3px solid var(--ink);border-radius:12px;background:#fff;padding:3px}
+  .item .lbl{line-height:1.15;word-break:keep-all}
+  .item.found img{opacity:.3}
+  .item.found .lbl{text-decoration:line-through;opacity:.5}
+  .item.found::after{content:"✔";position:absolute;left:50%;top:8px;transform:translateX(-50%);font-size:36px;color:var(--good);text-shadow:0 0 4px #fff}
+
+  /* 좁은 화면: 판 이름을 버튼 줄 아래에 한 줄로 따로 (버튼 사이에 끼면 글자가 세로로 쪼개짐) */
+  @media (max-width:520px){
+    .top{flex-wrap:wrap;row-gap:2px}
+    .top .name{order:10;flex-basis:100%;text-align:center;font-size:15px;white-space:nowrap}
+    .top .hearts{margin-left:auto}
+  }
+  @media (max-height:500px){
+    .top{padding:3px 6px} .pill{min-height:32px;min-width:32px;font-size:15px;padding:2px 8px} .top .name{font-size:15px}
+    .tray{padding:3px 6px} .item{width:52px;font-size:12px} .item img{width:40px;height:40px;padding:2px}
+    .item.found::after{font-size:26px;top:4px}
+  }
+  /* 알림창 */
+  .overlay{align-items:center;justify-content:center;background:rgba(40,30,20,.6);z-index:5;padding:16px}
+  .card{background:var(--tray);border:4px solid var(--ink);border-radius:22px;padding:22px 20px;text-align:center;width:min(360px,100%);box-shadow:0 8px 0 var(--ink)}
+  .card h2{margin:0 0 6px;font-size:32px;font-weight:400}
+  .card .big{font-size:44px;margin:6px 0;color:#d79a00}
+  .card .row{font-size:19px;margin:4px 0}
+  .card .btns{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+
+  /* 엔딩 */
+  #ending{background:#120e1c;flex-direction:column;align-items:center;justify-content:center;z-index:6;cursor:pointer}
+  #ending .pic{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 1.6s}
+  #ending .pic.on{opacity:1}
+  #ending .cap{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);width:min(92%,720px);text-align:center;color:#fff;
+    background:rgba(20,14,30,.6);border-radius:18px;padding:14px 16px;opacity:0;transition:opacity 1.2s 0.8s}
+  #ending .cap.on{opacity:1}
+  #ending .cap h2{margin:0 0 6px;font-weight:400;font-size:clamp(26px,5vw,44px)}
+  #ending .cap p{margin:0;font-size:clamp(16px,2.8vw,22px)}
+  #ending .cap .btns{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  #ending .cap .btn{color:var(--ink)}
+  .glow{animation:glow 2.4s ease-in-out infinite}
+  @keyframes glow{0%,100%{text-shadow:0 0 8px #9fd3ff}50%{text-shadow:0 0 24px #cfe9ff,0 0 4px #fff}}
+</style>
+</head>
+<body>
+
+<section id="title" class="screen on">
+  <div class="bg"></div>
+  <h1>숨바꼭질 그림책</h1>
+  <p>그림책 30권 속에 숨은 물건을 모두 찾아보세요!</p>
+  <button class="btn main" id="startBtn">시작하기</button>
+</section>
+
+<section id="map" class="screen">
+  <header>
+    <h2>그림책 지도</h2>
+    <button class="pill" id="musicM" aria-label="배경음 켜고 끄기">🎵</button>
+    <button class="pill" id="sfxM" aria-label="효과음 켜고 끄기">🔊</button>
+    <button class="pill" id="fullM" aria-label="전체 화면">⛶</button>
+  </header>
+  <div id="chapters"></div>
+  <button class="btn endingBtn" id="endingAgain" style="display:none">엔딩 다시 보기</button>
+</section>
+
+<section id="game" class="screen">
+  <div class="top">
+    <button class="pill" id="back" aria-label="지도로">◀</button>
+    <div class="name" id="stageName"></div>
+    <div class="hearts" id="hearts"></div>
+    <button class="pill" id="hintBtn" aria-label="힌트">💡<span id="hintLeft"></span></button>
+    <button class="pill" id="musicG" aria-label="배경음 켜고 끄기">🎵</button>
+    <button class="pill" id="sfxG" aria-label="효과음 켜고 끄기">🔊</button>
+  </div>
+  <div id="view">
+    <div id="stagebox"><img id="pic" alt=""></div>
+    <div class="tip" id="tip"></div>
+  </div>
+  <div class="tray" id="tray"></div>
+</section>
+
+<section id="result" class="screen overlay">
+  <div class="card">
+    <h2>다 찾았어요!</h2>
+    <div class="big" id="resStars"></div>
+    <div class="row" id="resTime"></div>
+    <div class="btns">
+      <button class="btn main" id="nextBtn">다음 그림책 ▶</button>
+      <button class="btn" id="againBtn">다시 하기</button>
+      <button class="btn" id="mapBtn">지도로</button>
+    </div>
+  </div>
+</section>
+
+<section id="fail" class="screen overlay">
+  <div class="card">
+    <h2>하트를 다 썼어요</h2>
+    <div class="row">괜찮아요, 다시 찾아봐요!</div>
+    <div class="btns">
+      <button class="btn main" id="retryBtn">다시 하기</button>
+      <button class="btn" id="failMapBtn">지도로</button>
+    </div>
+  </div>
+</section>
+
+<section id="ending" class="screen">
+  <div class="pic" id="endPic1" style="background-image:url(img/ending.webp)"></div>
+  <div class="pic" id="endPic2" style="background-image:url(img/teaser.webp)"></div>
+  <div class="cap" id="endCap"></div>
+</section>
+
+<script src="stages.js?v=2610101704"></script>
+<script>
+const W = 1200;                 // 좌표 기준 가로
+const HEARTS = 3;
+const CHAPTERS = { 1:['1장 · 우리 동네','쉬움 — 물건이 비교적 잘 보여요'], 2:['2장 · 숲과 바다','보통 — 물건이 주변 색에 섞여요'], 3:['3장 · 한밤의 모험','어려움 — 아주 교묘하게 숨어 있어요'] };
+const $ = id => document.getElementById(id);
+
+// ---------- 저장 (안 되는 환경이어도 돌아가게) ----------
+function load(k, d){ try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+let cleared = load('hide2_cleared', {});          // { 판번호: 별 }
+let musicOn = load('hide2_music', true), sfxOn = load('hide2_sfx', true);
+
+// ---------- 전체 화면 ----------
+function goFull(){
+  const el = document.documentElement;
+  if (document.fullscreenElement || document.webkitFullscreenElement) return;
+  const f = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (f) { try{ const p = f.call(el); if (p && p.catch) p.catch(()=>{}); }catch(e){} }
+}
+function toggleFull(){
+  if (document.fullscreenElement || document.webkitFullscreenElement){
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else goFull();
+}
+
+// ---------- 소리 ----------
+let ac = null, musicGain = null, sfxGain = null;
+function audio(){
+  if (!ac){
+    try{
+      ac = new (window.AudioContext||window.webkitAudioContext)();
+      musicGain = ac.createGain(); musicGain.gain.value = musicOn ? 0.5 : 0; musicGain.connect(ac.destination);
+      sfxGain = ac.createGain(); sfxGain.gain.value = sfxOn ? 1 : 0; sfxGain.connect(ac.destination);
+    }catch(e){ ac = null; }
+  }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function note(dest, freq, t, dur, type, vol, attack=0.01){
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g).connect(dest); o.start(t); o.stop(t+dur+0.05);
+}
+function tone(freqs, dur=0.12, type='sine', vol=0.18){
+  if (!audio()) return;
+  let t = ac.currentTime;
+  freqs.forEach(f=>{ note(sfxGain, f, t, dur, type, vol); t += dur*0.8; });
+}
+const sfx = {
+  good: ()=>tone([660,880],0.12,'triangle'),
+  bad:  ()=>tone([220,150],0.16,'square',0.07),
+  hint: ()=>tone([520,620,520],0.1,'sine'),
+  win:  ()=>tone([523,659,784,1047],0.16,'triangle'),
+  fail: ()=>tone([392,330,262],0.22,'triangle',0.12),
+};
+// 배경음: 장마다 다른 오르골 곡을 그 자리에서 연주
+const SONGS = {
+  1:{ bpm:104, root:72, scale:[0,2,4,7,9],       chords:[0,5,7,0, 9,5,7,0], wave:'triangle', vol:0.07, seed:11 },
+  2:{ bpm:86,  root:69, scale:[0,2,4,6,7,9,11],  chords:[0,7,5,0, 2,7,5,0], wave:'sine',     vol:0.08, seed:23 },
+  3:{ bpm:74,  root:69, scale:[0,3,5,7,10],      chords:[0,8,3,10, 0,5,8,7], wave:'sine',    vol:0.08, seed:37 },
+};
+const midi = m => 440 * Math.pow(2, (m-69)/12);
+let song = null, songTimer = null, songStep = 0, songNext = 0, songMelody = [];
+function makeMelody(s){
+  let x = s.seed, rnd = ()=> (x = (x*9301+49297) % 233280) / 233280;
+  const steps = 64, mel = []; let idx = 2;
+  for (let i=0;i<steps;i++){
+    if (i % 8 !== 0 && rnd() < 0.3){ mel.push(null); continue; }
+    idx = Math.max(0, Math.min(s.scale.length*2-1, idx + Math.round((rnd()-0.5)*3)));
+    mel.push(s.root + s.scale[idx % s.scale.length] + 12*Math.floor(idx / s.scale.length) - 12);
+  }
+  return mel;
+}
+function playSong(ch){
+  if (song === ch && songTimer) return;
+  stopSong(); song = ch;
+  if (!audio()) return;
+  const s = SONGS[ch]; songMelody = makeMelody(s); songStep = 0; songNext = ac.currentTime + 0.1;
+  const eighth = 60 / s.bpm / 2;
+  songTimer = setInterval(()=>{
+    while (songNext < ac.currentTime + 0.25){
+      const m = songMelody[songStep % songMelody.length];
+      if (m != null) note(musicGain, midi(m), songNext, eighth*2.2, s.wave, s.vol);
+      if (songStep % 8 === 0){   // 마디마다 낮은 화음
+        const c = s.chords[(songStep/8) % s.chords.length];
+        [0, 7, 12].forEach(iv => note(musicGain, midi(s.root - 24 + c + iv), songNext, eighth*8, 'sine', s.vol*0.5, 0.15));
+      }
+      songNext += eighth; songStep++;
+    }
+  }, 60);
+}
+function stopSong(){ clearInterval(songTimer); songTimer = null; song = null; }
+function setMusic(on){
+  musicOn = on; save('hide2_music', on);
+  if (musicGain) musicGain.gain.value = on ? 0.5 : 0;
+  ['musicM','musicG'].forEach(id=>{ $(id).style.opacity = on ? 1 : .4; });
+}
+function setSfx(on){
+  sfxOn = on; save('hide2_sfx', on);
+  if (sfxGain) sfxGain.gain.value = on ? 1 : 0;
+  ['sfxM','sfxG'].forEach(id=>{ $(id).textContent = on ? '🔊' : '🔇'; });
+}
+
+// ---------- 화면 ----------
+function show(id, keepGame){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id || (!!keepGame && s.id==='game')));
+}
+const starText = n => '★'.repeat(n) + '☆'.repeat(3-n);
+const isOpen = n => n === 1 || !!cleared[n-1];
+
+function buildMap(){
+  const box = $('chapters'); box.innerHTML = '';
+  [1,2,3].forEach(ch=>{
+    const c = document.createElement('div'); c.className = 'chapter';
+    c.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--ch'+ch);
+    c.innerHTML = `<h3>${CHAPTERS[ch][0]}</h3><div class="sub">${CHAPTERS[ch][1]}</div><div class="stagegrid"></div>`;
+    const g = c.querySelector('.stagegrid');
+    STAGES.filter(s=>s.chapter===ch).forEach(s=>{
+      const open = isOpen(s.num), b = document.createElement('button');
+      b.className = 'sbtn' + (open ? '' : ' locked');
+      b.innerHTML = `<div class="th" style="background-image:url('${s.thumb}')"></div>
+        <div class="nm">${s.num}. ${s.title}</div><div class="st">${cleared[s.num] ? starText(cleared[s.num]) : ''}</div>
+        ${open ? '' : '<div class="lock">🔒</div>'}`;
+      if (open) b.onclick = ()=>startStage(s.num);
+      g.appendChild(b);
+    });
+    box.appendChild(c);
+  });
+  $('endingAgain').style.display = cleared[STAGES.length] ? '' : 'none';
+}
+function openMap(){ buildMap(); show('map'); playSong(1); }
+
+// ---------- 게임 상태 ----------
+let st = null, found = [], hearts = HEARTS, hintsLeft = 0, startTime = 0, playing = false, runId = 0, hintLock = 0;
+const view = $('view'), box = $('stagebox'), pic = $('pic');
+let NW = 0, NH = 0, s = 1, tx = 0, ty = 0, minS = 1, maxS = 6;
+
+function stageByNum(n){ return STAGES.find(x=>x.num===n); }
+function startStage(n){
+  st = stageByNum(n); if (!st) return;
+  runId++; found = st.items.map(()=>false); hearts = HEARTS; hintsLeft = st.hints; playing = false; hintLock = 0;
+  $('stageName').textContent = `${st.num}. ${st.title}`;
+  drawHearts(); $('hintLeft').textContent = hintsLeft; $('hintBtn').disabled = false;
+  box.querySelectorAll('.mark,.miss,.hint').forEach(e=>e.remove());
+  show('game'); playSong(st.chapter);
+  pic.style.visibility = 'hidden'; $('tray').innerHTML = '';
+  $('tip').textContent = '그림을 불러오는 중…'; $('tip').style.opacity = 1; clearTimeout(tipTimer);
+  let loaded = false;
+  pic.onerror = ()=>{ $('tip').textContent = '그림을 불러오지 못했어요. 다시 해 보세요'; $('tip').style.opacity = 1; };
+  pic.onload = ()=>{
+    if (loaded || !$('game').classList.contains('on')) return; loaded = true;
+    NW = pic.naturalWidth; NH = pic.naturalHeight; pic.style.visibility = '';
+    box.style.width = NW+'px'; box.style.height = NH+'px';
+    buildTray(); fitView();
+    startTime = Date.now(); playing = true;
+    showTip('두 손가락이나 마우스 휠로 확대해서 찾아보세요', 3500);
+  };
+  pic.src = st.img;
+  if (pic.complete && pic.naturalWidth) pic.onload();
+}
+function drawHearts(){ $('hearts').textContent = '♥'.repeat(hearts) + '♡'.repeat(HEARTS-hearts); }
+let tipTimer = null;
+function showTip(t, ms){ const e = $('tip'); e.textContent = t; e.style.opacity = 1; clearTimeout(tipTimer); tipTimer = setTimeout(()=>e.style.opacity = 0, ms); }
+function buildTray(){
+  const tray = $('tray'); tray.innerHTML = '';
+  st.items.forEach((it,i)=>{
+    const d = document.createElement('div'); d.className = 'item'; d.id = 'it'+i;
+    d.innerHTML = `<img src="items/${it.icon}.png" alt=""><div class="lbl">${it.name}</div>`;
+    tray.appendChild(d);
+  });
+}
+
+// ---------- 확대·이동 ----------
+function apply(){
+  const vw = view.clientWidth, vh = view.clientHeight, w = NW*s, h = NH*s;
+  tx = w <= vw ? (vw-w)/2 : Math.min(0, Math.max(vw-w, tx));
+  ty = h <= vh ? (vh-h)/2 : Math.min(0, Math.max(vh-h, ty));
+  box.style.transform = `translate(${tx}px,${ty}px) scale(${s})`;
+}
+function fitView(){
+  const vw = view.clientWidth, vh = view.clientHeight;
+  minS = Math.min(vw/NW, vh/NH);
+  const cover = Math.max(vw/NW, vh/NH);
+  maxS = Math.max(minS*6, cover*3);
+  const ar = vw/vh;
+  s = (ar < 1.2 || ar > 2.4) ? cover : minS;   // 휴대폰 세로·가로처럼 그림과 모양이 크게 다르면 꽉 채우고 밀어서 봄
+  tx = (vw - NW*s)/2; ty = (vh - NH*s)/2; apply();
+}
+function zoomAt(cx, cy, ns){
+  ns = Math.max(minS, Math.min(maxS, ns));
+  tx = cx - (cx - tx) * ns / s; ty = cy - (cy - ty) * ns / s; s = ns; apply();
+}
+function centerOn(ix, iy, ns){
+  s = Math.max(minS, Math.min(maxS, ns));
+  tx = view.clientWidth/2 - ix*s; ty = view.clientHeight/2 - iy*s; apply();
+}
+window.addEventListener('resize', ()=>{
+  if (!NW || !$('game').classList.contains('on')) return;
+  const old = minS; minS = Math.min(view.clientWidth/NW, view.clientHeight/NH); s = Math.max(minS, s*minS/old); apply();
+});
+view.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const r = view.getBoundingClientRect();
+  zoomAt(e.clientX - r.left, e.clientY - r.top, s * (e.deltaY < 0 ? 1.2 : 1/1.2));
+}, {passive:false});
+
+const pts = new Map(); let moved = 0, pinch = null, last = null;
+view.addEventListener('pointerdown', e=>{
+  try{ view.setPointerCapture(e.pointerId); }catch(err){}
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pts.size === 1){ moved = 0; last = {x:e.clientX, y:e.clientY}; view.classList.add('drag'); }
+  if (pts.size === 2){ const [a,b] = [...pts.values()]; pinch = { d: Math.hypot(a.x-b.x, a.y-b.y), s }; moved = 99; }
+});
+view.addEventListener('pointermove', e=>{
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  const r = view.getBoundingClientRect();
+  if (pts.size === 2 && pinch){
+    const [a,b] = [...pts.values()];
+    zoomAt((a.x+b.x)/2 - r.left, (a.y+b.y)/2 - r.top, pinch.s * Math.hypot(a.x-b.x, a.y-b.y) / pinch.d);
+  } else if (pts.size === 1 && last){
+    const dx = e.clientX - last.x, dy = e.clientY - last.y;
+    moved += Math.abs(dx) + Math.abs(dy); tx += dx; ty += dy; apply();
+    last = {x:e.clientX, y:e.clientY};
+  }
+});
+function up(e){
+  if (!pts.has(e.pointerId)) return;
+  pts.delete(e.pointerId);
+  if (pts.size === 0){
+    view.classList.remove('drag');
+    if (moved < 10) tap(e.clientX, e.clientY);
+    pinch = null; last = null;
+  } else if (pts.size === 1){ const p = [...pts.values()][0]; last = {x:p.x, y:p.y}; pinch = null; }
+}
+view.addEventListener('pointerup', up);
+view.addEventListener('pointercancel', e=>{ pts.delete(e.pointerId); if (!pts.size){ pinch = null; last = null; view.classList.remove('drag'); } });
+
+// ---------- 누르기 ----------
+function tap(cx, cy){
+  if (!playing) return;
+  const r = view.getBoundingClientRect();
+  const ix = (cx - r.left - tx) / s, iy = (cy - r.top - ty) / s;
+  if (ix < 0 || iy < 0 || ix > NW || iy > NH) return;
+  const k = NW / W, extra = 8 * k;   // 손가락이 살짝 빗나가도 봐주는 여유 (그림 기준 8)
+  let bi = -1, bz = null, bd = Infinity;
+  st.items.forEach((it,i)=>it.zones.forEach(z=>{
+    const d = Math.hypot(ix - z[0]*k, iy - z[1]*k) - z[2]*k;
+    if (d < bd){ bd = d; bi = i; bz = z; }
+  }));
+  if (bd <= extra){ if (!found[bi]) hit(bi, bz[0]*k, bz[1]*k, bz[2]*k); return; }
+  // 틀림: 하트 하나 잃음
+  hearts--; drawHearts(); sfx.bad();
+  $('hearts').classList.remove('shake'); void $('hearts').offsetWidth; $('hearts').classList.add('shake');
+  view.classList.add('flash'); setTimeout(()=>view.classList.remove('flash'), 250);
+  const m = document.createElement('div'); m.className = 'miss'; m.textContent = '✕';
+  m.style.left = ix+'px'; m.style.top = iy+'px'; m.style.fontSize = (34/s)+'px';
+  box.appendChild(m); setTimeout(()=>m.remove(), 800);
+  if (hearts <= 0){
+    playing = false; const run = runId;
+    setTimeout(()=>{ if (run === runId){ sfx.fail(); show('fail', true); } }, 600);
+  }
+}
+function hit(i, x, y, rad){
+  found[i] = true; sfx.good();
+  box.querySelectorAll('.hint').forEach(e=>e.remove());
+  const m = document.createElement('div'); m.className = 'mark';
+  const size = Math.max(rad*2.6, 50);
+  m.style.left = x+'px'; m.style.top = y+'px'; m.style.width = size+'px'; m.style.height = size+'px';
+  box.appendChild(m);
+  const el = $('it'+i); el.classList.add('found'); el.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+  if (found.every(Boolean)){ playing = false; const run = runId; setTimeout(()=>{ if (run === runId) win(); }, 700); }
+}
+$('hintBtn').onclick = ()=>{
+  if (!playing || hintsLeft <= 0 || Date.now() < hintLock) return;
+  const i = found.findIndex(f=>!f); if (i < 0) return;
+  hintLock = Date.now() + 1500;
+  hintsLeft--; $('hintLeft').textContent = hintsLeft; if (!hintsLeft) $('hintBtn').disabled = true;
+  sfx.hint();
+  const k = NW / W, [x,y,rad] = st.items[i].zones[0];
+  const off = Math.max(rad*k*1.5, 30*k), ang = Math.random()*Math.PI*2;   // 정확한 자리가 아니라 근처를 크게
+  const hx = x*k + Math.cos(ang)*off, hy = y*k + Math.sin(ang)*off;
+  centerOn(hx, hy, Math.max(s, minS*2));
+  box.querySelectorAll('.hint').forEach(e=>e.remove());
+  const h = document.createElement('div'); h.className = 'hint'; const size = Math.max(rad*k*8, 180*k);
+  h.style.left = hx+'px'; h.style.top = hy+'px'; h.style.width = size+'px'; h.style.height = size+'px';
+  box.appendChild(h); setTimeout(()=>h.remove(), 3200);
+  $('it'+i).scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+};
+function win(){
+  sfx.win();
+  const sec = Math.floor((Date.now()-startTime)/1000);
+  const stars = hearts;   // 남은 하트 = 별
+  if (!cleared[st.num] || stars > cleared[st.num]){ cleared[st.num] = stars; save('hide2_cleared', cleared); }
+  $('resStars').textContent = starText(stars);
+  $('resTime').textContent = `걸린 시간 ${Math.floor(sec/60)}분 ${sec%60}초 · 남은 하트 ${hearts}개`;
+  const last = st.num === STAGES.length;
+  $('nextBtn').textContent = last ? '엔딩 보기 ✨' : '다음 그림책 ▶';
+  show('result', true);
+}
+
+// ---------- 엔딩 ----------
+let endStep = 0;
+function startEnding(){
+  show('ending'); playSong(3); endStep = 0;
+  $('endPic1').classList.remove('on'); $('endPic2').classList.remove('on'); $('endCap').classList.remove('on');
+  setTimeout(()=>{
+    $('endPic1').classList.add('on');
+    $('endCap').innerHTML = '<h2>모든 물건을 찾았어요!</h2><p>30권의 그림책 속 숨바꼭질이 끝났어요.<br>물건들이 고맙다며 하늘로 날아올라요.</p><p style="margin-top:8px;font-size:15px;opacity:.75">화면을 누르면 계속</p>';
+    $('endCap').classList.add('on'); endStep = 1;
+  }, 200);
+}
+$('ending').addEventListener('click', e=>{
+  if (e.target.closest('button')) return;
+  if (endStep !== 1) return;
+  endStep = 2;
+  $('endCap').classList.remove('on');
+  setTimeout(()=>{
+    $('endPic1').classList.remove('on'); $('endPic2').classList.add('on');
+    $('endCap').innerHTML = '<p>그런데… 창가에 처음 보는 그림책 한 권이 놓여 있어요.</p><h2 class="glow" style="margin-top:8px">숨바꼭질 그림책 2</h2><p>새로운 그림책이 곧 열립니다</p><div class="btns"><button class="btn" id="endMap">지도로</button></div>';
+    $('endCap').classList.add('on');
+    $('endMap').onclick = openMap;
+  }, 900);
+});
+
+// ---------- 버튼 ----------
+$('startBtn').onclick = ()=>{ goFull(); audio(); openMap(); };
+$('nextBtn').onclick = ()=>{ if (st.num === STAGES.length) startEnding(); else startStage(st.num+1); };
+$('againBtn').onclick = ()=>startStage(st.num);
+$('retryBtn').onclick = ()=>startStage(st.num);
+$('mapBtn').onclick = $('failMapBtn').onclick = ()=>{ runId++; openMap(); };
+$('back').onclick = ()=>{ runId++; playing = false; openMap(); };
+$('endingAgain').onclick = startEnding;
+$('musicM').onclick = $('musicG').onclick = ()=>{ audio(); setMusic(!musicOn); };
+$('sfxM').onclick = $('sfxG').onclick = ()=>{ audio(); setSfx(!sfxOn); };
+$('fullM').onclick = toggleFull;
+document.addEventListener('visibilitychange', ()=>{   // 다른 앱·탭으로 가면 소리 멈춤
+  if (!ac) return;
+  if (document.hidden) ac.suspend();
+  else ac.resume().then(()=>{ songNext = ac.currentTime + 0.1; });
+});
+setMusic(musicOn); setSfx(sfxOn);
+</script>
+</body>
+</html>
