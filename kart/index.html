@@ -231,7 +231,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { Relay } from './net.js';
+import { Relay } from './net.js?v=2610130000';
 
 const $ = (id) => document.getElementById(id);
 // 태블릿 모드: 조종기(play.html) 안에서 내 카트 하나만 계산하고 그려요 (주소에 ?pad=1)
@@ -1004,7 +1004,8 @@ let viewKarts = [];                          // 화면 칸을 받는 카트
 let cdT = 0, raceT = 0, retireT = -1, finishCount = 0;
 let lastCd = -1;
 
-function wrapA(a) { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; }
+// 각도를 -π~π로 (나눗셈 나머지로 해서 아무리 큰 값이 와도 바로 끝나요)
+function wrapA(a) { if (!Number.isFinite(a)) return 0; const T = Math.PI * 2; a = (a + Math.PI) % T; if (a < 0) a += T; return a - Math.PI; }
 
 function newKart(name, ci, slot, bot) {
   const k = {
@@ -1015,7 +1016,7 @@ function newKart(name, ci, slot, bot) {
     input: { s: 0, dr: false, br: false, gas: slot && slot.kb ? false : undefined }, boostReq: false, wrongT: 0, wallCd: 0, bumpCd: 0, puffT: 0,
     lane: (Math.random() - 0.5) * 8, laneT: 0, skill: 0.9 + Math.random() * 0.07,
     cam: { h: 0, fov: 70 }, mesh: makeKartMesh(ci, name), msg: '', msgT: 0,
-    remote: null, remoteAt: 0, sq: 0,   // 태블릿이 보낸 내 카트 상태, 다시 맞춘 번호
+    remote: null, remoteAt: 0, sq: 0, budget: 30,   // 태블릿이 보낸 내 카트 상태, 다시 맞춘 번호, 움직일 수 있는 거리
   };
   scene.add(k.mesh.g);
   return k;
@@ -1254,7 +1255,7 @@ function followRemote(k, r, at, dt) {
   const age = Math.min(0.25, Math.max(0, (performance.now() - at) / 1000));
   const px = r.x + r.vx * age, pz = r.z + r.vz * age;
   const a = Math.min(1, dt * 12);
-  if (Math.hypot(px - k.x, pz - k.z) > 15) { k.x = px; k.z = pz; k.h = r.h; }
+  if (!(Math.hypot(px - k.x, pz - k.z) <= 15)) { k.x = px; k.z = pz; k.h = r.h; }   // 멀거나 값이 망가졌으면 바로 그 자리로
   k.x += (px - k.x) * a; k.z += (pz - k.z) * a;
   k.h = wrapA(k.h + wrapA(r.h - k.h) * a);
   k.vx = r.vx; k.vz = r.vz; k.vf = r.vx * Math.sin(k.h) + r.vz * Math.cos(k.h);
@@ -1634,7 +1635,7 @@ function caption(txt, pri, k) {
 const SNAP = ['x', 'z', 'h', 'boostT', 'miniT', 'drifting', 'driftDir', 'turnVis', 'driftVis', 'vf', 'vx', 'vz'];
 function bcTick(dt) {
   if (bc.capT > 0) { bc.capT -= dt; if (bc.capT <= 0) $('bccap').classList.remove('on'); }
-  $('bclive').innerHTML = bc.auto ? '<b>●</b> 생중계 · 자동' : `<b>●</b> 생중계 · ${bc.target ? bc.target.name : ''} 고정`;
+  $('bclive').innerHTML = bc.auto ? '<b>●</b> 생중계 · 자동' : `<b>●</b> 생중계 · ${bc.target ? bc.target.name.replace(/[<>&"']/g, '') : ''} 고정`;
   $('bcauto').classList.toggle('on', bc.auto);
   if (phase !== 'race') return;
   bc.buf.push({ t: raceT, s: racers.map((k) => SNAP.map((f) => k[f])) });
@@ -1819,8 +1820,7 @@ function onRelay(m) {
     ss.set('kart-room', m.code); ss.set('kart-key', m.key);
     $('code').textContent = m.code; $('sideCode').textContent = m.code;
     const url = new URL('play.html?room=' + m.code, location.href);
-    const relayQ = new URLSearchParams(location.search).get('relay');
-    if (relayQ) url.searchParams.set('relay', relayQ);
+    for (const q of ['relay', 'db']) { const v = new URLSearchParams(location.search).get(q); if (v) url.searchParams.set(q, v); }
     $('url').textContent = url.href.replace(/^https?:\/\//, '');
     try {
       const qr = qrcode(0, 'M'); qr.addData(url.href); qr.make();
@@ -1886,6 +1886,10 @@ function pushStates() {
   for (const s of slots) {
     if (!s || s.pid == null) continue;
     const k = s.kart;
+    // 달리는 중인데 2초 넘게 자리를 안 보내는 태블릿: 지금 상태를 다시 보내 줘요 (화면이 꺼졌다 켜졌거나, 가짜 쪽지로 3D가 꺼졌을 때 다시 붙게)
+    if (k && phase === 'race' && !k.finished && raceT > 2 && performance.now() - (k.remoteAt || 0) > 2000 && performance.now() - (k.resyncAt || 0) > 2000) {
+      k.resyncAt = performance.now(); sendRace(k);
+    }
     const d = { k: 'st', ph: phase, in: !!k, L: laps, map: trackIdx };
     if (k) Object.assign(d, { r: k.rank || racers.indexOf(k) + 1, n: racers.length, lap: Math.min(k.lap, laps), g: +k.gauge.toFixed(2), b: k.boosts,
       fin: k.finished ? k.place : 0, cd: Math.max(0, Math.ceil(cdT)), wr: k.wrongT > 0.8 });
@@ -1904,17 +1908,40 @@ function sendRace(k) {
     ks: racers.map((o) => [o.name, o.char, o.bot ? 1 : 0]), s: st } });
 }
 function takeRemote(k, d) {
-  if (d.sq !== k.sq || k.finished || (phase !== 'race' && phase !== 'count')) return;
-  const num = (v) => (Number.isFinite(+v) ? +v : 0);
-  const r = { x: num(d.x), z: num(d.z), h: num(d.h), vx: num(d.vx), vz: num(d.vz), bt: num(d.bt), mt: num(d.mt),
-    dd: Math.sign(num(d.dd)), dt: num(d.dt), tv: num(d.tv) };
+  if (k.finished || phase !== 'race') return;   // 출발 전에는 받지 않아요 (정상 태블릿도 보내지 않아요)
+  if (d.sq !== k.sq) {   // 맞춤 번호가 틀렸으면(옛 값이거나 가짜 출발 정보를 받았으면) 지금 자리를 다시 보내요
+    if (performance.now() - (k.resyncAt || 0) > 1000) { k.resyncAt = performance.now(); sendRace(k); }
+    return;
+  }
+  // 모든 값을 있을 수 있는 범위로 자르기 (엄청 큰 값으로 큰 화면이 멈추거나 순간이동하지 않게)
+  const num = (v, lo, hi) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : 0);
+  const r = { x: num(d.x, -5000, 5000), z: num(d.z, -5000, 5000), h: wrapA(num(d.h, -1e6, 1e6)), vx: num(d.vx, -90, 90), vz: num(d.vz, -90, 90),
+    bt: num(d.bt, 0, BOOST_TIME), mt: num(d.mt, 0, 1), dd: Math.sign(num(d.dd, -1, 1)), dt: num(d.dt, 0, 10), tv: num(d.tv, -5, 5) };
+  const sp = Math.hypot(r.vx, r.vz); if (sp > 90) { r.vx *= 90 / sp; r.vz *= 90 / sp; }
+  // 말이 안 되는 값은 버리고 지금 자리를 다시 보내요 (고장·장난 막기, 다시 보내기는 1초에 한 번만)
+  // · 움직일 수 있는 거리: 시간이 흐르면 초속 90m씩 쌓이고(최대 75m — 와이파이가 0.8초쯤 멈췄다 몰려와도 괜찮게) 움직인 만큼 줄어요 → 잘게 자주 보내도 가장 빠른 부스터(초속 약 81m)보다 빨리 못 가요
+  // · 길 밖(벽 너머)으로 나간 자리는 받지 않아요 → 길 사이를 가로지르는 지름길도 막혀요
+  // · 바퀴 수는 태블릿이 보낸 숫자를 쓰지 않고, 받은 자리로 큰 화면이 직접 세요
+  const now = performance.now(), tr = track, N = tr.N;
+  const fresh = k.remote && now - k.remoteAt < 1000;
+  k.budget = Math.min(75, k.budget + 90 * (now - (k.budgetAt || now)) / 1000); k.budgetAt = now;   // 허용량은 흐른 시간으로만 차요
+  const bx = fresh ? k.remote.x : k.x, bz = fresh ? k.remote.z : k.z, move = Math.hypot(r.x - bx, r.z - bz);
+  const ni = nearest(tr, r.x, r.z, k.idx);
+  const off = (r.x - tr.px[ni]) * tr.nx[ni] + (r.z - tr.pz[ni]) * tr.nz[ni];
+  if (move > k.budget || Math.abs(off) > tr.hw + 2) {
+    if (now - (k.resyncAt || 0) > 1000) { k.resyncAt = now; sendRace(k); }
+    return;
+  }
+  k.budget -= move;
   if (!k.remote) { k.x = r.x; k.z = r.z; k.h = r.h; }
-  k.remote = r; k.remoteAt = performance.now();
-  // 길 위치·바퀴 계산에 쓰는 값 (바퀴·결승 판정은 큰 화면이 해요)
-  k.idx = ((Math.round(num(d.i)) % track.N) + track.N) % track.N;
-  k.total = Math.round(num(d.tt)); k.prog = num(d.p);
-  k.gauge = Math.max(0, Math.min(1, num(d.g))); k.boosts = Math.max(0, Math.min(2, Math.round(num(d.b))));
-  k.wrongT = num(d.wr);
+  k.remote = r; k.remoteAt = now;
+  let dd = ni - k.idx;
+  if (dd > N / 2) dd -= N;
+  if (dd < -N / 2) dd += N;
+  k.total += dd; k.idx = ni;
+  k.prog = k.total + Math.max(-0.5, Math.min(0.5, ((r.x - tr.px[ni]) * tr.tx[ni] + (r.z - tr.pz[ni]) * tr.tz[ni]) / tr.ds));
+  k.gauge = num(d.g, 0, 1); k.boosts = Math.round(num(d.b, 0, 2));
+  k.wrongT = num(d.wr, 0, 999);
 }
 // 모든 태블릿에 카트 자리를 보내요: [x, z, 방향, 속도x, 속도z, 표시, 기울기, 등수, 바퀴]
 // 표시: 1 부스터 · 2 순간 가속 · 4 드리프트 · 8 오른쪽 드리프트 · 16 파란 연기
@@ -2045,10 +2072,13 @@ if (demo > 0) { botCount = Math.min(MAX, demo); renderSlots(); startRace(); }
 // 내 카트는 여기서 계산하고(늦음 없음), 다른 카트는 큰 화면이 보내 준 자리를 따라 그려요.
 const pad = { me: null, on: false, sq: 0, key: '', sendT: 0, out: null, input: { s: 0, dr: false, br: false } };
 function padOut(type, d) { if (pad.out) try { pad.out(type, d); } catch (_) {} }
+// 큰 화면이 보낸 값도 숫자인지, 있을 수 있는 범위인지 확인해요 (큰 화면인 척하는 이상한 쪽지 막기)
+function clampN(v, lo, hi) { return Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : Math.max(lo, Math.min(hi, 0)); }
+const PHASES = ['lobby', 'count', 'race', 'result'];
 function padArr(a) {
-  const f = a[5] | 0;
-  return { x: a[0], z: a[1], h: a[2], vx: a[3], vz: a[4], bt: f & 1 ? 1 : 0, mt: f & 2 ? 1 : 0,
-    dd: f & 4 ? (f & 8 ? 1 : -1) : 0, dt: f & 16 ? 1 : 0, tv: a[6] || 0 };
+  const f = clampN(a[5], 0, 31) | 0, n = clampN;
+  return { x: n(a[0], -5000, 5000), z: n(a[1], -5000, 5000), h: wrapA(n(a[2], -1e6, 1e6)), vx: n(a[3], -90, 90), vz: n(a[4], -90, 90),
+    bt: f & 1 ? 1 : 0, mt: f & 2 ? 1 : 0, dd: f & 4 ? (f & 8 ? 1 : -1) : 0, dt: f & 16 ? 1 : 0, tv: n(a[6], -5, 5) };
 }
 function padStop() {
   pad.on = false; pad.me = null; pad.key = '';
@@ -2102,11 +2132,15 @@ if (PAD) window.__pad = {
   get active() { return !!pad.me; },
   get boosts() { return pad.me ? pad.me.boosts : 0; },
   set out(fn) { pad.out = fn; },
-  setTrack(i) { if (i !== trackIdx && !pad.me) setTrack(i); },
+  setTrack(i) { i = clampN(i, 0, TRACKS.length - 1) | 0; if (i !== trackIdx && !pad.me) setTrack(i); },
   input(inp) { pad.input.s = Math.max(-1, Math.min(1, +inp.s || 0)); pad.input.dr = !!inp.dr; pad.input.br = !!inp.br; },
   boost() { if (pad.me && pad.on && phase === 'race') pad.me.boostReq = true; },
   // 이번 판 정보 + 내 카트 상태 (출발할 때, 다시 이어질 때)
   race(d) {
+    if (!d || !Array.isArray(d.ks) || !d.ks.length || !PHASES.includes(d.ph)) return;
+    d.map = clampN(d.map, 0, TRACKS.length - 1) | 0;
+    d.ks = d.ks.slice(0, MAX).map((o) => (Array.isArray(o) ? [String(o[0]).slice(0, 6), clampN(o[1], 0, CHARS.length - 1) | 0, o[2] ? 1 : 0] : ['?', 0, 1]));
+    if (!(d.me >= 0 && d.me < d.ks.length)) return;   // 엉터리 번호면 지금 화면을 끄지 않고 그대로 둬요
     const key = JSON.stringify([d.map, d.ks]);
     if (key !== pad.key || !pad.me) {
       padStop();
@@ -2114,27 +2148,31 @@ if (PAD) window.__pad = {
       for (const [name, ci, bot] of d.ks) racers.push(newKart(name, ci, null, !!bot));
       pad.key = key;
     }
-    laps = d.L; phase = d.ph;
-    const me = racers[d.me]; if (!me) return;
+    laps = clampN(d.L, 1, 5) | 0; phase = d.ph;
+    const me = racers[clampN(d.me, 0, MAX - 1) | 0]; if (!me) return;
     pad.me = me; pad.sq = d.sq; pad.on = true;
     me.input = pad.input; me.rs = null; me.finished = false;
-    Object.assign(me, d.s);
+    const st = d.s || {}, n = clampN;   // 알고 있는 값만 받아요
+    Object.assign(me, { x: n(st.x, -5000, 5000), z: n(st.z, -5000, 5000), h: wrapA(n(st.h, -1e6, 1e6)), vx: n(st.vx, -90, 90), vz: n(st.vz, -90, 90),
+      idx: n(st.idx, 0, track.N - 1) | 0, total: Math.round(n(st.total, -track.N, 99 * track.N)), gauge: n(st.gauge, 0, 1), boosts: n(st.boosts, 0, 2) | 0,
+      boostT: n(st.boostT, 0, BOOST_TIME), miniT: n(st.miniT, 0, 1) });
     me.cam.h = me.h;
     const tr = track, ni = me.idx;
     me.prog = me.total + Math.max(-0.5, Math.min(0.5, ((me.x - tr.px[ni]) * tr.tx[ni] + (me.z - tr.pz[ni]) * tr.tz[ni]) / tr.ds));
     racers.forEach((o, i) => { o.rank = o.rank || i + 1; });
     if (viewKarts[0] !== me) { viewKarts = [me]; buildViews(); }
     layout();
-    if (d.fin) this.finish(d.fin);
+    if (d.fin) this.finish(clampN(d.fin, 1, MAX) | 0);
   },
   // 큰 화면이 보낸 모든 카트 자리
   pos(d) {
-    if (!pad.me || d.a.length !== racers.length) return;
+    if (!pad.me || !d || !Array.isArray(d.a) || d.a.length !== racers.length || !PHASES.includes(d.ph)) return;
     if (d.ph !== phase) { if (d.ph === 'race' && phase === 'count') raceT = 0; phase = d.ph; }
     const t = performance.now();
     d.a.forEach((a, i) => {
       const o = racers[i];
-      o.rank = a[7]; o.lap = a[8];
+      if (!Array.isArray(a)) return;
+      o.rank = clampN(a[7], 0, MAX) | 0; o.lap = clampN(a[8], 1, 5) | 0;
       if (o === pad.me && pad.on) return;
       o.rs = padArr(a); o.rsAt = t;
     });
@@ -2142,7 +2180,7 @@ if (PAD) window.__pad = {
   // 결승하면 큰 화면이 내 카트를 이어서 몰아요 (나는 따라 그리기만)
   finish(place) {
     const me = pad.me; if (!me || me.finished) return;
-    pad.on = false; me.finished = true; me.place = place; me.drifting = false;
+    pad.on = false; me.finished = true; me.place = clampN(place, 1, MAX) | 0; me.drifting = false;
   },
   phase(ph) {
     if (ph === 'lobby' || ph === 'result') { if (pad.me) padStop(); phase = ph; }

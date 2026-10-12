@@ -130,7 +130,7 @@
 <div id="conn">연결 중…</div>
 
 <script type="module">
-import { Relay, store } from './net.js';
+import { Relay, store } from './net.js?v=2610130000';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -294,7 +294,7 @@ function onState(d) {
   if (d.ph === 'count') {
     if (d.cd !== lastCd) { lastCd = d.cd; flash(d.cd > 0 ? String(d.cd) : '출발!', d.cd > 0 ? 900 : 700); buzz(d.cd > 0 ? 40 : 150); }
   }
-  $('rank').innerHTML = `${d.r}<small>/${d.n}등</small>`;
+  $('rank').innerHTML = `${Number(d.r) | 0}<small>/${Number(d.n) | 0}등</small>`;   // 숫자만 넣어요 (이상한 쪽지 막기)
   $('lap').textContent = `${d.lap}/${d.L}바퀴`;
   $('gauge').style.width = Math.round(d.g * 100) + '%';
   if (!three) { $('bcount').textContent = d.b; $('boost').classList.toggle('empty', d.b <= 0); }
