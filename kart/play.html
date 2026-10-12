@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#14183a">
+<title>스피드 레이싱 그랑프리</title>
+<style>
+  :root {
+    --bg: #14183a; --panel: #1f2552; --ink: #fff; --dim: #aab0e0;
+    --me: #ff4d4d; --drift: #3d8bff; --boost: #ff9a2e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden;
+    font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    justify-content: center; gap: 16px; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); }
+  .screen.on { display: flex; }
+  h1 { margin: 0; font-size: 34px; letter-spacing: 2px; text-align: center; word-break: keep-all; }
+  h1 small { display: block; font-size: 14px; color: var(--dim); letter-spacing: 0; font-weight: 500; margin-top: 4px; }
+  label { font-size: 15px; color: var(--dim); display: block; margin-bottom: 6px; }
+  input { font: inherit; font-size: 26px; width: 240px; padding: 10px 14px; border-radius: 14px; border: 3px solid #3a4280;
+    background: #0d1030; color: #fff; text-align: center; user-select: text; -webkit-user-select: text; }
+  input:focus { outline: none; border-color: #ffd23d; }
+  button { font: inherit; cursor: pointer; border: 0; }
+  .big { font-size: 24px; font-weight: 800; padding: 14px 40px; border-radius: 16px; background: #ffd23d; color: #2a1e00;
+    box-shadow: 0 5px 0 #b38a10; }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #b38a10; }
+  .err { color: #ff8a8a; min-height: 1.3em; font-size: 16px; text-align: center; }
+  .kartbadge { width: 120px; height: 120px; border-radius: 30px; background: var(--me); display: grid; place-items: center;
+    font-size: 64px; box-shadow: 0 0 0 6px rgba(255,255,255,.15); }
+  .myname { font-size: 30px; font-weight: 800; }
+  .hint { color: var(--dim); font-size: 17px; text-align: center; line-height: 1.5; }
+
+  /* 조종 화면 */
+  #race { padding: 0; gap: 0; justify-content: stretch; }
+  .status { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+    padding-top: max(8px, env(safe-area-inset-top)); background: var(--panel); border-bottom: 4px solid var(--me); }
+  .rank { font-size: 34px; font-weight: 900; min-width: 76px; }
+  .rank small { font-size: 16px; color: var(--dim); font-weight: 600; }
+  .lap { font-size: 20px; font-weight: 700; color: var(--dim); }
+  .gaugebox { flex: 1; display: flex; align-items: center; gap: 8px; }
+  .gauge { flex: 1; height: 16px; background: #0d1030; border-radius: 8px; overflow: hidden; }
+  .gauge i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3d8bff, #6ff0ff); }
+  .tag { font-size: 14px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: #0d1030; color: var(--dim); }
+  .pads { flex: 1; width: 100%; display: flex; gap: 10px; padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .steer { flex: 1.1; display: flex; border-radius: 22px; overflow: hidden; background: #0d1030; touch-action: none; }
+  .steer div { flex: 1; display: grid; place-items: center; font-size: 64px; color: #55609c; transition: background .05s; }
+  .steer div.on { background: #2f3a86; color: #fff; }
+  .steer div + div { border-left: 3px solid var(--bg); }
+  .right { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .row { flex: 1; display: flex; gap: 10px; }
+  .pad { flex: 1; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 900; color: #fff; touch-action: none; position: relative; }
+  .pad b { font-size: 28px; }
+  .pad span { font-size: 14px; opacity: .8; font-weight: 600; }
+  .pad.drift { background: var(--drift); box-shadow: inset 0 -6px 0 rgba(0,0,0,.25); flex: 1.6; }
+  .pad.boost { background: var(--boost); box-shadow: inset 0 -6px 0 rgba(0,0,0,.25); }
+  .pad.brake { background: #4b4f6b; flex: 0.55; }
+  .pad.brake b { font-size: 18px; }
+  .pad.on { filter: brightness(1.35); transform: scale(.97); }
+  .pad.empty { filter: grayscale(.8) brightness(.6); }
+  .count { position: absolute; top: 8px; right: 12px; font-size: 22px; font-weight: 900; }
+  #msg { position: fixed; left: 0; right: 0; top: 40%; text-align: center; font-size: 72px; font-weight: 900;
+    pointer-events: none; text-shadow: 0 4px 0 rgba(0,0,0,.4); display: none; }
+  #conn { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); background: #c0392b; color: #fff;
+    padding: 6px 14px; border-radius: 12px; font-size: 15px; display: none; z-index: 9; }
+  .place { font-size: 96px; font-weight: 900; line-height: 1; }
+
+  /* 태블릿 3D 화면: 내 화면 위에 단추를 반쯤 비치게 겹쳐요 */
+  #pad3d { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; visibility: hidden; pointer-events: none; }
+  body.three #pad3d { visibility: visible; }
+  body.three .status { display: none; }
+  body.three .pads { position: fixed; left: 0; right: 0; bottom: 0; height: min(42vh, 320px); justify-content: space-between;
+    padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
+  body.three .steer { flex: 0 0 min(40vw, 380px); background: rgba(13,16,48,.35); }
+  body.three .steer div { color: rgba(255,255,255,.8); }
+  body.three .steer div.on { background: rgba(47,58,134,.75); }
+  body.three .right { flex: 0 0 min(40vw, 380px); }
+  body.three .pad { opacity: .82; }
+  body.three.fin .pads { display: none; }
+</style>
+</head>
+<body>
+<iframe id="pad3d" title="내 화면"></iframe>
+
+<section class="screen on" id="join">
+  <h1>🏁 스피드 레이싱 그랑프리<small>큰 화면의 방 번호를 넣어요</small></h1>
+  <div><label for="code">방 번호</label><input id="code" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+  <div><label for="name">내 이름 (6글자까지)</label><input id="name" maxlength="6" autocomplete="off"></div>
+  <div class="err" id="err"></div>
+  <button class="big" id="go">참가하기</button>
+</section>
+
+<section class="screen" id="wait">
+  <div class="kartbadge" id="badge">🏎️</div>
+  <div class="myname" id="wname"></div>
+  <div class="hint" id="whint">큰 화면에서 내 캐릭터를 찾아보세요!<br>선생님이 출발시키면 시작해요.</div>
+  <div class="hint" id="wload" style="font-size:14px"></div>
+  <button class="tag" id="leave" style="margin-top:20px;padding:8px 14px">이름 바꾸기</button>
+</section>
+
+<section class="screen" id="race">
+  <div class="status">
+    <div class="rank" id="rank">-</div>
+    <div class="lap" id="lap">1/3바퀴</div>
+    <div class="gaugebox"><div class="gauge"><i id="gauge"></i></div></div>
+    <div class="tag" id="wrong" style="display:none;background:#c0392b;color:#fff">거꾸로 가요!</div>
+  </div>
+  <div class="pads">
+    <div class="steer" id="steer"><div id="sl">◀</div><div id="sr">▶</div></div>
+    <div class="right">
+      <div class="row">
+        <div class="pad brake" id="brake"><b>후진</b></div>
+        <div class="pad boost empty" id="boost"><b>부스터</b><span>톡 누르기</span><div class="count" id="bcount">0</div></div>
+      </div>
+      <div class="row"><div class="pad drift" id="drift"><b>드리프트</b><span>꾹 누른 채 방향 돌리기</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="done">
+  <div class="hint">결승!</div>
+  <div class="place" id="dplace">-</div>
+  <div class="hint" id="dhint">큰 화면을 보세요</div>
+</section>
+
+<div id="msg"></div>
+<div id="conn">연결 중…</div>
+
+<script type="module">
+import { Relay, store } from './net.js';
+
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+let myId = store('kart-id');
+if (!myId) { myId = Math.random().toString(36).slice(2, 10); store('kart-id', myId); }
+
+$('code').value = params.get('room') || '';
+$('name').value = store('kart-name') || '';
+if (!$('code').value) $('code').focus(); else if (!$('name').value) $('name').focus();
+
+let joining = false;        // 참가 버튼을 누른 뒤인지
+let phase = 'lobby';
+let relay = null;
+
+function show(id) {
+  for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id);
+  if (id === 'join') {   // 방에서 나오면 3D 화면도 멈춰요
+    document.body.classList.remove('three', 'fin');
+    const p = P(); if (p) p.phase('lobby');
+  }
+}
+function setColor(c) {
+  document.documentElement.style.setProperty('--me', c);
+  document.querySelector('meta[name=theme-color]').content = c;
+}
+function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (_) {} }
+
+let lock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && !lock) { lock = await navigator.wakeLock.request('screen'); lock.onrelease = () => { lock = null; }; } } catch (_) {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && joining) keepAwake(); });
+
+function sendJoin() {
+  relay.send({ t: 'join', code: $('code').value.trim(), info: { id: myId, name: $('name').value.trim() } });
+}
+
+$('go').onclick = () => {
+  const code = $('code').value.trim(), name = $('name').value.trim();
+  if (!/^\d{4}$/.test(code)) { $('err').textContent = '방 번호 네 자리를 넣어 주세요'; return; }
+  if (!name) { $('err').textContent = '이름을 넣어 주세요'; return; }
+  store('kart-name', name);
+  $('err').textContent = '';
+  joining = true;
+  keepAwake();
+  try {
+    const de = document.documentElement;
+    if (de.requestFullscreen) de.requestFullscreen().catch(() => {});
+    else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();   // 아이패드 등
+  } catch (_) {}
+  load3d();
+  if (!relay) relay = new Relay(() => { if (joining) sendJoin(); }, onMsg, onConn);
+  else sendJoin();
+  $('wname').textContent = name;
+};
+for (const id of ['code', 'name']) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $('go').click(); });
+$('leave').onclick = () => { joining = false; relay && relay.ws && relay.ws.close(); show('join'); };
+
+// ── 태블릿 3D 화면 ── 큰 화면 파일을 「태블릿 모드」로 안에 띄워요.
+// 내 카트는 그 안에서 계산하고, 3D가 안 되는 기기는 예전처럼 단추만으로 달려요 (큰 화면이 대신 계산).
+const frame3d = $('pad3d');
+let padReady = false;
+function load3d() {
+  if (frame3d.src) return;
+  const q = new URLSearchParams({ pad: '1' });
+  if (params.has('mute')) q.set('mute', '1');
+  frame3d.src = 'index.html?' + q;
+}
+function P() {
+  try { const p = frame3d.contentWindow && frame3d.contentWindow.__pad; return p || null; } catch (_) { return null; }
+}
+let wantTrack = -1;
+setInterval(() => {
+  const p = P();
+  if (p && !padReady) {
+    padReady = true;
+    p.out = (type, d) => {
+      if (!relay) return;
+      if (type === 'me') relay.send({ t: 'm', d: Object.assign({ k: 'me' }, d) });
+      else if (type === 'sync') relay.send({ t: 'm', d: { k: 'sync' } });
+      else if (type === 'fx') onFx(d);
+    };
+    if (wantTrack >= 0) p.setTrack(wantTrack);
+    if (relay && (phase === 'count' || phase === 'race')) relay.send({ t: 'm', d: { k: 'sync' } });   // 경주 중에 준비됐으면 지금 자리를 받아요
+  }
+  if (p && p.active) {
+    const b = p.boosts;
+    $('bcount').textContent = b; $('boost').classList.toggle('empty', b <= 0);
+  }
+  if ($('wait').classList.contains('on') && joining) {
+    const n = p ? p.loaded : 0;
+    $('wload').textContent = !p ? '내 화면 준비 중…' : n < 8 ? `캐릭터 불러오는 중 ${n}/8` : '';
+  }
+}, 100);
+
+function onConn(s) {
+  $('conn').style.display = (joining && s !== 'open') ? 'block' : 'none';
+}
+
+function onMsg(m) {
+  if (m.t === 'noroom') { joining = false; show('join'); $('err').textContent = '그런 방이 없어요. 번호를 확인해 주세요'; return; }
+  if (m.t === 'full') { joining = false; show('join'); $('err').textContent = '자리가 다 찼어요'; return; }
+  if (m.t === 'kicked') { joining = false; show('join'); $('err').textContent = '방에서 나왔어요'; return; }
+  if (m.t === 'joined') { show('wait'); $('whint').innerHTML = m.host ? '큰 화면에서 내 캐릭터를 찾아보세요!<br>선생님이 출발시키면 시작해요.' : '큰 화면을 기다리는 중이에요…'; return; }
+  if (m.t === 'hostgone') { $('conn').textContent = '큰 화면을 기다리는 중…'; $('conn').style.display = 'block'; return; }
+  if (m.t === 'hostback') { $('conn').style.display = 'none'; $('conn').textContent = '연결 중…'; return; }
+  if (m.t !== 'd' || !m.d) return;
+  const d = m.d;
+  if (d.k === 'you') {
+    setColor(d.color);
+    $('wname').textContent = d.char ? `${d.name} · ${d.char}` : d.name;
+    if (d.emoji) $('badge').textContent = d.emoji;
+    if (d.wait) $('whint').innerHTML = '지금 경주가 진행 중이에요.<br>다음 판에 함께 달려요!';
+    else $('whint').innerHTML = '큰 화면에서 내 캐릭터를 찾아보세요!<br>선생님이 출발시키면 시작해요.';
+  } else if (d.k === 'full') {
+    joining = false; relay.ws && relay.ws.close(); show('join'); $('err').textContent = '자리가 다 찼어요 (8명)';
+  } else if (d.k === 'st') {
+    onState(d);
+  } else if (d.k === 'fx') {
+    onFx(d);
+  } else if (d.k === 'race') {
+    const p = P(); if (p) p.race(d);   // 화면 바꾸기는 곧이어 오는 상태(st)에서 해요
+  } else if (d.k === 'pos') {
+    const p = P(); if (p) p.pos(d);
+  }
+}
+
+function onFx(d) {
+  if (d.e === 'gauge') buzz([30, 40, 30]);
+  else if (d.e === 'wall') buzz(25);
+  else if (d.e === 'bump') buzz(40);
+  else if (d.e === 'boost') buzz(60);
+  else if (d.e === 'lap') { buzz([50, 50, 50]); flash(d.txt || '한 바퀴!', 1000); }
+  else if (d.e === 'finish') buzz([100, 60, 200]);
+}
+
+let flashTimer = 0;
+function flash(txt, ms) {
+  $('msg').textContent = txt; $('msg').style.display = 'block';
+  clearTimeout(flashTimer); flashTimer = setTimeout(() => { $('msg').style.display = 'none'; }, ms);
+}
+
+let lastCd = -1;
+function onState(d) {
+  phase = d.ph;
+  const p = P();
+  if (d.map != null) { wantTrack = d.map; if (p) p.setTrack(d.map); }
+  if (p) { p.phase(d.ph); if (d.fin) p.finish(d.fin); }
+  const three = !!(p && p.active) && d.in && d.ph !== 'lobby' && d.ph !== 'result';
+  document.body.classList.toggle('three', three);
+  document.body.classList.toggle('fin', three && !!d.fin);
+  if (!d.in) { if (phase !== 'lobby') show('wait'); else show('wait'); return; }   // 이번 판에 안 달리는 사람
+  if (d.ph === 'lobby') { show('wait'); lastCd = -1; return; }
+  if (d.ph === 'result' || (d.fin && d.ph !== 'count' && !three)) {
+    show('done');
+    $('dplace').textContent = d.fin ? d.fin + '등' : '완주 못함';
+    $('dhint').textContent = d.ph === 'result' ? '수고했어요! 큰 화면을 보세요' : '다른 친구들을 기다리는 중…';
+    return;
+  }
+  show('race');
+  if (d.ph === 'count') {
+    if (d.cd !== lastCd) { lastCd = d.cd; flash(d.cd > 0 ? String(d.cd) : '출발!', d.cd > 0 ? 900 : 700); buzz(d.cd > 0 ? 40 : 150); }
+  }
+  $('rank').innerHTML = `${d.r}<small>/${d.n}등</small>`;
+  $('lap').textContent = `${d.lap}/${d.L}바퀴`;
+  $('gauge').style.width = Math.round(d.g * 100) + '%';
+  if (!three) { $('bcount').textContent = d.b; $('boost').classList.toggle('empty', d.b <= 0); }
+  $('wrong').style.display = d.wr ? 'block' : 'none';
+}
+
+// ── 조종 입력 ────────────────────────────────────────────
+const inp = { s: 0, dr: false, br: false };
+let lastSent = '';
+function sendInput(force) {
+  if (!relay) return;
+  const key = `${inp.s}|${inp.dr}|${inp.br}`;
+  if (!force && key === lastSent) return;
+  lastSent = key;
+  const p = P(); if (p) p.input(inp);
+  relay.send({ t: 'm', d: { k: 'in', s: inp.s, dr: inp.dr, br: inp.br } });
+}
+setInterval(() => sendInput(true), 150);
+
+// 방향: 왼쪽 판 하나에서 손가락 위치로 정해요 (미끄러지듯 옮겨도 돼요)
+const steerEl = $('steer');
+const steerTouches = new Map();
+function updateSteer() {
+  const r = steerEl.getBoundingClientRect();
+  let s = 0;
+  // 가장 나중에 닿은 손가락을 따라가요
+  const last = [...steerTouches.values()].pop();
+  if (last !== undefined) s = last < r.left + r.width / 2 ? -1 : 1;
+  inp.s = s;
+  $('sl').classList.toggle('on', s < 0);
+  $('sr').classList.toggle('on', s > 0);
+  sendInput();
+}
+steerEl.addEventListener('pointerdown', (e) => { e.preventDefault(); steerEl.setPointerCapture(e.pointerId); steerTouches.set(e.pointerId, e.clientX); updateSteer(); });
+steerEl.addEventListener('pointermove', (e) => { if (steerTouches.has(e.pointerId)) { steerTouches.set(e.pointerId, e.clientX); updateSteer(); } });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) steerEl.addEventListener(ev, (e) => { steerTouches.delete(e.pointerId); updateSteer(); });
+
+function holdPad(el, onChange) {
+  const ids = new Set();
+  const set = () => { el.classList.toggle('on', ids.size > 0); onChange(ids.size > 0); };
+  el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); ids.add(e.pointerId); set(); });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, (e) => { ids.delete(e.pointerId); set(); });
+}
+holdPad($('drift'), (on) => { inp.dr = on; sendInput(); });
+holdPad($('brake'), (on) => { inp.br = on; sendInput(); });
+function useBoost() {
+  const p = P();
+  if (p && p.driving) p.boost();
+  else if (relay) relay.send({ t: 'm', d: { k: 'boost' } });
+}
+$('boost').addEventListener('pointerdown', (e) => { e.preventDefault(); $('boost').classList.add('on'); useBoost(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('boost').addEventListener(ev, () => $('boost').classList.remove('on'));
+
+// 컴퓨터로 시험할 때: 방향키, Shift=드리프트, Space/Ctrl=부스터, ↓=후진
+const keys = new Set();
+function keyInput() {
+  inp.s = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
+  inp.dr = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  inp.br = keys.has('ArrowDown');
+  $('sl').classList.toggle('on', inp.s < 0); $('sr').classList.toggle('on', inp.s > 0);
+  $('drift').classList.toggle('on', inp.dr); $('brake').classList.toggle('on', inp.br);
+  sendInput();
+}
+addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.repeat) return;
+  if (e.code === 'Space' || e.code === 'ControlLeft' || e.code === 'ControlRight') { useBoost(); e.preventDefault(); return; }
+  keys.add(e.code); keyInput();
+});
+addEventListener('keyup', (e) => { keys.delete(e.code); keyInput(); });
+addEventListener('contextmenu', (e) => e.preventDefault());
+</script>
+</body>
+</html>
