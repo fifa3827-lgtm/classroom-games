@@ -415,12 +415,12 @@ function onFx(d) {
   else if (d.e === 'wall') { buzz(25); snd.wall(); }
   else if (d.e === 'bump') { buzz(40); snd.bump(); }
   else if (d.e === 'boost') { buzz(60); snd.boost(); }
-  else if (d.e === 'mini') snd.mini();
-  else if (d.e === 'drift') driftSnd(!!d.on && phase === 'race');
+  else if (d.e === 'mini') { buzz(40); snd.mini(); }
+  else if (d.e === 'drift') { if (d.on && phase === 'race') buzz(25); driftSnd(!!d.on && phase === 'race'); }
   else if (d.e === 'lap') { buzz([50, 50, 50]); flash(d.txt || '한 바퀴!', 1000); snd.lap(); }
   else if (d.e === 'finish') { buzz([100, 60, 200]); driftSnd(false); snd.finish(); showWarn(0); }
   else if (d.e === 'item') { buzz(30); snd.item(); }
-  else if (d.e === 'box') snd.box();
+  else if (d.e === 'box') { buzz([35, 50, 35]); snd.box(); }
   else if (d.e === 'throw') { buzz(30); snd.throw(); }
   else if (d.e === 'hitok') { buzz([40, 40, 40]); snd.hitok(); flash('명중!', 700); }
   else if (d.e === 'block') { buzz(80); snd.block(); flash('막았다!', 800); showWarn(0); }
