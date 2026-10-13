@@ -15,6 +15,7 @@ plan={
  'lanternfall':['lanternfall-0.png','lanternfall-2.png','lanternfall-3.png','lanternfall-1.png'],
  'foglamp':['foglamp-0.png','foglamp-2.png','foglamp/img/s-06-bar-front.webp'],
  'escape':['escape-0.png','escape-1.png','escape-2.png','escape-3.png'],
+ 'kart':['kart-0.png','kart-1.png','kart-2.png','kart-3.png','kart-4.png'],
 }
 for slug,fs in plan.items():
   d=f'{O}/{slug}'; os.makedirs(d,exist_ok=True)
