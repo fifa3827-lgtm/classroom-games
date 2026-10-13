@@ -72,6 +72,12 @@
   .its i { width: 50px; height: 50px; border-radius: 12px; background: rgba(0,0,0,.3); display: grid; place-items: center;
     font-style: normal; font-size: 32px; line-height: 1; }
   body.items .its { display: flex; }
+  /* 아이템전: 휴대폰 가로처럼 낮은 화면에서 드리프트 단추가 밀려나지 않게 글자 옆에 아이템 칸을 두고, 칸 크기도 화면 높이에 맞춰요 */
+  body.items .row, body.items .pad { min-height: 0; }
+  body.items .pad.boost { flex-direction: row; gap: 10px; }
+  body.items .its { margin-top: 0; }
+  body.items .pad.boost b { font-size: clamp(20px, 3.8vw, 32px); white-space: nowrap; }
+  body.items .its i { width: min(50px, 11vh); height: min(50px, 11vh); font-size: min(32px, 7vh); }
   body.items #bsub, body.items #bcount { display: none; }
   body.items .gaugebox { visibility: hidden; }
   #warn { position: fixed; left: 0; right: 0; top: 16%; text-align: center; font-size: 34px; font-weight: 900; padding: 8px 0;
@@ -224,30 +230,45 @@ const snd = {
   block: () => { tone(1568, 0.25, 'sine', 0.09); tone(2093, 0.35, 'sine', 0.07, 0.05); },                   // 막음
   warn: () => { tone(988, 0.12, 'square', 0.05); tone(988, 0.12, 'square', 0.05, 0.2); },
 };
-// 드리프트 「끼이익」: 드리프트하는 동안 이어지고, 끝나면 짧게 사라져요
-const drift = { g: null, f: null, f2: null, n: null };
+// 드리프트 「끼익」: 타이어가 붙었다 미끄러졌다 하는 높고 날카로운 소리 (사용자가 고른 「가-2」)
+// 불규칙한 높이 떨림 + 거친 세기 떨림 + 고무 공명 두 군데 + 쓸리는 잡음. 드리프트하는 동안 이어지고, 끝나면 짧게 사라져요
+const TIRE = { f: [1350, 1420, 2050], bp: [1650, 3200], rough: 0.6, jitter: 90, scrub: 0.4 };
+const drift = { g: null, all: null, oscs: null, buf: null };
 function driftSnd(on) {
   const a = A();
   if (on && !drift.g && a) {
-    const n = a.createBufferSource(), f = a.createBiquadFilter(), f2 = a.createBiquadFilter(), g = a.createGain();
-    n.buffer = noise; n.loop = true;
-    f.type = 'bandpass'; f.frequency.value = 2000; f.Q.value = 9;
-    f2.type = 'bandpass'; f2.frequency.value = 4000; f2.Q.value = 6;
-    g.gain.setValueAtTime(0.0001, a.currentTime); g.gain.linearRampToValueAtTime(0.25, a.currentTime + 0.06);
-    n.connect(f).connect(g); n.connect(f2).connect(g); g.connect(a.destination); n.start();
-    Object.assign(drift, { g, f, f2, n, at: performance.now(), sig: '' });
+    const all = [], o = TIRE;
+    if (!drift.buf) {   // 드리프트 전용 4초 잡음 (짧으면 같은 떨림이 되풀이돼 기계처럼 들려요)
+      drift.buf = a.createBuffer(1, a.sampleRate * 4, a.sampleRate);
+      const d = drift.buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const srcs = [];
+    const src = () => { const n = a.createBufferSource(); n.buffer = drift.buf; n.loop = true; all.push(n); srcs.push(n); return n; };
+    const slow = (hz) => { const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = hz; f.Q.value = 0.5; src().connect(f); return f; };
+    const jit = a.createGain(); jit.gain.value = o.jitter * 6; slow(35).connect(jit);
+    const tone = a.createGain(); tone.gain.value = 0.22;
+    const oscs = o.f.map((hz, i) => { const x = a.createOscillator(); x.type = i === 2 ? 'triangle' : 'sawtooth'; x.frequency.value = hz; jit.connect(x.frequency); x.connect(tone); all.push(x); return x; });
+    const amp = a.createGain(); amp.gain.value = 1 - o.rough * 0.5; const ag = a.createGain(); ag.gain.value = o.rough * 3; slow(70).connect(ag).connect(amp.gain);
+    const b1 = a.createBiquadFilter(), b2 = a.createBiquadFilter(); b1.type = b2.type = 'bandpass';
+    b1.frequency.value = o.bp[0]; b1.Q.value = 2.5; b2.frequency.value = o.bp[1]; b2.Q.value = 3;
+    tone.connect(b1).connect(amp); tone.connect(b2).connect(amp);
+    const sf = a.createBiquadFilter(), sg = a.createGain(); sf.type = 'bandpass'; sf.frequency.value = o.bp[0] * 1.6; sf.Q.value = 1.1; sg.gain.value = o.scrub * 0.5;
+    src().connect(sf).connect(sg).connect(amp);
+    const g = a.createGain(); amp.connect(g).connect(a.destination);
+    g.gain.setValueAtTime(0.0001, a.currentTime); g.gain.linearRampToValueAtTime(0.28, a.currentTime + 0.06);
+    all.forEach((x) => (srcs.includes(x) ? x.start(0, Math.random() * 4) : x.start()));   // 잡음은 매번 다른 곳에서 시작
+    Object.assign(drift, { g, all, oscs, at: performance.now(), sig: '' });
   } else if (!on && drift.g) {
-    const { g, n } = drift, t = actx.currentTime;
-    g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, 0.05); n.stop(t + 0.3);
-    drift.g = drift.n = drift.f = drift.f2 = null;
+    const { g, all } = drift, t = actx.currentTime;
+    g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, 0.05); all.forEach((x) => x.stop(t + 0.3));
+    drift.g = drift.all = drift.oscs = null;
   }
 }
 function driftTune(sp, sl) {   // 세게 미끄러질수록 크고 조금 높게
   if (!drift.g) return;
   const t = actx.currentTime, k = Math.min(1, sl / 14), v = Math.min(1, sp / 50);
-  drift.f.frequency.setTargetAtTime(1700 + k * 700 + v * 300, t, 0.08);
-  drift.f2.frequency.setTargetAtTime(3600 + k * 900, t, 0.08);
-  drift.g.gain.setTargetAtTime(0.12 + 0.18 * k * (0.5 + 0.5 * v), t, 0.08);
+  drift.oscs.forEach((x, i) => x.frequency.setTargetAtTime(TIRE.f[i] * (0.92 + k * 0.16), t, 0.12));
+  drift.g.gain.setTargetAtTime(0.22 + 0.26 * k * (0.5 + 0.5 * v), t, 0.08);   // 가장 세게 미끄러져도 벽 부딪힘 소리 정도
 }
 
 let lock = null;
