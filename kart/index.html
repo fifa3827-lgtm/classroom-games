@@ -2715,7 +2715,7 @@ function onRelay(m) {
   if (m.t === 'room') {
     ss.set('kart-room', m.code); ss.set('kart-key', m.key);
     $('code').textContent = m.code; $('sideCode').textContent = m.code;
-    const url = new URL('play.html?room=' + m.code + '&v=2610132', location.href);   // v: 조종기를 고치면 번호를 바꿔 태블릿이 옛 화면을 쓰지 않게
+    const url = new URL('play.html?room=' + m.code + '&v=2610133', location.href);   // v: 조종기를 고치면 번호를 바꿔 태블릿이 옛 화면을 쓰지 않게
     for (const q of ['relay', 'db']) { const v = new URLSearchParams(location.search).get(q); if (v) url.searchParams.set(q, v); }
     $('url').textContent = url.href.replace(/^https?:\/\//, '');
     try {
