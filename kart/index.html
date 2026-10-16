@@ -1183,7 +1183,7 @@ CHARS.forEach((c, i) => gltf.load(`models/${c.file}.glb`, (g) => {
   box = new THREE.Box3().setFromObject(wrap);
   const ctr = box.getCenter(new THREE.Vector3());
   root.position.set(-ctr.x, -box.min.y, -ctr.z);
-  root.traverse((o) => { if (o.isMesh) { o.castShadow = !PAD; o.receiveShadow = true; } });   // 태블릿은 카트 그림자를 동그란 그림자로만
+  root.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });   // 카트 그림자는 동그란 그림자로만 (큰 화면도: 매 장면 그림자를 다시 그리면 버벅여요)
   MODELS[i] = wrap;
   modelsLoaded++;
   $('loading').textContent = modelsLoaded < CHARS.length ? `캐릭터 불러오는 중 ${modelsLoaded}/${CHARS.length}` : '';
@@ -1199,7 +1199,7 @@ const fbGeo = {
 const darkM = new THREE.MeshStandardMaterial({ color: '#23252e', roughness: 0.7 });
 function fallbackBody(color) {
   const b = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color, roughness: 0.4 });
-  const add = (geom, mat, x, y, z) => { const o = new THREE.Mesh(geom, mat); o.position.set(x, y, z); o.castShadow = !PAD; b.add(o); };
+  const add = (geom, mat, x, y, z) => { const o = new THREE.Mesh(geom, mat); o.position.set(x, y, z); b.add(o); };
   add(fbGeo.body, m, 0, 0.62, 0); add(fbGeo.nose, m, 0, 0.55, 1.95);
   add(fbGeo.torso, new THREE.MeshStandardMaterial({ color: '#f4f4f4' }), 0, 1.2, -0.45); add(fbGeo.head, m, 0, 1.95, -0.4);
   for (const [x, z] of [[1.15, 1.05], [-1.15, 1.05], [1.15, -1.05], [-1.15, -1.05]]) add(fbGeo.wheel, darkM, x, 0.5, z);
@@ -2027,16 +2027,25 @@ const tmpV = new THREE.Vector3();
 let W = 0, H = 0, rects = [];
 
 // 화질: 느려지면 해상도를 낮추고, 넉넉하면 다시 올려요
-const Q = { max: Math.min(devicePixelRatio || 1, PAD ? 1.5 : 2), pr: PAD ? 1 : Math.min(devicePixelRatio || 1, 2), frames: 0, t: 0, good: 0 };
+// top = 한 번 느렸던 화질 위로는 다시 안 올려요 (올렸다 내렸다 하며 툭툭 끊기지 않게)
+const Q = { max: Math.min(devicePixelRatio || 1, PAD ? 1.5 : 2), top: 9, pr: PAD ? 1 : Math.min(devicePixelRatio || 1, 2), frames: 0, t: 0, good: 0, hitch: 0 };
+// 큰 화면은 한 장면에 그리는 점 수를 정해 둬요 (4K 텔레비전·고해상도 노트북에서 너무 무겁지 않게)
+const PIX = 1920 * 1080 * 1.3;
+function prCap() {
+  const c = Math.min(Q.max, Q.top, PAD ? 9 : Math.sqrt(PIX / Math.max(1, innerWidth * innerHeight)));
+  return Math.max(0.75, Math.floor(c * 20) / 20);
+}
 renderer.setPixelRatio(Q.pr);
 function tuneQuality(dt) {
   Q.frames++; Q.t += dt;
+  if (dt >= 0.1) Q.hitch++;
   if (Q.t < 2) return;
-  const fps = Q.frames / Q.t; Q.frames = 0; Q.t = 0;
+  const fps = Q.frames / Q.t, hitch = Q.hitch; Q.frames = 0; Q.t = 0; Q.hitch = 0;
   if (document.hidden) return;
-  if (fps < 45 && Q.pr > 0.75) { Q.pr = Math.max(0.75, Q.pr - 0.25); Q.good = 0; renderer.setPixelRatio(Q.pr); layout(); }
+  if (hitch > 0 && hitch < 5) return;   // 잠깐 몇 번 멈춘 것(불러오기·화면 바뀜)은 느린 게 아니에요
+  if (fps < 45 && Q.pr > 0.75) { Q.pr = Math.max(0.75, Q.pr - 0.25); Q.top = Q.pr; Q.good = 0; renderer.setPixelRatio(Q.pr); layout(); }
   else if (fps < 30 && sun.castShadow) { sun.castShadow = false; renderer.shadowMap.needsUpdate = true; }
-  else if (fps > 58 && Q.pr < Q.max && ++Q.good >= 3) { Q.pr = Math.min(Q.max, Q.pr + 0.25); Q.good = 0; renderer.setPixelRatio(Q.pr); layout(); }
+  else if (fps > 58 && Q.pr < prCap() && ++Q.good >= 3) { Q.pr = Math.min(prCap(), Q.pr + 0.25); Q.good = 0; renderer.setPixelRatio(Q.pr); layout(); }
 }
 
 function gridFor(n) {
@@ -2049,6 +2058,7 @@ function gridFor(n) {
 
 function layout() {
   W = innerWidth; H = innerHeight;
+  if (Q.pr > prCap()) { Q.pr = prCap(); renderer.setPixelRatio(Q.pr); }
   renderer.setSize(W, H, false);
   $('gl').style.width = W + 'px'; $('gl').style.height = H + 'px';
   const racing = phase === 'count' || phase === 'race' || phase === 'result';
@@ -2559,8 +2569,7 @@ function render(dt) {
   renderer.setClearColor('#0d1030');
   renderer.clear();
   if (phase === 'result' && pod.g && !(bc.replay && bc.replay.hl)) { renderPodium(dt); return; }
-  // 큰 화면은 움직이는 카트 그림자 때문에 경주 중 매번 새로 그려요. 태블릿은 무거워서 맵을 만들 때 한 번만 그려요
-  if ((phase === 'race' || phase === 'count') && !PAD) renderer.shadowMap.needsUpdate = true;
+  // 그림자는 맵을 만들 때 한 번만 그려요 (카트는 동그란 그림자). 경주 중 매번 새로 그리면 큰 화면이 버벅여요
   if (phase === 'lobby') {
     orbitA += dt * 0.06;
     const C = track.box, r = Math.max(C.maxx - C.minx, C.maxz - C.minz) * 0.72;
@@ -3156,7 +3165,7 @@ if (PAD) window.__pad = {
   },
 };
 
-window.__kart = { get racers() { return racers; }, get phase() { return phase; }, get track() { return track; }, startRace, toLobby, slots, step, setTrack, Q, frame, bc,
+window.__kart = { get racers() { return racers; }, get phase() { return phase; }, get track() { return track; }, startRace, toLobby, slots, step, setTrack, Q, frame, bc, renderer,
   music, get actx() { return actx; }, SONGS, prepSong, playStep, musicTick,   // 소리 시험용
   scene, pod, conf, hlStart, endRace,   // 연출 시험용
   itemCount, hazards, useItem, hitKart, get itemMode() { return itemMode; } };   // 아이템전 시험용
