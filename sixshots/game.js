@@ -5,7 +5,7 @@
   const AR = { l: 30, t: 34, r: 930, b: 462 }; // 싸움터(벽 안쪽)
   const BR = 5;          // 탄 반지름
   const STOP = 45;       // 이 속도 아래면 멈춤
-  const SHOT_SPEED = 760, KICK_SPEED = 430;
+  const SHOT_SPEED = 760;
   const LOCK_MS = 300;   // 화면이 바뀐 뒤 누르기를 받지 않는 시간
   const FONT = '"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
   const qs = new URLSearchParams(location.search);
@@ -13,7 +13,7 @@
   const ROOM_PARAM = parseInt(qs.get('room'), 10);
   const STAGE_PARAM = parseInt(qs.get('stage'), 10);
   const LAST_ROOM = 10;
-  const TEST_RUN = (ROOM_PARAM >= 1 && ROOM_PARAM <= LAST_ROOM) || (STAGE_PARAM >= 1 && STAGE_PARAM <= 5);
+  const TEST_RUN = (ROOM_PARAM >= 1 && ROOM_PARAM <= LAST_ROOM) || (STAGE_PARAM >= 0 && STAGE_PARAM <= 5);
 
   const cv = document.getElementById('c');
   const ctx = cv.getContext('2d');
@@ -53,7 +53,7 @@
   document.addEventListener('webkitfullscreenchange', onFSChange);
 
   // ===== 그림 파일 (한 번만 불러온다. 못 불러온 그림은 코드 그림으로 그린다) =====
-  const ASSET_V = '2610171200'; // 그림 주소 번호(index.html의 game.js?v= 와 같게)
+  const ASSET_V = '2610192000'; // 그림 주소 번호(index.html의 game.js?v= 와 같게)
   // 인물: 위에서 본 모습, 총구는 오른쪽(각도 0). ax, ay = 기준점(몸통 무게 중심) 비율, br = 몸 반지름(px), hat = 그림 속 모자 반지름(px), dark = 어둡게(탄보다 밝지 않게)
   const SPR = {
     player: { ax: 0.376, ay: 0.449, br: 74, hat: 44, dark: 0.8 },
@@ -95,21 +95,27 @@
   })();
 
   // ===== 도구 =====
-  const rand = (a, b) => a + Math.random() * (b - a);
+  const rand = (a, b) => a + Math.random() * (b - a); // 그림·소리용(씨앗과 무관)
+  // 씨앗 난수(?seed=N): 씨앗이 같으면 같은 방 배치·물결 자리·각인 후보가 나온다. 없으면 지금처럼 무작위.
+  const SEED = /^\d+$/.test(qs.get('seed') || '') ? parseInt(qs.get('seed'), 10) >>> 0 : null;
+  function mulberry32(a) { return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const mkRng = (k) => (SEED === null ? Math.random : mulberry32((SEED ^ Math.imul(k + 1, 0x9E3779B1)) >>> 0));
+  let R = Math.random, AIR = Math.random;  // R = 이번 방의 배치용(방마다 새로), AIR = 적 행동용(판마다 새로)
+  const srand = (a, b) => a + R() * (b - a), arand = (a, b) => a + AIR() * (b - a);
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const norm = (x, y) => { const d = Math.hypot(x, y) || 1; return { x: x / d, y: y / d }; };
   function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
-  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function shuffle(a, rng) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor((rng || R)() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   function fmtTime(s) { s = Math.floor(s); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
 
   // ===== 저장 =====
   const BEST_KEY = 'sixshots_best', RUNS_KEY = 'sixshots_runs', MUSIC_KEY = 'sixshots_music';
   function loadBest() {
-    const d = { room: 0, unlocked: 1, engs: [], stageTimes: {}, hunter: false };
+    const d = { room: 0, introRoom: 0, unlocked: 1, engs: [], stageTimes: {}, hunter: false };
     try {
       const s = localStorage.getItem(BEST_KEY); const o = s ? JSON.parse(s) : null;
       if (o && typeof o === 'object') {
-        d.room = o.room || 0; d.unlocked = clamp(o.unlocked || 1, 1, 5);
+        d.room = o.room || 0; d.introRoom = o.introRoom || 0; d.unlocked = clamp(o.unlocked || 1, 1, 5);
         d.engs = Array.isArray(o.engs) ? o.engs.filter((k) => ['magnet', 'fire', 'ghost'].includes(k)) : [];
         d.stageTimes = o.stageTimes && typeof o.stageTimes === 'object' ? o.stageTimes : {};
         if (o.time && !d.stageTimes[1]) d.stageTimes[1] = o.time; // 예전 형식
@@ -172,7 +178,6 @@
     hurt() { tone(220, 0.3, 'square', 0.18, 60); },
     boom() { noise(0.5, 0.6, 600); tone(90, 0.4, 'sine', 0.4, 30); },
     fire() { noise(0.6, 0.3, 900); },
-    kick(hit) { noise(0.06, 0.3, 900); tone(hit ? 200 : 120, 0.06, 'triangle', 0.15); if (!hit) tone(90, 0.12, 'sine', 0.12, 60); },
     warn() { tone(600, 0.18, 'square', 0.16, 950); },
     slash() { noise(0.12, 0.3, 4000); },
     clear() { tone(523, 0.15, 'triangle', 0.12); tone(659, 0.15, 'triangle', 0.12, 0, 0.12); tone(784, 0.3, 'triangle', 0.12, 0, 0.24); },
@@ -238,15 +243,16 @@
 
   // ===== 각인 =====
   const ENG = {
-    ret: { name: '귀환', sym: '↺', col: '#4fd1ff', desc: ['멈추면 주인에게', '굴러 돌아온다'] },
+    ret: { name: '귀환', sym: '↺', col: '#4fd1ff', desc: ['멈추면 내게 굴러 온다', '(한 번 쓰면 보통 탄)'] },
     boom: { name: '폭발', sym: '✸', col: '#ff6a3d', desc: ['멈출 때 작은 폭발', '(나도 맞는다)'] },
-    trap: { name: '덫', sym: '⚠', col: '#c77dff', desc: ['적이 주우면', '그 자리에서 터진다'] },
+    trap: { name: '덫', sym: '⚠', col: '#c77dff', desc: ['바닥에 1.5초 놓이면 켜짐', '적이 주우면 터진다(1번)'] },
     pierce: { name: '관통', sym: '➤', col: '#7dff8a', desc: ['적을 한 명', '뚫고 지나간다'] },
     rubber: { name: '고무', sym: '◎', col: '#ff8fd0', desc: ['튕겨도 느려지지 않고', '더 멀리 굴러간다'] },
     magnet: { name: '자석', sym: '∪', col: '#ffe14d', desc: ['바닥에서 가까우면', '주인 쪽으로 끌려온다'] },
-    fire: { name: '화염', sym: '♨', col: '#ff9a2a', desc: ['멈춘 자리에 2초 불길', '(나도 맞는다)'] },
+    fire: { name: '화염', sym: '♨', col: '#ff9a2a', desc: ['멈춘 자리에 2초 불길', '나도 맞음 · 3초간 못 주움'] },
     ghost: { name: '유령', sym: '☁', col: '#b8c8ff', desc: ['날아갈 때 엄폐물', '한 개를 통과한다'] },
   };
+  const TRAP_ARM = 1.5; // 덫이 켜지기까지 바닥에 놓여 있어야 하는 시간
   const BASE_ENGS = ['ret', 'boom', 'trap', 'pierce', 'rubber'];
   const STAGE_ENG = { 1: 'magnet', 2: 'fire', 3: 'ghost' };
 
@@ -277,7 +283,7 @@
     9: [[T_, T_, K_], [T_, T_, S_], [T_, T_, K_, S_]],
     10: [['boss']],
   };
-  // 문 자리(오른쪽 벽 2곳, 위쪽 벽 3곳). 왼쪽(플레이어 시작 쪽)·아래(탄창 판)·오른쪽 아래(터치 차기 단추)에는 두지 않는다.
+  // 문 자리(오른쪽 벽 2곳, 위쪽 벽 3곳). 왼쪽(플레이어 시작 쪽)·아래(탄창 판)·오른쪽 아래(터치 발사 버튼)에는 두지 않는다.
   const DOOR_SPOTS = [
     { x: AR.r, y: 110, sx: AR.r - 28, sy: 110, ix: -1, iy: 0 },
     { x: AR.r, y: 248, sx: AR.r - 28, sy: 248, ix: -1, iy: 0 },
@@ -299,15 +305,16 @@
     cards: null, chosen: null, best: loadBest(), usedTouch: false, newBest: false, clock: 0, lockUntil: 0,
     test: TEST_RUN, unlockMsg: [], run: null, lamps: LAMPS[0],
     iceRooms: [], wave: 1, waves: 1, waveT: 0, waveWarn: 0, doors: [], waveList: [],
-    hitDirs: [], lastHit: '', pickHints: 0, pickHint: 0, kickHints: 0, kickHint: null, kickInZone: false, touchRun: false, prevHeld: 6,
+    hitDirs: [], lastHit: '', pickHints: 0, pickHint: 0, touchRun: false, prevHeld: 6, noAimT: 0,
   };
-  game.selStage = game.best.unlocked;
   const runs = loadRuns();
+  game.selStage = !game.best.room && !runs.length ? 0 : game.best.unlocked; // 처음 한 번은 입문(0단계)을 자동으로 고름
+  const stageName = (s) => (s === 0 ? '0단계(입문)' : s + '단계');
   let obstacles = [], enemies = [], particles = [], fires = [], floorCanvas = null;
-  const player = { isPlayer: true, x: 90, y: 248, vx: 0, vy: 0, r: 16, hp: 3, maxHp: 3, inv: 0, aim: 0, held: [], kickCd: 0, shotCd: 0, recoil: 0, kickFx: 0, alive: true, speed: 215 };
+  const player = { isPlayer: true, x: 90, y: 248, vx: 0, vy: 0, r: 16, hp: 3, maxHp: 3, inv: 0, aim: 0, held: [], shotCd: 0, recoil: 0, alive: true, speed: 215 };
   const bullets = [];
   for (let i = 1; i <= 6; i++) {
-    bullets.push({ id: i, eng: null, state: 'held', owner: player, x: 0, y: 0, vx: 0, vy: 0, bounces: 0, kicked: false, pierceLeft: 0, rubberLeft: 0, ghostLeft: 0, ghostObs: null, hitSet: new Set(), lockT: 0, trapArmed: true, retT: 0, trail: [], blink: Math.random() * 6 });
+    bullets.push({ id: i, eng: null, state: 'held', owner: player, x: 0, y: 0, vx: 0, vy: 0, bounces: 0, pierceLeft: 0, rubberLeft: 0, ghostLeft: 0, ghostObs: null, hitSet: new Set(), lockT: 0, trapArmed: true, retT: 0, trail: [], blink: Math.random() * 6 });
   }
   const sortHeld = (e) => e.held.sort((a, b) => a.id - b.id);
   const sceneKey = () => (game.paused ? 'paused' : game.state);
@@ -493,36 +500,38 @@
   }
   function findSpawn(r) {
     for (let k = 0; k < 400; k++) {
-      const x = rand(560, 900), y = rand(60, 440);
+      const x = srand(560, 900), y = srand(60, 440);
       if (!pointFree(x, y, r + 6)) continue;
       if (Math.hypot(player.x - x, player.y - y) < 80 + r) continue;
       if (enemies.some((e) => Math.hypot(e.x - x, e.y - y) < e.r + r + 14)) continue;
       return { x, y };
     }
-    for (let k = 0; k < 400; k++) { const x = rand(420, 900), y = rand(50, 450); if (pointFree(x, y, r + 2) && Math.hypot(player.x - x, player.y - y) >= 80 + r) return { x, y }; }
+    for (let k = 0; k < 400; k++) { const x = srand(420, 900), y = srand(50, 450); if (pointFree(x, y, r + 2) && Math.hypot(player.x - x, player.y - y) >= 80 + r) return { x, y }; }
     return { x: 880, y: 248 };
   }
   function makeEnemy(type, x, y) {
     const T = ETYPES[type];
     const hp = type === 'boss' && game.stage >= 5 ? 13 : T.hp;
-    return { type, x, y, vx: 0, vy: 0, r: T.r, hp, maxHp: hp, speed: T.speed, pick: T.pick, held: [], state: 'seek', t: 0, aimAng: Math.PI, aimOff: 0, face: Math.PI, flash: 0, alive: true, seekT: 0, strafe: Math.random() < 0.5 ? 1 : -1, strafeT: rand(1, 3), isPlayer: false, slashFx: 0, dashHit: false, inv: 0, stun: 0 };
+    return { type, x, y, vx: 0, vy: 0, r: T.r, hp, maxHp: hp, speed: T.speed, pick: T.pick, held: [], state: 'seek', t: 0, aimAng: Math.PI, aimOff: 0, face: Math.PI, flash: 0, alive: true, seekT: 0, strafe: R() < 0.5 ? 1 : -1, strafeT: srand(1, 3), isPlayer: false, slashFx: 0, dashHit: false, inv: 0 };
   }
   function newRun(stage, room) {
     for (const b of bullets) b.eng = null;
-    game.stage = clamp(stage || 1, 1, 5);
-    player.maxHp = game.stage >= 4 ? 2 : 3;
+    game.stage = clamp(stage == null || isNaN(stage) ? 1 : stage, 0, 5);
+    player.maxHp = game.stage === 0 ? 5 : game.stage >= 4 ? 2 : 3; // 0단계(입문): 체력 5(기획 4 → 봇 완주율 58%라 5로, 13장)
     player.hp = player.maxHp; player.alive = true;
-    game.kills = 0; game.time = 0; game.paused = false; game.pickHints = 0; game.kickHints = 0; game.lastHit = ''; game.touchRun = game.usedTouch; game.newBest = false; game.unlockMsg = [];
-    game.iceRooms = shuffle([5, 6, 7, 8, 9]).slice(0, 2); // 얼음 바닥은 5~9번 방 중 2개
+    game.kills = 0; game.time = 0; game.paused = false; game.pickHints = 0; game.lastHit = ''; game.touchRun = game.usedTouch; game.newBest = false; game.unlockMsg = [];
+    AIR = mkRng(9);
+    game.iceRooms = shuffle([5, 6, 7, 8, 9], mkRng(0)).slice(0, 2); // 얼음 바닥은 5~9번 방 중 2개
     game.run = { date: new Date().toISOString(), stage: game.stage, room: 0, won: false, time: 0, roomTimes: [], death: null,
-      hitsBy: { '내 탄': 0, '적 탄': 0, '칼': 0, '폭발': 0, '화염': 0 }, stolen: 0, shots: 0, hits: 0, kicks: 0, engravings: [], test: game.test };
+      hitsBy: { '내 탄': 0, '적 탄': 0, '칼': 0, '폭발': 0, '화염': 0 }, stolen: 0, shots: 0, hits: 0, hitShots: 0, engravings: [], test: game.test };
     startRoom(room || 1);
   }
   function startRoom(n) {
     game.room = n; game.ice = game.iceRooms.includes(n);
-    const li = n === 1 ? 0 : 1 + Math.floor(Math.random() * (LAYOUTS.length - 1));
+    R = mkRng(100 + n);
+    const li = n === 1 ? 0 : 1 + Math.floor(R() * (LAYOUTS.length - 1));
     obstacles = LAYOUTS[li].map((a) => ({ x: a[0], y: a[1], w: a[2], h: a[3] }));
-    game.lamps = n === 1 ? LAMPS[0] : LAMPS[Math.floor(Math.random() * LAMPS.length)];
+    game.lamps = n === 1 ? LAMPS[0] : LAMPS[Math.floor(R() * LAMPS.length)];
     buildBlocked();
     // 문 2~4개 (막히지 않은 자리에서 고름)
     const nd = n >= LAST_ROOM || WAVES[n].length < 2 ? 0 : n <= 3 ? 2 : n <= 6 ? 3 : 4;
@@ -531,9 +540,9 @@
     if (game.stage >= 5 && n >= 3) game.waveList[game.waveList.length - 1].push('thug'); // 5단계: 3번 방부터 마지막 물결에 적 +1
     game.waves = game.waveList.length; game.wave = 1; game.waveT = 0; game.waveWarn = 0;
     floorCanvas = makeFloor(game.ice);
-    Object.assign(player, { x: 90, y: 248, vx: 0, vy: 0, inv: 0, held: [], kickCd: 0, shotCd: 0, recoil: 0, kickFx: 0, aim: 0 });
+    Object.assign(player, { x: 90, y: 248, vx: 0, vy: 0, inv: 0, held: [], shotCd: 0, recoil: 0, aim: 0 });
     for (const b of bullets) {
-      Object.assign(b, { state: 'held', owner: player, vx: 0, vy: 0, bounces: 0, kicked: false, lockT: 0, trapArmed: true, retT: 0, x: player.x, y: player.y, ghostObs: null, ghostLeft: 0 });
+      Object.assign(b, { state: 'held', owner: player, vx: 0, vy: 0, bounces: 0, lockT: 0, trapArmed: true, retT: 0, burnT: 0, floorT: 0, x: player.x, y: player.y, ghostObs: null, ghostLeft: 0 });
       b.trail.length = 0; b.hitSet.clear(); player.held.push(b);
     }
     sortHeld(player);
@@ -551,7 +560,7 @@
     }
     setScene('play');
     game.clearing = false; game.slow = 0; game.freeze = 0; game.flash = 0; game.shake = 0; game.roomT = 0; game.roomStart = game.time;
-    game.hitDirs = []; game.pickHint = 0; game.kickHint = null; game.kickInZone = false; game.prevHeld = 6;
+    game.hitDirs = []; game.pickHint = 0; game.noAimT = 0; game.prevHeld = 6;
     stick.active = false; aimT.active = false;
     fieldT = 0; updateFields();
   }
@@ -565,8 +574,15 @@
     game.run.roomTimes.push(Math.round((game.time - game.roomStart) * 10) / 10);
     if (game.room >= LAST_ROOM) { showResult(true); return; }
     const pool = BASE_ENGS.concat(game.best.engs);
-    game.cards = shuffle(pool.slice()).slice(0, 3);
+    game.cards = shuffle(pool.slice(), mkRng(200 + game.room)).slice(0, 3);
     setScene('cards');
+  }
+  // 일일 도전 대비(조각 1-2): 각인 후보 3장을 「해금 목록」 대신 씨앗·단계·방 번호만으로 정한다. 지금 게임은 이 함수를 쓰지 않는다.
+  // 후보 = 기본 5종 + 그 단계 아래 단계를 깨면 열리는 각인(2단계면 자석, 3단계면 자석·화염, 4단계 이상이면 자석·화염·유령).
+  function cardsBySeed(seed, stage, room) {
+    const pool = BASE_ENGS.slice();
+    for (let st = 1; st < stage; st++) if (STAGE_ENG[st]) pool.push(STAGE_ENG[st]);
+    return shuffle(pool, mulberry32(((seed >>> 0) ^ Math.imul(200 + room + 1, 0x9E3779B1)) >>> 0)).slice(0, 3);
   }
   function showResult(won) {
     // 결과 화면 탄창에 「날아감」이 남지 않게 탄을 바닥에 내려놓음
@@ -580,7 +596,8 @@
     game.newBest = false; game.unlockMsg = [];
     if (!game.test) {
       let changed = false;
-      if (reached > b.room) { if (reached > 1) game.newBest = true; b.room = reached; changed = true; }
+      if (st === 0) { if (reached > b.introRoom) { if (reached > 1) game.newBest = true; b.introRoom = reached; changed = true; } } // 0단계(입문) 기록은 따로
+      else if (reached > b.room) { if (reached > 1) game.newBest = true; b.room = reached; changed = true; }
       if (won) {
         const prev = b.stageTimes[st];
         if (!prev || game.time < prev) { b.stageTimes[st] = Math.round(game.time * 10) / 10; game.newBest = true; changed = true; }
@@ -598,17 +615,17 @@
   }
 
   // ===== 탄 =====
-  function prepFlight(b, owner, vx, vy, kicked) {
-    b.state = 'fly'; b.owner = owner; b.vx = vx; b.vy = vy; b.bounces = 0; b.kicked = kicked;
+  function prepFlight(b, owner, vx, vy) {
+    b.state = 'fly'; b.owner = owner; b.vx = vx; b.vy = vy; b.bounces = 0;
     b.pierceLeft = b.eng === 'pierce' ? 1 : 0; b.rubberLeft = b.eng === 'rubber' ? 3 : 0;
     b.ghostLeft = b.eng === 'ghost' ? 1 : 0; b.ghostObs = null;
-    b.hitSet.clear(); b.trail.length = 0;
+    b.hitSet.clear(); b.trail.length = 0; b.pShot = false; b.pHit = false;
   }
   function fire(e, ang, speed) {
     if (!e.held.length) return false;
     const b = e.held.shift();
     b.x = e.x; b.y = e.y;
-    prepFlight(b, e, Math.cos(ang) * speed, Math.sin(ang) * speed, false);
+    prepFlight(b, e, Math.cos(ang) * speed, Math.sin(ang) * speed);
     const mx = e.x + Math.cos(ang) * (e.r + 10), my = e.y + Math.sin(ang) * (e.r + 10);
     particles.push({ x: mx, y: my, vx: 0, vy: 0, life: 0.07, max: 0.07, flash: 11, col: '#fff3c0' });
     for (let i = 0; i < 7; i++) particles.push({ x: mx, y: my, vx: Math.cos(ang + rand(-0.5, 0.5)) * rand(80, 240), vy: Math.sin(ang + rand(-0.5, 0.5)) * rand(80, 240), life: 0.15, max: 0.15, col: '#ffd070', size: 2.5 });
@@ -628,17 +645,12 @@
       if (!e.alive || b.hitSet.has(e)) continue;
       if (!e.isPlayer && e.inv > 0) continue;          // 막 들어온 적은 무적(탄이 지나감)
       if (e === b.owner && b.bounces < 1) continue;   // 쏜 사람은 한 번 튕긴 뒤부터 맞음
-      if (b.kicked && e.isPlayer) continue;             // 찬 탄은 적에게만
       const dx = e.x - b.x, dy = e.y - b.y, rr = (e.isPlayer ? e.r : e.r * HIT_K) + BR;
       if (dx * dx + dy * dy >= rr * rr) continue;
       b.hitSet.add(e);
       if (e.isPlayer && (player.inv > 0 || game.clearing)) continue;
-      if (!e.isPlayer && b.owner === player) game.run.hits++;
+      if (!e.isPlayer && b.owner === player) { game.run.hits++; if (b.pShot && !b.pHit) { b.pHit = true; game.run.hitShots++; } } // hitShots: 적을 1명 이상 맞힌 쏜 탄(빗나감 비율용)
       hurt(e, b.owner === player ? '내 탄' : '적 탄', { x: b.x - b.vx * 0.05, y: b.y - b.vy * 0.05, name: b.owner && !b.owner.isPlayer && ETYPES[b.owner.type] ? ETYPES[b.owner.type].name : '' });
-      if (b.kicked && !e.isPlayer && e.alive) { // 찬 탄: 0.8초 멈춤, 예고 취소
-        e.stun = 0.8;
-        if (e.state === 'aim' || e.state === 'back' || e.state === 'windup' || e.state === 'dash') { e.state = 'seek'; e.seekT = 0; }
-      }
       if (!e.isPlayer && b.pierceLeft > 0) { b.pierceLeft--; continue; }
       b.vx *= -0.12; b.vy *= -0.12;
       return;
@@ -678,12 +690,14 @@
   function stopBullet(b) {
     b.vx = 0; b.vy = 0; b.state = 'floor'; b.trail.length = 0;
     if (b.eng === 'boom') explode(b.x, b.y, false);
-    if (b.eng === 'fire') { fires.push({ x: b.x, y: b.y, t: 2, hit: new Set() }); SFX.fire(); }
-    if (b.eng === 'ret' && player.alive) { b.state = 'return'; b.retT = 4; } // 귀환의 주인은 언제나 플레이어
+    if (b.eng === 'fire') { fires.push({ x: b.x, y: b.y, t: 2, hit: new Set() }); SFX.fire(); b.lockT = 3; b.burnT = 3; } // 화염탄은 3초 불타는 동안 아무도 못 주움
+    if (b.eng === 'ret' && player.alive) { b.state = 'return'; b.retT = 4; b.eng = null; } // 귀환: 한 번 돌아오면 보통 탄 // 귀환의 주인은 언제나 플레이어
   }
   function updateBullets(dt) {
     for (const b of bullets) {
       if (b.lockT > 0) b.lockT -= dt;
+      if (b.burnT > 0) b.burnT -= dt;
+      b.floorT = b.state === 'floor' ? (b.floorT || 0) + dt : 0; // 바닥에 놓인 시간(덫이 켜지는 데 씀)
       if (b.state === 'held') { b.x = b.owner.x; b.y = b.owner.y; continue; }
       if (b.state === 'fly') {
         stepBullet(b, dt, true);
@@ -701,9 +715,9 @@
         const d = flowDir(fieldP, b.x, b.y, o.x, o.y);
         b.vx = d.x * 240; b.vy = d.y * 240;
         stepBullet(b, dt, false);
-      } else if (b.state === 'floor' && b.eng === 'magnet') { // 자석: 반지름 120 안이면 주인 쪽으로 천천히
+      } else if (b.state === 'floor' && b.eng === 'magnet') { // 자석: 반지름 80 안이면 주인 쪽으로 천천히(4차 측정 +16%p라 120 → 80, 조각 1-2)
         const o = player; // 자석의 주인은 언제나 플레이어
-        if (o.alive && Math.hypot(o.x - b.x, o.y - b.y) < 120) {
+        if (o.alive && Math.hypot(o.x - b.x, o.y - b.y) < 80) {
           const d = norm(o.x - b.x, o.y - b.y); b.vx = d.x * 70; b.vy = d.y * 70;
           stepBullet(b, dt, false); b.vx = b.vy = 0;
         }
@@ -717,8 +731,8 @@
       for (let i = -1; i < enemies.length; i++) {
         const e = i < 0 ? player : enemies[i];
         if (!e.alive || f.hit.has(e)) continue;
-        if (e.isPlayer && f.t > 1.5) continue; // 플레이어는 불길이 생기고 0.5초 뒤부터 맞음
-        if (Math.hypot(e.x - f.x, e.y - f.y) < 40 + (e.isPlayer ? e.r : e.r * HIT_K)) { if (hurt(e, '화염', { x: f.x, y: f.y })) f.hit.add(e); }
+        if (e.isPlayer && f.t > 1.5) continue; // 플레이어는 불길이 생기고 0.5초 뒤부터 맞음. 적이 맞는 범위는 30+r(4차 측정 +17%p라 40 → 30, 조각 1-2)
+        if (Math.hypot(e.x - f.x, e.y - f.y) < (e.isPlayer ? 40 : 30) + e.r) { if (hurt(e, '화염', { x: f.x, y: f.y })) f.hit.add(e); }
       }
     }
     fires = fires.filter((f) => f.t > 0);
@@ -734,13 +748,13 @@
   function updatePickups() {
     for (const b of bullets) {
       if (b.state !== 'floor' && b.state !== 'return') continue;
-      if (player.alive && Math.hypot(player.x - b.x, player.y - b.y) < player.r + BR + 4) { give(player, b); continue; }
+      if (player.alive && !(b.burnT > 0) && Math.hypot(player.x - b.x, player.y - b.y) < player.r + BR + 4) { give(player, b); continue; }
       if (b.lockT > 0) continue;
       for (const e of enemies) {
-        if (!e.alive || !e.pick || e.stun > 0) continue;
+        if (!e.alive || !e.pick) continue;
         if (Math.hypot(e.x - b.x, e.y - b.y) >= e.r + BR + 4) continue;
-        if (b.eng === 'trap' && b.trapArmed) {
-          b.trapArmed = false; b.lockT = 1.2; b.state = 'floor'; b.vx = b.vy = 0;
+        if (b.eng === 'trap' && b.trapArmed && b.floorT > TRAP_ARM) { // 덫: 바닥에 1.5초 놓인 뒤에만 켜짐, 한 번 터지면 보통 탄
+          b.trapArmed = false; b.lockT = 1.2; b.state = 'floor'; b.vx = b.vy = 0; b.eng = null;
           explode(b.x, b.y, true);
         } else give(e, b);
         break;
@@ -752,7 +766,7 @@
     particles.push({ x, y, vx: 0, vy: 0, life: 0.3, max: 0.3, ring: 60, col: enemiesOnly ? '#c77dff' : '#ff6a3d' });
     game.shake = Math.max(game.shake, 0.35); SFX.boom();
     if (!enemiesOnly && player.alive && Math.hypot(player.x - x, player.y - y) < 40 + player.r) hurt(player, '폭발', { x, y });
-    for (const e of enemies.slice()) if (e.alive && Math.hypot(e.x - x, e.y - y) < 60 + e.r * HIT_K) hurt(e, '폭발');
+    for (const e of enemies.slice()) if (e.alive && Math.hypot(e.x - x, e.y - y) < 60 + e.r) hurt(e, '폭발'); // 폭발·화염·덫 범위는 r 기준(적 맞는 거리 확대와 떼어 냄, 12.3)
   }
 
   // ===== 피해 (피해를 줬으면 true) =====
@@ -796,33 +810,46 @@
   const mouse = { x: 480, y: 248 };
   let aimMode = 'mouse';
   let stick = { active: false }, aimT = { active: false };
-  const KB = { x: 884, y: 400, r: 40 };              // 터치 차기 단추
+  const STICK_PUSH = 110;                           // 스틱 중심을 플레이어에게서 이만큼 떨어뜨림
+  const FB = { x: 862, y: 396, r: 60 };              // 터치 발사 버튼(공격 스틱, 12.7)
+  const FB_HIT = FB.r + 10;                         // 이만큼 안을 누르면 발사 버튼
   const PB = { x: W - 136, y: 0, w: 132, h: 56 };    // 터치 멈춤 단추(130×56 이상)
 
+  // ----- 터치 조준(12.2) -----
+  function lineClear(x1, y1, x2, y2) { // 탄 가운데가 지나는 길에 엄폐물이 없는가
+    const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 4));
+    for (let i = 1; i < n; i++) { const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n; for (const o of obstacles) if (inBox(x, y, o)) return false; }
+    return true;
+  }
+  function tapTarget() { // 톡: 곧게 쏴서 맞힐 수 있는 가장 가까운 적(지금 위치, 앞을 내다보지 않음)
+    let best = null, bd = 1e9;
+    for (const e of enemies) {
+      if (!e.alive || e.inv > 0) continue;
+      const d = Math.hypot(e.x - player.x, e.y - player.y);
+      if (d < bd && lineClear(player.x, player.y, e.x, e.y)) { bd = d; best = e; }
+    }
+    return best;
+  }
+  const ASSIST = 8 * Math.PI / 180;
+  function assistAim(a) { // 끌기: 끈 방향 ±8° 안에 적이 있으면 그 적 쪽으로(가장 각도 차가 작은 적)
+    let best = a, bd = ASSIST;
+    for (const e of enemies) {
+      if (!e.alive || e.inv > 0) continue;
+      const ea = Math.atan2(e.y - player.y, e.x - player.x), d = Math.abs(angDiff(ea, a));
+      if (d <= bd) { bd = d; best = ea; }
+    }
+    return best;
+  }
   function playerShoot() {
     if (game.state !== 'play' || game.paused || !player.alive || player.shotCd > 0 || game.roomT < 0.3) return;
     if (!player.held.length) return;
     player.shotCd = 0.12;
+    const b0 = player.held[0];
     if (fire(player, player.aim, SHOT_SPEED)) {
-      game.run.shots++;
+      game.run.shots++; b0.pShot = true;
       player.vx -= Math.cos(player.aim) * 140; player.vy -= Math.sin(player.aim) * 140;
       player.recoil = 0.1; game.shake = Math.max(game.shake, 0.08);
     }
-  }
-  function kick() {
-    if (game.state !== 'play' || game.paused || !player.alive || player.kickCd > 0) return;
-    player.kickCd = 0.4; player.kickFx = 0.15;
-    const ax = Math.cos(player.aim), ay = Math.sin(player.aim);
-    let n = 0;
-    for (const b of bullets) {
-      if (b.state !== 'floor' && b.state !== 'return') continue;
-      const dx = b.x - player.x, dy = b.y - player.y;
-      if (Math.hypot(dx, dy) > 50 + BR || dx * ax + dy * ay < 0) continue;
-      prepFlight(b, player, ax * KICK_SPEED, ay * KICK_SPEED, true); n++;
-    }
-    if (n > 0) game.run.kicks++;
-    else particles.push({ x: player.x + ax * 30, y: player.y + ay * 30 - 10, vx: 0, vy: -30, life: 0.7, max: 0.7, text: '헛발', col: '#e8d8c0' });
-    SFX.kick(n > 0);
   }
   function updatePlayer(dt) {
     if (!player.alive) return;
@@ -839,10 +866,8 @@
     moveEnt(player, mx * mag * player.speed, my * mag * player.speed, dt);
     if (aimMode === 'mouse') player.aim = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     player.inv = Math.max(0, player.inv - dt);
-    player.kickCd = Math.max(0, player.kickCd - dt);
     player.shotCd = Math.max(0, player.shotCd - dt);
     player.recoil = Math.max(0, player.recoil - dt);
-    player.kickFx = Math.max(0, player.kickFx - dt);
   }
 
   // ===== 적 AI: 줍기 → 조준(예고) → 쏘기 → 거리 두기 =====
@@ -851,8 +876,9 @@
     const enraged = e.type === 'boss' && e.hp <= e.maxHp / 2;
     let t = e.type === 'sniper' ? 1.0 : e.type === 'boss' ? (enraged ? 0.5 : 0.6) : 0.5;
     if (game.stage >= 3) t = Math.max(0.35, t * 0.8);
+    if (game.stage === 0) t *= 1.3; // 0단계(입문): 예고 1.3배
     e.t = t;
-    e.aimOff = e.type === 'thug' ? rand(-0.14, 0.14) : e.type === 'boss' ? rand(-0.05, 0.05) : 0;
+    e.aimOff = e.type === 'thug' ? arand(-0.14, 0.14) : e.type === 'boss' ? arand(-0.05, 0.05) : 0;
     SFX.warn();
   }
   function keepDistance(e, ideal, d, dx, dy) {
@@ -865,14 +891,13 @@
     const enraged = e.type === 'boss' && e.hp <= e.maxHp / 2;
     const sp = e.speed * (enraged ? 1.22 : 1);
     e.inv = Math.max(0, e.inv - dt);
-    if (e.stun > 0) { e.stun -= dt; e.flash = Math.max(0, e.flash - dt); moveEnt(e, 0, 0, dt); return; } // 멈춤: 못 움직이고 못 쏨
     let mv = { x: 0, y: 0 }, spMul = 1;
     e.t -= dt; e.flash = Math.max(0, e.flash - dt); e.slashFx = Math.max(0, e.slashFx - dt);
-    e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rand(1.2, 3); }
+    e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = arand(1.2, 3); }
     if (e.type === 'knife') {
       if (e.state === 'seek') {
         mv = flowDir(fieldP, e.x, e.y, player.x, player.y);
-        if (player.alive && d < 120 && rayLen(e.x, e.y, angP, d) >= d - player.r) { e.state = 'windup'; e.t = 0.3; e.aimAng = angP; SFX.warn(); }
+        if (player.alive && d < 120 && rayLen(e.x, e.y, angP, d) >= d - player.r) { e.state = 'windup'; e.t = game.stage === 0 ? 0.39 : 0.3; e.aimAng = angP; SFX.warn(); }
       } else if (e.state === 'windup') {
         if (e.t <= 0) { e.state = 'dash'; e.t = 0.35; e.dashHit = false; SFX.slash(); }
       } else if (e.state === 'dash') { // 돌진: 0.35초 동안 1.8배
@@ -953,33 +978,17 @@
     }
   }
 
-  // ===== 화면 안내(줍기·차기) =====
-  function kickZoneBullet() {
-    const ax = Math.cos(player.aim), ay = Math.sin(player.aim);
-    let best = null, bd = 1e9;
-    for (const b of bullets) {
-      if (b.state !== 'floor' && b.state !== 'return') continue;
-      const dx = b.x - player.x, dy = b.y - player.y, d = Math.hypot(dx, dy);
-      if (d <= 50 + BR && dx * ax + dy * ay >= 0 && d < bd) { bd = d; best = b; }
-    }
-    return best;
-  }
+  // ===== 화면 안내(줍기) =====
   function updateHints(dt) {
     for (const h of game.hitDirs) h.t -= dt;
     game.hitDirs = game.hitDirs.filter((h) => h.t > 0);
     if (!player.alive) return;
     // 줍기: 손에 든 탄이 0발이 되면(1단계 1~3번 방, 판마다 처음 두 번)
     const held = player.held.length;
-    if (held === 0 && game.prevHeld > 0 && game.stage === 1 && game.room <= 3 && game.pickHints < 2) { game.pickHints++; game.pickHint = 5; }
+    if (held === 0 && game.prevHeld > 0 && game.stage <= 1 && game.room <= 3 && game.pickHints < 2) { game.pickHints++; game.pickHint = 5; }
     game.prevHeld = held;
     if (game.pickHint > 0) { game.pickHint -= dt; if (held > 0) game.pickHint = 0; }
-    // 줍기 안내가 시작되면 떠 있던 차기 안내는 거두고, 세지 않은 것으로 돌린다(다음에 다시 보이게)
-    if (game.pickHint > 0 && game.kickHint) { if (game.kickHint.t > 1) game.kickHints = Math.max(0, game.kickHints - 1); game.kickHint = null; }
-    // 차기: 바닥 탄이 차기 범위에 들어오면(처음 세 번)
-    const kb = kickZoneBullet();
-    if (kb && !game.kickInZone && game.kickHints < 3 && !(game.pickHint > 0)) { game.kickHints++; game.kickHint = { b: kb, t: 2.5 }; }
-    game.kickInZone = !!kb;
-    if (game.kickHint) { game.kickHint.t -= dt; if (game.kickHint.t <= 0 || game.kickHint.b.state !== 'floor' && game.kickHint.b.state !== 'return') game.kickHint = null; }
+    if (game.noAimT > 0) { game.noAimT -= dt; if (tapTarget()) game.noAimT = 0; } // 노릴 적이 생기면 바로 지운다
   }
 
   // ===== 물결 =====
@@ -1142,7 +1151,12 @@
     ctx.globalCompositeOperation = 'lighter';
     glow(b.x, b.y, b.state === 'fly' ? 26 : 20, a);
     ctx.globalCompositeOperation = 'source-over';
-    if (b.eng) circ(b.x, b.y, BR + 3, null, ENG[b.eng].col, 2);
+    if (b.eng) {
+      const off = (b.burnT > 0) || (b.eng === 'trap' && b.state === 'floor' && b.floorT <= TRAP_ARM); // 불타는 중(못 주움)·아직 안 켜진 덫
+      if (off) ctx.setLineDash([3, 3]);
+      circ(b.x, b.y, BR + 3, null, b.burnT > 0 ? '#ff5a1a' : ENG[b.eng].col, 2);
+      if (off) ctx.setLineDash([]);
+    }
     circ(b.x, b.y, BR, '#ffd84d');
     circ(b.x - 1.2, b.y - 1.2, BR * 0.55, '#ffffff');
   }
@@ -1178,12 +1192,6 @@
       if (e.inv > 0) ctx.globalAlpha = Math.floor(e.inv * 16) % 2 ? 0.45 : 0.85;
       drawChar(e.type, e.x, e.y, e.r, e.face, e.flash > 0, e.state === 'windup' || e.state === 'dash');
       ctx.globalAlpha = 1;
-      if (e.stun > 0) for (let i = 0; i < 3; i++) { // 멈춤: 머리 위 별
-        const a = game.clock * 5 + i * 2.09, sx = e.x + Math.cos(a) * (e.r * 0.8), sy = e.y - e.r - 24 + Math.sin(a) * 3;
-        ctx.fillStyle = '#e8e0ff'; ctx.strokeStyle = '#5a3a9a'; ctx.lineWidth = 1.5; ctx.beginPath();
-        for (let k = 0; k < 10; k++) { const rr = k % 2 ? 2.6 : 6, aa = k * Math.PI / 5 - Math.PI / 2; ctx.lineTo(sx + Math.cos(aa) * rr, sy + Math.sin(aa) * rr); }
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-      }
       if (e.type === 'knife' && e.state === 'windup') {
         ctx.strokeStyle = 'rgba(255,50,40,0.95)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 12, e.aimAng - 0.9, e.aimAng + 0.9); ctx.stroke();
       }
@@ -1197,9 +1205,9 @@
       const rk = player.recoil * 30;
       drawChar('player', player.x - Math.cos(player.aim) * rk, player.y - Math.sin(player.aim) * rk, player.r, player.aim, false);
       ctx.globalAlpha = 1;
-      if (player.kickFx > 0) { ctx.fillStyle = 'rgba(255,230,160,0.25)'; ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.arc(player.x, player.y, 50, player.aim - Math.PI / 2, player.aim + Math.PI / 2); ctx.closePath(); ctx.fill(); }
-      const al = aimT.active ? 140 : 50;
-      ctx.strokeStyle = 'rgba(255,240,200,0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 6]);
+      const drag = aimT.active && Math.hypot(aimT.x - aimT.ox, aimT.y - aimT.oy) >= 15; // 발사 버튼을 끄는 중: 조준선을 길고 뚜렷하게
+      const al = drag ? 160 : 50;
+      ctx.strokeStyle = drag ? 'rgba(255,240,200,0.85)' : 'rgba(255,240,200,0.35)'; ctx.lineWidth = drag ? 2.5 : 1.5; ctx.setLineDash([4, 6]);
       ctx.beginPath(); ctx.moveTo(player.x + Math.cos(player.aim) * 24, player.y + Math.sin(player.aim) * 24); ctx.lineTo(player.x + Math.cos(player.aim) * al, player.y + Math.sin(player.aim) * al); ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -1243,29 +1251,19 @@
       ctx.globalAlpha = a; ctx.fillStyle = p.col; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); ctx.globalAlpha = 1;
     }
   }
-  // 안내 상자 자리: 대상(탄)과 플레이어를 둘 다 가리지 않게, 둘 중 위쪽보다 더 위에. 위가 좁으면 둘 중 아래쪽보다 더 아래에.
-  function hintY(ty, h) {
-    const pr = player.r * SPR_K; // 그림 크기만큼 피한다
-    const top = Math.min(ty - 8, player.y - pr), bot = Math.max(ty + 8, player.y + pr);
-    const up = top - 6 - h / 2;
-    if (up - h / 2 >= AR.t + 4) return { y: up, up: true };
-    return { y: Math.min(bot + 6 + h / 2, AR.b - h / 2 - 4), up: false };
-  }
   function drawHints() {
     if (game.state !== 'play' || !player.alive) return;
-    let picking = false;
     if (game.pickHint > 0) {
       let nb = null, nd = 1e9;
       for (const b of bullets) if (b.state === 'floor' || b.state === 'return') { const d = Math.hypot(b.x - player.x, b.y - player.y); if (d < nd) { nd = d; nb = b; } }
       if (nb) {
-        picking = true;
         // 상자는 늘 탄 바로 옆(위→아래→왼쪽→오른쪽 순)에 붙인다. 플레이어를 덮지 않고 싸움터 안에 드는 첫 자리를 쓴다.
         const BW = 68, BH = 28, G = 18, PR = player.r * SPR_K + 6;
         // 후보 자리를 싸움터 안으로 당긴 뒤, 탄과 플레이어를 덮지 않는 첫 자리를 고른다
         const cands = [[0, -1], [0, 1], [-1, 0], [1, 0]].map(([ux, uy]) => ({ ux, uy,
           cx: clamp(nb.x + ux * (BW / 2 + G), AR.l + BW / 2, AR.r - BW / 2), cy: clamp(nb.y + uy * (BH / 2 + G), AR.t + BH / 2, AR.b - BH / 2) }));
         const gap = (c, x, y) => Math.hypot(x - clamp(x, c.cx - BW / 2, c.cx + BW / 2), y - clamp(y, c.cy - BH / 2, c.cy + BH / 2));
-        const ok = (c) => gap(c, nb.x, nb.y) > 12 && gap(c, player.x, player.y) > PR;
+        const ok = (c) => gap(c, nb.x, nb.y) > 12 && gap(c, player.x, player.y) > PR && (!game.usedTouch || (gap(c, FB.x, FB.y) > FB.r + 4 && !(c.cx + BW / 2 > PB.x - 4 && c.cy - BH / 2 < PB.y + PB.h + 4))); // 터치 판: 발사 버튼·멈춤 단추도 피함
         const pick = cands.find(ok) || cands.find(c => gap(c, nb.x, nb.y) > 12) || cands[0];
         const bob = Math.sin(game.clock * 6) * 3;
         const cx = clamp(pick.cx + pick.ux * bob, AR.l + BW / 2, AR.r - BW / 2), cy = clamp(pick.cy + pick.uy * bob, AR.t + BH / 2, AR.b - BH / 2);
@@ -1276,16 +1274,6 @@
         const px = -pick.uy * 8, py = pick.ux * 8;
         ctx.fillStyle = '#ffe14d'; ctx.beginPath(); ctx.moveTo(bx + px, by + py); ctx.lineTo(bx - px, by - py); ctx.lineTo(tx, ty); ctx.closePath(); ctx.fill();
       }
-    }
-    if (game.kickHint && !game.usedTouch && !picking) { // 줍기 안내가 떠 있으면 겹치지 않게 차기 안내는 쉰다
-      const b = game.kickHint.b, label = '우클릭/Space: 차기';
-      const x = clamp(b.x, AR.l + 100, AR.r - 100), y = hintY(b.y, 30).y;
-      rrect(x - 92, y - 15, 184, 30, 8); ctx.fillStyle = 'rgba(20,12,8,0.85)'; ctx.fill();
-      txt(label, x, y, 18, '#ffe8b0');
-    }
-    if (game.touchRun && game.room === 1 && game.roomT < 5 && !game.paused) {
-      rrect(W / 2 - 250, AR.t + 44, 500, 40, 10); ctx.fillStyle = 'rgba(20,12,8,0.6)'; ctx.fill();
-      txt('왼쪽 끌기: 이동 · 오른쪽 끌었다 놓기: 쏘기', W / 2, AR.t + 64, 20, '#ffe8b0');
     }
     // 어디서 맞았나: 화면 가장자리 빨간 쐐기
     for (const h of game.hitDirs) {
@@ -1329,7 +1317,7 @@
       if (b.eng) { const E = ENG[b.eng]; circ(x + sw - 15, y0 + 21, 12, E.col); txt(E.sym, x + sw - 15, y0 + 22, 18, '#1a1010'); }
       if (next) { ctx.fillStyle = '#f6e6b8'; ctx.beginPath(); ctx.moveTo(x + sw / 2 - 9, y0 - 12); ctx.lineTo(x + sw / 2 + 9, y0 - 12); ctx.lineTo(x + sw / 2, y0 - 2); ctx.closePath(); ctx.fill(); }
     }
-    txt((game.room >= LAST_ROOM ? '10번 방 · 두목' : game.room + '번 방/10') + ' · ' + game.stage + '단계', W - 24, 488, 20, '#f0d9b0', 'right');
+    txt((game.room >= LAST_ROOM ? '10번 방 · 두목' : game.room + '번 방/10') + ' · ' + stageName(game.stage), W - 24, 488, 20, '#f0d9b0', 'right');
     const l2 = [];
     if (game.room < LAST_ROOM) l2.push('물결 ' + Math.min(game.wave, game.waves) + '/' + game.waves);
     if (game.ice) l2.push('얼음 바닥');
@@ -1340,19 +1328,63 @@
       ctx.fillStyle = '#2a1a14'; ctx.fillRect(W / 2 - 115, 12, 240, 10);
       ctx.fillStyle = '#d4af37'; ctx.fillRect(W / 2 - 115, 12, 240 * boss.hp / boss.maxHp, 10);
     }
-    if (game.room === 1 && game.state === 'play') txt('총알은 여섯 발뿐. 빗나간 총알은 누구나 줍는다.', W / 2, 17, 18, '#ffe9b8');
+    // 위쪽 벽 띠(싸움터 밖) 글자: 「노릴 적 없음」 > 1번 방 첫 5초 터치 조작 안내 > 1번 방 규칙 한 줄. 안내는 싸움터 위에 그리지 않는다.
+    if (game.state === 'play' && game.noAimT > 0) txt('노릴 적 없음', boss ? 715 : W / 2, 17, 18, '#ff9a8a');
+    else if (game.state === 'play' && game.room === 1) {
+      if (game.touchRun && game.roomT < 5 && !game.paused) txt('왼쪽 끌기: 이동 · 발사 버튼 톡: 자동 조준 · 끌었다 놓기: 직접 조준', W / 2, 17, 18, '#ffe14d');
+      else txt('총알은 여섯 발뿐. 빗나간 총알은 누구나 줍는다.', W / 2, 17, 18, '#ffe9b8');
+    }
     if (game.usedTouch && game.state === 'play') {
-      if (game.kickHint) { const g = ctx.createRadialGradient(KB.x, KB.y, KB.r * 0.6, KB.x, KB.y, KB.r + 22); g.addColorStop(0, 'rgba(255,225,77,0.7)'); g.addColorStop(1, 'rgba(255,225,77,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(KB.x, KB.y, KB.r + 22, 0, 7); ctx.fill(); }
-      circ(KB.x, KB.y, KB.r, game.kickHint ? 'rgba(255,225,77,0.45)' : player.kickCd > 0 ? 'rgba(120,90,60,0.35)' : 'rgba(255,220,150,0.25)', game.kickHint ? '#ffe14d' : 'rgba(255,230,180,0.6)', game.kickHint ? 3 : 2);
-      txt('차기', KB.x, KB.y, 20, '#fff2d8');
+      drawFireButton();
       rrect(PB.x, PB.y, PB.w, PB.h, 10); ctx.fillStyle = 'rgba(40,24,12,0.75)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,230,180,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
       txt('멈춤', PB.x + PB.w / 2, PB.y + PB.h / 2, 22, '#fff2d8');
-      if (stick.active) {
-        circ(stick.ox, stick.oy, 50, null, 'rgba(255,255,255,0.3)', 2);
+      if (stick.active) { // 반투명
+        circ(stick.ox, stick.oy, 50, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.3)', 2);
         const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy), k = d > 50 ? 50 / d : 1;
-        circ(stick.ox + dx * k, stick.oy + dy * k, 20, 'rgba(255,255,255,0.3)');
+        circ(stick.ox + dx * k, stick.oy + dy * k, 20, 'rgba(255,255,255,0.25)');
       }
     }
+  }
+  // 발사 버튼(12.7): 반투명. 노릴 적이 없으면 흐리게, 있으면 톡 고리 색(노랑). 끄는 동안 손잡이가 끈 쪽으로 움직인다.
+  function drawFireButton() {
+    const live = player.alive && player.held.length > 0 && !game.clearing && !!tapTarget();
+    ctx.save(); ctx.globalAlpha = live || aimT.active ? 1 : 0.45;
+    circ(FB.x, FB.y, FB.r, live ? 'rgba(255,225,77,0.14)' : 'rgba(255,255,255,0.05)', live ? 'rgba(255,225,77,0.85)' : 'rgba(255,255,255,0.35)', live ? 3 : 2);
+    let kx = FB.x, ky = FB.y;
+    if (aimT.active) { const dx = aimT.x - aimT.ox, dy = aimT.y - aimT.oy, d = Math.hypot(dx, dy), k = d > FB.r * 0.6 ? FB.r * 0.6 / d : 1; kx += dx * k; ky += dy * k; }
+    circ(kx, ky, 26, aimT.active ? 'rgba(255,240,200,0.3)' : 'rgba(255,255,255,0.1)', null);
+    txt('발사', kx, ky, 20, live ? '#fff2c0' : 'rgba(255,242,216,0.8)');
+    ctx.restore();
+  }
+  // 스틱 고리나 발사 버튼이 플레이어와 겹치면 플레이어 테두리 실루엣을 맨 위에 덧그린다
+  function drawStickSilhouette() {
+    if (!player.alive || game.state !== 'play' || game.paused) return;
+    const pr = player.r * SPR_K;
+    const nearStick = stick.active && Math.hypot(stick.ox - player.x, stick.oy - player.y) < 50 + pr;
+    const nearFire = game.usedTouch && Math.hypot(FB.x - player.x, FB.y - player.y) < FB.r + pr;
+    if (!nearStick && !nearFire) return;
+    ctx.save(); ctx.lineCap = 'round';
+    for (const [col, lw] of [['rgba(0,0,0,0.7)', 5], ['#1fc2b3', 2.5]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.arc(player.x, player.y, pr, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(player.x + Math.cos(player.aim) * pr, player.y + Math.sin(player.aim) * pr); ctx.lineTo(player.x + Math.cos(player.aim) * (pr + 12), player.y + Math.sin(player.aim) * (pr + 12)); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // 톡 조준 고리: 손에 탄이 있으면 지금 톡 하면 노릴 적에게 작은 고리(끄는 동안은 숨김)
+  function drawTapRing() {
+    if (!game.usedTouch || game.state !== 'play' || game.paused || !player.alive || !player.held.length || game.clearing) return;
+    if (aimT.active && Math.hypot(aimT.x - aimT.ox, aimT.y - aimT.oy) >= 15) return; // 끄는 동안은 숨김
+    const t = tapTarget(); if (!t) return;
+    const rr = t.r * SPR_K + 5;
+    ctx.save();
+    for (const [col, lw] of [['rgba(0,0,0,0.6)', 4], ['#ffe14d', 2]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.arc(t.x, t.y, rr, 0, 7); ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; ctx.moveTo(t.x + Math.cos(a) * (rr - 4), t.y + Math.sin(a) * (rr - 4)); ctx.lineTo(t.x + Math.cos(a) * (rr + 5), t.y + Math.sin(a) * (rr + 5)); }
+      ctx.stroke();
+    }
+    ctx.restore();
   }
   function overlay(a) { ctx.fillStyle = `rgba(8,5,8,${a})`; ctx.fillRect(0, 0, W, H); }
   function drawButton(x, y, w, h, label, fn, col) {
@@ -1381,18 +1413,18 @@
     txt('세상에 총알은 여섯 발뿐. 빗나간 한 발은 적의 탄약이 된다.', W / 2, 168, 20, '#f0d9b0', 'center', 'normal');
     txt('아직 만들고 있는 게임이에요. 그림·난이도·내용이 바뀔 수 있어요.', W / 2, 195, 18, '#bfae94', 'center', 'normal');
     // 현상금 단계 고르기
-    const bw = 140, bh = 72, gap = 12, x0 = W / 2 - (bw * 5 + gap * 4) / 2, y0 = 270;
-    for (let s = 1; s <= 5; s++) {
-      const x = x0 + (s - 1) * (bw + gap), open = s <= game.best.unlocked, sel = s === game.selStage;
+    const bw = 140, bh = 72, gap = 12, x0 = W / 2 - (bw * 6 + gap * 5) / 2, y0 = 270;
+    for (let s = 0; s <= 5; s++) { // 0단계(입문)는 늘 열려 있음
+      const x = x0 + s * (bw + gap), open = s <= game.best.unlocked, sel = s === game.selStage;
       rrect(x, y0, bw, bh, 10); ctx.fillStyle = open ? (sel ? '#d9a21f' : '#7a5a24') : '#2a2420'; ctx.fill();
       ctx.strokeStyle = sel ? '#fff0b0' : '#4a3a2c'; ctx.lineWidth = sel ? 3 : 1.5; ctx.stroke();
       txt('현상금 ' + s + '단계', x + bw / 2, y0 + 24, 20, open ? '#2a1606' : '#6a5a4a');
       const bt = game.best.stageTimes[s];
-      txt(open ? (bt ? '최단 ' + fmtTime(bt) : '도전!') : '잠김', x + bw / 2, y0 + 52, 18, open ? '#3a2208' : '#6a5a4a', 'center', 'normal');
+      txt(open ? (bt ? '최단 ' + fmtTime(bt) : s === 0 ? '입문 · 체력 5' : '도전!') : '잠김', x + bw / 2, y0 + 52, 18, open ? '#3a2208' : '#6a5a4a', 'center', 'normal');
       if (open) btn(x, y0, bw, bh, () => { game.selStage = s; startSelected(); });
     }
-    txt('WASD 이동 · 마우스 조준 · 왼쪽 클릭 쏘기 · 오른쪽 클릭/Space 차기 · Esc 멈춤 · M 음악', W / 2, 382, 18, '#c9b8a0', 'center', 'normal');
-    txt('터치: 왼쪽 끌기 이동 · 오른쪽 끌었다 놓기 발사 · 차기 단추', W / 2, 410, 18, '#c9b8a0', 'center', 'normal');
+    txt('WASD 이동 · 마우스 조준 · 왼쪽 클릭 쏘기 · Esc 멈춤 · M 음악', W / 2, 382, 18, '#c9b8a0', 'center', 'normal');
+    txt('터치: 왼쪽 끌기 이동 · 오른쪽 아래 발사 버튼 톡 자동 조준 · 끌었다 놓기 직접 조준', W / 2, 410, 18, '#c9b8a0', 'center', 'normal');
     txt(imgReady ? '단계를 누르거나 ←/→로 고르고 Enter로 시작' : '불러오는 중…', W / 2, 455, 22, `rgba(255,240,200,${0.8 + 0.2 * Math.sin(game.clock * 4)})`);
     const rec = [];
     if (game.best.hunter) rec.push('칭호: 현상금 사냥꾼');
@@ -1444,10 +1476,11 @@
   function drawResult() {
     overlay(0.8);
     txt(game.won ? '여섯손가락 잭을 쓰러뜨렸다!' : '쓰러졌다…', W / 2, 90, 40, game.won ? '#ffd34d' : '#ff7a6a');
-    txt('현상금 ' + game.stage + '단계 · 도달한 방: ' + game.room + '번 방', W / 2, 160, 22, '#f0d9b0', 'center', 'normal');
+    txt('현상금 ' + stageName(game.stage) + ' · 도달한 방: ' + game.room + '번 방', W / 2, 160, 22, '#f0d9b0', 'center', 'normal');
     txt('쓰러뜨린 적: ' + game.kills + ' · 걸린 시간: ' + fmtTime(game.time), W / 2, 196, 22, '#f0d9b0', 'center', 'normal');
     const bt = game.best.stageTimes[game.stage];
-    let line = '최고 기록: ' + game.best.room + '번 방' + (bt ? ' · ' + game.stage + '단계 최단 ' + fmtTime(bt) : '');
+    let line = game.stage === 0 ? '입문 최고 기록: ' + game.best.introRoom + '번 방' + (bt ? ' · 입문 최단 ' + fmtTime(bt) : '')
+      : '최고 기록: ' + game.best.room + '번 방' + (bt ? ' · ' + stageName(game.stage) + ' 최단 ' + fmtTime(bt) : '');
     if (game.test) line = '시험 시작 판이라 기록을 저장하지 않습니다';
     else if (game.newBest) line += '  (새 기록!)';
     txt(line, W / 2, 236, 18, '#c9b8a0', 'center', 'normal');
@@ -1455,7 +1488,7 @@
     game.unlockMsg.forEach((m, i) => txt(m, W / 2, 278 + i * 30, 20, '#ffe14d'));
     drawButton(W / 2 - 200, 400, 180, 60, '다시', () => newRun(game.stage, 1));
     drawButton(W / 2 + 20, 400, 180, 60, '제목으로', () => setScene('title'), '#a08050');
-    txt('Enter·Space: 다시', W / 2, 490, 18, '#a89880', 'center', 'normal');
+    if (!game.usedTouch) txt('Enter·Space: 다시', W / 2, 490, 18, '#a89880', 'center', 'normal'); // 터치로 한 판에는 키보드 안내를 숨긴다
   }
   function drawPause() {
     overlay(0.25);
@@ -1464,8 +1497,8 @@
     txt('멈춤', W / 2, 72, 36, '#ffd34d');
     drawButton(W / 2 - 200, 96, 180, 56, '계속', () => togglePause());
     drawButton(W / 2 + 20, 96, 180, 56, music.on ? '음악 끄기' : '음악 켜기', () => toggleMusic(), '#a08050');
-    txt(game.usedTouch ? '왼쪽 끌기: 이동 · 오른쪽 끌었다 놓기: 쏘기' : 'Esc: 계속 · M: 음악 켜기/끄기', W / 2, 180, 18, '#f0d9b0', 'center', 'normal');
-    if (game.usedTouch) txt('「차기」 단추: 앞의 바닥 탄 차기', W / 2, 204, 18, '#f0d9b0', 'center', 'normal');
+    txt(game.usedTouch ? '왼쪽 끌기: 이동 · 발사 버튼 톡: 가까운 적 자동 조준' : 'Esc: 계속 · M: 음악 켜기/끄기', W / 2, 180, 18, '#f0d9b0', 'center', 'normal');
+    if (game.usedTouch) txt('발사 버튼을 끌었다 놓기: 직접 겨눠 쏘기', W / 2, 204, 18, '#f0d9b0', 'center', 'normal');
     if (MUTE) txt('소리 꺼진 주소로 열었습니다', W / 2, game.usedTouch ? 226 : 204, 18, '#c9b8a0', 'center', 'normal');
     if (FS_OK) drawButton(W / 2 - 110, 40 + ph - 62, 220, 46, isFS() ? '전체 화면 끄기' : '전체 화면 켜기', () => toggleFS(), '#a08050');
   }
@@ -1477,9 +1510,11 @@
     if (game.shake > 0) { const s = game.shake * 14; ctx.translate(rand(-s, s), rand(-s, s)); }
     ctx.drawImage(floorCanvas, 0, 0, W, H);
     drawWorld();
+    drawTapRing();
     ctx.restore();
     drawHUD();
     drawHints();
+    drawStickSilhouette();
     if (game.flash > 0) { ctx.fillStyle = `rgba(255,40,30,${game.flash * 0.8})`; ctx.fillRect(0, 0, W, H); }
     if (game.state === 'play' && game.clearing) txt('방 정리!', W / 2, H / 2 - 40, 48, '#ffd34d');
     if (game.paused) drawPause();
@@ -1515,7 +1550,7 @@
     initAudio();
     if (game.state === 'title' && !game.paused && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
       e.preventDefault();
-      game.selStage = clamp(game.selStage + (e.code === 'ArrowLeft' ? -1 : 1), 1, game.best.unlocked);
+      game.selStage = clamp(game.selStage + (e.code === 'ArrowLeft' ? -1 : 1), 0, game.best.unlocked);
       return;
     }
     if (e.code === 'Escape') { togglePause(); return; }
@@ -1525,7 +1560,7 @@
       e.preventDefault();
       if (e.repeat) return;
       if (game.paused) return;
-      if (game.state === 'play') { if (e.code === 'Space') kick(); return; }
+      if (game.state === 'play') return; // 놀이 중 Space는 아무 일도 하지 않는다(차기 없앰, 12.7)
       if (locked()) return;
       if (game.state === 'title') startSelected();
       else if (game.state === 'result') newRun(game.stage, 1);
@@ -1550,18 +1585,22 @@
       mouse.x = p.x; mouse.y = p.y; aimMode = 'mouse';
       player.aim = Math.atan2(mouse.y - player.y, mouse.x - player.x); // 누른 그 자리로 바로 겨눔(지난 프레임 방향으로 나가지 않게)
       if (game.usedTouch && p.x >= PB.x && p.y <= PB.y + PB.h) { togglePause(); return; }
-      if (e.button === 0) playerShoot(); else if (e.button === 2) kick();
+      if (e.button === 0) playerShoot(); // 오른쪽 클릭은 아무 일도 하지 않는다(차기 없앰, 12.7)
       return;
     }
     aimMode = 'touch';
     if (p.x >= PB.x - 6 && p.y <= PB.y + PB.h + 6) { togglePause(); return; }
-    const kd = Math.hypot(p.x - KB.x, p.y - KB.y);
-    if (kd < KB.r + 4) { kick(); return; }
-    if (kd < KB.r + 30) return; // 차기 단추 근처를 빗나가게 누르면 아무 일도 없음
-    if (p.x < W / 2) { // 스틱 고리 중심은 캔버스 가장자리에서 고리 반지름(50)만큼 안쪽
-      if (!stick.active) { const ox = clamp(p.x, 50, W - 50), oy = clamp(p.y, 50, H - 50); stick = { active: true, id: e.pointerId, ox, oy, x: ox, y: oy, rox: p.rx, roy: p.ry }; }
+    if (Math.hypot(p.x - FB.x, p.y - FB.y) < FB_HIT) { // 발사 버튼: 톡 = 자동 조준, 끌기 = 직접 조준(놓을 때 쏨)
+      if (!aimT.active) aimT = { active: true, id: e.pointerId, ox: p.rx, oy: p.ry, x: p.rx, y: p.ry };
+      return;
     }
-    else if (!aimT.active) aimT = { active: true, id: e.pointerId, ox: p.rx, oy: p.ry, x: p.rx, y: p.ry };
+    if (p.x < W / 2) { // 스틱 고리 중심은 캔버스 가장자리에서 고리 반지름(50)만큼 안쪽
+      if (!stick.active) {
+        let sx = p.x, sy = p.y; const pdx = sx - player.x, pdy = sy - player.y, pd = Math.hypot(pdx, pdy);
+        if (pd < STICK_PUSH) { const ux = pd > 0.5 ? pdx / pd : -1, uy = pd > 0.5 ? pdy / pd : 0; sx = player.x + ux * STICK_PUSH; sy = player.y + uy * STICK_PUSH; } // 플레이어와 110 안이면 반대쪽으로 밀어냄
+        const ox = clamp(sx, 50, W - 50), oy = clamp(sy, 50, H - 50); stick = { active: true, id: e.pointerId, ox, oy, x: ox, y: oy, rox: p.rx, roy: p.ry }; }
+    }
+    // 버튼 밖의 오른쪽 터치는 아무 일도 하지 않는다(12.7)
   }, { passive: false });
   window.addEventListener('pointermove', (e) => {
     if (isPortraitPhone()) return;
@@ -1571,7 +1610,7 @@
     if (aimT.active && e.pointerId === aimT.id) {
       aimT.x = p.rx; aimT.y = p.ry;
       const dx = p.rx - aimT.ox, dy = p.ry - aimT.oy;
-      if (Math.hypot(dx, dy) >= 15) player.aim = Math.atan2(dy, dx);
+      if (Math.hypot(dx, dy) >= 15) player.aim = assistAim(Math.atan2(dy, dx));
     }
   });
   function endPointer(e, cancel) {
@@ -1580,9 +1619,15 @@
     if (aimT.active && e.pointerId === aimT.id) {
       aimT.active = false;
       const dx = aimT.x - aimT.ox, dy = aimT.y - aimT.oy;
-      if (Math.hypot(dx, dy) < 15) return; // 톡 치기만 하면 발사하지 않음
-      player.aim = Math.atan2(dy, dx);
-      if (!cancel) playerShoot();
+      if (cancel) return;
+      if (Math.hypot(dx, dy) < 15) { // 톡(15px 미만): 자동 조준. 맞힐 적이 없으면 쏘지 않음
+        const t = tapTarget();
+        if (t && player.held.length) { player.aim = Math.atan2(t.y - player.y, t.x - player.x); playerShoot(); }
+        else if (!t && player.held.length && game.state === 'play' && !game.paused) game.noAimT = 1; // 안 쏘고 「노릴 적 없음」을 1초
+        return;
+      }
+      player.aim = assistAim(Math.atan2(dy, dx)); // 끌었다 놓기: 직접 조준 + ±8° 보정
+      playerShoot();
     }
   }
   window.addEventListener('pointerup', (e) => endPointer(e, false));
@@ -1612,7 +1657,7 @@
   };
 
   // ===== 시작 =====
-  if (TEST_RUN) whenReady(() => newRun(STAGE_PARAM >= 1 && STAGE_PARAM <= 5 ? STAGE_PARAM : 1, ROOM_PARAM >= 1 && ROOM_PARAM <= LAST_ROOM ? ROOM_PARAM : 1));
+  if (TEST_RUN) whenReady(() => newRun(STAGE_PARAM >= 0 && STAGE_PARAM <= 5 ? STAGE_PARAM : 1, ROOM_PARAM >= 1 && ROOM_PARAM <= LAST_ROOM ? ROOM_PARAM : 1));
   let last = performance.now();
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
