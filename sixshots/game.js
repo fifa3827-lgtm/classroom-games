@@ -62,7 +62,7 @@
   document.addEventListener('webkitfullscreenchange', onFSChange);
 
   // ===== 그림 파일 (한 번만 불러온다. 못 불러온 그림은 코드 그림으로 그린다) =====
-  const ASSET_V = '2610202100'; // 그림 주소 번호(index.html의 game.js?v= 와 같게)
+  const ASSET_V = '2610202300'; // 그림 주소 번호(index.html의 game.js?v= 와 같게)
   // 인물: 위에서 본 모습, 총구는 오른쪽(각도 0). ax, ay = 기준점(몸통 무게 중심) 비율, br = 몸 반지름(px), hat = 그림 속 모자 반지름(px), dark = 어둡게(탄보다 밝지 않게)
   const SPR = {
     player: { ax: 0.376, ay: 0.449, br: 74, hat: 44, dark: 0.8 },
@@ -2305,9 +2305,10 @@
     drawButton(W / 2 + 20, 400, 180, 60, '제목으로', () => setScene('title'), '#a08050');
     if (!game.usedTouch) txt('Enter·Space: 다시', W / 2, 490, 18, '#a89880', 'center', 'normal'); // 터치로 한 판에는 키보드 안내를 숨긴다
   }
+  const quitArmed = () => (game.quitArm || 0) > performance.now(); // 「제목으로」 두 번 누르기 대기(실제 시각, 멈춤 중에도 흐름)
   function drawPause() {
     overlay(0.25);
-    const ph = 160 + (game.usedTouch ? 24 : 0) + (MUTE ? 24 : 0) + (FS_OK ? 58 : 0);
+    const ph = 160 + (game.usedTouch ? 24 : 0) + (MUTE ? 24 : 0) + 58 + (quitArmed() ? 26 : 0); // 맨 아래 줄: 전체 화면·제목으로
     rrect(W / 2 - 290, 40, 580, ph, 14); ctx.fillStyle = 'rgba(20,12,8,0.8)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,220,150,0.5)'; ctx.lineWidth = 2; ctx.stroke();
     txt('멈춤', W / 2, 72, 36, '#ffd34d');
     drawButton(W / 2 - 200, 96, 180, 56, '계속', () => togglePause());
@@ -2315,7 +2316,13 @@
     txt(game.usedTouch ? '왼쪽 끌기: 이동 · 발사 버튼 톡: 가까운 적 자동 조준' : 'Esc: 계속 · M: 음악 켜기/끄기', W / 2, 180, 18, '#f0d9b0', 'center', 'normal');
     if (game.usedTouch) txt('발사 버튼을 끌었다 놓기: 직접 겨눠 쏘기', W / 2, 204, 18, '#f0d9b0', 'center', 'normal');
     if (MUTE) txt('소리 꺼진 주소로 열었습니다', W / 2, game.usedTouch ? 226 : 204, 18, '#c9b8a0', 'center', 'normal');
-    if (FS_OK) drawButton(W / 2 - 110, 40 + ph - 62, 220, 46, isFS() ? '전체 화면 끄기' : '전체 화면 켜기', () => toggleFS(), '#a08050');
+    // 맨 아래 줄: 전체 화면(지원할 때) + 제목으로. 실수로 판을 잃지 않게 2초 안에 두 번 눌러야 나간다(사용자 지적 10-20)
+    const by = 40 + ph - 62 - (quitArmed() ? 26 : 0);
+    if (FS_OK) drawButton(W / 2 - 230, by, 220, 46, isFS() ? '전체 화면 끄기' : '전체 화면 켜기', () => toggleFS(), '#a08050');
+    drawButton(FS_OK ? W / 2 + 10 : W / 2 - 110, by, 220, 46, quitArmed() ? '정말 제목으로' : '제목으로', () => {
+      if (quitArmed()) { game.quitArm = 0; game.paused = false; setScene('title'); } else game.quitArm = performance.now() + 2000;
+    }, quitArmed() ? '#c0503a' : '#a08050');
+    if (quitArmed()) txt('한 번 더 누르면 이 판을 그만두고 제목으로 가요', W / 2, by + 64, 18, '#ffb0a0', 'center', 'normal');
   }
   function draw() {
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
@@ -2360,6 +2367,7 @@
     }
   }
   function togglePause() {
+    game.quitArm = 0;
     if (game.state !== 'play' && !game.paused) return;
     game.paused = !game.paused;
     game.lockUntil = game.paused ? performance.now() + LOCK_MS : 0; // 멈출 때만 잠금. 풀 때는 바로 쏠 수 있음
