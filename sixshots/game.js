@@ -53,7 +53,7 @@
   document.addEventListener('webkitfullscreenchange', onFSChange);
 
   // ===== 그림 파일 (한 번만 불러온다. 못 불러온 그림은 코드 그림으로 그린다) =====
-  const ASSET_V = '2610192000'; // 그림 주소 번호(index.html의 game.js?v= 와 같게)
+  const ASSET_V = '2610201100'; // 그림 주소 번호(index.html의 game.js?v= 와 같게)
   // 인물: 위에서 본 모습, 총구는 오른쪽(각도 0). ax, ay = 기준점(몸통 무게 중심) 비율, br = 몸 반지름(px), hat = 그림 속 모자 반지름(px), dark = 어둡게(탄보다 밝지 않게)
   const SPR = {
     player: { ax: 0.376, ay: 0.449, br: 74, hat: 44, dark: 0.8 },
@@ -61,10 +61,13 @@
     knife: { ax: 0.316, ay: 0.459, br: 63, hat: 46, dark: 1 },
     sniper: { ax: 0.281, ay: 0.452, br: 53, hat: 38, dark: 1 },
     boss: { ax: 0.356, ay: 0.473, br: 73, hat: 43, dark: 1 },
+    vulture: { ax: 0.444, ay: 0.485, br: 68, hat: 30, dark: 1, drawK: 1.35, lift: 0.22 }, // drawK = 그림만 크게(맞는 거리는 그대로), lift = 그림을 밝게(조각 2-2)
+    mole: { ax: 0.468, ay: 0.509, br: 82, hat: 34, dark: 1 },
+    witch: { ax: 0.374, ay: 0.493, br: 61, hat: 40, dark: 1 },
   };
   const SPR_K = 1.6;  // 그림 배율: 그림의 몸 반지름 = r x 1.6
   const HIT_K = 1.35; // 적·두목이 맞는 거리 = r x 1.35(그림 몸통에 맞춤). 플레이어·이동·벽은 r 그대로
-  const RING = { player: '#1fc2b3', thug: '#ff4636', knife: '#b86cff', sniper: '#3fd46a', boss: '#ffd060' }; // 종류별 발밑 테두리 색
+  const RING = { player: '#1fc2b3', thug: '#ff4636', knife: '#b86cff', sniper: '#3fd46a', boss: '#ffd060', vulture: '#f0a850', mole: '#c9a04a', witch: '#ff8a2a' }; // 종류별 발밑 테두리 색
   const IMG = {};
   let imgReady = false, imgLeft = 0;
   const onReady = [];
@@ -76,11 +79,11 @@
       if (fill) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = fill; g.fillRect(0, 0, c.width, c.height); }
       return c;
     };
-    const d = SPR[key].dark;
-    return { img: mk(d < 1 ? `rgba(0,0,0,${1 - d})` : null), white: mk('#ffffff'), w: im.width, h: im.height };
+    const d = SPR[key].dark, li = SPR[key].lift;
+    return { img: mk(d < 1 ? `rgba(0,0,0,${1 - d})` : li ? `rgba(255,236,200,${li})` : null), white: mk('#ffffff'), w: im.width, h: im.height };
   }
   (function loadImages() {
-    const names = ['player.png', 'thug.png', 'knife.png', 'sniper.png', 'boss.png', 'floor.jpg', 'ice.jpg', 'crate.jpg', 'keyart.jpg'];
+    const names = ['player.png', 'thug.png', 'knife.png', 'sniper.png', 'boss.png', 'vulture.png', 'mole.png', 'witch.png', 'floor.jpg', 'ice.jpg', 'sand.jpg', 'crate.jpg', 'rock.jpg', 'keyart.jpg'];
     if (typeof Image === 'undefined') { imgReady = true; return; } // 그림을 못 쓰는 곳(봇 시험 장치)
     imgLeft = names.length;
     const finish = () => { if (imgReady) return; imgReady = true; for (const f of onReady.splice(0)) f(); };
@@ -100,7 +103,7 @@
   const SEED = /^\d+$/.test(qs.get('seed') || '') ? parseInt(qs.get('seed'), 10) >>> 0 : null;
   function mulberry32(a) { return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const mkRng = (k) => (SEED === null ? Math.random : mulberry32((SEED ^ Math.imul(k + 1, 0x9E3779B1)) >>> 0));
-  let R = Math.random, AIR = Math.random;  // R = 이번 방의 배치용(방마다 새로), AIR = 적 행동용(판마다 새로)
+  let R = Math.random, AIR = Math.random, TAPR = Math.random;  // R = 이번 방의 배치용(방마다 새로), AIR = 적 행동용(판마다 새로)
   const srand = (a, b) => a + R() * (b - a), arand = (a, b) => a + AIR() * (b - a);
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const norm = (x, y) => { const d = Math.hypot(x, y) || 1; return { x: x / d, y: y / d }; };
@@ -228,7 +231,7 @@
   function schedMusic() {
     if (!ac || MUTE || !music.on) return;
     if (game.paused || document.hidden) { music.next = 0; return; }
-    const boss = game.room === LAST_ROOM && game.state !== 'title' && game.state !== 'result';
+    const boss = isBossRoom(game.room) && game.state !== 'title' && game.state !== 'result';
     const spb = 60 / (boss ? 132 : 84) / 2; // 8분음표 길이
     if (music.next < ac.currentTime) music.next = ac.currentTime + 0.05;
     while (music.next < ac.currentTime + 0.3) { playStep(music.step, music.next, spb, boss); music.next += spb; music.step = (music.step + 1) % 64; }
@@ -243,16 +246,20 @@
 
   // ===== 각인 =====
   const ENG = {
-    ret: { name: '귀환', sym: '↺', col: '#4fd1ff', desc: ['멈추면 내게 굴러 온다', '(한 번 쓰면 보통 탄)'] },
+    ret: { name: '귀환', sym: '↺', col: '#4fd1ff', desc: ['멈추고 1.5초 뒤', '내게 천천히 굴러 온다'] },
     boom: { name: '폭발', sym: '✸', col: '#ff6a3d', desc: ['멈출 때 작은 폭발', '(나도 맞는다)'] },
-    trap: { name: '덫', sym: '⚠', col: '#c77dff', desc: ['바닥에 1.5초 놓이면 켜짐', '적이 주우면 터진다(1번)'] },
+    trap: { name: '덫', sym: '⚠', col: '#c77dff', desc: ['바닥에 2.5초 놓이면 켜짐', '적이 주우면 작게 터진다'] },
     pierce: { name: '관통', sym: '➤', col: '#7dff8a', desc: ['적을 한 명', '뚫고 지나간다'] },
     rubber: { name: '고무', sym: '◎', col: '#ff8fd0', desc: ['튕겨도 느려지지 않고', '더 멀리 굴러간다'] },
     magnet: { name: '자석', sym: '∪', col: '#ffe14d', desc: ['바닥에서 가까우면', '주인 쪽으로 끌려온다'] },
     fire: { name: '화염', sym: '♨', col: '#ff9a2a', desc: ['멈춘 자리에 2초 불길', '나도 맞음 · 3초간 못 주움'] },
     ghost: { name: '유령', sym: '☁', col: '#b8c8ff', desc: ['날아갈 때 엄폐물', '한 개를 통과한다'] },
   };
-  const TRAP_ARM = 1.5; // 덫이 켜지기까지 바닥에 놓여 있어야 하는 시간
+  const TRAP_ARM = 2.5; // 덫이 켜지기까지 바닥에 놓여 있어야 하는 시간(6차 측정에서 1.5 → 2.5)
+  const TRAP_R = 30;    // 덫이 적을 맞히는 범위(30+r, 6차 측정에서 60 → 30)
+  const BOOM_R = 45;    // 폭발 각인이 적을 맞히는 범위(45+r, 플레이어는 40+r. 6차 측정에서 60 → 45)
+  const FIRE_R = 8;     // 화염 불길이 적을 맞히는 범위(8+r, 플레이어는 40+r. 6차 측정에서 30 → 15, 검수 뒤 15 → 8)
+  const RET_SPEED = 120, RET_WAIT = 1.5; // 귀환: 굴러 오는 속도, 멈춘 뒤 굴러 오기 시작할 때까지(초)
   const BASE_ENGS = ['ret', 'boom', 'trap', 'pierce', 'rubber'];
   const STAGE_ENG = { 1: 'magnet', 2: 'fire', 3: 'ghost' };
 
@@ -270,19 +277,30 @@
     [[54, 130], [850, 58], [700, 438]],
   ];
   // 방별 물결(적 수가 점점 늘어남, 칼잡이는 한 물결에 최대 1명, 저격수는 4번 방부터) + 10번 두목
-  const T_ = 'thug', K_ = 'knife', S_ = 'sniper';
+  const T_ = 'thug', K_ = 'knife', S_ = 'sniper', V_ = 'vulture', M_ = 'mole';
+  // 1막 술집: 방 1~4 + 5번 방 두목 여섯손가락 잭
   const WAVES = {
     1: [[T_, T_]],
     2: [[T_, T_, T_]],
     3: [[T_, T_], [T_, K_]],
     4: [[T_, T_, S_], [T_, K_]],
-    5: [[T_, T_, K_], [T_, T_, S_]],
-    6: [[T_, T_], [T_, K_, S_], [T_, T_]],
-    7: [[T_, T_, K_], [T_, S_], [T_, T_, K_]],
-    8: [[T_, T_, S_], [T_, T_, K_], [T_, T_, S_]],
-    9: [[T_, T_, K_], [T_, T_, S_], [T_, T_, K_, S_]],
-    10: [['boss']],
+    5: [['boss']],
   };
+  // 2막 모래 협곡: 방 6~9(건달·독수리·두더지) + 10번 방 두목 모래바람 마녀(건달 물결을 부른다)
+  const WAVES2 = {
+    6: [[T_, T_, V_], [T_, M_]],
+    7: [[T_, M_, V_], [T_, M_]],
+    8: [[T_, V_], [T_, M_], [T_, V_]],
+    9: [[T_, V_], [T_, M_], [T_, V_]],
+    10: [['witch'], [T_]],
+  };
+  // 바위 배치(모래 협곡, 틈은 모두 56 이상)
+  const LAYOUTS2 = [
+    [[300, 150, 60, 60], [520, 300, 60, 60], [700, 120, 50, 50], [760, 330, 60, 50]],
+    [[380, 90, 40, 120], [380, 320, 40, 86], [620, 210, 120, 40], [820, 90, 40, 40]],
+    [[260, 300, 120, 40], [480, 120, 40, 100], [640, 300, 40, 100], [780, 160, 60, 40]],
+    [[340, 220, 50, 50], [520, 100, 50, 50], [520, 340, 50, 50], [720, 220, 50, 50]],
+  ];
   // 문 자리(오른쪽 벽 2곳, 위쪽 벽 3곳). 왼쪽(플레이어 시작 쪽)·아래(탄창 판)·오른쪽 아래(터치 발사 버튼)에는 두지 않는다.
   const DOOR_SPOTS = [
     { x: AR.r, y: 110, sx: AR.r - 28, sy: 110, ix: -1, iy: 0 },
@@ -295,16 +313,36 @@
     thug: { hp: 1, r: 17, speed: 165, pick: true, name: '건달', hat: '#46312a' },
     knife: { hp: 2, r: 17, speed: 182, pick: false, name: '칼잡이', hat: '#40283f' },
     sniper: { hp: 1, r: 16, speed: 150, pick: true, name: '저격수', hat: '#2e3b2b' },
-    boss: { hp: 9, r: 25, speed: 165, pick: true, name: '여섯손가락 잭', hat: '#1c1716' },
+    boss: { hp: 9, hp5: 13, r: 25, speed: 165, pick: true, boss: true, name: '여섯손가락 잭', hat: '#1c1716' },
+    vulture: { hp: 1, r: 16, speed: 215, pick: true, fly: true, name: '독수리', hat: '#5a3a1e' },
+    mole: { hp: 2, r: 18, speed: 150, pick: true, name: '두더지', hat: '#6a4a22' },
+    witch: { hp: 7, hp5: 14, r: 24, speed: 160, pick: true, boss: true, name: '모래바람 마녀', hat: '#3a1a2a' },
   };
+
+  // ===== 바닥 법칙(연결 함수): entK = 사람 미끄럼(작을수록 미끄러움), fr·lin = 날아가는 탄 마찰, update(dt) = 매 프레임 바닥 일, canPick(e, b, dt) = 줍기 조건 =====
+  const FLOOR_RULES = {
+    plain: { label: '', entK: 16, fr: 1.15, lin: 45, tile: 'floor', shade: 'rgba(8,5,6,0.32)', tint: 'rgba(25,30,80,0.3)', code: () => `hsl(${22 + rand(-4, 4)},30%,${10 + rand(0, 4)}%)`, update: null, canPick: null, drawTop: null },
+    ice: { label: '얼음 바닥', hudCol: '#9fd8ff', entK: 2.2, fr: 0.4, lin: 12, tile: 'ice', shade: 'rgba(4,8,14,0.45)', tint: 'rgba(180,220,255,0.05)', code: () => `hsl(${200 + rand(-6, 6)},34%,${20 + rand(0, 5)}%)`, cracks: true, update: null, canPick: null, drawTop: null },
+    // 모래(12.8): 바람에 바닥 탄이 구르고, 바닥에 놓인 지 5초 지나면 묻혀 0.5초 서 있어야 줍는다
+    sand: { label: '모래 바닥', hudCol: '#e8c98a', entK: 16, fr: 1.15, lin: 45, tile: 'sand', shade: 'rgba(30,16,6,0.26)', tint: 'rgba(235,200,140,0.10)', bulletEdge: 'rgba(45,22,4,0.9)', code: () => `hsl(${34 + rand(-4, 4)},30%,${13 + rand(0, 4)}%)`, wind: true, update: sandUpdate, canPick: sandCanPick, drawTop: drawWind },
+  };
+  // ===== 지역 자료: 방 배치·등불·물결·특별 바닥 방·두목·바닥 그림 =====
+  const REGIONS = {
+    saloon: { name: '술집', layouts: LAYOUTS, lamps: LAMPS, waves: WAVES, floor: 'plain', obsTile: 'crate', special: { rule: 'ice', pool: [2, 3, 4], count: 1 }, boss: 'boss', winText: '여섯손가락 잭을 쓰러뜨렸다!' },
+    canyon: { name: '모래 협곡', layouts: LAYOUTS2, lamps: LAMPS, waves: WAVES2, floor: 'sand', obsTile: 'rock', special: null, boss: 'witch', winText: '모래바람 마녀를 쓰러뜨렸다!' },
+  };
+  // 막: 방 번호 구간과 지역. 마지막 방이 두목 방.
+  const ACTS = [{ region: 'saloon', first: 1, last: 5 }, { region: 'canyon', first: 6, last: 10 }];
+  const actOf = (n) => ACTS.find((a) => n >= a.first && n <= a.last) || ACTS[ACTS.length - 1];
+  const isBossRoom = (n) => actOf(n).last === n;
 
   // ===== 상태 =====
   const game = {
-    state: 'title', stage: 1, selStage: 1, room: 1, kills: 0, time: 0, iceRoom: 5, ice: false, paused: false,
+    state: 'title', stage: 1, selStage: 1, room: 1, kills: 0, time: 0, ice: false, rule: FLOOR_RULES.plain, region: REGIONS.saloon, paused: false,
     freeze: 0, slow: 0, shake: 0, flash: 0, clearing: false, clearT: 0, overT: 0, won: false, roomT: 0, roomStart: 0,
     cards: null, chosen: null, best: loadBest(), usedTouch: false, newBest: false, clock: 0, lockUntil: 0,
     test: TEST_RUN, unlockMsg: [], run: null, lamps: LAMPS[0],
-    iceRooms: [], wave: 1, waves: 1, waveT: 0, waveWarn: 0, doors: [], waveList: [],
+    special: {}, act: 1, wave: 1, waves: 1, waveT: 0, waveWarn: 0, doors: [], waveList: [],
     hitDirs: [], lastHit: '', pickHints: 0, pickHint: 0, touchRun: false, prevHeld: 6, noAimT: 0,
   };
   const runs = loadRuns();
@@ -358,7 +396,7 @@
     }
   }
   function moveEnt(e, dvx, dvy, dt) {
-    const k = game.ice ? 2.2 : 16;
+    const k = game.rule.entK;
     const a = 1 - Math.exp(-k * dt);
     e.vx += (dvx - e.vx) * a; e.vy += (dvy - e.vy) * a;
     e.x += e.vx * dt; e.y += e.vy * dt;
@@ -431,29 +469,29 @@
   }
 
   // ===== 방 =====
-  function makeFloor(ice) {
+  function makeFloor(rule, reg) {
     const c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2;
     const g = c.getContext('2d'); g.scale(2, 2);
     g.fillStyle = '#120b0e'; g.fillRect(0, 0, W, H);
-    const tile = ice ? IMG.ice : IMG.floor;
+    const tile = IMG[rule.tile];
     if (tile) { // 바닥 그림을 이어 깔고, 탄이 묻히지 않게 코드 바닥 밝기쯤으로 어둡게 덮는다
       const T = 256;
       g.save(); g.beginPath(); g.rect(AR.l, AR.t, AR.r - AR.l, AR.b - AR.t); g.clip();
       for (let y = AR.t; y < AR.b; y += T) for (let x = AR.l; x < AR.r; x += T) g.drawImage(tile, x, y, T, T);
       g.restore();
-      g.fillStyle = ice ? 'rgba(4,8,14,0.45)' : 'rgba(8,5,6,0.32)'; g.fillRect(AR.l, AR.t, AR.r - AR.l, AR.b - AR.t);
+      g.fillStyle = rule.shade; g.fillRect(AR.l, AR.t, AR.r - AR.l, AR.b - AR.t);
     } else for (let y = AR.t; y < AR.b; y += 22) {
       let x = AR.l - rand(0, 120);
       while (x < AR.r) {
         const len = rand(90, 190);
-        g.fillStyle = ice ? `hsl(${200 + rand(-6, 6)},34%,${20 + rand(0, 5)}%)` : `hsl(${22 + rand(-4, 4)},30%,${10 + rand(0, 4)}%)`;
+        g.fillStyle = rule.code();
         const x0 = Math.max(x, AR.l), x1 = Math.min(x + len, AR.r);
         if (x1 > x0) g.fillRect(x0, y, x1 - x0 - 1, Math.min(21, AR.b - y));
         x += len;
       }
     }
-    g.fillStyle = ice ? 'rgba(180,220,255,0.05)' : 'rgba(25,30,80,0.3)'; g.fillRect(AR.l, AR.t, AR.r - AR.l, AR.b - AR.t);
-    if (ice && !tile) {
+    g.fillStyle = rule.tint; g.fillRect(AR.l, AR.t, AR.r - AR.l, AR.b - AR.t);
+    if (rule.cracks && !tile) {
       g.strokeStyle = 'rgba(230,245,255,0.16)'; g.lineWidth = 2;
       for (let i = 0; i < 26; i++) { const x = rand(AR.l, AR.r), y = rand(AR.t, AR.b), l = rand(30, 110); g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y - l * 0.35); g.stroke(); }
     }
@@ -485,9 +523,10 @@
     for (const o of obstacles) {
       g.fillStyle = 'rgba(0,0,0,0.4)'; g.beginPath(); g.ellipse(o.x + o.w / 2 + 5, o.y + o.h / 2 + 7, o.w / 2 + 6, o.h / 2 + 5, 0, 0, 7); g.fill();
       g.fillStyle = '#5e3b20'; g.fillRect(o.x, o.y, o.w, o.h);
-      if (IMG.crate) { // 짧은 변 길이의 정사각형 상자를 이어 붙인다(늘리지 않음, 끝이 안 맞으면 조금 겹침)
+      const ot = IMG[reg.obsTile];
+      if (ot) { // 짧은 변 길이의 정사각형 상자를 이어 붙인다(늘리지 않음, 끝이 안 맞으면 조금 겹침)
         const s = Math.min(o.w, o.h), L = Math.max(o.w, o.h), n = Math.ceil(L / s - 0.001), step = n > 1 ? (L - s) / (n - 1) : 0, horiz = o.w >= o.h;
-        for (let i = 0; i < n; i++) g.drawImage(IMG.crate, horiz ? o.x + i * step : o.x, horiz ? o.y : o.y + i * step, s, s);
+        for (let i = 0; i < n; i++) g.drawImage(ot, horiz ? o.x + i * step : o.x, horiz ? o.y : o.y + i * step, s, s);
         g.fillStyle = 'rgba(10,5,2,0.38)'; g.fillRect(o.x, o.y, o.w, o.h);
         g.strokeStyle = '#2e1a0c'; g.lineWidth = 3; g.strokeRect(o.x + 1.5, o.y + 1.5, o.w - 3, o.h - 3);
       } else {
@@ -511,8 +550,8 @@
   }
   function makeEnemy(type, x, y) {
     const T = ETYPES[type];
-    const hp = type === 'boss' && game.stage >= 5 ? 13 : T.hp;
-    return { type, x, y, vx: 0, vy: 0, r: T.r, hp, maxHp: hp, speed: T.speed, pick: T.pick, held: [], state: 'seek', t: 0, aimAng: Math.PI, aimOff: 0, face: Math.PI, flash: 0, alive: true, seekT: 0, strafe: R() < 0.5 ? 1 : -1, strafeT: srand(1, 3), isPlayer: false, slashFx: 0, dashHit: false, inv: 0 };
+    const hp = T.hp5 && game.stage >= 5 ? T.hp5 : T.hp;
+    return { type, x, y, vx: 0, vy: 0, r: T.r, hp, maxHp: hp, speed: T.speed, pick: T.pick, held: [], state: 'seek', t: 0, aimAng: Math.PI, aimOff: 0, face: Math.PI, flash: 0, alive: true, seekT: 0, strafe: R() < 0.5 ? 1 : -1, strafeT: srand(1, 3), isPlayer: false, slashFx: 0, dashHit: false, inv: 0, fly: !!T.fly, under: false, upT: 0, sweepCd: 5 };
   }
   function newRun(stage, room) {
     for (const b of bullets) b.eng = null;
@@ -520,29 +559,35 @@
     player.maxHp = game.stage === 0 ? 5 : game.stage >= 4 ? 2 : 3; // 0단계(입문): 체력 5(기획 4 → 봇 완주율 58%라 5로, 13장)
     player.hp = player.maxHp; player.alive = true;
     game.kills = 0; game.time = 0; game.paused = false; game.pickHints = 0; game.lastHit = ''; game.touchRun = game.usedTouch; game.newBest = false; game.unlockMsg = [];
-    AIR = mkRng(9);
-    game.iceRooms = shuffle([5, 6, 7, 8, 9], mkRng(0)).slice(0, 2); // 얼음 바닥은 5~9번 방 중 2개
+    AIR = mkRng(9); TAPR = mkRng(12); // TAPR = 톡 흔들림용(적 행동 난수와 따로)
+    game.special = {}; // 특별 바닥 방(지역 자료의 special: 1막 얼음 등). 막마다 씨앗을 따로 쓴다(첫 막은 예전과 같은 mkRng(0)).
+    ACTS.forEach((a, i) => { const sp = REGIONS[a.region].special; if (sp) for (const n of shuffle(sp.pool.slice(), mkRng(i === 0 ? 0 : 300 + i)).slice(0, sp.count)) game.special[n] = sp.rule; });
     game.run = { date: new Date().toISOString(), stage: game.stage, room: 0, won: false, time: 0, roomTimes: [], death: null,
       hitsBy: { '내 탄': 0, '적 탄': 0, '칼': 0, '폭발': 0, '화염': 0 }, stolen: 0, shots: 0, hits: 0, hitShots: 0, engravings: [], test: game.test };
     startRoom(room || 1);
   }
   function startRoom(n) {
-    game.room = n; game.ice = game.iceRooms.includes(n);
+    const act = actOf(n), reg = REGIONS[act.region];
+    game.room = n; game.act = ACTS.indexOf(act) + 1; game.region = reg;
+    game.rule = FLOOR_RULES[game.special[n] || reg.floor]; game.ice = game.rule === FLOOR_RULES.ice;
     R = mkRng(100 + n);
-    const li = n === 1 ? 0 : 1 + Math.floor(R() * (LAYOUTS.length - 1));
-    obstacles = LAYOUTS[li].map((a) => ({ x: a[0], y: a[1], w: a[2], h: a[3] }));
-    game.lamps = n === 1 ? LAMPS[0] : LAMPS[Math.floor(R() * LAMPS.length)];
+    const li = n === 1 ? 0 : 1 + Math.floor(R() * (reg.layouts.length - 1)); // 1번 방(처음 방)은 늘 첫 배치
+    obstacles = reg.layouts[li].map((a) => ({ x: a[0], y: a[1], w: a[2], h: a[3] }));
+    game.lamps = n === 1 ? reg.lamps[0] : reg.lamps[Math.floor(R() * reg.lamps.length)];
     buildBlocked();
     // 문 2~4개 (막히지 않은 자리에서 고름)
-    const nd = n >= LAST_ROOM || WAVES[n].length < 2 ? 0 : n <= 3 ? 2 : n <= 6 ? 3 : 4;
+    // 바람(모래 바닥): 방마다 씨앗으로 방향을 정한다
+    game.wind = game.rule.wind ? (() => { const a = R() * Math.PI * 2; return { x: Math.cos(a), y: Math.sin(a), a }; })() : null;
+    const nd = reg.waves[n].length < 2 ? 0 : isBossRoom(n) ? 2 : n <= 3 ? 2 : n <= 6 ? 3 : 4;
     game.doors = shuffle(DOOR_SPOTS.filter((d) => pointFree(d.sx, d.sy, 27))).slice(0, nd);
-    game.waveList = WAVES[n].map((w) => w.slice());
+    game.waveList = reg.waves[n].map((w) => w.slice());
+    mixWaves(n, game.act, game.waveList);
     if (game.stage >= 5 && n >= 3) game.waveList[game.waveList.length - 1].push('thug'); // 5단계: 3번 방부터 마지막 물결에 적 +1
     game.waves = game.waveList.length; game.wave = 1; game.waveT = 0; game.waveWarn = 0;
-    floorCanvas = makeFloor(game.ice);
+    floorCanvas = makeFloor(game.rule, reg);
     Object.assign(player, { x: 90, y: 248, vx: 0, vy: 0, inv: 0, held: [], shotCd: 0, recoil: 0, aim: 0 });
     for (const b of bullets) {
-      Object.assign(b, { state: 'held', owner: player, vx: 0, vy: 0, bounces: 0, lockT: 0, trapArmed: true, retT: 0, burnT: 0, floorT: 0, x: player.x, y: player.y, ghostObs: null, ghostLeft: 0 });
+      Object.assign(b, { state: 'held', owner: player, vx: 0, vy: 0, bounces: 0, lockT: 0, trapArmed: true, retT: 0, retWait: 0, burnT: 0, floorT: 0, x: player.x, y: player.y, ghostObs: null, ghostLeft: 0, buried: false, sweepT: 0 });
       b.trail.length = 0; b.hitSet.clear(); player.held.push(b);
     }
     sortHeld(player);
@@ -552,17 +597,31 @@
       enemies.push(makeEnemy('thug', 860, 140), makeEnemy('thug', 860, 340));
       for (const type of list.slice(2)) { const p = findSpawn(ETYPES[type].r); enemies.push(makeEnemy(type, p.x, p.y)); }
     } else {
-      list.sort((a, b) => (a === 'boss' ? -1 : b === 'boss' ? 1 : 0));
+      list.sort((a, b) => (ETYPES[a].boss ? -1 : ETYPES[b].boss ? 1 : 0));
       for (const type of list) {
-        if (type === 'boss' && pointFree(820, 248, 31)) { enemies.push(makeEnemy(type, 820, 248)); continue; }
+        if (ETYPES[type].boss && pointFree(820, 248, 31)) { enemies.push(makeEnemy(type, 820, 248)); continue; }
         const p = findSpawn(ETYPES[type].r); enemies.push(makeEnemy(type, p.x, p.y));
       }
     }
     setScene('play');
+    game.actT = n === act.first && game.act > 1 ? 1.5 : 0; // 막이 바뀌면 지역 이름 화면 1.5초
+    game.sweep = null; game.tick = 0;
     game.clearing = false; game.slow = 0; game.freeze = 0; game.flash = 0; game.shake = 0; game.roomT = 0; game.roomStart = game.time;
     game.hitDirs = []; game.pickHint = 0; game.noAimT = 0; game.prevHeld = 6;
     stick.active = false; aimT.active = false;
     fieldT = 0; updateFields();
+  }
+  // 단계별 적 섞임(12.8, 조각 2): 단계가 오르면 2막에 1막 적이, 1막에 2막 적(독수리)이 섞인다
+  function mixWaves(n, act, list) {
+    if (isBossRoom(n)) return;
+    const last = list[list.length - 1];
+    if (act === 2) {
+      if (game.stage >= 2) last.push('knife');                               // 2단계~: 2막 마지막 물결에 칼잡이
+      if (game.stage >= 3 && n >= 7) list[Math.min(1, list.length - 1)].push('sniper'); // 3단계~: 7~9번 방 둘째 물결에 저격수
+    } else {
+      if (game.stage >= 3 && n >= 3) last.push('vulture');                   // 3단계~: 1막 3·4번 방 마지막 물결에 독수리
+      if (game.stage >= 4 && n === 2) last.push('vulture');                  // 4단계~: 2번 방에도 독수리
+    }
   }
   function finishRoom() {
     for (const b of bullets) { // 6발 모두 플레이어에게
@@ -572,7 +631,7 @@
     player.held = bullets.slice();
     fires = [];
     game.run.roomTimes.push(Math.round((game.time - game.roomStart) * 10) / 10);
-    if (game.room >= LAST_ROOM) { showResult(true); return; }
+    if (game.room >= LAST_ROOM) { showResult(true); return; } // 마지막 막의 두목 방
     const pool = BASE_ENGS.concat(game.best.engs);
     game.cards = shuffle(pool.slice(), mkRng(200 + game.room)).slice(0, 3);
     setScene('cards');
@@ -643,7 +702,7 @@
     for (let i = -1; i < enemies.length; i++) {
       const e = i < 0 ? player : enemies[i];
       if (!e.alive || b.hitSet.has(e)) continue;
-      if (!e.isPlayer && e.inv > 0) continue;          // 막 들어온 적은 무적(탄이 지나감)
+      if (!e.isPlayer && (e.inv > 0 || e.under)) continue; // 막 들어온 적은 무적(탄이 지나감), 땅속 두더지도 맞지 않음
       if (e === b.owner && b.bounces < 1) continue;   // 쏜 사람은 한 번 튕긴 뒤부터 맞음
       const dx = e.x - b.x, dy = e.y - b.y, rr = (e.isPlayer ? e.r : e.r * HIT_K) + BR;
       if (dx * dx + dy * dy >= rr * rr) continue;
@@ -689,9 +748,9 @@
   }
   function stopBullet(b) {
     b.vx = 0; b.vy = 0; b.state = 'floor'; b.trail.length = 0;
-    if (b.eng === 'boom') explode(b.x, b.y, false);
+    if (b.eng === 'boom') explode(b.x, b.y, false, BOOM_R);
     if (b.eng === 'fire') { fires.push({ x: b.x, y: b.y, t: 2, hit: new Set() }); SFX.fire(); b.lockT = 3; b.burnT = 3; } // 화염탄은 3초 불타는 동안 아무도 못 주움
-    if (b.eng === 'ret' && player.alive) { b.state = 'return'; b.retT = 4; b.eng = null; } // 귀환: 한 번 돌아오면 보통 탄 // 귀환의 주인은 언제나 플레이어
+    if (b.eng === 'ret' && player.alive) { b.retWait = RET_WAIT; if (RET_WAIT <= 0) { b.state = 'return'; b.retT = 4; } } // 귀환(12.9): 멈추고 RET_WAIT초 뒤 굴러 옴, 일회용 아님. 귀환의 주인은 언제나 플레이어
   }
   function updateBullets(dt) {
     for (const b of bullets) {
@@ -701,7 +760,7 @@
       if (b.state === 'held') { b.x = b.owner.x; b.y = b.owner.y; continue; }
       if (b.state === 'fly') {
         stepBullet(b, dt, true);
-        let fr = game.ice ? 0.4 : 1.15, lin = game.ice ? 12 : 45;
+        let fr = game.rule.fr, lin = game.rule.lin;
         if (b.eng === 'rubber') { fr *= 0.5; lin *= 0.5; } // 고무: 바닥 마찰 절반
         const sp = Math.hypot(b.vx, b.vy);
         let nsp = sp * Math.exp(-fr * dt) - lin * dt;
@@ -713,8 +772,11 @@
         b.retT -= dt;
         if (!o.alive || b.retT <= 0) { b.state = 'floor'; b.vx = b.vy = 0; continue; }
         const d = flowDir(fieldP, b.x, b.y, o.x, o.y);
-        b.vx = d.x * 240; b.vy = d.y * 240;
+        b.vx = d.x * RET_SPEED; b.vy = d.y * RET_SPEED;
         stepBullet(b, dt, false);
+      } else if (b.state === 'floor' && b.retWait > 0) { // 귀환: 기다렸다가 굴러 오기 시작
+        b.retWait -= dt;
+        if (b.retWait <= 0 && player.alive) { b.state = 'return'; b.retT = 4; b.buried = false; }
       } else if (b.state === 'floor' && b.eng === 'magnet') { // 자석: 반지름 80 안이면 주인 쪽으로 천천히(4차 측정 +16%p라 120 → 80, 조각 1-2)
         const o = player; // 자석의 주인은 언제나 플레이어
         if (o.alive && Math.hypot(o.x - b.x, o.y - b.y) < 80) {
@@ -730,43 +792,107 @@
       if (Math.random() < 0.6) particles.push({ x: f.x + rand(-30, 30), y: f.y + rand(-30, 30), vx: rand(-10, 10), vy: rand(-60, -20), life: 0.4, max: 0.4, col: Math.random() < 0.5 ? '#ff7a20' : '#ffc040', size: rand(3, 5) });
       for (let i = -1; i < enemies.length; i++) {
         const e = i < 0 ? player : enemies[i];
-        if (!e.alive || f.hit.has(e)) continue;
+        if (!e.alive || f.hit.has(e) || e.under) continue;
         if (e.isPlayer && f.t > 1.5) continue; // 플레이어는 불길이 생기고 0.5초 뒤부터 맞음. 적이 맞는 범위는 30+r(4차 측정 +17%p라 40 → 30, 조각 1-2)
-        if (Math.hypot(e.x - f.x, e.y - f.y) < (e.isPlayer ? 40 : 30) + e.r) { if (hurt(e, '화염', { x: f.x, y: f.y })) f.hit.add(e); }
+        if (Math.hypot(e.x - f.x, e.y - f.y) < (e.isPlayer ? 40 : FIRE_R) + e.r) { if (hurt(e, '화염', { x: f.x, y: f.y })) f.hit.add(e); }
       }
     }
     fires = fires.filter((f) => f.t > 0);
   }
   function give(e, b) {
-    b.state = 'held'; b.owner = e; b.vx = b.vy = 0; b.trail.length = 0; b.x = e.x; b.y = e.y;
+    b.state = 'held'; b.owner = e; b.vx = b.vy = 0; b.trail.length = 0; b.x = e.x; b.y = e.y; b.buried = false; b.sweepT = 0; b.retWait = 0;
     e.held.push(b);
     if (e.isPlayer) { sortHeld(e); if (b.eng === 'trap') b.trapArmed = true; }
     else game.run.stolen++;
     for (let i = 0; i < 5; i++) particles.push({ x: e.x, y: e.y, vx: rand(-60, 60), vy: rand(-60, 60), life: 0.25, max: 0.25, col: '#ffe9a0', size: 2 });
     SFX.click();
   }
-  function updatePickups() {
+  function updatePickups(dt) {
+    const cp = game.rule.canPick; // 바닥 법칙의 줍기 조건(없으면 닿으면 바로 줍는다)
     for (const b of bullets) {
       if (b.state !== 'floor' && b.state !== 'return') continue;
-      if (player.alive && !(b.burnT > 0) && Math.hypot(player.x - b.x, player.y - b.y) < player.r + BR + 4) { give(player, b); continue; }
+      if (player.alive && !(b.burnT > 0) && Math.hypot(player.x - b.x, player.y - b.y) < player.r + BR + 4 && (!cp || cp(player, b, dt))) { give(player, b); continue; }
       if (b.lockT > 0) continue;
       for (const e of enemies) {
-        if (!e.alive || !e.pick) continue;
+        if (!e.alive || !e.pick || e.under) continue;
         if (Math.hypot(e.x - b.x, e.y - b.y) >= e.r + BR + 4) continue;
-        if (b.eng === 'trap' && b.trapArmed && b.floorT > TRAP_ARM) { // 덫: 바닥에 1.5초 놓인 뒤에만 켜짐, 한 번 터지면 보통 탄
-          b.trapArmed = false; b.lockT = 1.2; b.state = 'floor'; b.vx = b.vy = 0; b.eng = null;
-          explode(b.x, b.y, true);
-        } else give(e, b);
+        if (cp && !cp(e, b, dt)) continue; // 이 적이 아직 파는 중이면 다른 적을 본다
+        enemyTake(e, b);
         break;
       }
     }
   }
-  function explode(x, y, enemiesOnly) {
+  function enemyTake(e, b) {
+    if (b.eng === 'trap' && b.trapArmed && b.floorT > TRAP_ARM) { // 덫: 바닥에 TRAP_ARM초 놓인 뒤에만 켜짐. 터지면 내가 다시 주울 때까지 꺼짐(일회용 아님, 12.9)
+      b.trapArmed = false; b.lockT = 1.2; b.state = 'floor'; b.vx = b.vy = 0;
+      explode(b.x, b.y, true, TRAP_R);
+    } else give(e, b);
+  }
+  // ----- 모래 바닥 법칙(12.8) -----
+  const WIND_SPEED = 12, BURY_T = 5, DIG_T = 0.5;
+  function sandUpdate(dt) { // 바람: 바닥 탄이 초속 12로 구른다(벽·바위에 막히면 멈춤). 바닥에 놓인 지 5초 지나면 묻혀서 더는 구르지 않는다.
+    for (const b of bullets) {
+      if (b.state !== 'floor') { b.buried = false; continue; }
+      if (b.sweepT > 0) continue;
+      if (b.floorT >= BURY_T) { b.buried = true; continue; }
+      if (!game.wind) continue;
+      b.vx = game.wind.x * WIND_SPEED; b.vy = game.wind.y * WIND_SPEED;
+      stepBullet(b, dt, false); b.vx = b.vy = 0;
+    }
+  }
+  function sandCanPick(e, b, dt) { // 묻힌 탄은 그 위에 0.5초 서 있어야 줍는다(플레이어·적 모두). 한 사람이 한 탄씩 판다.
+    if (!b.buried) return true;
+    const cur = e.digB, live = e.digTick >= game.tick - 1; // 지난 프레임이나 이번 프레임에 파던 탄이 있는가
+    // 파던 탄이 아직 묻힌 채 줍는 거리 안이면 그 탄만 판다(두 발이 함께 닿을 때 목표가 번갈아 바뀌어 영영 못 줍던 불량, 조각 2-2 검수)
+    if (cur && cur !== b && live && cur.state === 'floor' && cur.buried && Math.hypot(e.x - cur.x, e.y - cur.y) < e.r + BR + 4) return false;
+    if (cur !== b || !live) { e.digB = b; e.digT = 0; }
+    if (e.digTick !== game.tick) { e.digTick = game.tick; e.digT += dt; }
+    return e.digT >= DIG_T;
+  }
+  // 마녀의 쓸어 보내기: 예고(1.2초) 뒤 방 안의 모든 바닥 탄을 화살표 방향 벽으로 보낸다
+  function updateSweep(dt) {
+    const sw = game.sweep;
+    if (sw && sw.t > 0) {
+      sw.t -= dt;
+      if (sw.t <= 0) {
+        for (const b of bullets) if (b.state === 'floor') { b.sweepT = 1.6; b.sweepDir = sw.dir; b.buried = false; b.floorT = 0; }
+        game.shake = Math.max(game.shake, 0.3); SFX.fire();
+        game.sweep = null;
+      }
+    }
+    for (const b of bullets) {
+      if (!(b.sweepT > 0)) continue;
+      if (b.state !== 'floor') { b.sweepT = 0; continue; }
+      b.sweepT -= dt;
+      const px = b.x, py = b.y;
+      b.vx = b.sweepDir.x * 520; b.vy = b.sweepDir.y * 520;
+      stepBullet(b, dt, false); b.vx = b.vy = 0; b.floorT = 0;
+      if (Math.hypot(b.x - px, b.y - py) < 0.5) b.sweepT = 0; // 벽·바위에 막힘
+      if (Math.random() < 0.3) particles.push({ x: b.x, y: b.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0.35, max: 0.35, dust: rand(3, 6), col: '#b8925a' });
+    }
+  }
+  function lineWide(x1, y1, x2, y2, pad) { // 엄폐물에서 pad만큼 떨어진 곧은 길인가(두더지가 잘 보이는 자리에 솟게)
+    const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 4));
+    for (let i = 1; i < n; i++) { const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n; for (const o of obstacles) if (x > o.x - pad && x < o.x + o.w + pad && y > o.y - pad && y < o.y + o.h + pad) return false; }
+    return true;
+  }
+  function bodySpot(x, y, r) { // 몸(반지름 r)이 들어가는 가장 가까운 자리
+    if (pointFree(x, y, r)) return { x, y };
+    for (let rr = 6; rr < 240; rr += 6) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, nx = x + Math.cos(a) * rr, ny = y + Math.sin(a) * rr; if (pointFree(nx, ny, r)) return { x: nx, y: ny }; }
+    return { x: 480, y: 248 };
+  }
+  // 날던 적이 엄폐물 위에서 쓰러져도 탄이 바위 안에 놓이지 않게, 가장 가까운 빈 자리를 찾는다
+  function freeSpot(x, y) {
+    if (bulletFree(x, y)) return { x, y };
+    for (let rr = 6; rr < 200; rr += 6) for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, nx = x + Math.cos(a) * rr, ny = y + Math.sin(a) * rr; if (bulletFree(nx, ny)) return { x: nx, y: ny }; }
+    return { x: clamp(x, AR.l + BR + 1, AR.r - BR - 1), y: clamp(y, AR.t + BR + 1, AR.b - BR - 1) };
+  }
+  function explode(x, y, enemiesOnly, rad = 60) {
     for (let i = 0; i < 26; i++) { const a = rand(0, 7), s = rand(60, 260); particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.25, 0.5), max: 0.5, col: i % 2 ? '#ff8a3d' : '#ffd36a', size: rand(2, 4) }); }
-    particles.push({ x, y, vx: 0, vy: 0, life: 0.3, max: 0.3, ring: 60, col: enemiesOnly ? '#c77dff' : '#ff6a3d' });
+    particles.push({ x, y, vx: 0, vy: 0, life: 0.3, max: 0.3, ring: rad, col: enemiesOnly ? '#c77dff' : '#ff6a3d' });
     game.shake = Math.max(game.shake, 0.35); SFX.boom();
     if (!enemiesOnly && player.alive && Math.hypot(player.x - x, player.y - y) < 40 + player.r) hurt(player, '폭발', { x, y });
-    for (const e of enemies.slice()) if (e.alive && Math.hypot(e.x - x, e.y - y) < 60 + e.r) hurt(e, '폭발'); // 폭발·화염·덫 범위는 r 기준(적 맞는 거리 확대와 떼어 냄, 12.3)
+    for (const e of enemies.slice()) if (e.alive && !e.under && Math.hypot(e.x - x, e.y - y) < rad + e.r) hurt(e, '폭발'); // 폭발·화염·덫 범위는 r 기준(적 맞는 거리 확대와 떼어 냄, 12.3)
   }
 
   // ===== 피해 (피해를 줬으면 true) =====
@@ -790,12 +916,13 @@
     e.alive = false; game.kills++;
     let k = 0;
     for (const b of e.held) {
-      let x = e.x, y = e.y;
+      let x = e.x, y = e.y, ok = false;
       for (let tries = 0; tries < 8; tries++) {
         const a = (k + tries) * 1.7, nx = e.x + Math.cos(a) * 12, ny = e.y + Math.sin(a) * 12;
-        if (bulletFree(nx, ny)) { x = nx; y = ny; break; }
+        if (bulletFree(nx, ny)) { x = nx; y = ny; ok = true; break; }
       }
-      Object.assign(b, { state: 'floor', owner: null, x, y, vx: 0, vy: 0 }); b.trail.length = 0; k++;
+      if (!ok) ({ x, y } = freeSpot(e.x, e.y)); // 독수리가 바위 위에서 쓰러진 경우 등
+      Object.assign(b, { state: 'floor', owner: null, x, y, vx: 0, vy: 0, floorT: 0, buried: false, sweepT: 0 }); b.trail.length = 0; k++;
     }
     e.held = [];
     // 먼지 + 날아가는 모자
@@ -821,12 +948,13 @@
     for (let i = 1; i < n; i++) { const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n; for (const o of obstacles) if (inBox(x, y, o)) return false; }
     return true;
   }
-  function tapTarget() { // 톡: 곧게 쏴서 맞힐 수 있는 가장 가까운 적(지금 위치, 앞을 내다보지 않음)
+  const TAP_RANGE = 450, TAP_JIT = 10 * Math.PI / 180; // 톡 약화(12.9): 이보다 먼 적은 노리지 않음, 쏠 때 ±10° 흔들림(±6°는 기준 미달이라 팀장이 10°로 정함)
+  function tapTarget() { // 톡: 곧게 쏴서 맞힐 수 있는 가장 가까운 적(지금 위치, 앞을 내다보지 않음), TAP_RANGE 안만
     let best = null, bd = 1e9;
     for (const e of enemies) {
-      if (!e.alive || e.inv > 0) continue;
+      if (!e.alive || e.inv > 0 || e.under) continue;
       const d = Math.hypot(e.x - player.x, e.y - player.y);
-      if (d < bd && lineClear(player.x, player.y, e.x, e.y)) { bd = d; best = e; }
+      if (d < bd && d <= TAP_RANGE && lineClear(player.x, player.y, e.x, e.y)) { bd = d; best = e; }
     }
     return best;
   }
@@ -834,14 +962,14 @@
   function assistAim(a) { // 끌기: 끈 방향 ±8° 안에 적이 있으면 그 적 쪽으로(가장 각도 차가 작은 적)
     let best = a, bd = ASSIST;
     for (const e of enemies) {
-      if (!e.alive || e.inv > 0) continue;
+      if (!e.alive || e.inv > 0 || e.under) continue;
       const ea = Math.atan2(e.y - player.y, e.x - player.x), d = Math.abs(angDiff(ea, a));
       if (d <= bd) { bd = d; best = ea; }
     }
     return best;
   }
   function playerShoot() {
-    if (game.state !== 'play' || game.paused || !player.alive || player.shotCd > 0 || game.roomT < 0.3) return;
+    if (game.state !== 'play' || game.paused || !player.alive || player.shotCd > 0 || game.roomT < 0.3 || game.actT > 0) return;
     if (!player.held.length) return;
     player.shotCd = 0.12;
     const b0 = player.held[0];
@@ -873,12 +1001,12 @@
   // ===== 적 AI: 줍기 → 조준(예고) → 쏘기 → 거리 두기 =====
   function beginAim(e) {
     e.state = 'aim';
-    const enraged = e.type === 'boss' && e.hp <= e.maxHp / 2;
-    let t = e.type === 'sniper' ? 1.0 : e.type === 'boss' ? (enraged ? 0.5 : 0.6) : 0.5;
+    const isB = !!ETYPES[e.type].boss, enraged = isB && e.hp <= e.maxHp / 2;
+    let t = e.type === 'sniper' ? 1.0 : isB ? (enraged ? 0.5 : 0.6) : 0.5;
     if (game.stage >= 3) t = Math.max(0.35, t * 0.8);
     if (game.stage === 0) t *= 1.3; // 0단계(입문): 예고 1.3배
     e.t = t;
-    e.aimOff = e.type === 'thug' ? arand(-0.14, 0.14) : e.type === 'boss' ? arand(-0.05, 0.05) : 0;
+    e.aimOff = e.type === 'thug' || e.type === 'mole' ? arand(-0.14, 0.14) : isB ? arand(-0.05, 0.05) : 0;
     SFX.warn();
   }
   function keepDistance(e, ideal, d, dx, dy) {
@@ -888,7 +1016,7 @@
   }
   function updateEnemy(e, dt) {
     const dx = player.x - e.x, dy = player.y - e.y, d = Math.hypot(dx, dy), angP = Math.atan2(dy, dx);
-    const enraged = e.type === 'boss' && e.hp <= e.maxHp / 2;
+    const isB = !!ETYPES[e.type].boss, enraged = isB && e.hp <= e.maxHp / 2;
     const sp = e.speed * (enraged ? 1.22 : 1);
     e.inv = Math.max(0, e.inv - dt);
     let mv = { x: 0, y: 0 }, spMul = 1;
@@ -908,17 +1036,22 @@
         mv = fleeDir(e.x, e.y, e); spMul = 0.5;
         if (e.t <= 0) e.state = 'seek';
       }
+    } else if (e.type === 'vulture') {
+      mv = vultureMove(e, d);
+    } else if (e.type === 'mole') {
+      mv = moleMove(e, dt, angP);
     } else {
+      if (e.type === 'witch') witchSweep(e, dt);
       if (e.state === 'seek') {
         e.seekT += dt;
-        const want = e.type === 'boss' ? 3 : 1;
+        const want = isB ? 3 : 1;
         if (e.held.length >= want || (e.held.length > 0 && (e.seekT > 2.5 || !anyFloor))) {
           if (e.type === 'sniper') { e.state = 'back'; e.t = 1.6; } else beginAim(e);
         } else if (anyFloor && fieldB[cellOf(e.x, e.y)] < 1e9) {
           let near = null, nd = 1e9;
           for (const b of bullets) if (b.state === 'floor' && b.lockT <= 0) { const q = Math.hypot(b.x - e.x, b.y - e.y); if (q < nd) { nd = q; near = b; } }
           mv = flowDir(fieldB, e.x, e.y, near ? near.x : e.x, near ? near.y : e.y);
-          if (e.type === 'boss') spMul = 1.15;    // 두목은 빠르게 줍는다
+          if (isB) spMul = 1.15;    // 두목은 빠르게 줍는다
           if (game.stage >= 2) spMul *= 1.2;       // 2단계: 1.2배 빨리 주우러 감
         } else {
           mv = keepDistance(e, e.type === 'sniper' ? 340 : 230, d, dx, dy);
@@ -931,9 +1064,9 @@
         if (e.t <= 0) {
           if (!player.alive || !e.held.length) { e.state = 'seek'; e.seekT = 0; }
           else {
-            if (e.type === 'boss' && e.held.length >= 3) { fire(e, e.aimAng - 0.26, 680); fire(e, e.aimAng, 680); fire(e, e.aimAng + 0.26, 680); }
-            else fire(e, e.aimAng, e.type === 'sniper' ? 860 : e.type === 'boss' ? 680 : 620);
-            e.state = 'away'; e.t = e.type === 'boss' ? 0.5 : 0.7;
+            if (isB && e.held.length >= 3) { fire(e, e.aimAng - 0.26, 680); fire(e, e.aimAng, 680); fire(e, e.aimAng + 0.26, 680); }
+            else fire(e, e.aimAng, e.type === 'sniper' ? 860 : isB ? 680 : 620);
+            e.state = 'away'; e.t = isB ? 0.5 : 0.7;
           }
         }
       } else if (e.state === 'away') {
@@ -942,14 +1075,104 @@
       }
     }
     let v = sp * spMul;
-    if (e.type === 'boss') v = Math.min(v, player.speed * 1.05); // 두목 속도 상한
-    moveEnt(e, mv.x * v, mv.y * v, dt);
+    if (isB) v = Math.min(v, player.speed * 1.05); // 두목 속도 상한
+    if (e.fly || e.under) moveFree(e, mv.x * v, mv.y * v, dt); else moveEnt(e, mv.x * v, mv.y * v, dt);
     if (e.state === 'aim' || e.state === 'windup' || e.state === 'dash') e.face = e.aimAng;
     else if (Math.hypot(e.vx, e.vy) > 20) e.face = Math.atan2(e.vy, e.vx);
   }
+  // 나는 적·땅속 적: 엄폐물을 넘고(싸움터 벽만 막음) 미끄러지지 않는다
+  function moveFree(e, dvx, dvy, dt) {
+    const a = 1 - Math.exp(-16 * dt);
+    e.vx += (dvx - e.vx) * a; e.vy += (dvy - e.vy) * a;
+    e.x = clamp(e.x + e.vx * dt, AR.l + e.r, AR.r - e.r); e.y = clamp(e.y + e.vy * dt, AR.t + e.r, AR.b - e.r);
+  }
+  // 독수리(12.8): 가장 가까운 바닥 탄을 낚아채, 가장 가까운 다른 적 위로 날아가 떨어뜨려 준다. 직접 쏘지 않는다.
+  function vultureMove(e, d) {
+    if (e.held.length) {
+      let to = null, td = 1e9;
+      for (const o of enemies) if (o !== e && o.alive && o.pick && !o.under && !o.fly) { const q = Math.hypot(o.x - e.x, o.y - e.y); if (q < td) { td = q; to = o; } }
+      if (to) {
+        if (td < to.r + e.r + 6) { // 떨어뜨려 준다(빼앗긴 탄 수는 처음 낚아챌 때만 센다)
+          for (const b of e.held) { b.owner = to; to.held.push(b); }
+          e.held = []; e.state = 'rest'; e.t = 1.6; SFX.click();
+          return { x: 0, y: 0 };
+        }
+        return norm(to.x - e.x, to.y - e.y);
+      }
+      if (bulletFree(e.x, e.y)) { // 받을 적이 없으면 그 자리에 떨어뜨리고 쉰다
+        for (const b of e.held) Object.assign(b, { state: 'floor', owner: null, x: e.x, y: e.y, vx: 0, vy: 0, floorT: 0, buried: false, sweepT: 0, lockT: 0.6 });
+        e.held = []; e.state = 'rest'; e.t = 2.2;
+        return { x: 0, y: 0 };
+      }
+      return norm(480 - e.x, 248 - e.y);
+    }
+    if (e.t <= 0) {
+      let near = null, nd = 1e9;
+      for (const b of bullets) if (b.state === 'floor' && b.lockT <= 0 && !(b.burnT > 0)) { const q = Math.hypot(b.x - e.x, b.y - e.y); if (q < nd) { nd = q; near = b; } }
+      if (near) { e.state = 'seek'; const n = norm(near.x - e.x, near.y - e.y), k = Math.min(1, nd / 30); return { x: n.x * k, y: n.y * k }; }
+    }
+    // 쉬는 중이거나 바닥 탄이 없으면 플레이어 둘레(약 220)를 돈다
+    const n = norm(e.x - player.x, e.y - player.y), rr = d < 180 ? 0.8 : d > 260 ? -0.8 : 0;
+    return { x: -n.y * e.strafe + n.x * rr, y: n.x * e.strafe + n.y * rr };
+  }
+  // 두더지(12.8): 땅속(맞지 않음)으로 바닥 탄 밑까지 가서 0.7초 흙 들썩임 예고 뒤 솟아 탄을 줍는다. 솟은 뒤 1.5초 동안 땅 위(맞음), 탄이 있으면 건달처럼 예고 뒤 쏜다.
+  // 노릴 바닥 탄이 없거나 탄을 들고 있으면 플레이어에게서 약 190 떨어진 곳에 솟는다(언제나 다시 솟아 쓰러뜨릴 수 있게).
+  function moleMove(e, dt, angP) {
+    if (e.state === 'seek' || e.state === 'under') {
+      if (e.state === 'seek') { e.state = 'under'; e.under = true; e.seekT = 0; e.molT = null; }
+      e.seekT += dt;
+      let tx, ty, near = null, nd = 1e9;
+      if (!e.held.length) for (const b of bullets) if (b.state === 'floor' && b.lockT <= 0 && !(b.burnT > 0)) { const q = Math.hypot(b.x - e.x, b.y - e.y); if (q < nd) { nd = q; near = b; } }
+      if (near) { tx = near.x; ty = near.y; }
+      else if (e.molT && e.seekT - e.molT.t < 3) { tx = e.molT.x; ty = e.molT.y; } // 정한 자리는 3초 동안 고정(프레임마다 반대편으로 뒤집히던 불량, 조각 2-2 검수)
+      else { // 플레이어가 곧게 쏴서 맞힐 수 있는(가운데 엄폐물 없는) 자리를 고른다. 지금 쪽에서 가까운 각도부터.
+        const a0 = Math.atan2(e.y - player.y, e.x - player.x);
+        tx = clamp(player.x + Math.cos(a0) * 190, AR.l + 40, AR.r - 40); ty = clamp(player.y + Math.sin(a0) * 190, AR.t + 40, AR.b - 40);
+        for (let i = 0; i < 16; i++) {
+          const a = a0 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * Math.PI / 8, x = clamp(player.x + Math.cos(a) * 190, AR.l + 40, AR.r - 40), y = clamp(player.y + Math.sin(a) * 190, AR.t + 40, AR.b - 40);
+          if (pointFree(x, y, e.r) && lineWide(player.x, player.y, x, y, 14)) { tx = x; ty = y; break; }
+        }
+        e.molT = { x: tx, y: ty, t: e.seekT };
+      }
+      ({ x: tx, y: ty } = bodySpot(tx, ty, e.r)); // 바위·벽 옆의 탄이면 몸이 들어가는 가장 가까운 자리에서 솟는다
+      const q = Math.hypot(tx - e.x, ty - e.y);
+      if (e.seekT > 4 && !pointFree(e.x, e.y, e.r)) { const p = bodySpot(e.x, e.y, e.r); e.x = p.x; e.y = p.y; } // 4초 안에 못 솟으면 가까운 빈자리에서 반드시 솟는다
+      if ((q < 10 || e.seekT > 4) && e.seekT > 0.8 && pointFree(e.x, e.y, e.r)) { e.state = 'rumble'; e.t = game.stage === 0 ? 0.91 : 0.7; SFX.warn(); return { x: 0, y: 0 }; }
+      const n = norm(tx - e.x, ty - e.y), k = Math.min(1, q / 30);
+      return { x: n.x * k, y: n.y * k };
+    }
+    if (e.state === 'rumble') {
+      if (Math.random() < 0.5) particles.push({ x: e.x + rand(-e.r, e.r), y: e.y + rand(-e.r, e.r), vx: rand(-40, 40), vy: rand(-60, -10), life: 0.3, max: 0.3, col: '#a07a48', size: 3 });
+      if (e.t <= 0) { // 솟음: 그 자리의 바닥 탄(묻힌 탄도)을 줍는다
+        e.under = false; e.state = 'up'; e.upT = 1.5;
+        for (const b of bullets) if (e.alive && b.state === 'floor' && b.lockT <= 0 && !(b.burnT > 0) && Math.hypot(b.x - e.x, b.y - e.y) < e.r + BR + 24) enemyTake(e, b); // 덫에 쓰러지면 더 줍지 않음
+        for (let i = 0; i < 10; i++) { const a = rand(0, 7), sp = rand(30, 120); particles.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5, max: 0.5, dust: rand(5, 9), col: '#9a7448' }); }
+        if (e.alive && e.held.length && player.alive) beginAim(e);
+      }
+      return { x: 0, y: 0 };
+    }
+    e.upT -= dt;
+    if (e.state === 'aim') {
+      e.aimAng = angP + e.aimOff;
+      if (e.t <= 0) { if (e.held.length && player.alive) fire(e, e.aimAng, 620); e.state = 'up'; }
+    } else if (e.upT <= 0) { e.state = 'under'; e.under = true; e.seekT = 0; e.molT = null; }
+    else if (e.held.length && player.alive && e.upT > 0.6) beginAim(e);
+    return { x: 0, y: 0 };
+  }
+  // 모래바람 마녀: 일정 간격(9초, 3단계부터 7초)으로 큰 화살표 예고 1.2초 뒤 바닥 탄을 모두 화살표 방향 벽으로 쓸어 보낸다(플레이어에게서 마녀 쪽으로)
+  function witchSweep(e, dt) {
+    if (game.sweep) return;
+    e.sweepCd -= dt;
+    if (e.sweepCd > 0 || !bullets.some((b) => b.state === 'floor')) return;
+    const vx = e.x - player.x, vy = e.y - player.y;
+    const dir = Math.abs(vx) >= Math.abs(vy) ? { x: Math.sign(vx) || 1, y: 0 } : { x: 0, y: Math.sign(vy) || 1 };
+    game.sweep = { t: game.stage === 0 ? 1.56 : 1.2, max: game.stage === 0 ? 1.56 : 1.2, dir };
+    e.sweepCd = game.stage >= 3 ? 7 : 9;
+    SFX.warn();
+  }
   function separate() {
     for (let i = 0; i < enemies.length; i++) for (let j = i + 1; j < enemies.length; j++) {
-      const a = enemies[i], b = enemies[j]; if (!a.alive || !b.alive) continue;
+      const a = enemies[i], b = enemies[j]; if (!a.alive || !b.alive || a.under || b.under || a.fly || b.fly) continue; // 나는 적·땅속 적은 밀지 않음
       const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), m = a.r + b.r;
       if (d < m && d > 0.01) { const p = (m - d) / 2, nx = dx / d, ny = dy / d; a.x -= nx * p; a.y -= ny * p; b.x += nx * p; b.y += ny * p; collideEnt(a); collideEnt(b); }
     }
@@ -1038,6 +1261,8 @@
     game.shake = Math.max(0, game.shake - rdt * 1.6);
     if (game.state === 'play') {
       if (game.freeze > 0) { game.freeze -= rdt; return; }
+      if (game.actT > 0) { game.actT -= rdt; return; } // 막 이름 화면 동안은 멈춤
+      game.tick++;
       let ts = 1;
       if (game.slow > 0) { game.slow -= rdt; ts = 0.3; }
       const dt = rdt * ts;
@@ -1047,7 +1272,9 @@
       for (const e of enemies) if (e.alive) updateEnemy(e, dt);
       separate();
       updateBullets(dt);
-      updatePickups();
+      if (game.rule.update) game.rule.update(dt);
+      updateSweep(dt);
+      updatePickups(dt);
       updateFires(dt);
       updateHints(dt);
       enemies = enemies.filter((e) => e.alive);
@@ -1089,12 +1316,12 @@
   function drawChar(kind, x, y, r, a, fl, extra) {
     const s = IMG[kind];
     if (!s) { drawCharCode(kind, x, y, r, a, fl, extra); return; }
-    const S = SPR[kind], k = r * SPR_K / S.br, w = s.w * k, h = s.h * k;
-    shadow(x, y, r * 1.3);
+    const S = SPR[kind], dk = S.drawK || 1, k = r * SPR_K * dk / S.br, w = s.w * k, h = s.h * k;
+    if (kind === 'vulture') shadow(x + 10, y + 18, r * 1.1); else shadow(x, y, r * 1.3); // 나는 독수리는 그림자가 떨어져 있다
     // 종류별 색 빛(그림 뒤): 어두운 바닥에서도 종류가 구별되게, 그림은 가리지 않게
-    const halo = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * 2.1);
+    const hr = r * 2.1 * dk, halo = ctx.createRadialGradient(x, y, r * 0.9, x, y, hr);
     halo.addColorStop(0, RING[kind]); halo.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.save(); ctx.globalAlpha *= 0.55; ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, 7); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.globalAlpha *= dk > 1 ? 0.8 : 0.55; ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, hr, 0, 7); ctx.fill(); ctx.restore();
     ctx.save(); ctx.translate(x, y); ctx.rotate(a);
     ctx.drawImage(s.img, -S.ax * w, -S.ay * h, w, h);
     if (fl) { ctx.globalAlpha *= 0.85; ctx.drawImage(s.white, -S.ax * w, -S.ay * h, w, h); } // 맞을 때 하얗게
@@ -1133,6 +1360,9 @@
       ell(x - Math.cos(a) * r * 0.45, y - Math.sin(a) * r * 0.45, r * 1.3, r * 0.85, a, W8 || '#2f7a46', '#b8f0c0', 2.5); // 긴 코트
       ell(x, y, r * 0.75, r * 0.75, 0, W8 || '#2a3a24', '#9ad0a0', 2);    // 모자 챙
       circ(x, y, r * 0.38, W8 || '#1a2616');
+    } else if (kind === 'vulture' || kind === 'mole' || kind === 'witch') { // 그림을 못 불러왔을 때
+      ell(bx, by, r * 1.1, r * 0.9, a, W8 || RING[kind], '#1a1010', 2.5);
+      circ(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6, r * 0.35, W8 || '#2a1a10');
     } else { // 두목
       gunLine(x, y, a - 0.45, r * 0.4, r + 12, '#e8c050', 4.5);
       gunLine(x, y, a + 0.45, r * 0.4, r + 12, '#e8c050', 4.5);
@@ -1148,17 +1378,54 @@
     ctx.restore(); ctx.globalAlpha = 1;
   }
   function drawBullet(b, a) {
+    const edge = game.rule.bulletEdge; // 밝은 바닥(모래): 빛을 키우고 진한 테두리를 둘러 탄이 여전히 가장 밝게
     ctx.globalCompositeOperation = 'lighter';
-    glow(b.x, b.y, b.state === 'fly' ? 26 : 20, a);
+    glow(b.x, b.y, (b.state === 'fly' ? 26 : 20) * (edge ? 1.35 : 1), a);
     ctx.globalCompositeOperation = 'source-over';
+    if (edge) circ(b.x, b.y, BR + 1.5, null, edge, 2.5);
     if (b.eng) {
-      const off = (b.burnT > 0) || (b.eng === 'trap' && b.state === 'floor' && b.floorT <= TRAP_ARM); // 불타는 중(못 주움)·아직 안 켜진 덫
+      const off = (b.burnT > 0) || (b.eng === 'trap' && (!b.trapArmed || (b.state === 'floor' && b.floorT <= TRAP_ARM))); // 불타는 중(못 주움)·아직 안 켜진 덫·터진 뒤 꺼진 덫
       if (off) ctx.setLineDash([3, 3]);
       circ(b.x, b.y, BR + 3, null, b.burnT > 0 ? '#ff5a1a' : ENG[b.eng].col, 2);
       if (off) ctx.setLineDash([]);
     }
     circ(b.x, b.y, BR, '#ffd84d');
     circ(b.x - 1.2, b.y - 1.2, BR * 0.55, '#ffffff');
+  }
+  // 땅속 두더지: 흙 자국(움직이는 흙 둔덕). 솟기 예고(0.7초)에는 흙이 들썩이고 주황 고리가 줄어든다.
+  function drawMoleDirt(e) {
+    const rumble = e.state === 'rumble';
+    const j = rumble ? Math.sin(game.clock * 60) * 2 : 0;
+    ell(e.x + j, e.y + 4, e.r * 1.25, e.r * 0.8, 0, 'rgba(70,46,22,0.85)', 'rgba(190,150,90,0.6)', 2);
+    for (let i = 0; i < 5; i++) { const a = i * 1.26 + e.x * 0.05; circ(e.x + Math.cos(a) * e.r * 0.8 + j, e.y + 4 + Math.sin(a) * e.r * 0.45, 3.5, '#8a6a3c'); }
+    if (rumble) {
+      const k = Math.max(0, e.t) / 0.7;
+      ctx.save(); ctx.setLineDash([6, 5]);
+      circ(e.x, e.y, e.r * 1.6 + 18 * k, null, 'rgba(255,150,40,0.95)', 3.5);
+      ctx.restore();
+      txt('!', e.x, e.y - e.r * 1.6 - 22, 26, '#ffb040');
+    }
+    if (e.held.length) circ(e.x, e.y + 4, 3, '#ffd84d');
+  }
+  // 묻힌 탄: 반쯤 묻혀 흐리다(그래도 바닥보다는 밝게)
+  function drawBuried(b) {
+    ctx.globalCompositeOperation = 'lighter'; glow(b.x, b.y, 13, 0.32); ctx.globalCompositeOperation = 'source-over';
+    ell(b.x, b.y + 2, BR + 4, BR * 0.7, 0, 'rgba(120,88,48,0.9)');
+    ctx.save(); ctx.beginPath(); ctx.rect(b.x - 10, b.y - 10, 20, 10.5); ctx.clip();
+    circ(b.x, b.y, BR, 'rgba(255,216,77,0.75)'); ctx.restore();
+    if (b.eng) circ(b.x, b.y, BR + 3, null, ENG[b.eng].col, 1.5);
+  }
+  // 마녀의 쓸어 보내기 예고: 싸움터를 가로지르는 큰 화살표, 차오르는 막대
+  function drawSweep(sw) {
+    const k = 1 - Math.max(0, sw.t) / sw.max, cx = (AR.l + AR.r) / 2, cy = (AR.t + AR.b) / 2, a = Math.atan2(sw.dir.y, sw.dir.x);
+    const L = sw.dir.x ? 340 : 160, Wd = 70;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+    ctx.globalAlpha = 0.16 + 0.12 * Math.abs(Math.sin(game.clock * 10)); // 플레이어·탄이 비쳐 보이게 반투명(조각 2-2)
+    ctx.fillStyle = '#ff8a2a';
+    ctx.beginPath(); ctx.moveTo(-L, -Wd / 2); ctx.lineTo(L - 70, -Wd / 2); ctx.lineTo(L - 70, -Wd * 1.3); ctx.lineTo(L + 30, 0); ctx.lineTo(L - 70, Wd * 1.3); ctx.lineTo(L - 70, Wd / 2); ctx.lineTo(-L, Wd / 2); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.6; ctx.strokeStyle = '#ffd08a'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.globalAlpha = 0.4; ctx.fillStyle = '#ffe0a0'; ctx.fillRect(-L, -6, (L * 2 - 70) * k, 12);
+    ctx.restore();
   }
   function drawWorld() {
     // 등불
@@ -1183,6 +1450,7 @@
     // 적
     for (const e of enemies) {
       if (!e.alive) continue;
+      if (e.under) { drawMoleDirt(e); continue; } // 땅속 두더지는 그림 대신 흙 자국만
       if (e.held.length) { // 탄을 쥔 적은 빛남(조준 중엔 더 세게, 깜박이지 않음)
         const strong = e.state === 'aim';
         const g = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 2.4);
@@ -1195,7 +1463,7 @@
       if (e.type === 'knife' && e.state === 'windup') {
         ctx.strokeStyle = 'rgba(255,50,40,0.95)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 12, e.aimAng - 0.9, e.aimAng + 0.9); ctx.stroke();
       }
-      if (e.maxHp > 1 && e.type !== 'boss') for (let i = 0; i < e.maxHp; i++) { ctx.fillStyle = i < e.hp ? '#ff5a4a' : '#3a2a2a'; ctx.fillRect(e.x - 9 + i * 10, e.y - e.r - 10, 8, 4); }
+      if (e.maxHp > 1 && !ETYPES[e.type].boss) for (let i = 0; i < e.maxHp; i++) { ctx.fillStyle = i < e.hp ? '#ff5a4a' : '#3a2a2a'; ctx.fillRect(e.x - 9 + i * 10, e.y - e.r - 10, 8, 4); }
       if (e.held.length) circ(e.x + Math.cos(e.face) * (e.r - 3), e.y + Math.sin(e.face) * (e.r - 3), 3.5, '#ffd84d');
     }
     // 플레이어
@@ -1212,7 +1480,11 @@
       ctx.setLineDash([]);
     }
     // 바닥 탄: 인물 그림 밑에 숨지 않게 인물 뒤에 그린다
-    for (const b of bullets) if (b.state === 'floor' || b.state === 'return') drawBullet(b, 0.6 + 0.35 * Math.sin(game.clock * 3 + b.blink));
+    for (const b of bullets) if (b.state === 'floor' || b.state === 'return') {
+      if (b.buried) { drawBuried(b); continue; }
+      drawBullet(b, 0.6 + 0.35 * Math.sin(game.clock * 3 + b.blink));
+    }
+    if (game.sweep) drawSweep(game.sweep);
     // 예고선: 빨강, 깜박이지 않음, 굵고 빛남, 첫 엄폐물에서 끊김
     ctx.lineCap = 'round';
     for (const e of enemies) {
@@ -1220,7 +1492,7 @@
       let lines = [];
       if (e.state === 'aim') {
         const max = e.type === 'sniper' ? 1100 : 300;
-        const angs = e.type === 'boss' && e.held.length >= 3 ? [e.aimAng - 0.26, e.aimAng, e.aimAng + 0.26] : [e.aimAng];
+        const angs = ETYPES[e.type].boss && e.held.length >= 3 ? [e.aimAng - 0.26, e.aimAng, e.aimAng + 0.26] : [e.aimAng];
         lines = angs.map((a) => [a, rayLen(e.x, e.y, a, max)]);
       } else if (e.type === 'knife' && e.state === 'windup') lines = [[e.aimAng, rayLen(e.x, e.y, e.aimAng, 120)]];
       for (const [a, len] of lines) {
@@ -1317,21 +1589,23 @@
       if (b.eng) { const E = ENG[b.eng]; circ(x + sw - 15, y0 + 21, 12, E.col); txt(E.sym, x + sw - 15, y0 + 22, 18, '#1a1010'); }
       if (next) { ctx.fillStyle = '#f6e6b8'; ctx.beginPath(); ctx.moveTo(x + sw / 2 - 9, y0 - 12); ctx.lineTo(x + sw / 2 + 9, y0 - 12); ctx.lineTo(x + sw / 2, y0 - 2); ctx.closePath(); ctx.fill(); }
     }
-    txt((game.room >= LAST_ROOM ? '10번 방 · 두목' : game.room + '번 방/10') + ' · ' + stageName(game.stage), W - 24, 488, 20, '#f0d9b0', 'right');
-    const l2 = [];
-    if (game.room < LAST_ROOM) l2.push('물결 ' + Math.min(game.wave, game.waves) + '/' + game.waves);
-    if (game.ice) l2.push('얼음 바닥');
-    if (l2.length) txt(l2.join(' · '), W - 24, 518, 18, game.waveWarn > 0 ? '#ff7a6a' : game.ice ? '#9fd8ff' : '#c9b8a0', 'right');
-    const boss = enemies.find((e) => e.type === 'boss' && e.alive);
+    // 오른쪽 아래 글은 탄창 6번 칸(오른쪽 끝 713.5) 오른쪽에만: 단계·물결 줄과 바닥 이름 줄을 나눈다(조각 2-2 검수)
+    txt(game.act + '막 · ' + (isBossRoom(game.room) ? game.room + '번 방 · 두목' : game.room + '번 방/' + LAST_ROOM), W - 24, 482, 20, '#f0d9b0', 'right');
+    const l2 = [game.stage === 0 ? '입문' : stageName(game.stage)];
+    if (!isBossRoom(game.room)) l2.push('물결 ' + Math.min(game.wave, game.waves) + '/' + game.waves);
+    txt(l2.join(' · '), W - 24, 506, 18, game.waveWarn > 0 ? '#ff7a6a' : '#c9b8a0', 'right');
+    if (game.rule.label) txt(game.rule.label, W - 24, 528, 18, game.rule.hudCol || '#c9b8a0', 'right');
+    if (game.rule.drawTop && (game.state === 'play' || game.state === 'over')) game.rule.drawTop();
+    const boss = enemies.find((e) => ETYPES[e.type].boss && e.alive);
     if (boss) {
-      txt('여섯손가락 잭', W / 2 - 130, 17, 18, '#f0d9b0', 'right');
+      txt(ETYPES[boss.type].name, W / 2 - 130, 17, 18, '#f0d9b0', 'right');
       ctx.fillStyle = '#2a1a14'; ctx.fillRect(W / 2 - 115, 12, 240, 10);
       ctx.fillStyle = '#d4af37'; ctx.fillRect(W / 2 - 115, 12, 240 * boss.hp / boss.maxHp, 10);
     }
     // 위쪽 벽 띠(싸움터 밖) 글자: 「노릴 적 없음」 > 1번 방 첫 5초 터치 조작 안내 > 1번 방 규칙 한 줄. 안내는 싸움터 위에 그리지 않는다.
-    if (game.state === 'play' && game.noAimT > 0) txt('노릴 적 없음', boss ? 715 : W / 2, 17, 18, '#ff9a8a');
+    if (game.state === 'play' && game.noAimT > 0) txt('노릴 적 없음', boss ? 668 : W / 2, 17, 18, '#ff9a8a'); // 두목 방: 체력 막대(605까지)와 문(736부터) 사이
     else if (game.state === 'play' && game.room === 1) {
-      if (game.touchRun && game.roomT < 5 && !game.paused) txt('왼쪽 끌기: 이동 · 발사 버튼 톡: 자동 조준 · 끌었다 놓기: 직접 조준', W / 2, 17, 18, '#ffe14d');
+      if (game.touchRun && game.roomT < 5 && !game.paused) txt('왼쪽 끌기: 이동 · 발사 톡: 가까운 적 자동 조준 · 끌었다 놓기: 직접 조준', W / 2, 17, 18, '#ffe14d');
       else txt('총알은 여섯 발뿐. 빗나간 총알은 누구나 줍는다.', W / 2, 17, 18, '#ffe9b8');
     }
     if (game.usedTouch && game.state === 'play') {
@@ -1384,6 +1658,28 @@
       for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; ctx.moveTo(t.x + Math.cos(a) * (rr - 4), t.y + Math.sin(a) * (rr - 4)); ctx.lineTo(t.x + Math.cos(a) * (rr + 5), t.y + Math.sin(a) * (rr + 5)); }
       ctx.stroke();
     }
+    ctx.restore();
+  }
+  // 위쪽 벽 띠 왼쪽: 바람 화살표(모래 바닥)
+  function drawWind() {
+    if (!game.wind) return;
+    const x = 120, y = 17, a = game.wind.a;
+    txt('바람', x - 46, y, 18, '#e8c98a');
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.strokeStyle = '#ffe0a0'; ctx.fillStyle = '#ffe0a0'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    const o = (game.clock * 10) % 6;
+    ctx.beginPath(); ctx.moveTo(-14 + o * 0.3, 0); ctx.lineTo(8, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(4, -7); ctx.lineTo(4, 7); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // 막 이름 화면(1.5초): 「2막 · 모래 협곡」
+  function drawActTitle() {
+    const k = game.actT / 1.5, a = Math.min(1, k * 4, (1 - k) * 6 + 0.2);
+    ctx.save(); ctx.globalAlpha = Math.min(1, a);
+    overlay(0.55);
+    rrect(W / 2 - 260, H / 2 - 80, 520, 130, 16); ctx.fillStyle = 'rgba(30,18,8,0.88)'; ctx.fill(); ctx.strokeStyle = '#e8b060'; ctx.lineWidth = 3; ctx.stroke();
+    txt(game.act + '막 · ' + game.region.name, W / 2, H / 2 - 30, 50, '#ffd34d');
+    txt('두목: ' + ETYPES[game.region.boss].name, W / 2, H / 2 + 22, 22, '#f0d9b0', 'center', 'normal');
     ctx.restore();
   }
   function overlay(a) { ctx.fillStyle = `rgba(8,5,8,${a})`; ctx.fillRect(0, 0, W, H); }
@@ -1475,7 +1771,7 @@
   }
   function drawResult() {
     overlay(0.8);
-    txt(game.won ? '여섯손가락 잭을 쓰러뜨렸다!' : '쓰러졌다…', W / 2, 90, 40, game.won ? '#ffd34d' : '#ff7a6a');
+    txt(game.won ? REGIONS[ACTS[ACTS.length - 1].region].winText : '쓰러졌다…', W / 2, 90, 40, game.won ? '#ffd34d' : '#ff7a6a');
     txt('현상금 ' + stageName(game.stage) + ' · 도달한 방: ' + game.room + '번 방', W / 2, 160, 22, '#f0d9b0', 'center', 'normal');
     txt('쓰러뜨린 적: ' + game.kills + ' · 걸린 시간: ' + fmtTime(game.time), W / 2, 196, 22, '#f0d9b0', 'center', 'normal');
     const bt = game.best.stageTimes[game.stage];
@@ -1517,6 +1813,7 @@
     drawStickSilhouette();
     if (game.flash > 0) { ctx.fillStyle = `rgba(255,40,30,${game.flash * 0.8})`; ctx.fillRect(0, 0, W, H); }
     if (game.state === 'play' && game.clearing) txt('방 정리!', W / 2, H / 2 - 40, 48, '#ffd34d');
+    if (game.state === 'play' && game.actT > 0) drawActTitle();
     if (game.paused) drawPause();
     else if (game.state === 'cards') drawCards();
     else if (game.state === 'pickBullet') drawPickBullet();
@@ -1622,7 +1919,7 @@
       if (cancel) return;
       if (Math.hypot(dx, dy) < 15) { // 톡(15px 미만): 자동 조준. 맞힐 적이 없으면 쏘지 않음
         const t = tapTarget();
-        if (t && player.held.length) { player.aim = Math.atan2(t.y - player.y, t.x - player.x); playerShoot(); }
+        if (t && player.held.length) { player.aim = Math.atan2(t.y - player.y, t.x - player.x) + (TAPR() * 2 - 1) * TAP_JIT; playerShoot(); } // 흔들림은 씨앗 난수
         else if (!t && player.held.length && game.state === 'play' && !game.paused) game.noAimT = 1; // 안 쏘고 「노릴 적 없음」을 1초
         return;
       }
@@ -1648,10 +1945,15 @@
     get state() { return game.paused ? 'paused' : game.state; },
     get hp() { return player.hp; },
     get player() { return { x: Math.round(player.x), y: Math.round(player.y), hp: player.hp, held: player.held.map((b) => b.id) }; },
-    get bullets() { return bullets.map((b) => ({ id: b.id, x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, state: b.state, owner: ownerName(b), eng: b.eng })); },
-    get enemies() { return enemies.filter((e) => e.alive).map((e) => ({ type: e.type, x: Math.round(e.x), y: Math.round(e.y), hp: e.hp, state: e.state, held: e.held.map((b) => b.id) })); },
+    get bullets() { return bullets.map((b) => ({ id: b.id, x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, state: b.state, owner: ownerName(b), eng: b.eng, buried: !!b.buried })); },
+    get enemies() { return enemies.filter((e) => e.alive).map((e) => ({ type: e.type, x: Math.round(e.x), y: Math.round(e.y), hp: e.hp, state: e.state, held: e.held.map((b) => b.id), under: !!e.under, inv: e.inv > 0 })); },
     get kills() { return game.kills; },
     get ice() { return game.ice; },
+    get act() { return game.act; },
+    get region() { return game.region.name; },
+    get wind() { return game.wind ? { x: Math.round(game.wind.x * 100) / 100, y: Math.round(game.wind.y * 100) / 100 } : null; },
+    get actTitle() { return game.actT > 0; },
+    get sweep() { return game.sweep ? { t: Math.round(game.sweep.t * 100) / 100, dir: game.sweep.dir } : null; },
     get music() { return music.on; },
     get runs() { return runs.slice(); },
   };
