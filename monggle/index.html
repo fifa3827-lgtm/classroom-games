@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffd6e4">
+<title>몽글 점프</title>
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/" } }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #4a3b5c; --pink: #ff7aa8; --mint: #6fd6c0; --gold: #ffc84a; --card: rgba(255,255,255,.92);
+    --font: "Jua", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #ffe3ec; color: var(--ink); font-family: var(--font);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; }
+  canvas#gl { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+  button { font: inherit; cursor: pointer; border: 0; color: inherit; }
+  .hide { display: none !important; }
+
+  /* 위쪽 점수판 */
+  #hud { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top) + 12px) 16px 0; pointer-events: none; }
+  #score { text-align: center; font-size: 64px; line-height: 1; color: #fff; -webkit-text-stroke: 2px #ff7aa8; paint-order: stroke fill; text-shadow: 0 4px 0 rgba(74,59,92,.3); }
+  #best { display: table; margin: 6px auto 0; font-size: 15px; color: var(--ink); background: rgba(255,255,255,.75); border-radius: 999px; padding: 2px 12px; }
+  .chip { position: fixed; top: calc(env(safe-area-inset-top) + 12px); display: flex; align-items: center; gap: 6px; background: var(--card);
+    border-radius: 999px; padding: 6px 12px; font-size: 18px; box-shadow: 0 3px 0 rgba(74,59,92,.15); pointer-events: auto; }
+  #starChip { left: 12px; }
+  /* 좁은 화면에서는 점수를 단추 줄 아래로 내린다 */
+  @media (max-width: 600px) { #hud { padding-top: calc(env(safe-area-inset-top) + 60px); } }
+  #btnRow { right: 12px; padding: 4px; gap: 4px; z-index: 20; }
+  #btnRow button { width: 38px; height: 38px; border-radius: 50%; background: transparent; font-size: 20px; }
+  #btnRow button:hover { background: #ffe7ef; }
+
+  /* 떠오르는 글자 */
+  #pops { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .pop { position: absolute; transform: translate(-50%, -50%); font-size: 30px; color: #fff; white-space: nowrap;
+    text-shadow: 0 3px 0 rgba(74,59,92,.35); animation: popUp 1.1s ease-out forwards; }
+  .pop { -webkit-text-stroke: 4px rgba(74,59,92,.55); paint-order: stroke fill; }
+  .pop.perfect { color: #fff6b0; font-size: 34px; -webkit-text-stroke: 5px #e2558a; text-shadow: 0 3px 0 rgba(74,59,92,.35), 0 0 16px rgba(255,200,74,.9); }
+  .pop.small { font-size: 22px; }
+  @keyframes popUp { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.6); } 15% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); }
+    30% { transform: translate(-50%, -70%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -190%) scale(1); } }
+  #hint { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 34px); transform: translateX(-50%); background: var(--card);
+    padding: 10px 18px; border-radius: 999px; font-size: 18px; box-shadow: 0 3px 0 rgba(74,59,92,.15); pointer-events: none; white-space: nowrap;
+    transition: opacity .4s; }
+
+  /* 창 */
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .screen.dim { background: rgba(74,59,92,.28); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .panel { background: var(--card); border-radius: 28px; padding: 24px 22px; width: min(360px, 100%); text-align: center;
+    box-shadow: 0 8px 0 rgba(74,59,92,.12), 0 18px 40px rgba(74,59,92,.18); animation: panelIn .35s cubic-bezier(.2,1.4,.4,1); max-height: 100%; overflow: auto; }
+  @keyframes panelIn { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .big { display: block; width: 100%; padding: 14px; border-radius: 18px; font-size: 22px; color: #fff; background: var(--pink); box-shadow: 0 5px 0 #d9507f; margin-top: 12px; }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #d9507f; }
+  .big.mint { background: var(--mint); box-shadow: 0 5px 0 #3fae98; }
+  .big.mint:active { box-shadow: 0 2px 0 #3fae98; }
+  .big.plain { background: #efe8f6; color: var(--ink); box-shadow: 0 5px 0 #d6cbe4; }
+  .big.plain:active { box-shadow: 0 2px 0 #d6cbe4; }
+  .big:disabled { background: #ece6f2; color: #7d7090; box-shadow: 0 5px 0 #d8cfe3; cursor: default; }
+  .big:disabled:active { transform: none; }
+  .row { display: flex; gap: 10px; } .row .big { flex: 1; }
+
+  /* 제목 화면: 아래쪽에 띄워 캐릭터가 보이게 */
+  #title { align-items: flex-end; padding-bottom: calc(env(safe-area-inset-bottom) + 22px); }
+  #title .logo { position: fixed; top: calc(env(safe-area-inset-top) + 9vh); left: 0; right: 0; text-align: center; pointer-events: none; }
+  #title .logo h1 { margin: 0; font-size: clamp(52px, 15vw, 86px); font-weight: normal; color: #fff; letter-spacing: 2px;
+    text-shadow: 0 5px 0 #ff7aa8, 0 10px 0 rgba(74,59,92,.18); animation: bob 2.4s ease-in-out infinite; }
+  #title .logo p { display: inline-block; margin: 10px 0 0; font-size: 19px; color: #fff; background: rgba(74,59,92,.78); border-radius: 999px; padding: 4px 16px; }
+  @keyframes bob { 50% { transform: translateY(-8px) rotate(-1.5deg); } }
+  #title .panel { padding: 16px; }
+  #titleBest { font-size: 16px; opacity: .75; margin-bottom: 2px; }
+
+  #overScore { font-size: 72px; line-height: 1.05; color: var(--pink); }
+  #overMsg { font-size: 20px; margin: 2px 0 6px; min-height: 26px; }
+  #overInfo { font-size: 16px; opacity: .8; }
+  .newbest { display: inline-block; background: var(--gold); color: #fff; border-radius: 999px; padding: 2px 12px; font-size: 16px;
+    animation: wiggle .6s ease-in-out infinite alternate; }
+  @keyframes wiggle { from { transform: rotate(-4deg) scale(1); } to { transform: rotate(4deg) scale(1.08); } }
+
+  /* 친구 도감 */
+  #friendsPanel h2, #gachaPanel h2 { margin: 0 0 4px; font-weight: normal; font-size: 28px; }
+  .sub { font-size: 15px; opacity: .7; margin-bottom: 12px; }
+  #grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .card { background: #fff5f8; border-radius: 18px; padding: 8px 4px 6px; border: 3px solid transparent; position: relative; }
+  .card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
+  .card .nm { font-size: 15px; margin-top: 2px; }
+  .card.locked img { filter: brightness(0) opacity(.18); }
+  .card.locked .nm { opacity: .5; }
+  .card.sel { border-color: var(--pink); background: #ffe7ef; }
+  .card.sel::after { content: "함께해요"; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); background: var(--pink); color: #fff;
+    font-size: 12px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  #gachaBtn small { font-size: 15px; opacity: .9; }
+
+  /* 뽑기 */
+  #gacha { z-index: 12; }
+  #gachaStage { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-left: 16px; padding-right: 16px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 28px); }
+  #gachaText { font-size: 30px; color: #fff; text-shadow: 0 2px 0 rgba(74,59,92,.5); text-align: center; margin-bottom: 14px; min-height: 40px;
+    background: rgba(74,59,92,.82); border-radius: 22px; padding: 10px 22px; max-width: calc(100vw - 32px); }
+  #gachaText:empty { visibility: hidden; }
+  #gachaText small { display: block; font-size: 18px; }
+
+  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center;
+    background: linear-gradient(#ffd6e4, #c9ecff); z-index: 30; font-size: 22px; transition: opacity .5s; }
+  #loadBar { width: 200px; height: 14px; border-radius: 999px; background: rgba(255,255,255,.7); overflow: hidden; }
+  #loadBar i { display: block; height: 100%; width: 0; background: var(--pink); border-radius: 999px; transition: width .2s; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="pops"></div>
+
+<div id="hud" class="hide">
+  <div id="score">0</div>
+  <div id="best"></div>
+</div>
+<div id="starChip" class="chip hide">⭐ <span id="stars">0</span></div>
+<div id="btnRow" class="chip">
+  <button id="btnPause" class="hide" title="잠깐 쉬기" aria-label="잠깐 쉬기">⏸</button>
+  <button id="btnSound" title="소리 켜기/끄기" aria-label="소리">🔊</button>
+  <button id="btnFull" title="전체 화면" aria-label="전체 화면">⛶</button>
+</div>
+<div id="hint" class="hide">화면을 꾹 눌렀다가 떼면 점프!</div>
+
+<div id="title" class="screen">
+  <div class="logo"><h1>몽글 점프</h1><p>꾹~ 눌렀다 떼면 폴짝!</p></div>
+  <div class="panel">
+    <div id="titleBest"></div>
+    <button class="big" id="btnStart">시작하기</button>
+    <button class="big mint" id="btnFriends">친구 도감 · 뽑기</button>
+  </div>
+</div>
+
+<div id="over" class="screen dim hide">
+  <div class="panel">
+    <div id="overNew"></div>
+    <div id="overScore">0</div>
+    <div id="overMsg"></div>
+    <div id="overInfo"></div>
+    <button class="big" id="btnAgain">다시 하기</button>
+    <div class="row">
+      <button class="big mint" id="btnOverFriends">뽑기</button>
+      <button class="big plain" id="btnHome">처음으로</button>
+    </div>
+  </div>
+</div>
+
+<div id="pause" class="screen dim hide">
+  <div class="panel">
+    <h2 style="margin:0 0 6px;font-weight:normal;font-size:28px">잠깐 쉬어요</h2>
+    <div class="sub">지금 점수 <span id="pauseScore">0</span>점</div>
+    <button class="big" id="btnResume">계속하기</button>
+    <button class="big plain" id="btnQuit">처음으로</button>
+  </div>
+</div>
+
+<div id="friends" class="screen dim hide">
+  <div class="panel" id="friendsPanel">
+    <h2>친구 도감</h2>
+    <div class="sub">함께 뛸 친구를 눌러 고르세요</div>
+    <div id="grid"></div>
+    <button class="big mint" id="gachaBtn"></button>
+    <button class="big plain" id="btnFriendsClose">닫기</button>
+  </div>
+</div>
+
+<div id="gacha" class="screen hide">
+  <div id="gachaStage">
+    <div id="gachaText"></div>
+    <div class="row" style="width:min(360px,100%)">
+      <button class="big" id="btnGachaOk" style="visibility:hidden">좋아요!</button>
+    </div>
+  </div>
+</div>
+
+<div id="loading"><div>몽글몽글 준비 중…</div><div id="loadBar"><i></i></div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ---------- 저장 ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('monggle:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('monggle:' + k, JSON.stringify(v)); } catch (e) {} },
+};
+let best = store.get('best', 0), stars = store.get('stars', 0), owned = store.get('owned', ['monggle']), sel = store.get('sel', 'monggle');
+let muted = store.get('muted', false), played = store.get('played', 0);
+if (!owned.includes(sel)) sel = 'monggle';
+
+// ---------- 캐릭터 · 발판 ----------
+const FRIENDS = [
+  { id: 'monggle', file: 'c_monggle', name: '몽글이', say: '몽글몽글~ 같이 뛰자!' },
+  { id: 'kongtteok', file: 'c_kongtteok', name: '콩떡이', say: '해바라기씨 먹고 힘이 불끈!' },
+  { id: 'malang', file: 'c_malang', name: '말랑이', say: '말랑말랑, 통통 튀어요!' },
+  { id: 'posong', file: 'c_pengpeng', name: '뽀송이', say: '목도리 휘날리며 출발!' },
+  { id: 'bungbung', file: 'c_buzz', name: '붕붕이', say: '붕붕~ 날개는 장식이에요' },
+  { id: 'somgureum', file: 'c_cloud', name: '솜구름', say: '구름처럼 사뿐사뿐~' },
+];
+const GACHA_COST = 30;
+// shape: circle(동그란 발판) / box(네모 발판). special: 위에서 잠깐 기다리면 보너스
+const PLATS = [
+  { id: 'cupcake', shape: 'circle', w: 1 },
+  { id: 'macaron', shape: 'circle', w: 1 },
+  { id: 'cake', shape: 'circle', w: 1 },
+  { id: 'mushroom', shape: 'circle', w: .8 },
+  { id: 'drum', shape: 'circle', w: .8, special: 'drum' },
+  { id: 'jelly', shape: 'box', w: .8 },
+  { id: 'gift', shape: 'box', w: .5, special: 'gift' },
+  { id: 'musicbox', shape: 'circle', w: .5, special: 'music' },
+];
+const CHAR_H = 1.25;          // 캐릭터 키
+const MAX_DIST = 4.6;        // 가장 멀리 뛰는 거리
+const CHARGE_SPEED = 3.0;    // 1초 누르면 늘어나는 거리
+const MODEL_YAW = 0;         // 모델 앞쪽이 +z 가 아니면 여기서 돌린다
+
+// ---------- 화면 ----------
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
+const CAM_OFF = new THREE.Vector3(-6.2, 9, 6.2);
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0xffd0e0, 1.5);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -8; sun.shadow.camera.right = 8; sun.shadow.camera.top = 8; sun.shadow.camera.bottom = -8;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 40;
+sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+
+// 하늘: 점수에 따라 아침 → 낮 → 노을 → 밤
+const SKIES = [
+  { top: 0xffc4d8, bot: 0xc8ecff, sea: 0xfff2f7, light: 0xffffff, hemi: 1.5, sun: 2.2 },   // 아침
+  { top: 0x8fd3ff, bot: 0xe6f7ff, sea: 0xf4fbff, light: 0xffffff, hemi: 1.6, sun: 2.4 },   // 낮
+  { top: 0xff9a7a, bot: 0xffd9a0, sea: 0xffe6d0, light: 0xffe0c0, hemi: 1.3, sun: 2.0 },   // 노을
+  { top: 0x2b2a63, bot: 0x7a6bc2, sea: 0x9a8fd8, light: 0xc9c4ff, hemi: 1.0, sun: 1.3 },   // 밤
+];
+const skyGeo = new THREE.SphereGeometry(90, 32, 16);
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false,
+  uniforms: { top: { value: new THREE.Color() }, bot: { value: new THREE.Color() }, night: { value: 0 }, time: { value: 0 } },
+  vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform vec3 top; uniform vec3 bot; uniform float night; uniform float time; varying vec3 vP;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+    void main(){ float t = clamp(vP.y * .9 + .35, 0., 1.); vec3 c = mix(bot, top, t);
+      vec2 g = floor(vP.xz / max(vP.y, .05) * 40.); float s = step(.985, h(g)) * smoothstep(.15, .6, vP.y);
+      s *= .6 + .4 * sin(time * 2. + h(g + 3.) * 30.);
+      c += vec3(s) * night; gl_FragColor = vec4(c, 1.); }`,
+});
+const sky = new THREE.Mesh(skyGeo, skyMat);
+scene.add(sky);
+// 아래쪽 구름 바다
+const seaMat = new THREE.MeshLambertMaterial({ color: 0xfff2f7, transparent: true, opacity: .85 });
+const sea = new THREE.Mesh(new THREE.CircleGeometry(80, 48), seaMat);
+sea.rotation.x = -Math.PI / 2; sea.position.y = -14;
+sea.visible = false; // 아래는 하늘 색 + 작은 구름만 보이게
+const puffGeo = new THREE.SphereGeometry(1, 16, 10);
+const puffMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: .9 });
+const puffs = new THREE.Group(); scene.add(puffs);
+for (let i = 0; i < 12; i++) {
+  const g = new THREE.Group();
+  for (let k = 0; k < 4; k++) {
+    const m = new THREE.Mesh(puffGeo, puffMat); const r = .6 + Math.random() * .8;
+    m.scale.set(r * 1.3, r * .7, r); m.position.set(k * 1.5 - 2 + Math.random(), Math.random() * .4, Math.random() - .5); g.add(m);
+  }
+  g.userData.base = new THREE.Vector3((Math.random() - .5) * 50, -9 - Math.random() * 3, (Math.random() - .5) * 50);
+  g.userData.ph = Math.random() * 6;
+  puffs.add(g);
+}
+const skyNow = { top: new THREE.Color(), bot: new THREE.Color(), sea: new THREE.Color(), light: new THREE.Color(), hemi: 1.5, sun: 2.2, night: 0 };
+function skyTarget(score) {
+  const f = (score / 60) % SKIES.length, i = Math.floor(f), j = (i + 1) % SKIES.length;
+  const t = THREE.MathUtils.smoothstep(f - i, .65, 1);
+  const a = SKIES[i], b = SKIES[j], c = (x, y) => new THREE.Color(x).lerp(new THREE.Color(y), t);
+  return { top: c(a.top, b.top), bot: c(a.bot, b.bot), sea: c(a.sea, b.sea), light: c(a.light, b.light),
+    hemi: THREE.MathUtils.lerp(a.hemi, b.hemi, t), sun: THREE.MathUtils.lerp(a.sun, b.sun, t),
+    night: (i === 3 ? 1 - t : 0) + (j === 3 ? t : 0) };
+}
+function applySky(target, k) {
+  skyNow.top.lerp(target.top, k); skyNow.bot.lerp(target.bot, k); skyNow.sea.lerp(target.sea, k); skyNow.light.lerp(target.light, k);
+  skyNow.hemi += (target.hemi - skyNow.hemi) * k; skyNow.sun += (target.sun - skyNow.sun) * k; skyNow.night += (target.night - skyNow.night) * k;
+  skyMat.uniforms.top.value.copy(skyNow.top); skyMat.uniforms.bot.value.copy(skyNow.bot); skyMat.uniforms.night.value = skyNow.night;
+  seaMat.color.copy(skyNow.sea); puffMat.color.copy(new THREE.Color(0xffffff).lerp(skyNow.sea, .5));
+  hemi.intensity = skyNow.hemi; hemi.color.copy(skyNow.light); sun.intensity = skyNow.sun; sun.color.copy(skyNow.light);
+  scene.fog = scene.fog || new THREE.Fog(0xffffff, 30, 75); scene.fog.color.copy(skyNow.bot);
+}
+applySky(skyTarget(0), 1);
+
+// ---------- 모델 불러오기 ----------
+const proto = {};           // 이름 → { obj, h, w, d }
+const thumbs = {};
+function normalize(root, height) {
+  // 바닥 가운데를 (0,0,0)에 두고 키를 맞춘다
+  const box = new THREE.Box3().setFromObject(root), size = box.getSize(new THREE.Vector3());
+  const s = height / size.y;
+  root.scale.setScalar(s);
+  const b2 = new THREE.Box3().setFromObject(root), c = b2.getCenter(new THREE.Vector3());
+  root.position.x -= c.x; root.position.z -= c.z; root.position.y -= b2.min.y;
+  const wrap = new THREE.Group(); wrap.add(root);
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.material) o.material.side = THREE.FrontSide; } });
+  const sz = new THREE.Box3().setFromObject(wrap).getSize(new THREE.Vector3());
+  return { obj: wrap, h: sz.y, w: sz.x, d: sz.z };
+}
+function fallbackChar(color) {
+  const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color, roughness: .6 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.38, 24, 16), m); body.scale.y = .9; body.position.y = .36;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.34, 24, 16), m); head.position.y = .8;
+  const eye = new THREE.MeshBasicMaterial({ color: 0x222222 });
+  [-.12, .12].forEach(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 8), eye); e.position.set(x, .84, .3); g.add(e); });
+  g.add(body, head); g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return { obj: g, h: 1.1, w: .8, d: .8 };
+}
+const FALLBACK_COLORS = [0xffb3c8, 0xffe08a, 0xa8e6cf, 0xb8c8ff, 0xffc89a, 0xe0c8ff, 0xc8f0ff, 0xffd0a0];
+function fallbackPlat(p, i) {
+  const m = new THREE.MeshStandardMaterial({ color: FALLBACK_COLORS[i % FALLBACK_COLORS.length], roughness: .5 });
+  const geo = p.shape === 'box' ? new THREE.BoxGeometry(2, 1, 2) : new THREE.CylinderGeometry(1, 1, 1, 40);
+  const mesh = new THREE.Mesh(geo, m); mesh.position.y = .5; mesh.castShadow = mesh.receiveShadow = true;
+  const g = new THREE.Group(); g.add(mesh); return { obj: g, h: 1, w: 2, d: 2 };
+}
+async function loadAll() {
+  const loader = new GLTFLoader(), bar = document.querySelector('#loadBar i');
+  const list = [...FRIENDS.map(f => ['c', f.file]), ...PLATS.map(p => ['p', 'p_' + p.id]), ['p', 'p_capsule']];
+  let done = 0;
+  await Promise.all(list.map(([kind, file], i) => new Promise(res => {
+    loader.load('models/' + file + '.glb', g => {
+      proto[file] = normalize(g.scene, kind === 'c' ? CHAR_H : 1); done++; bar.style.width = (done / list.length * 100) + '%'; res();
+    }, undefined, () => {
+      proto[file] = kind === 'c' ? fallbackChar(FALLBACK_COLORS[i % 8]) : fallbackPlat(PLATS.find(p => 'p_' + p.id === file) || PLATS[0], i);
+      done++; bar.style.width = (done / list.length * 100) + '%'; res();
+    });
+  })));
+}
+function cloneOf(file) { return proto[file].obj.clone(true); }
+
+// ---------- 소리 (WebAudio로 직접 만든다) ----------
+let ac = null, master = null;
+function audio() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = muted ? 0 : .5; master.connect(ac.destination); } catch (e) {} }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function tone(freq, dur, type = 'sine', vol = .3, when = 0, slideTo = 0) {
+  if (!audio()) return; const t = ac.currentTime + when;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .02);
+}
+let chargeOsc = null, chargeGain = null;
+function chargeStart() {
+  if (!audio()) return; chargeStop();
+  chargeOsc = ac.createOscillator(); chargeGain = ac.createGain(); chargeOsc.type = 'triangle';
+  chargeOsc.frequency.setValueAtTime(220, ac.currentTime); chargeOsc.frequency.linearRampToValueAtTime(880, ac.currentTime + MAX_DIST / CHARGE_SPEED);
+  chargeGain.gain.setValueAtTime(0, ac.currentTime); chargeGain.gain.linearRampToValueAtTime(.07, ac.currentTime + .08);
+  chargeOsc.connect(chargeGain); chargeGain.connect(master); chargeOsc.start();
+}
+function chargeStop() { if (chargeOsc) { try { chargeGain.gain.setTargetAtTime(0, ac.currentTime, .02); chargeOsc.stop(ac.currentTime + .1); } catch (e) {} chargeOsc = null; } }
+const SND = {
+  jump() { tone(300, .25, 'sine', .25, 0, 700); },
+  land() { tone(180, .12, 'sine', .35, 0, 90); },
+  perfect(c) { const base = [523, 587, 659, 698, 784, 880, 988, 1047][Math.min(c - 1, 7)]; tone(base, .25, 'triangle', .25); tone(base * 1.5, .3, 'sine', .15, .06); },
+  fall() { tone(700, .7, 'sine', .25, 0, 120); },
+  star() { tone(1320, .12, 'square', .08); tone(1760, .2, 'square', .07, .07); },
+  drum() { tone(110, .3, 'sine', .5, 0, 55); tone(220, .08, 'triangle', .2); },
+  gift() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, .25, 'triangle', .2, i * .08)); },
+  music() { [659, 784, 880, 784, 659, 523, 587, 659].forEach((f, i) => tone(f, .35, 'sine', .18, i * .18)); tone(1319, 1.6, 'sine', .04); },
+  fanfare() { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, .3, 'triangle', .22, i * .11)); },
+  shake() { tone(400 + Math.random() * 200, .06, 'square', .05); },
+  click() { tone(660, .06, 'sine', .15); },
+};
+
+// ---------- 효과 (반짝이 · 고리) ----------
+const fx = [];
+const sparkGeo = new THREE.OctahedronGeometry(.07, 0);
+function sparkles(pos, color, n = 18, speed = 3) {
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color, transparent: true }));
+    m.position.copy(pos); const a = Math.random() * Math.PI * 2, up = 1 + Math.random() * 2.5;
+    m.userData = { v: new THREE.Vector3(Math.cos(a) * speed * (.4 + Math.random() * .6), up * speed * .6, Math.sin(a) * speed * (.4 + Math.random() * .6)), life: .9, max: .9, spin: Math.random() * 10 };
+    scene.add(m); fx.push(m);
+  }
+}
+function ring(pos, color) {
+  const m = new THREE.Mesh(new THREE.RingGeometry(.3, .42, 48), new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.copy(pos); m.position.y += .03;
+  m.userData = { ring: true, life: .6, max: .6 }; scene.add(m); fx.push(m);
+}
+function updateFx(dt) {
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const m = fx[i], u = m.userData; u.life -= dt; const k = Math.max(u.life / u.max, 0);
+    if (u.ring) { const s = 1 + (1 - k) * 4; m.scale.set(s, s, s); m.material.opacity = k; }
+    else { u.v.y -= 9 * dt; m.position.addScaledVector(u.v, dt); m.rotation.x += u.spin * dt; m.rotation.y += u.spin * dt; m.material.opacity = k; m.scale.setScalar(.5 + k); }
+    if (u.life <= 0) { scene.remove(m); m.geometry !== sparkGeo && m.geometry.dispose(); m.material.dispose(); fx.splice(i, 1); }
+  }
+}
+const popsEl = document.getElementById('pops');
+function pop(text, worldPos, cls = '') {
+  const v = worldPos.clone().project(camera);
+  const el = document.createElement('div'); el.className = 'pop ' + cls; el.textContent = text;
+  el.style.left = ((v.x + 1) / 2 * innerWidth) + 'px'; el.style.top = ((1 - v.y) / 2 * innerHeight) + 'px';
+  popsEl.appendChild(el);
+  // 화면 밖으로 나가지 않게 안쪽으로 당긴다
+  const hw = el.offsetWidth / 2 * 1.15 + 8, x = parseFloat(el.style.left), y = parseFloat(el.style.top);
+  el.style.left = Math.min(Math.max(x, hw), innerWidth - hw) + 'px'; el.style.top = Math.max(y, 110) + 'px';
+  setTimeout(() => el.remove(), 1150);
+}
+
+// ---------- 게임 상태 ----------
+const world = new THREE.Group(); scene.add(world);
+let plats = [], cur = 0, hero = null, heroWrap = null;
+let state = 'title';     // title · ready · charging · jumping · falling · over · gacha
+let score = 0, combo = 0, starsThisRun = 0, jumps = 0;
+let chargeAt = 0, paused = false, restY = 0, standY = 0, chargeT = 0, jump = null, idleT = 0, waitT = 0, bonusDone = false;
+const camLook = new THREE.Vector3(), camGoal = new THREE.Vector3();
+let starMesh = null;
+const starGeo = (() => {
+  const s = new THREE.Shape(); for (let i = 0; i < 10; i++) { const r = i % 2 ? .12 : .28, a = i / 10 * Math.PI * 2 + Math.PI / 2; i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  return new THREE.ExtrudeGeometry(s, { depth: .08, bevelEnabled: true, bevelThickness: .04, bevelSize: .03, bevelSegments: 2 }).center();
+})();
+const starMat = new THREE.MeshStandardMaterial({ color: 0xffd84a, emissive: 0xffb000, emissiveIntensity: .45, roughness: .3, metalness: .2 });
+
+function platRadius() { return THREE.MathUtils.lerp(1.05, .62, Math.min(score / 200, 1)); }
+function makePlat(type, pos, r) {
+  const p = PLATS.find(x => x.id === type), pr = proto['p_' + type];
+  const g = new THREE.Group(), model = pr.obj.clone(true);
+  // 지름(또는 한 변)이 2r 이 되도록 맞추고, 너무 높으면 납작하게
+  const s = (2 * r) / Math.max(pr.w, pr.d);
+  model.scale.set(s, Math.min(s, 1.9 / pr.h), s);
+  g.add(model); g.position.copy(pos); world.add(g);
+  const top = pr.h * model.scale.y;
+  return { type, shape: p.shape, special: p.special, r, top, g, model, baseScaleY: model.scale.y, wob: 0, star: false };
+}
+function pickType() {
+  let total = PLATS.reduce((a, p) => a + p.w, 0), x = Math.random() * total;
+  for (const p of PLATS) { x -= p.w; if (x <= 0) return p.id; }
+  return PLATS[0].id;
+}
+function addNext() {
+  const last = plats[plats.length - 1];
+  const dir = Math.random() < .5 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, -1);
+  const r = platRadius() * (.85 + Math.random() * .3);
+  let type = pickType(); if (type === last.type) type = pickType();
+  const gap = last.r + r + .3 + Math.random() * Math.min(1.2 + score * .02, 2.2);
+  const d = Math.min(gap, MAX_DIST - .3);
+  const pos = last.g.position.clone().addScaledVector(dir, d);
+  const p = makePlat(type, pos, r); p.dir = dir;
+  // 처음 등장 애니메이션: 위에서 톡 떨어진다
+  p.g.position.y = 3; p.drop = 0;
+  if (Math.random() < .3 && !p.special) addStar(p);
+  plats.push(p);
+}
+function addStar(p) {
+  const m = new THREE.Mesh(starGeo, starMat); m.castShadow = true;
+  m.position.set(0, p.top + .9, 0); p.g.add(m); p.star = m;
+}
+function setHero(id) {
+  const f = FRIENDS.find(x => x.id === id) || FRIENDS[0];
+  if (heroWrap) world.remove(heroWrap);
+  heroWrap = new THREE.Group(); hero = cloneOf(f.file); heroWrap.add(hero); world.add(heroWrap);
+}
+function resetWorld() {
+  for (const p of plats) world.remove(p.g); plats = []; cur = 0;
+  score = 0; combo = 0; starsThisRun = 0; jumps = 0; bonusDone = false; waitT = 0;
+  const first = makePlat('macaron', new THREE.Vector3(0, 0, 0), 1.1); first.dir = new THREE.Vector3(1, 0, 0); plats.push(first);
+  addNext(); plats[1].g.position.y = 0; plats[1].drop = 1;
+  setHero(sel);
+  heroWrap.position.set(0, first.top, 0); restY = first.top; hero.scale.set(1, 1, 1); hero.rotation.set(0, 0, 0);
+  faceTo(plats[1].g.position, true);
+  camGoal.copy(midPoint()); camLook.copy(camGoal);
+  updateScore();
+}
+function midPoint() { const a = plats[cur].g.position, b = plats[cur + 1] ? plats[cur + 1].g.position : a; return a.clone().add(b).multiplyScalar(.5); }
+function faceTo(target, instant) {
+  const d = target.clone().sub(heroWrap.position); const yaw = Math.atan2(d.x, d.z) + MODEL_YAW;
+  heroWrap.userData.yaw = yaw; if (instant) heroWrap.rotation.y = yaw;
+}
+// 발판 모델에 위에서 광선을 쏘아 (x,z) 자리의 실제 윗면 높이를 찾는다. 모델이 없는 자리면 null
+const ray = new THREE.Raycaster(), DOWN = new THREE.Vector3(0, -1, 0);
+function surfaceY(p, x, z) {
+  const sy = p.model.scale.y, py = p.g.position.y;
+  p.model.scale.y = p.baseScaleY; p.g.position.y = 0; p.g.updateMatrixWorld(true);
+  ray.set(new THREE.Vector3(x, 10, z), DOWN);
+  const hit = ray.intersectObject(p.model, true)[0];
+  p.model.scale.y = sy; p.g.position.y = py; p.g.updateMatrixWorld(true);
+  return hit ? hit.point.y : null;
+}
+function inside(p, x, z, margin = 0) {
+  const dx = x - p.g.position.x, dz = z - p.g.position.z;
+  if (p.shape === 'box') return Math.abs(dx) <= p.r + margin && Math.abs(dz) <= p.r + margin;
+  return Math.hypot(dx, dz) <= p.r + margin;
+}
+
+// ---------- 조작 ----------
+function press() {
+  audio();
+  if (state !== 'ready' || paused) return;
+  state = 'charging'; chargeT = 0; standY = restY; chargeAt = performance.now(); chargeStart();
+  document.getElementById('hint').style.opacity = 0;
+}
+function release() {
+  if (state !== 'charging') return;
+  chargeStop(); chargeT = (performance.now() - chargeAt) / 1000;
+  const dist = Math.min(chargeT * CHARGE_SPEED, MAX_DIST);
+  const from = heroWrap.position.clone();
+  const tgt = plats[cur + 1];
+  // 다음 발판 쪽으로 뛴다 (옆으로 비껴 있으면 그만큼 보정한 방향)
+  const dir = tgt.g.position.clone().sub(from); dir.y = 0; dir.normalize();
+  const to = from.clone().addScaledVector(dir, dist);
+  const onTop = (p, y) => (y !== null && y > p.top * .55 ? y : null);   // 받침 접시 같은 낮은 곳은 발판 밖으로 친다
+  const yNext = onTop(tgt, surfaceY(tgt, to.x, to.z)), yCur = yNext === null ? onTop(plats[cur], surfaceY(plats[cur], to.x, to.z)) : null;
+  const landNext = yNext !== null, landCur = yCur !== null;
+  to.y = landNext ? yNext : landCur ? yCur : Math.max(tgt.top, plats[cur].top) * .5;
+  const axis = new THREE.Vector3(dir.z, 0, -dir.x); // 앞으로 공중제비 도는 축
+  jump = { from, to, t: 0, dur: .42 + dist * .03, h: 1.2 + dist * .25, axis, landNext, landCur, dir };
+  state = 'jumping'; SND.jump(); jumps++;
+  // 발판이 통 튀어 오른다
+  plats[cur].wob = 1;
+}
+const isUI = e => e.target.closest && e.target.closest('button, .panel, .chip');
+addEventListener('pointerdown', e => { if (isUI(e)) return; if (state === 'ready') { e.preventDefault(); press(); } });
+addEventListener('pointerup', release);
+addEventListener('pointercancel', release);
+// 앱을 바꾸거나 화면이 꺼지면: 누르던 것은 취소하고, 최고 기록은 미리 저장한다
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden') return;
+  if (state === 'charging') setPause(true);
+  if (score > best) { best = score; store.set('best', best); }
+});
+addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    if (!$('over').classList.contains('hide') && $('friends').classList.contains('hide') && canRestart) { e.preventDefault(); startGame(); return; }
+    if (state === 'title' && $('friends').classList.contains('hide') && !e.repeat) { e.preventDefault(); startGame(); return; }
+    if (e.code === 'Space' && !e.repeat) { e.preventDefault(); press(); }
+  }
+});
+addEventListener('keyup', e => { if (e.code === 'Space') release(); });
+addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- 착지 ----------
+function landed() {
+  const j = jump; jump = null;
+  heroWrap.position.copy(j.to); restY = j.to.y; hero.rotation.set(0, 0, 0);
+  if (j.landNext) {
+    cur++;
+    const p = plats[cur], dx = j.to.x - p.g.position.x, dz = j.to.z - p.g.position.z;
+    const off = p.shape === 'box' ? Math.max(Math.abs(dx), Math.abs(dz)) : Math.hypot(dx, dz);
+    const top = new THREE.Vector3(j.to.x, j.to.y + 1.3, j.to.z);
+    if (off < p.r * .28) {
+      combo++; const gain = Math.min(combo * 2, 16); score += gain;
+      SND.perfect(combo); ring(new THREE.Vector3(p.g.position.x, p.top, p.g.position.z), 0xffffff);
+      sparkles(top.clone().setY(j.to.y + .3), combo > 3 ? 0xffd84a : 0xffffff, 14 + combo * 3);
+      pop(combo > 1 ? `퍼펙트 ×${combo}  +${gain}` : `퍼펙트! +${gain}`, top, 'perfect');
+    } else {
+      combo = 0; score += 1; SND.land(); pop('+1', top, 'small');
+    }
+    p.wob = 1.2; hero.scale.set(1.25, .7, 1.25);
+    if (p.star) { p.g.remove(p.star); p.star = false; stars++; starsThisRun++; store.set('stars', stars); SND.star();
+      sparkles(top.clone().setY(j.to.y + .8), 0xffd84a, 16); pop('⭐ +1', top.clone().setY(j.to.y + 2), 'small'); updateStars(); }
+    if ((p.special === 'gift' || p.special === 'music') && !store.get('found_' + p.special, false)) setTimeout(() => { if (plats[cur] === p && state === 'ready' && !bonusDone) pop('어? 잠깐 기다려 볼까…?', heroWrap.position.clone().setY(heroWrap.position.y + 1.8), 'small'); }, 700);
+    if (p.special === 'drum') { SND.drum(); score += 3; pop('둥! +3', top.clone().setY(j.to.y + 1.9), 'small'); p.wob = 2; }
+    waitT = 0; bonusDone = false;
+    updateScore();
+    addNext();
+    // 지나간 발판은 정리
+    while (cur > 6) { world.remove(plats[0].g); plats.shift(); cur--; }
+    faceTo(plats[cur + 1].g.position);
+    camGoal.copy(midPoint());
+    state = 'ready';
+  } else if (j.landCur) {
+    combo = 0; SND.land(); hero.scale.set(1.2, .75, 1.2); plats[cur].wob = 1; state = 'ready';
+    pop('조금 더 세게!', new THREE.Vector3(j.to.x, j.to.y + 1.3, j.to.z), 'small');
+  } else {
+    // 떨어짐: 아깝게 빗나갔는지 본다
+    const near = inside(plats[cur + 1], j.to.x, j.to.z, .45);
+    const pastTarget = j.to.clone().sub(plats[cur + 1].g.position).dot(j.dir) > 0;
+    state = 'falling'; SND.fall();
+    jump = { fall: true, t: 0, v: new THREE.Vector3(j.dir.x * 1.2, 2, j.dir.z * 1.2), spin: (Math.random() - .5) * 8 };
+    lastMiss = near ? (pastTarget ? '아깝다! 살짝 멀었어요' : '아깝다! 살짝 짧았어요') : (pastTarget ? '너무 멀리 뛰었어요' : '조금 더 꾹 눌러 봐요');
+  }
+}
+let lastMiss = '';
+
+// 받침이 있으면 「을」, 없으면 「를」
+const josa = w => ((w.charCodeAt(w.length - 1) - 0xAC00) % 28 ? '을' : '를');
+
+// ---------- 화면 전환 ----------
+const $ = id => document.getElementById(id);
+function show(id, on) { $(id).classList.toggle('hide', !on); }
+function updateScore() { $('score').textContent = score; $('best').textContent = '최고 ' + Math.max(best, score); }
+function updateStars() { $('stars').textContent = stars; }
+function startGame() {
+  SND.click(); show('title', false); show('over', false); show('friends', false);
+  resetWorld(); show('hud', true); show('starChip', true); show('btnPause', true);
+  played++; store.set('played', played);
+  const h = $('hint'); show('hint', true); h.style.opacity = played <= 3 ? 1 : 0;
+  state = 'ready';
+}
+let canRestart = false;
+function gameOver() {
+  state = 'over'; show('btnPause', false);
+  const isNew = score > best; if (isNew) { best = score; store.set('best', best); }
+  $('overScore').textContent = score;
+  $('overNew').innerHTML = isNew && score > 0 ? '<span class="newbest">새 기록!</span>' : '';
+  $('overMsg').textContent = lastMiss;
+  const need = GACHA_COST - stars;
+  $('overInfo').textContent = `이번 판 별 ${starsThisRun}개 · 모은 별 ${stars}개` + (owned.length < FRIENDS.length ? (need > 0 ? ` · 뽑기까지 ${need}개` : ' · 뽑기 가능!') : '');
+  $('btnOverFriends').textContent = (stars >= GACHA_COST && owned.length < FRIENDS.length) ? '🎁 뽑기!' : '친구 도감';
+  show('over', true); canRestart = false; setTimeout(() => canRestart = true, 700);
+  if (isNew && score > 0) setTimeout(SND.fanfare, 250);
+}
+function goTitle() {
+  SND.click(); show('over', false); show('hud', false); show('starChip', false); show('hint', false); show('btnPause', false);
+  resetWorld(); state = 'title'; show('title', true); refreshTitle();
+}
+function refreshTitle() { $('titleBest').textContent = best ? `최고 기록 ${best}점 · 별 ${stars}개` : '발판 한가운데에 내리면 퍼펙트!'; }
+
+// 친구 도감
+function openFriends() {
+  SND.click(); renderFriends(); show('friends', true);
+}
+function renderFriends() {
+  const grid = $('grid'); grid.innerHTML = '';
+  for (const f of FRIENDS) {
+    const has = owned.includes(f.id), c = document.createElement('button');
+    c.className = 'card' + (has ? '' : ' locked') + (sel === f.id ? ' sel' : '');
+    c.innerHTML = `<img src="models/thumb_${f.file}.webp" alt=""><div class="nm">${has ? f.name : '???'}</div>`;
+    c.onclick = () => { if (!has) { SND.shake(); return; } sel = f.id; store.set('sel', sel); SND.click(); renderFriends(); if (state === 'title' || state === 'over') { setHero(sel); const p = plats[cur]; heroWrap.position.set(p.g.position.x, p.top, p.g.position.z); restY = p.top; faceTo(plats[cur + 1].g.position, true); } };
+    grid.appendChild(c);
+  }
+  const left = FRIENDS.length - owned.length, b = $('gachaBtn');
+  if (left === 0) { b.innerHTML = '친구를 모두 모았어요! 🎉'; b.disabled = true; }
+  else { b.disabled = stars < GACHA_COST; b.innerHTML = `캡슐 뽑기 ⭐${GACHA_COST}<br><small>지금 별 ${stars}개 · 남은 친구 ${left}명</small>`; }
+}
+
+// 뽑기
+let gachaObj = null, capsule = null, gachaFriend = null, gachaT = 0, gachaPhase = 0, prevState = 'title';
+const gachaGroup = new THREE.Group(); scene.add(gachaGroup); gachaGroup.visible = false;
+function doGacha() {
+  if (state === 'gacha') return;   // 연타로 두 번 뽑히지 않게
+  const left = FRIENDS.filter(f => !owned.includes(f.id)); if (!left.length || stars < GACHA_COST) return;
+  stars -= GACHA_COST; store.set('stars', stars); updateStars();
+  gachaFriend = left[Math.floor(Math.random() * left.length)];
+  owned.push(gachaFriend.id); store.set('owned', owned);
+  prevState = state; state = 'gacha';
+  show('friends', false); show('over', false); show('title', false); show('gacha', true); show('hud', false);
+  $('btnGachaOk').style.visibility = 'hidden'; $('gachaText').innerHTML = '두근두근…';
+  // 뽑기 무대를 하늘 높이 따로 만든다
+  gachaGroup.clear(); gachaGroup.visible = true; world.visible = false;
+  gachaGroup.position.set(0, 0, 0);
+  const machine = cloneOf('p_capsule'); machine.scale.setScalar(2.2); machine.position.set(0, 0, -1.4); gachaGroup.add(machine);
+  const base = makeGround(); gachaGroup.add(base);
+  const cm = [new THREE.MeshStandardMaterial({ color: 0xff7aa8, roughness: .25 }), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .25 })];
+  capsule = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.SphereGeometry(.42, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), cm[0]);
+  const bot = new THREE.Mesh(new THREE.SphereGeometry(.42, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), cm[1]);
+  top.castShadow = bot.castShadow = true; capsule.add(top, bot); capsule.userData = { top, bot };
+  capsule.position.set(.9, 2.2, .6); gachaGroup.add(capsule);
+  gachaObj = null; gachaT = 0; gachaPhase = 0;
+  camGoal.set(0, .9, 0); camLook.copy(camGoal);
+}
+function makeGround() {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, .4, 48), new THREE.MeshStandardMaterial({ color: 0xffe7ef, roughness: .8 }));
+  m.position.y = -.2; m.receiveShadow = true; return m;
+}
+function updateGacha(dt) {
+  gachaT += dt; const c = capsule;
+  if (gachaPhase === 0) { // 굴러 떨어진다
+    const t = Math.min(gachaT / .6, 1); c.position.y = THREE.MathUtils.lerp(2.2, .42, t * t); c.position.x = THREE.MathUtils.lerp(.9, .3, t);
+    if (t >= 1) { gachaPhase = 1; gachaT = 0; SND.land(); }
+  } else if (gachaPhase === 1) { // 흔들흔들
+    c.rotation.z = Math.sin(gachaT * 30) * .25 * Math.min(gachaT, 1); c.position.y = .42 + Math.abs(Math.sin(gachaT * 15)) * .08;
+    if (Math.random() < dt * 14) SND.shake();
+    if (gachaT > 1.4) { gachaPhase = 2; gachaT = 0; SND.fanfare();
+      gachaObj = cloneOf(gachaFriend.file); gachaObj.scale.setScalar(.01); gachaObj.position.set(.3, 0, .2); gachaGroup.add(gachaObj);
+      sparkles(new THREE.Vector3(.3, .6, .2), 0xffd84a, 40, 4); sparkles(new THREE.Vector3(.3, .6, .2), 0xff9ac0, 30, 3.5); ring(new THREE.Vector3(.3, .02, .2), 0xffffff);
+      $('gachaText').innerHTML = `${gachaFriend.name}${josa(gachaFriend.name)} 만났어요!<small>${gachaFriend.say}</small>`;
+      setTimeout(() => { $('btnGachaOk').style.visibility = 'visible'; }, 700);
+    }
+  } else { // 캡슐이 열리고 친구가 뿅
+    c.userData.top.position.y += dt * 4; c.userData.top.rotation.z -= dt * 6; c.userData.bot.position.y -= dt * 1.5;
+    c.userData.top.material.opacity = 1;
+    const t = Math.min(gachaT / .5, 1), s = t < 1 ? THREE.MathUtils.lerp(.01, 1.5, 1 - Math.pow(1 - t, 3)) * (1 + Math.sin(t * Math.PI) * .2) : 1.5;
+    gachaObj.scale.setScalar(s); gachaObj.position.y = Math.abs(Math.sin(gachaT * 3)) * .25; gachaObj.rotation.y = gachaT * 1.2;
+    if (gachaT > .5) c.visible = false;
+  }
+}
+function closeGacha() {
+  SND.click(); show('gacha', false); gachaGroup.visible = false; gachaGroup.clear(); world.visible = true;
+  sel = gachaFriend.id; store.set('sel', sel);
+  setHero(sel); heroWrap.position.copy(new THREE.Vector3(plats[cur].g.position.x, plats[cur].top, plats[cur].g.position.z)); restY = plats[cur].top;
+  if (plats[cur + 1]) faceTo(plats[cur + 1].g.position, true);
+  camGoal.copy(midPoint()); camLook.copy(camGoal);
+  state = prevState === 'over' ? 'over' : 'title';
+  if (state === 'over') { goTitle(); } else { show('title', true); refreshTitle(); }
+  openFriends();
+}
+
+function setPause(on) {
+  if (on && (state === 'over' || state === 'falling' || state === 'title' || state === 'gacha')) return;
+  if (on && state === 'charging') { chargeStop(); state = 'ready'; const p = plats[cur]; p.model.scale.y = p.baseScaleY; heroWrap.position.y = restY; hero.scale.set(1, 1, 1); }
+  paused = on; SND.click(); $('pauseScore').textContent = score; show('pause', on);
+}
+$('btnPause').onclick = () => setPause(true);
+$('btnResume').onclick = () => setPause(false);
+$('btnQuit').onclick = () => { if (score > best) { best = score; store.set('best', best); } paused = false; show('pause', false); goTitle(); };
+addEventListener('keydown', e => { if ((e.code === 'Escape' || e.code === 'KeyP') && !$('hud').classList.contains('hide')) setPause(!paused); });
+$('btnStart').onclick = startGame;
+$('btnAgain').onclick = startGame;
+$('btnHome').onclick = goTitle;
+$('btnFriends').onclick = openFriends;
+$('btnOverFriends').onclick = openFriends;
+$('btnFriendsClose').onclick = () => { SND.click(); show('friends', false); if (state === 'title') refreshTitle(); };
+$('gachaBtn').onclick = doGacha;
+$('btnGachaOk').onclick = closeGacha;
+$('btnSound').onclick = e => { e.currentTarget.blur(); muted = !muted; store.set('muted', muted); $('btnSound').textContent = muted ? '🔇' : '🔊'; if (audio() && master) master.gain.value = muted ? 0 : .5; };
+$('btnSound').textContent = muted ? '🔇' : '🔊';
+$('btnFull').onclick = e => { e.currentTarget.blur();
+  const de = document.documentElement;
+  if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  else if (de.requestFullscreen) de.requestFullscreen().catch(() => {}); else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();
+};
+if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) $('btnFull').classList.add('hide');
+
+// ---------- 크기 ----------
+function resize() {
+  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h;
+  // 세로 화면에서는 조금 더 멀리서 본다
+  camera.fov = w < h ? 46 : 30; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+// ---------- 매 프레임 ----------
+const clock = new THREE.Clock();
+let elapsed = 0, titleLift = 1;
+function frame() {
+  const dt = Math.min(clock.getDelta(), 1 / 20); elapsed += dt;
+  skyMat.uniforms.time.value = elapsed;
+  for (const g of puffs.children) { const b = g.userData.base; g.position.set(b.x + camLook.x + Math.sin(elapsed * .1 + g.userData.ph) * 2, b.y + Math.sin(elapsed * .5 + g.userData.ph) * .2, b.z + camLook.z); }
+  sky.position.copy(camLook); sea.position.x = camLook.x; sea.position.z = camLook.z;
+  applySky(skyTarget(state === 'title' ? 0 : score), dt * 1.2);
+
+  if (state === 'gacha') updateGacha(dt);
+  else if (heroWrap && !paused) {
+    // 몸 돌리기
+    let dy = (heroWrap.userData.yaw || 0) - heroWrap.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); heroWrap.rotation.y += dy * Math.min(dt * 12, 1);
+    if (state === 'charging') {
+      chargeT = (performance.now() - chargeAt) / 1000; const k = Math.min(chargeT * CHARGE_SPEED / MAX_DIST, 1);
+      hero.scale.set(1 + k * .25, 1 - k * .45, 1 + k * .25);
+      const p = plats[cur]; p.model.scale.y = p.baseScaleY * (1 - k * .22);
+      heroWrap.position.y = standY * (1 - k * .22);
+      hero.position.x = Math.sin(elapsed * 60) * .015 * k;   // 부르르
+    } else if (state === 'jumping') {
+      const j = jump; j.t += dt; const t = Math.min(j.t / j.dur, 1);
+      heroWrap.position.lerpVectors(j.from, j.to, t); heroWrap.position.y = THREE.MathUtils.lerp(j.from.y, j.to.y, t) + Math.sin(t * Math.PI) * j.h;
+      // 공중제비
+      // 세상 기준 축(j.axis)으로 돌린 것을 몸(heroWrap) 기준으로 바꾼다
+      const q = new THREE.Quaternion().setFromAxisAngle(j.axis, -t * Math.PI * 2);
+      const yawQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), heroWrap.rotation.y);
+      hero.quaternion.copy(yawQ.clone().invert().multiply(q).multiply(yawQ));
+      hero.scale.lerp(new THREE.Vector3(.9, 1.15, .9), Math.min(dt * 20, 1));
+      hero.position.x = 0;
+      // 퍼펙트가 이어지면 반짝이 꼬리
+      if (combo >= 2 && Math.random() < .7) sparkles(heroWrap.position.clone().setY(heroWrap.position.y + .5), [0xff9ac0, 0xffd84a, 0x9ad8ff, 0xc8b0ff][Math.floor(Math.random() * 4)], 1, .6);
+      const p = plats[cur]; p.model.scale.y += (p.baseScaleY - p.model.scale.y) * Math.min(dt * 20, 1);
+      if (t >= 1) landed();
+    } else if (state === 'falling') {
+      const j = jump; j.t += dt; j.v.y -= 14 * dt; heroWrap.position.addScaledVector(j.v, dt);
+      hero.rotation.z += j.spin * dt; hero.rotation.x += j.spin * .6 * dt;
+      if (j.t > 1.1) { jump = null; gameOver(); }
+    } else {
+      // 숨쉬기
+      idleT += dt; const b = Math.sin(idleT * 3) * .03;
+      hero.scale.lerp(new THREE.Vector3(1 - b * .5, 1 + b, 1 - b * .5), Math.min(dt * 10, 1)); hero.position.x = 0;
+      // 제목 화면에서는 카메라 쪽을 보며 고개를 살랑살랑
+      if (state === 'title') heroWrap.userData.yaw = Math.sin(elapsed * .6) * .6 + Math.atan2(CAM_OFF.x, CAM_OFF.z) + MODEL_YAW;
+      // 특별 발판 위에서 기다리기
+      if (state === 'ready' && plats[cur].special && plats[cur].special !== 'drum' && !bonusDone) {
+        waitT += dt;
+        if (waitT > 2) {
+          bonusDone = true; const p = plats[cur], at = new THREE.Vector3(heroWrap.position.x, heroWrap.position.y + 1.6, heroWrap.position.z);
+          store.set('found_' + p.special, true);
+          if (p.special === 'gift') { score += 10; SND.gift(); stars += 2; starsThisRun += 2; store.set('stars', stars); updateStars();
+            sparkles(at, 0xff9ac0, 30, 3.5); sparkles(at, 0xffd84a, 20, 3); pop('선물 발견! +10 ⭐+2', at, 'perfect'); p.wob = 2; }
+          else { score += 5; SND.music(); sparkles(at, 0xc8b0ff, 26, 2.5); pop('♪ 오르골 +5', at, 'perfect'); p.wob = 1.5; p.spin = 3; }
+          updateScore();
+        }
+      }
+    }
+  }
+  // 발판 흔들림 · 떨어지는 등장 · 별 돌기
+  for (const p of plats) {
+    if (p.drop !== undefined && p.drop < 1) { p.drop = Math.min(p.drop + dt * 3.2, 1); const t = p.drop; p.g.position.y = (1 - t) * (1 - t) * 3 - Math.sin(t * Math.PI) * .0; if (t >= 1) p.wob = .8; }
+    if (p.wob > 0) { p.wob = Math.max(p.wob - dt * 2.5, 0); if (!(state === 'charging' && p === plats[cur])) p.model.scale.y = p.baseScaleY * (1 + Math.sin(p.wob * 18) * .06 * p.wob);
+      if (p === plats[cur] && heroWrap && (state === 'ready' || state === 'title' || state === 'over')) heroWrap.position.y = restY * p.model.scale.y / p.baseScaleY; }
+    if (p.spin) { p.model.rotation.y += p.spin * dt; p.spin = Math.max(p.spin - dt * .8, 0); }
+    if (p.star) { p.star.rotation.y += dt * 2.5; p.star.position.y = p.top + .9 + Math.sin(elapsed * 3) * .1; }
+  }
+  updateFx(dt);
+
+  // 카메라
+  camLook.lerp(camGoal, Math.min(dt * 3, 1));
+  const off = state === 'gacha' ? new THREE.Vector3(0, 2.6, 7.5) : CAM_OFF;
+  // 제목 화면에서는 장면을 조금 아래로 내려 제목과 겹치지 않게
+  titleLift += ((state === 'title' ? 1 : 0) - titleLift) * Math.min(dt * 4, 1);
+  const look = camLook.clone(); look.y += titleLift * 1.1;
+  camera.position.copy(look).add(off); camera.lookAt(look);
+  sun.position.copy(camLook).add(new THREE.Vector3(-4, 10, 6)); sun.target.position.copy(camLook);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+// ---------- 시작 ----------
+await loadAll();
+// 도감 그림이 없으면 화면에서 직접 찍는다
+resetWorld(); refreshTitle(); updateStars();
+const ld = $('loading'); ld.style.opacity = 0; setTimeout(() => ld.remove(), 500);
+requestAnimationFrame(frame);
+window.__mg = { get state() { return state; }, get score() { return score; }, plats: () => plats, cur: () => cur };
+</script>
+</body>
+</html>
