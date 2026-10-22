@@ -73,6 +73,7 @@
   #title .logo p { display: inline-block; margin: 10px 0 0; font-size: 19px; color: #fff; background: rgba(74,59,92,.78); border-radius: 999px; padding: 4px 16px; }
   @keyframes bob { 50% { transform: translateY(-8px) rotate(-1.5deg); } }
   #title .panel { padding: 16px; }
+  #title .row .big { font-size: 18px; white-space: nowrap; padding: 12px 6px; }
   #titleBest { font-size: 16px; opacity: .75; margin-bottom: 2px; }
 
   #overScore { font-size: 72px; line-height: 1.05; color: var(--pink); }
@@ -105,6 +106,61 @@
   #gachaText:empty { visibility: hidden; }
   #gachaText small { display: block; font-size: 18px; }
 
+  /* 도입 장면 */
+  #story { z-index: 14; align-items: flex-end; padding-bottom: calc(env(safe-area-inset-bottom) + 22px); cursor: pointer; }
+  #storyCard { background: rgba(74,59,92,.88); color: #fff; border-radius: 26px; padding: 18px 20px 14px; width: min(440px, 100%);
+    text-align: center; box-shadow: 0 10px 30px rgba(74,59,92,.3); }
+  #storyText { font-size: 21px; line-height: 1.45; min-height: 92px; word-break: keep-all; display: flex; align-items: center; justify-content: center; }
+  #storyPics { min-height: 54px; }
+  #storyText b { color: #ffd84a; font-weight: normal; }
+  #storyPics { display: flex; justify-content: center; gap: 6px; margin: 4px 0 8px; }
+  #storyPics img { width: 54px; height: 54px; object-fit: contain; animation: pop2 .5s cubic-bezier(.2,1.6,.4,1) both; }
+  #storyPics img.sil { filter: brightness(0) invert(1) opacity(.55); }
+  @keyframes pop2 { from { transform: scale(0); } to { transform: scale(1); } }
+  #storyNav { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 16px; }
+  #storyNav button { background: rgba(255,255,255,.16); border-radius: 999px; padding: 8px 16px; color: #fff; }
+  #storyNav .next { background: var(--pink); }
+  .dots { display: flex; gap: 6px; } .dots i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .3; }
+  .dots i.on { opacity: 1; }
+
+  /* 게임 방법 */
+  #howto { z-index: 16; }
+  #howto .panel { width: min(380px, 100%); }
+  #howto h2 { margin: 0; font-weight: normal; font-size: 26px; }
+  #howPic { height: 150px; margin: 12px 0 6px; border-radius: 20px; background: linear-gradient(#cfeeff, #ffe3ec); position: relative; overflow: hidden; }
+  #howText { font-size: 17px; line-height: 1.5; min-height: 76px; word-break: keep-all; }
+  #howText b { color: var(--pink); font-weight: normal; }
+  #howto .dots { justify-content: center; margin: 10px 0 2px; color: var(--pink); }
+  .hp { position: absolute; }
+  .hp img { width: 100%; height: 100%; object-fit: contain; }
+  /* 1 꾹 누르기 */
+  .h1 .hero { left: calc(50% - 40px); bottom: 34px; width: 80px; height: 80px; transform-origin: 50% 100%; animation: squash 1.6s ease-in-out infinite; }
+  .h1 .finger { left: calc(50% + 30px); top: 8px; font-size: 40px; animation: pressF 1.6s ease-in-out infinite; }
+  .h1 .bar { left: 20%; right: 20%; bottom: 14px; height: 10px; border-radius: 99px; background: rgba(255,255,255,.8); overflow: hidden; }
+  .h1 .bar i { display: block; height: 100%; background: var(--pink); animation: fill 1.6s ease-in-out infinite; }
+  @keyframes squash { 0%,10% { transform: scale(1,1); } 70% { transform: scale(1.25,.6); } 80%,100% { transform: scale(1,1); } }
+  @keyframes pressF { 0%,10% { transform: translateY(-6px); } 20%,70% { transform: translateY(6px); } 80%,100% { transform: translateY(-6px); } }
+  @keyframes fill { 0%,10% { width: 0; } 70% { width: 100%; } 80%,100% { width: 0; } }
+  /* 2 떼면 폴짝 */
+  .plat { width: 70px; height: 26px; border-radius: 50%; background: #ffb3c8; box-shadow: 0 8px 0 #e993ae; bottom: 26px; }
+  .h2 .p1 { left: 10%; } .h2 .p2 { right: 10%; background: #ffe08a; box-shadow: 0 8px 0 #e2c264; }
+  .h2 .hero { width: 56px; height: 56px; left: calc(10% + 7px); bottom: 44px; animation: hop 2s cubic-bezier(.4,0,.6,1) infinite; }
+  @keyframes hop { 0%,15% { transform: translate(0,0) rotate(0); } 50% { transform: translate(var(--half), -36px) rotate(180deg); }
+    85%,100% { transform: translate(var(--full), 0) rotate(360deg); } }
+  /* 3 퍼펙트 */
+  .h3 .target { left: calc(50% - 70px); bottom: 20px; width: 140px; height: 54px; border-radius: 50%; background: #ffb3c8; box-shadow: 0 8px 0 #e993ae; }
+  .h3 .target::after { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 14px; transform: translate(-50%,-50%); border-radius: 50%; background: #fff; box-shadow: 0 0 0 6px rgba(255,255,255,.45); }
+  .h3 .hero { left: calc(50% - 30px); bottom: 44px; width: 60px; height: 60px; animation: drop 1.8s ease-in infinite; }
+  .h3 .ptxt { left: 0; right: 0; top: 12px; text-align: center; font-size: 24px; color: #fff6b0; -webkit-text-stroke: 4px #e2558a; paint-order: stroke fill; animation: ptxt 1.8s infinite; }
+  @keyframes drop { 0% { transform: translateY(-80px); } 40%,100% { transform: translateY(0); } }
+  @keyframes ptxt { 0%,40% { opacity: 0; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } 60%,90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
+  /* 4 별 · 뽑기 */
+  .h4 .row4 { left: 0; right: 0; top: 22px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 40px; }
+  .h4 .row4 .cap { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(#ff7aa8 50%, #fff 50%); box-shadow: inset 0 0 0 3px rgba(74,59,92,.15); animation: wiggle .6s ease-in-out infinite alternate; }
+  .h4 .row4 small { font-size: 18px; color: var(--ink); }
+  .h4 .sils { left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 4px; }
+  .h4 .sils img { width: 40px; height: 40px; filter: brightness(0) opacity(.25); }
+
   #loading { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center;
     background: linear-gradient(#ffd6e4, #c9ecff); z-index: 30; font-size: 22px; transition: opacity .5s; }
   #loadBar { width: 200px; height: 14px; border-radius: 999px; background: rgba(255,255,255,.7); overflow: hidden; }
@@ -133,6 +189,7 @@
     <div id="titleBest"></div>
     <button class="big" id="btnStart">시작하기</button>
     <button class="big mint" id="btnFriends">친구 도감 · 뽑기</button>
+    <div class="row"><button class="big plain" id="btnHow">❓ 게임 방법</button><button class="big plain" id="btnStory">📖 이야기</button></div>
   </div>
 </div>
 
@@ -155,6 +212,7 @@
     <h2 style="margin:0 0 6px;font-weight:normal;font-size:28px">잠깐 쉬어요</h2>
     <div class="sub">지금 점수 <span id="pauseScore">0</span>점</div>
     <button class="big" id="btnResume">계속하기</button>
+    <button class="big plain" id="btnPauseHow">❓ 게임 방법</button>
     <button class="big plain" id="btnQuit">처음으로</button>
   </div>
 </div>
@@ -175,6 +233,24 @@
     <div class="row" style="width:min(360px,100%)">
       <button class="big" id="btnGachaOk" style="visibility:hidden">좋아요!</button>
     </div>
+  </div>
+</div>
+
+<div id="story" class="screen hide">
+  <div id="storyCard">
+    <div id="storyPics"></div>
+    <div id="storyText"></div>
+    <div id="storyNav"><button id="btnSkip">건너뛰기</button><div class="dots" id="storyDots"></div><button class="next" id="btnStoryNext">다음 ▶</button></div>
+  </div>
+</div>
+
+<div id="howto" class="screen dim hide">
+  <div class="panel">
+    <h2 id="howTitle"></h2>
+    <div id="howPic"></div>
+    <div id="howText"></div>
+    <div class="dots" id="howDots"></div>
+    <div class="row"><button class="big plain" id="btnHowPrev">◀ 이전</button><button class="big" id="btnHowNext">다음 ▶</button></div>
   </div>
 </div>
 
@@ -507,7 +583,7 @@ function inside(p, x, z, margin = 0) {
 // ---------- 조작 ----------
 function press() {
   audio();
-  if (state !== 'ready' || paused) return;
+  if (state !== 'ready' || paused || performance.now() < inputLock) return;
   state = 'charging'; chargeT = 0; standY = restY; chargeAt = performance.now(); chargeStart();
   document.getElementById('hint').style.opacity = 0;
 }
@@ -542,8 +618,10 @@ document.addEventListener('visibilitychange', () => {
 });
 addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'Enter') {
+    if (state === 'story') { e.preventDefault(); if (!e.repeat) storyNext(); return; }
+    if (!$('howto').classList.contains('hide')) { e.preventDefault(); if (!e.repeat) $('btnHowNext').click(); return; }
     if (!$('over').classList.contains('hide') && $('friends').classList.contains('hide') && canRestart) { e.preventDefault(); startGame(); return; }
-    if (state === 'title' && $('friends').classList.contains('hide') && !e.repeat) { e.preventDefault(); startGame(); return; }
+    if (state === 'title' && $('friends').classList.contains('hide') && !e.repeat && performance.now() > titleLock) { e.preventDefault(); startFromTitle(); return; }
     if (e.code === 'Space' && !e.repeat) { e.preventDefault(); press(); }
   }
 });
@@ -595,6 +673,7 @@ function landed() {
 let lastMiss = '';
 
 // 받침이 있으면 「을」, 없으면 「를」
+const josaIGA = w => ((w.charCodeAt(w.length - 1) - 0xAC00) % 28 ? '이' : '가');
 const josa = w => ((w.charCodeAt(w.length - 1) - 0xAC00) % 28 ? '을' : '를');
 
 // ---------- 화면 전환 ----------
@@ -603,13 +682,18 @@ function show(id, on) { $(id).classList.toggle('hide', !on); }
 function updateScore() { $('score').textContent = score; $('best').textContent = '최고 ' + Math.max(best, score); }
 function updateStars() { $('stars').textContent = stars; }
 function startGame() {
+  // 시작할 때 전체 화면으로 (안드로이드·컴퓨터. 아이폰은 기능이 없어 그냥 넘어감)
+  const de = document.documentElement;
+  if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+    try { const r = (de.requestFullscreen || de.webkitRequestFullscreen)?.call(de); if (r && r.catch) r.catch(() => {}); } catch (e) {}
+  }
   SND.click(); show('title', false); show('over', false); show('friends', false);
   resetWorld(); show('hud', true); show('starChip', true); show('btnPause', true);
   played++; store.set('played', played);
   const h = $('hint'); show('hint', true); h.style.opacity = played <= 3 ? 1 : 0;
-  state = 'ready';
+  state = 'ready'; inputLock = performance.now() + 450;
 }
-let canRestart = false;
+let canRestart = false, inputLock = 0;
 function gameOver() {
   state = 'over'; show('btnPause', false);
   const isNew = score > best; if (isNew) { best = score; store.set('best', best); }
@@ -627,6 +711,75 @@ function goTitle() {
   resetWorld(); state = 'title'; show('title', true); refreshTitle();
 }
 function refreshTitle() { $('titleBest').textContent = best ? `최고 기록 ${best}점 · 별 ${stars}개` : '발판 한가운데에 내리면 퍼펙트!'; }
+
+// ---------- 도입 장면 ----------
+const thumb = f => `models/thumb_${f}.webp`;
+const STORY = [
+  { text: '구름 위에 둥실 떠 있는<br><b>디저트 나라</b>예요.', pics: [] },
+  { text: '어느 날, <b>몽글이</b>의 친구들이<br>뽑기 캡슐 속에서<br>잠들어 버렸어요!', pics: FRIENDS.slice(1).map(f => [f.file, true]) },
+  { text: '하늘의 <b>⭐ 별</b>을 모으면<br>캡슐을 열 수 있대요.', pics: [] },
+  { text: '몽글아, 폴짝폴짝 뛰어서<br><b>친구들을 깨워 줘!</b>', pics: [['c_monggle', false]] },
+];
+let storyI = 0, afterStory = null, titleLock = 0;
+function placeHero(id) { setHero(id); const p = plats[cur]; heroWrap.position.set(p.g.position.x, p.top, p.g.position.z); restY = p.top; }
+function openStory(then) {
+  afterStory = then || null; storyI = 0; state = 'story'; if (sel !== 'monggle') placeHero('monggle');
+  show('title', false); show('story', true); drawStory();
+}
+function drawStory() {
+  const st = STORY[storyI];
+  $('storyText').innerHTML = `<span>${st.text}</span>`;   // 한 덩어리로 묶어 가운데 정렬
+  $('storyPics').innerHTML = st.pics.map(([f, sil], i) => `<img src="${thumb(f)}" class="${sil ? 'sil' : ''}" style="animation-delay:${i * .08}s" alt="">`).join('');
+  $('storyDots').innerHTML = STORY.map((_, i) => `<i class="${i === storyI ? 'on' : ''}"></i>`).join('');
+  $('btnStoryNext').textContent = storyI === STORY.length - 1 ? '좋아! ▶' : '다음 ▶';
+}
+function storyNext() {
+  SND.click();
+  if (storyI < STORY.length - 1) { storyI++; drawStory(); } else endStory();
+}
+function endStory() {
+  if (state !== 'story') return;
+  show('story', false); store.set('storySeen', true); state = 'title'; titleLock = performance.now() + 450;
+  $('title').style.pointerEvents = 'none'; setTimeout(() => { $('title').style.pointerEvents = ''; }, 450); if (sel !== 'monggle') placeHero(sel); show('title', true); refreshTitle();
+  const t = afterStory; afterStory = null; if (t) t();
+}
+$('story').onclick = () => storyNext();
+$('btnSkip').onclick = e => { e.stopPropagation(); SND.click(); endStory(); };
+
+// ---------- 게임 방법 ----------
+const HOW = [
+  { title: '1. 꾹 누르고 있어요', cls: 'h1', pic: `<div class="hp hero"><img src="${thumb('c_monggle')}" alt=""></div><div class="hp finger">👆</div><div class="hp bar"><i></i></div>`,
+    text: '화면 아무 곳이나 <b>꾹</b> 누르고 있으면<br>몽글이가 웅크리며 힘을 모아요.<br>컴퓨터는 <b>스페이스 키</b>도 돼요.' },
+  { title: '2. 손을 떼면 폴짝!', cls: 'h2', pic: `<div class="hp plat p1"></div><div class="hp plat p2"></div><div class="hp hero"><img src="${thumb('c_monggle')}" alt=""></div>`,
+    text: '<b>오래 누를수록 멀리</b> 뛰어요.<br>다음 발판까지 거리를 눈으로 재 보세요.<br>발판 밖으로 떨어지면 한 판이 끝나요.' },
+  { title: '3. 한가운데면 퍼펙트', cls: 'h3', pic: `<div class="hp target"></div><div class="hp hero"><img src="${thumb('c_monggle')}" alt=""></div><div class="hp ptxt">퍼펙트 ×3 +6</div>`,
+    text: '발판 <b>한가운데</b>에 내리면 퍼펙트!<br>퍼펙트가 이어질수록 점수가 커져요.' },
+  { title: '4. 별을 모아 친구를 깨워요', cls: 'h4', pic: `<div class="hp row4">⭐<small>× 30</small>➜<span class="cap"></span></div><div class="hp sils">${FRIENDS.slice(1).map(f => `<img src="${thumb(f.file)}" alt="">`).join('')}</div>`,
+    text: '별 <b>30개</b>로 캡슐을 뽑으면 친구가 깨어나요.<br>선물 상자나 오르골 위에서는…<br><b>잠깐 기다려 볼까요?</b>' },
+];
+let howI = 0, afterHow = null;
+function openHow(then) { afterHow = then || null; howI = 0; show('howto', true); drawHow(); }
+function drawHow() {
+  const h = HOW[howI];
+  $('howTitle').textContent = h.title; $('howText').innerHTML = h.text;
+  $('howPic').className = h.cls; $('howPic').innerHTML = h.pic;
+  howSize();
+  $('howDots').innerHTML = HOW.map((_, i) => `<i class="${i === howI ? 'on' : ''}"></i>`).join('');
+  $('btnHowPrev').style.visibility = howI ? 'visible' : 'hidden';
+  $('btnHowNext').textContent = howI === HOW.length - 1 ? (afterHow ? '시작하기!' : '알겠어요!') : '다음 ▶';
+}
+// 2번 그림: 발판 사이 거리를 실제 폭에 맞춘다
+function howSize() { const w = $('howPic').clientWidth, full = w * .8 - 70; $('howPic').style.setProperty('--full', full + 'px'); $('howPic').style.setProperty('--half', full / 2 + 'px'); }
+addEventListener('resize', () => { if (!$('howto').classList.contains('hide')) howSize(); });
+function closeHow() {
+  show('howto', false); store.set('howSeen', true);
+  const t = afterHow; afterHow = null; if (t) t();
+}
+$('btnHowNext').onclick = () => { SND.click(); if (howI < HOW.length - 1) { howI++; drawHow(); } else closeHow(); };
+$('btnHowPrev').onclick = () => { SND.click(); if (howI) { howI--; drawHow(); } };
+$('btnHow').onclick = () => { SND.click(); openHow(); };
+$('btnStory').onclick = () => { SND.click(); openStory(); };
+$('btnPauseHow').onclick = () => { SND.click(); openHow(); };
 
 // 친구 도감
 function openFriends() {
@@ -687,7 +840,7 @@ function updateGacha(dt) {
     if (gachaT > 1.4) { gachaPhase = 2; gachaT = 0; SND.fanfare();
       gachaObj = cloneOf(gachaFriend.file); gachaObj.scale.setScalar(.01); gachaObj.position.set(.3, 0, .2); gachaGroup.add(gachaObj);
       sparkles(new THREE.Vector3(.3, .6, .2), 0xffd84a, 40, 4); sparkles(new THREE.Vector3(.3, .6, .2), 0xff9ac0, 30, 3.5); ring(new THREE.Vector3(.3, .02, .2), 0xffffff);
-      $('gachaText').innerHTML = `${gachaFriend.name}${josa(gachaFriend.name)} 만났어요!<small>${gachaFriend.say}</small>`;
+      $('gachaText').innerHTML = `${gachaFriend.name}${josaIGA(gachaFriend.name)} 깨어났어요!<small>${gachaFriend.say}</small>`;
       setTimeout(() => { $('btnGachaOk').style.visibility = 'visible'; }, 700);
     }
   } else { // 캡슐이 열리고 친구가 뿅
@@ -717,8 +870,13 @@ function setPause(on) {
 $('btnPause').onclick = () => setPause(true);
 $('btnResume').onclick = () => setPause(false);
 $('btnQuit').onclick = () => { if (score > best) { best = score; store.set('best', best); } paused = false; show('pause', false); goTitle(); };
-addEventListener('keydown', e => { if ((e.code === 'Escape' || e.code === 'KeyP') && !$('hud').classList.contains('hide')) setPause(!paused); });
-$('btnStart').onclick = startGame;
+addEventListener('keydown', e => {
+  if (state === 'story' && e.code === 'Escape') { SND.click(); endStory(); return; }
+  if (!$('howto').classList.contains('hide')) { if (e.code === 'Escape') { SND.click(); closeHow(); } return; }
+  if ((e.code === 'Escape' || e.code === 'KeyP') && !$('hud').classList.contains('hide')) setPause(!paused);
+});
+function startFromTitle() { if (!store.get('howSeen', false)) { SND.click(); openHow(startGame); } else startGame(); }
+$('btnStart').onclick = startFromTitle;
 $('btnAgain').onclick = startGame;
 $('btnHome').onclick = goTitle;
 $('btnFriends').onclick = openFriends;
@@ -786,7 +944,8 @@ function frame() {
       idleT += dt; const b = Math.sin(idleT * 3) * .03;
       hero.scale.lerp(new THREE.Vector3(1 - b * .5, 1 + b, 1 - b * .5), Math.min(dt * 10, 1)); hero.position.x = 0;
       // 제목 화면에서는 카메라 쪽을 보며 고개를 살랑살랑
-      if (state === 'title') heroWrap.userData.yaw = Math.sin(elapsed * .6) * .6 + Math.atan2(CAM_OFF.x, CAM_OFF.z) + MODEL_YAW;
+      if (state === 'story') heroWrap.userData.yaw = Math.atan2(Math.sin(elapsed * .25), Math.cos(elapsed * .25)) + MODEL_YAW;
+      else if (state === 'title') heroWrap.userData.yaw = Math.sin(elapsed * .6) * .6 + Math.atan2(CAM_OFF.x, CAM_OFF.z) + MODEL_YAW;
       // 특별 발판 위에서 기다리기
       if (state === 'ready' && plats[cur].special && plats[cur].special !== 'drum' && !bonusDone) {
         waitT += dt;
@@ -813,10 +972,13 @@ function frame() {
 
   // 카메라
   camLook.lerp(camGoal, Math.min(dt * 3, 1));
-  const off = state === 'gacha' ? new THREE.Vector3(0, 2.6, 7.5) : CAM_OFF;
+  const off = state === 'gacha' ? new THREE.Vector3(0, 2.6, 7.5)
+    : state === 'story' ? new THREE.Vector3(Math.sin(elapsed * .25) * 6, 2.6, Math.cos(elapsed * .25) * 6) : CAM_OFF;
   // 제목 화면에서는 장면을 조금 아래로 내려 제목과 겹치지 않게
-  titleLift += ((state === 'title' ? 1 : 0) - titleLift) * Math.min(dt * 4, 1);
+  titleLift += ((state === 'title' || state === 'story' ? 1 : 0) - titleLift) * Math.min(dt * 4, 1);
   const look = camLook.clone(); look.y += titleLift * 1.1;
+  // 이야기 중에는 몽글이를 가운데에 두고 돈다
+  if (state === 'story' && heroWrap) { look.copy(heroWrap.position); look.y += .2; }
   camera.position.copy(look).add(off); camera.lookAt(look);
   sun.position.copy(camLook).add(new THREE.Vector3(-4, 10, 6)); sun.target.position.copy(camLook);
 
@@ -829,6 +991,7 @@ await loadAll();
 // 도감 그림이 없으면 화면에서 직접 찍는다
 resetWorld(); refreshTitle(); updateStars();
 const ld = $('loading'); ld.style.opacity = 0; setTimeout(() => ld.remove(), 500);
+if (!store.get('storySeen', false)) openStory(() => { if (!store.get('howSeen', false)) openHow(); });
 requestAnimationFrame(frame);
 window.__mg = { get state() { return state; }, get score() { return score; }, plats: () => plats, cur: () => cur };
 </script>
