@@ -425,9 +425,18 @@ function cloneOf(file) { return proto[file].obj.clone(true); }
 // ---------- 소리 (WebAudio로 직접 만든다) ----------
 let ac = null, master = null;
 function audio() {
-  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = muted ? 0 : .5; master.connect(ac.destination); } catch (e) {} }
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = muted ? 0 : .5; master.connect(ac.destination); bgmInit(); } catch (e) {} }
   if (ac && ac.state === 'suspended') ac.resume();
+  bgmPlay();
   return ac;
+}
+// 배경음악: 평소엔 「Pastel Dessert World」, 하늘이 밤이 되면 「Night Sky Lullaby」로 천천히 바뀐다
+const BGM = ['music/pastel.mp3', 'music/night.mp3'].map(src => { const a = new Audio(src); a.loop = true; a.preload = 'auto'; return { a, g: null, v: 0 }; });
+function bgmInit() { for (const b of BGM) { b.g = ac.createGain(); b.g.gain.value = 0; ac.createMediaElementSource(b.a).connect(b.g); b.g.connect(master); } }
+function bgmPlay() { if (document.visibilityState === 'hidden') return; for (const b of BGM) if (b.g && b.a.paused) b.a.play().catch(() => {}); }
+function bgmUpdate(dt) {
+  if (!BGM[0].g) return; const night = skyNow.night > .5 ? 1 : 0;
+  BGM.forEach((b, i) => { b.v += ((i ? night : 1 - night) * .3 - b.v) * Math.min(dt * 1.5, 1); b.g.gain.value = b.v; });
 }
 function tone(freq, dur, type = 'sine', vol = .3, when = 0, slideTo = 0) {
   if (!audio()) return; const t = ac.currentTime + when;
@@ -612,7 +621,8 @@ addEventListener('pointerup', release);
 addEventListener('pointercancel', release);
 // 앱을 바꾸거나 화면이 꺼지면: 누르던 것은 취소하고, 최고 기록은 미리 저장한다
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'hidden') return;
+  if (document.visibilityState !== 'hidden') { bgmPlay(); return; }
+  for (const b of BGM) b.a.pause();
   if (state === 'charging') setPause(true);
   if (score > best) { best = score; store.set('best', best); }
 });
@@ -910,6 +920,7 @@ function frame() {
   for (const g of puffs.children) { const b = g.userData.base; g.position.set(b.x + camLook.x + Math.sin(elapsed * .1 + g.userData.ph) * 2, b.y + Math.sin(elapsed * .5 + g.userData.ph) * .2, b.z + camLook.z); }
   sky.position.copy(camLook); sea.position.x = camLook.x; sea.position.z = camLook.z;
   applySky(skyTarget(state === 'title' ? 0 : score), dt * 1.2);
+  bgmUpdate(dt);
 
   if (state === 'gacha') updateGacha(dt);
   else if (heroWrap && !paused) {
