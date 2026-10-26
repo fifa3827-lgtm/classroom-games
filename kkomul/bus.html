@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="꼬물이 구구단">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>꼬물이 버스 - 꼬물이 구구단</title>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
@@ -605,8 +610,8 @@ function drawBus(b, t){
   ctx.restore();
   ctx.restore();
 
-  // 숫자판(표 쓰기) — 이 버스 몸통 위에만
-  if (b.state === 'ticket'){
+  // 숫자판(표 쓰기) — 이 버스 몸통 위에만(옆에 큰 숫자판이 뜨는 화면에선 안 그림)
+  if (b.state === 'ticket' && !window.__bigPadOn){
     rr(b.x - 2, b.y, BUS_W + 4, 150, 22); ctx.fillStyle = 'rgba(255,250,240,.95)'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = LINE; ctx.stroke();
     for (const kk of padKeys(b)){
       const on = b.keyPop && b.keyPop.lb === kk.label && b.keyPop.t > 0, pr = on ? 3 : 0;
@@ -684,7 +689,7 @@ function drawTutorial(t){
   if (G.state !== 'play' || G.held) return;
   const tb = ticketBus();
   if (tb){
-    if (G.ok > 0 || G.stats.ticketBad + G.stats.ticketLate > 0 || tb.typed) return;
+    if (G.ok > 0 || G.stats.ticketBad + G.stats.ticketLate > 0 || tb.typed || window.__bigPadOn) return;
     // 첫 표: 숫자판 오른쪽 밖에서 손끝으로 톡톡(키는 안 가림)
     const kk = padKeys(tb), right = kk[5], tap = (t * 2) % 1 < 0.35;
     ctx.globalAlpha = 0.9; drawHand(right.x + right.w + 8 - (tap ? 6 : 0), right.y + right.h / 2 + 30, tap, -Math.PI / 2); ctx.globalAlpha = 1;
@@ -846,7 +851,7 @@ cv.addEventListener('pointerdown', e => {
   }
   if (G.state === 'play' && !G.held){
     const tb = ticketBus();
-    if (tb){ const kk = padKeys(tb).find(r => inRect(G.px, G.py, r)); if (kk){ padPress(tb, kk.label); return; } }
+    if (tb && !window.__bigPadOn){ const kk = padKeys(tb).find(r => inRect(G.px, G.py, r)); if (kk){ padPress(tb, kk.label); return; } }
     grabAt(G.px, G.py);
   }
 });
@@ -893,5 +898,6 @@ window.__game = {
 };
 })();
 </script>
+<script src="screen.js?v=2610261700"></script>
 </body>
 </html>

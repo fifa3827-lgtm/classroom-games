@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="꼬물이 구구단">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>곱하기 젤리 - 꼬물이 구구단</title>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
@@ -736,6 +741,7 @@ function drawKeypad(){
   txt(kp.input || (Math.floor(G.t * 2) % 2 ? '' : '?'), 938 + sh, 126, 36, '#ff6f96');
   txt('맞히면 위쪽 친구들이 폴짝!', 873, 172, 17, '#7a6363');
   { const b = BTN_KPCLOSE; rr(b.x, b.y + 4, b.w, b.h, 18); ctx.fillStyle = 'rgba(61,48,48,.2)'; ctx.fill(); rr(b.x, b.y, b.w, b.h, 18); fs('#f2ecff', 4); txt('닫기', b.x + b.w / 2, b.y + b.h / 2 + 2, 24, LINE); }
+  if (window.__bigPadOn) return;   // 옆에 큰 숫자판이 뜨는 화면: 식과 「닫기」만
   KEYS.forEach((k, i) => {
     const r = keyRect(i), pr = kp.press === i && kp.pressT > 0 ? 3 : 0;
     rr(r.x, r.y + 4, r.w, r.h, 16); ctx.fillStyle = 'rgba(61,48,48,.2)'; ctx.fill();
@@ -978,7 +984,7 @@ cv.addEventListener('pointerdown', e => {
   if (G.state === 'result'){ if (G.resultT >= 1) for (const b of [BTN_AGAIN, BTN_DAN, BTN_MENU]) if (inBtn(p, b)) G.pressBtn = b; return; }
   if (G.state !== 'play') return;
   if (G.kp){
-    for (let i = 0; i < KEYS.length; i++) if (inBtn(p, keyRect(i))){ keyPress(KEYS[i]); return; }
+    if (!window.__bigPadOn) for (let i = 0; i < KEYS.length; i++) if (inBtn(p, keyRect(i))){ keyPress(KEYS[i]); return; }
     if (inBtn(p, BTN_KPCLOSE)) closeKeypad();
     return;
   }
@@ -1079,5 +1085,6 @@ window.__game = {
 };
 })();
 </script>
+<script src="screen.js?v=2610261700"></script>
 </body>
 </html>

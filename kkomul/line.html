@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="꼬물이 구구단">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>줄줄이 꼬물이 - 꼬물이 구구단</title>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
@@ -646,7 +651,7 @@ function drawBridge(g){
   }
 }
 function drawPad(){
-  const g = G.bridge; if (!g) return;
+  const g = G.bridge; if (!g || window.__bigPadOn) return;   // 옆에 큰 숫자판이 뜨는 화면에선 안 그림
   const sh = G.padShake > 0 ? Math.sin(G.time * 60) * 8 * G.padShake : 0;
   ctx.save(); ctx.translate(sh, 0);
   rrFS(PAD.x - 8, PAD.y - 8, 3 * PAD.k + 2 * PAD.gap + 16, 92 + 4 * (PAD.k + PAD.gap) + 10, 20, 'rgba(255,250,240,.96)', 4);
@@ -1007,7 +1012,7 @@ cv.addEventListener('pointerdown', e => {
     if (inRect(p, START_BTN)){ G.btnPress = 1; startGame(); }
     if (inRect(p, MENU_BTN_T)) location.href = 'index.html';
   }
-  else if (G.state === 'play' && G.bridge && p.x >= PAD.x - 10){
+  else if (G.state === 'play' && G.bridge && !window.__bigPadOn && p.x >= PAD.x - 10){
     const k = PAD_KEYS.find(k => inRect(p, k)); if (k) padPress(k.s);
     down = false;
   }
@@ -1021,7 +1026,7 @@ cv.addEventListener('pointerdown', e => {
 cv.addEventListener('pointermove', e => {
   if (G.state !== 'play') return;
   const p = toLocal(e);
-  if (G.bridge && p.x >= PAD.x - 10) return;
+  if (G.bridge && !window.__bigPadOn && p.x >= PAD.x - 10) return;
   if (down || e.pointerType === 'mouse') LD.tx = p.x;
 });
 // 키보드: 숫자 키(윗줄과 숫자 패드)와 Backspace, 숫자판이 열려 있을 때만
@@ -1087,5 +1092,6 @@ window.__game = {
 };
 })();
 </script>
+<script src="screen.js?v=2610261700"></script>
 </body>
 </html>
