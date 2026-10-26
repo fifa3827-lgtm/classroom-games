@@ -35,6 +35,10 @@ css.textContent = `
 #bigpad button{font:inherit;font-size:calc(var(--k)*.5);color:#3d3030;background:#fff1a8;border:4px solid #3d3030;border-radius:16px;box-shadow:0 5px 0 #d8c8b4;padding:0;cursor:pointer;touch-action:none}
 #bigpad button.del{background:#ffdede;font-size:calc(var(--k)*.3)}
 #bigpad button.on{transform:translateY(4px);box-shadow:0 1px 0 #d8c8b4}
+#bigpad .keys,#bigpad .q{transition:opacity .25s,filter .25s}
+#bigpad.off .keys{opacity:.35;filter:grayscale(.7)}
+#bigpad.off button{pointer-events:none}
+#bigpad.off .q{opacity:.7;font-size:calc(var(--k)*.3);border-style:dashed}
 #gomenu{position:fixed;display:none;flex-direction:column;align-items:center;justify-content:center;gap:.15em;box-sizing:border-box;padding:0;line-height:1;-webkit-appearance:none;appearance:none;font-family:Jua,"Malgun Gothic",sans-serif;color:#3d3030;background:rgba(255,250,240,.92);border:3px solid #3d3030;border-radius:16px;box-shadow:0 4px 0 rgba(61,48,48,.25);cursor:pointer;z-index:6;touch-action:none;-webkit-tap-highlight-color:transparent}
 #gomenu b{display:block;font-size:1.6em;font-weight:normal;line-height:1}
 #askmenu,#turn{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;font-family:Jua,"Malgun Gothic",sans-serif;color:#3d3030;z-index:9;touch-action:none}
@@ -141,8 +145,13 @@ function frame(){
   const g = window.__game, playing = !!g && g.state === 'play';
   menuBtn.style.display = playing && !asking ? 'flex' : 'none';
   if (!playing && asking){ asking = false; ask.style.display = 'none'; }
+  // 숫자판은 늘 보이고(빈 곳이 휑하지 않게, 자리도 미리 익히게), 숫자를 쓸 때만 밝게 켜짐
   const p = mode === 'none' ? null : padNow();
-  if (!!p !== shown){ shown = !!p; pad.style.display = p ? 'flex' : 'none'; }
+  const st = mode === 'none' ? 'hide' : p ? 'on' : 'off';
+  if (st !== shown){
+    shown = st; pad.style.display = st === 'hide' ? 'none' : 'flex'; pad.classList.toggle('off', st === 'off');
+    if (st === 'off'){ qEl.textContent = '🐣 숫자 쓸 때 켜져요'; lastQ = ''; }
+  }
   if (p){
     const q = p.q + '|' + p.typed;
     if (q !== lastQ){ lastQ = q; qEl.innerHTML = p.q + ' = <b>' + (p.typed || '?') + '</b>'; }
