@@ -35,8 +35,8 @@ css.textContent = `
 #bigpad button{font:inherit;font-size:calc(var(--k)*.5);color:#3d3030;background:#fff1a8;border:4px solid #3d3030;border-radius:16px;box-shadow:0 5px 0 #d8c8b4;padding:0;cursor:pointer;touch-action:none}
 #bigpad button.del{background:#ffdede;font-size:calc(var(--k)*.3)}
 #bigpad button.on{transform:translateY(4px);box-shadow:0 1px 0 #d8c8b4}
-#gomenu{position:fixed;display:none;padding:0;font-family:Jua,"Malgun Gothic",sans-serif;color:#3d3030;background:rgba(255,250,240,.92);border:3px solid #3d3030;border-radius:16px;box-shadow:0 4px 0 rgba(61,48,48,.25);cursor:pointer;z-index:6;touch-action:none;-webkit-tap-highlight-color:transparent}
-#gomenu b{display:block;font-size:1.6em;font-weight:normal;margin-bottom:1px}
+#gomenu{position:fixed;display:none;flex-direction:column;align-items:center;justify-content:center;gap:.15em;box-sizing:border-box;padding:0;line-height:1;-webkit-appearance:none;appearance:none;font-family:Jua,"Malgun Gothic",sans-serif;color:#3d3030;background:rgba(255,250,240,.92);border:3px solid #3d3030;border-radius:16px;box-shadow:0 4px 0 rgba(61,48,48,.25);cursor:pointer;z-index:6;touch-action:none;-webkit-tap-highlight-color:transparent}
+#gomenu b{display:block;font-size:1.6em;font-weight:normal;line-height:1}
 #askmenu,#turn{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;font-family:Jua,"Malgun Gothic",sans-serif;color:#3d3030;z-index:9;touch-action:none}
 #askmenu{background:rgba(61,48,48,.45)}
 #askmenu .card{background:#fffdf8;border:4px solid #3d3030;border-radius:28px;padding:24px 28px;text-align:center;font-size:28px;max-width:90vw}
@@ -139,7 +139,7 @@ addEventListener('resize', layout); layout();
 function frame(){
   requestAnimationFrame(frame);
   const g = window.__game, playing = !!g && g.state === 'play';
-  menuBtn.style.display = playing && !asking ? 'block' : 'none';
+  menuBtn.style.display = playing && !asking ? 'flex' : 'none';
   if (!playing && asking){ asking = false; ask.style.display = 'none'; }
   const p = mode === 'none' ? null : padNow();
   if (!!p !== shown){ shown = !!p; pad.style.display = p ? 'flex' : 'none'; }
