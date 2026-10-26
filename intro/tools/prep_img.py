@@ -2,6 +2,7 @@ from PIL import Image, ImageFilter
 import os
 S='shots'; O='out/intro'; R='classroom-games'
 plan={
+ 'kkomul':['kkomul-0.png','kkomul-1.png','kkomul-2.png','kkomul-3.png'],
  'hogol':['hogol-0.png','hogol-1.png','hogol-2.png','hogol-3.png'],
  'mango':['mango-0.png','mango-1.png',R+'/mango/img/scene-02-board.webp'],
  'mitgeurim':['mitgeurim-0.png','mitgeurim-1.png'],

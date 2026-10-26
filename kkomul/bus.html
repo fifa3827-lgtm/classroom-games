@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>꼬물이 버스 - 꼬물이 구구단</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#fdf1e2;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+canvas{display:block;touch-action:none}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script src="chars.js?v=2610251900"></script>
+<script>
+(function(){
+'use strict';
+// ───────── 기본 ─────────
+const W = 1024, H = 768, LINE = '#3d3030', FONT = '"Jua","Malgun Gothic",sans-serif';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const qs = new URLSearchParams(location.search);
+const MUTE = qs.get('mute') === '1';
+// ?seed=N 일 때만 고정, 아니면 판마다 다름
+let seed = parseInt(qs.get('seed'), 10) || 1;
+const SEEDED = qs.has('seed');
+function rnd(){
+  if (!SEEDED) return Math.random();
+  seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+const pick = a => a[Math.floor(rnd() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+let scale = 1, dpr = 1;
+function resize(){
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  scale = Math.min(innerWidth / W, innerHeight / H);
+  cv.style.width = W * scale + 'px'; cv.style.height = H * scale + 'px';
+  cv.width = Math.round(W * scale * dpr); cv.height = Math.round(H * scale * dpr);
+}
+addEventListener('resize', resize); resize();
+
+// 묶음 크기별 색
+const KCOL = { 2: '#b8ecd2', 3: '#ffd0b0', 4: '#c9e8ff', 5: '#dcc8ff', 6: '#fff1a8', 7: '#ffc8d8', 8: '#d6f0a0', 9: '#f0d6bc' };
+const KDARK = { 2: '#2f8a62', 3: '#c0602a', 4: '#2f6fa8', 5: '#7a52c8', 6: '#8a6a00', 7: '#c0406a', 8: '#4f7f12', 9: '#8a5a3c' };
+// 단 고르기(교과서 순서)
+const DANS = [
+  { label: '2·5단', ks: [2, 5] }, { label: '3·6단', ks: [3, 6] }, { label: '4·8단', ks: [4, 8] },
+  { label: '7·9단', ks: [7, 9] }, { label: '모두', ks: [2, 3, 4, 5, 6, 7, 8, 9] }
+];
+const TICKET_TIME = 15;              // 표 쓰기 넉넉한 시간(초)
+const PLAY_TIME = 90;               // 2학년이 느긋하게(담임 의견 1차)
+
+// ───────── 소리 ─────────
+let ac = null, master = null;
+function audioInit(){
+  if (MUTE || ac) return;
+  try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 0.9; master.connect(ac.destination); } catch (e) { ac = null; }
+}
+function tone(f, d, type, v, when, slideTo){
+  if (!ac) return;
+  const t = ac.currentTime + (when || 0);
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type || 'triangle'; o.frequency.setValueAtTime(f, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v || 0.15, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + d + 0.05);
+}
+const semi = n => 440 * Math.pow(2, n / 12);
+const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28, 31];
+const S = {
+  pick(){ tone(520, 0.08, 'sine', 0.12, 0, 780); },
+  attach(n){ tone(semi(3 + n * 3), 0.1, 'sine', 0.12); },
+  board(i){ const n = PENTA[clamp(i + Math.min(G.combo, 4), 0, PENTA.length - 1)]; tone(semi(n - 2), 0.14, 'triangle', 0.16); tone(semi(n + 10), 0.08, 'sine', 0.05); },
+  count(i){ const n = PENTA[clamp(i + 2, 0, PENTA.length - 1)]; tone(semi(n), 0.12, 'sine', 0.14); },
+  success(){ [0, 4, 7, 12].forEach((n, i) => tone(semi(n + 3 + Math.min(G.combo, 5)), 0.18, 'triangle', 0.14, i * 0.07)); },
+  wrong(){ tone(300, 0.25, 'sine', 0.16, 0, 140); tone(200, 0.2, 'triangle', 0.08, 0.05, 120); },
+  overflow(){ tone(700, 0.45, 'sine', 0.12, 0, 160); },
+  honk(){ for (const w of [0, 0.22]){ tone(330, 0.14, 'square', 0.07, w); tone(415, 0.14, 'square', 0.05, w); } },
+  close(){ tone(180, 0.08, 'square', 0.05); },
+  land(){ tone(140, 0.12, 'sine', 0.12, 0, 90); },
+  click(){ tone(660, 0.07, 'triangle', 0.12); },
+  key(n){ tone(semi(n * 2), 0.07, 'triangle', 0.1); },
+  end(){ [12, 7, 4, 0].forEach((n, i) => tone(semi(n), 0.22, 'triangle', 0.12, i * 0.12)); }
+};
+// 짧은 배경음(반복)
+const MEL = [0, 4, 7, 4, 9, 7, 4, 2, 0, 4, 7, 12, 9, 7, 4, 7];
+const BAS = [-12, -12, -5, -5, -7, -7, -5, -5];
+let bgmStep = 0, bgmNext = 0;
+function bgmUpdate(){
+  if (!ac || G.state !== 'play') return;
+  const step = G.playT < 60 ? 0.28 : 0.24;
+  while (bgmNext < ac.currentTime + 0.15){
+    const when = Math.max(0, bgmNext - ac.currentTime);
+    if (bgmStep % 2 === 0) tone(semi(MEL[(bgmStep / 2 | 0) % 16] - 9), step * 1.6, 'sine', 0.035, when);
+    if (bgmStep % 4 === 0) tone(semi(BAS[(bgmStep / 4 | 0) % 8] - 9), step * 3, 'triangle', 0.045, when);
+    bgmStep++; bgmNext += step;
+  }
+}
+
+// ───────── 게임 상태 ─────────
+const CH = 46;                       // 정류장 친구 크기
+const ROWS = [492, 614, 736];        // 정류장 세 줄(발바닥 y)
+const BUS_W = 440, BUS_H = 150, BUS_Y = 150, BUS_X = (W - BUS_W) / 2;
+const SIDE_X = 878;                  // 버스 오른쪽 빈 곳(알림 글자 자리)
+const G = {
+  state: 'title', t: 0, playT: 0, timeLeft: PLAY_TIME, score: 0, ok: 0, miss: 0, boards: 0, combo: 0,
+  review: [], reviewInfo: {}, buses: [], groups: [], slots: [], held: null, parts: [], pops: [], shake: 0, hitstop: 0,
+  resultT: 0, nextBus: 0.5, deck: [], last: '', history: [], px: 512, py: 600, pdown: false, paused: false, dan: 0, ks: [2, 5],
+  trainDemo: 'no', stats: {}
+};
+const charSize = k => k <= 5 ? CH : [0, 0, 0, 0, 0, 0, 42, 39, 36, 34][k];
+const charStep = k => charSize(k) * (k <= 5 ? 0.82 : 0.8);
+const groupW = k => k * charStep(k) + 30;
+
+// 정류장 자리: 고른 단의 가장 큰 묶음이 들어가는 고정 칸(묶음은 제자리에 있음)
+function makeSlots(){
+  const maxW = groupW(Math.max(...G.ks)), sw = maxW + 14;
+  const per = Math.floor((W - 30 + 14) / sw), x0 = (W - per * sw + 14) / 2;
+  G.slots = [];
+  for (const y of ROWS) for (let i = 0; i < per; i++) G.slots.push({ cx: x0 + i * sw + maxW / 2, y, g: null, cd: 0.15 * G.slots.length });
+}
+function homeX(g){ return G.slots[g.slot].cx - groupW(g.k) / 2; }
+
+function resetGame(){
+  Object.assign(G, { state: 'play', playT: 0, timeLeft: PLAY_TIME, score: 0, ok: 0, miss: 0, groupMiss: 0, boards: 0, combo: 0,
+    review: [], reviewInfo: {}, buses: [], groups: [], held: null, parts: [], pops: [], shake: 0, hitstop: 0, resultT: 0,
+    nextBus: 0.6, deck: [], last: '', history: [], ks: DANS[G.dan].ks, trainDemo: 'no',
+    stats: { late: 0, wrong: 0, over: 0, ticketBad: 0, ticketLate: 0, buses: 0, rev: 0 } });
+  makeSlots();
+  // 처음 정류장: 모든 자리에 묶음(제자리)
+  G.slots.forEach((s, i) => { const k = G.ks.length <= 2 ? G.ks[i % 2] : pick(G.ks); const g = makeGroup(k, i); g.x = homeX(g); g.y = s.y; g.state = 'station'; });
+  if (ac){ bgmStep = 0; bgmNext = ac.currentTime + 0.1; }
+}
+
+// ───────── 묶음(손잡은 친구들) ─────────
+function makeGroup(k, slot){
+  const g = { k, slot, ids: [], phase: rnd() * 6, x: G.slots[slot].cx - groupW(k) / 2, y: G.slots[slot].y, state: 'enter', et: 0, mood: 'normal', moodT: 0,
+    pop: 1, sq: 0, rot: 0, vx: 0, vy: 0, hop: rnd() * 3, delay: 0, bt: 0 };
+  for (let i = 0; i < k; i++) g.ids.push(pick(CHAR_IDS));
+  G.slots[slot].g = g;
+  G.groups.push(g);
+  return g;
+}
+function freeSlot(g){ if (g.slot >= 0 && G.slots[g.slot] && G.slots[g.slot].g === g){ G.slots[g.slot].g = null; G.slots[g.slot].cd = 0.7; } g.slot = -1; }
+function groupRect(g){ const w = groupW(g.k); return { x: g.x, y: g.y - 70, w, h: 92 }; }
+function inRect(px, py, r, pad){ pad = pad || 0; return px >= r.x - pad && px <= r.x + r.w + pad && py >= r.y - pad && py <= r.y + r.h + pad; }
+function setMood(g, m, t){ g.mood = m; g.moodT = t; }
+function curBus(){ return G.buses.find(b => b.state === 'wait' || b.state === 'arrive'); }
+
+// 빈자리에만 새 묶음이 걸어 들어옴
+function spawnLogic(dt){
+  const b = curBus();
+  const avail = G.groups.filter(g => g.slot >= 0 && g.state !== 'held');
+  const needLeft = b ? b.n - b.groupsIn : 0;
+  const have = b ? avail.filter(g => g.k === b.k).length : 0;
+  const empties = G.slots.filter(s => !s.g);
+  if (b && have === 0 && !empties.length){
+    // 자리가 꽉 찼는데 필요한 묶음이 없으면, 필요 없는 묶음 하나가 손 흔들며 떠남
+    const go = G.groups.filter(g => g.state === 'station' && g.k !== b.k)[0];
+    if (go){ freeSlot(go); go.state = 'exit'; go.et = 0; setMood(go, 'happy', 9); }
+  }
+  for (const s of G.slots){
+    if (s.g) continue;
+    s.cd -= dt; if (s.cd > 0) continue;
+    let k;
+    const haveNow = b ? G.groups.filter(g => g.slot >= 0 && g.k === b.k && g.state !== 'held').length : 0;
+    if (b && haveNow < Math.min(needLeft, 3)) k = b.k;
+    else if (b && rnd() < 0.5) k = b.k;
+    else k = pick(G.ks);
+    makeGroup(k, G.slots.indexOf(s));
+    s.cd = 0.7;
+  }
+}
+
+// ───────── 문제(무작위 카드 더미) ─────────
+function refillDeck(){
+  const d = [];
+  for (const k of G.ks) for (let n = 1; n <= 9; n++) d.push({ k, n, rev: false });
+  shuffle(d);
+  G.deck = G.deck.concat(d);
+}
+function addReview(k, n){
+  const key = k + '×' + n;
+  if (!G.reviewInfo[key]){ G.review.push(key); G.reviewInfo[key] = { k, n }; }
+  // 틀린 식은 두세 문제 뒤에 다시 나옴
+  if (G.deck.length < 4) refillDeck();
+  G.deck.splice(2 + Math.floor(rnd() * 2), 0, { k, n, rev: true });
+}
+function newProblem(){
+  if (G.deck.length < 2) refillDeck();
+  // 처음 두 대는 묶음 수가 적은 식(5묶음 이하)부터 — 몸풀기
+  let i = G.stats.buses < 2 ? G.deck.findIndex(p => p.n <= 5 && p.k + '×' + p.n !== G.last) : -1;
+  if (i < 0) i = G.deck.findIndex(p => p.k + '×' + p.n !== G.last);
+  if (i < 0) i = 0;
+  const p = G.deck.splice(i, 1)[0];
+  G.last = p.k + '×' + p.n; G.history.push(G.last);
+  if (p.rev) G.stats.rev++;
+  return p;
+}
+
+// ───────── 버스(한 번에 한 대) ─────────
+function spawnBus(){
+  const p = newProblem();
+  const f = G.playT < 45 ? 1 : 0.9;   // 뒤로 가면 조금만 빨라짐
+  const wait = (14 + (p.k >= 6 ? 5 : 4.5) * p.n) * f;
+  const b = { x: BUS_X, y: -320, k: p.k, n: p.n, target: p.k * p.n, groupsIn: 0, filled: 0, wins: [], state: 'arrive', t: 0,
+    wait, waitMax: wait, door: 1, flash: null, banner: null, overflow: false, sq: 0, rev: p.rev, closeDelay: 0, warned: false,
+    typed: '', tt: 0, lit: 0, right: false, cpop: 0 };
+  for (let i = 0; i < 9; i++) b.wins.push(null);
+  G.buses.push(b); G.stats.buses++;
+}
+function busRect(b){ return { x: b.x - 10, y: b.y - 92, w: BUS_W + 20, h: BUS_H + 112 }; }
+function busAt(px, py){ return G.buses.find(b => b.state === 'wait' && inRect(px, py, busRect(b), 20)); }
+function winPos(b, i){ return { x: b.x + 22 + i * 37 + 16, y: b.y + 18 + 50 }; }
+function formula(b){ return b.k + '×' + b.n + '=' + b.target; }
+
+// 숫자판(운전사 꼬물이의 표) — 가득 찬 버스 몸통 위에만 뜸(정류장은 안 가림)
+const PAD_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '지우기'];
+function padKeys(b){
+  const keys = [], kw = 67, kh = 66, gap = 6, x0 = b.x + 4, y0 = b.y + 6;
+  PAD_LABELS.forEach((lb, i) => {
+    const row = i < 6 ? 0 : 1, col = i < 6 ? i : i - 6;
+    keys.push({ label: lb, x: x0 + col * (kw + gap), y: y0 + row * (kh + gap), w: lb === '지우기' ? kw * 2 + gap : kw, h: kh });
+  });
+  return keys;
+}
+function ticketBus(){ return G.buses.find(b => b.state === 'ticket'); }
+function padPress(b, lb){
+  if (lb === '지우기'){ b.typed = b.typed.slice(0, -1); S.click(); b.keyPop = { lb, t: 0.15 }; return; }
+  const ans = String(b.target);
+  if (b.typed.length >= ans.length) return;          // 정답 자릿수보다 길게 못 씀
+  b.typed += lb; S.key(b.typed.length + 2);
+  b.keyPop = { lb, t: 0.15 };
+  if (b.typed === ans) ticketResolve(b, true, false);           // 맞는 순간 바로 정답
+  else if (b.typed.length === ans.length) ticketResolve(b, false, false);
+}
+function ticketResolve(b, right, timeout){
+  b.state = 'count'; b.t = 0; b.lit = 0; b.right = right;
+  if (right){
+    G.ok++; G.combo++;
+    const add = 100 + 20 * (G.combo - 1) + Math.round((TICKET_TIME - b.tt) * 4);
+    G.score += add;
+    popText(SIDE_X, b.y + 30, '+' + add, '#ff7a3c', 44);
+    S.success(); G.hitstop = 0.06; G.shake = Math.max(G.shake, 5);
+    confetti(b, 30);
+  } else {
+    G.miss++; if (timeout) G.stats.ticketLate++; else G.stats.ticketBad++; G.combo = 0; addReview(b.k, b.n);
+    popText(SIDE_X, b.y + 30, timeout ? '늦었어요' : '다시 봐요', '#c0602a', 32);
+    S.wrong(); G.shake = Math.max(G.shake, 4);
+  }
+}
+
+function updateBuses(dt){
+  if (!G.buses.length){
+    G.nextBus -= dt;
+    if (G.nextBus <= 0 && G.timeLeft > 3) spawnBus();
+  }
+  for (const b of G.buses){
+    b.t += dt;
+    b.sq *= Math.pow(0.02, dt);
+    b.cpop *= Math.pow(0.01, dt);
+    if (b.flash){ b.flash.t -= dt; if (b.flash.t <= 0) b.flash = null; }
+    if (b.keyPop) b.keyPop.t -= dt;
+    if (b.state === 'arrive'){
+      const k = clamp(b.t / 0.7, 0, 1);
+      b.y = lerp(-320, BUS_Y, 1 - Math.pow(1 - k, 3));
+      if (k >= 1){ b.y = BUS_Y; b.state = 'wait'; b.t = 0; b.sq = 0.35; S.land(); puff(b.x + 90, b.y + BUS_H + 6, 6); puff(b.x + 350, b.y + BUS_H + 6, 6); }
+    } else if (b.state === 'wait'){
+      b.wait -= dt;
+      b.door = Math.max(0, b.door - dt * 4);
+      if (!b.warned && b.wait < b.waitMax * 0.25){ b.warned = true; tone(330, 0.1, 'square', 0.04); }
+      if (b.wait <= 0){
+        b.state = 'fail'; b.t = 0; G.miss++; G.stats.late++; G.combo = 0; addReview(b.k, b.n);
+        b.banner = { text: formula(b), color: '#ff8a8a' }; S.honk(); G.shake = Math.max(G.shake, 6);
+        popText(SIDE_X, b.y + 30, '빵빵! 가요~', '#e05555', 32);
+      }
+    } else if (b.state === 'closing'){
+      b.door = Math.min(1, b.door + dt * 5);
+      if (b.t >= b.closeDelay){
+        // 가득! → 운전사 꼬물이가 「3×4=? 모두 몇 명?」 표를 내밂
+        b.state = 'ticket'; b.t = 0; b.typed = ''; b.tt = 0;
+        S.close(); puff(b.x + 90, b.y + BUS_H + 10, 5); puff(b.x + 350, b.y + BUS_H + 10, 5);
+        popText(SIDE_X, b.y + 120, '가득!', KDARK[b.k], 40);
+      }
+    } else if (b.state === 'ticket'){
+      b.door = 1; b.tt += dt;
+      if (b.tt >= TICKET_TIME) ticketResolve(b, false, true);
+    } else if (b.state === 'count'){
+      // 정답 확인: 창문 아래 뛰어 세기가 3, 6, 9, 12 차례로 켜짐
+      const want = Math.min(b.n, Math.floor(b.t / 0.24) + 1);
+      while (b.lit < want){ b.lit++; S.count(b.lit); b.cpop = 1; }
+      if (b.t > b.n * 0.24 + 0.5){
+        b.state = b.right ? 'done' : 'fail'; b.t = 0;
+        b.banner = { text: formula(b), color: b.right ? '#9fe6a0' : '#ffc46b' };
+        if (b.right){ S.honk(); popText(SIDE_X, b.y + 90, '빵빵! 출발!', '#2f8a62', 30); }
+      }
+    } else if (b.state === 'done' || b.state === 'fail'){
+      b.door = Math.min(1, b.door + dt * 5);
+      if (b.t > 1.1){ b.state = 'leave'; b.t = 0; }
+    } else if (b.state === 'leave'){
+      b.y = BUS_Y - Math.pow(b.t, 2) * 520;
+      if (b.t > 0.2 && Math.random() < 0.5) puff(b.x + 60 + Math.random() * 320, b.y + BUS_H + 10, 1);
+      if (b.t > 1.1) b.dead = true;
+    }
+  }
+  if (G.buses.some(b => b.dead)){
+    G.nextBus = 0.4;
+    if (G.trainDemo === 'show') G.trainDemo = 'done';
+    G.buses = G.buses.filter(b => !b.dead);
+  }
+}
+
+// ───────── 집기·놓기 ─────────
+function grabAt(px, py){
+  const st = G.groups.filter(g => g.state === 'station' || g.state === 'return');
+  for (let i = st.length - 1; i >= 0; i--){
+    const g = st[i];
+    if (inRect(px, py, groupRect(g), 4)){
+      g.state = 'held'; g.pop = 1.25; setMood(g, 'wow', 99);
+      G.held = { groups: [g], ox: g.x - px, oy: g.y - py, hover: null, dwell: 0 };
+      S.pick();
+      return true;
+    }
+  }
+  return false;
+}
+function releaseHeld(){
+  const h = G.held; if (!h) return;
+  G.held = null;
+  const b = busAt(G.px, G.py);
+  if (b) dropOn(b, h.groups);
+  else for (const g of h.groups){ g.state = 'return'; setMood(g, 'normal', 0); g.pop = 1.1; }
+}
+function penalty(b, sec, text){
+  b.wait = Math.max(0.5, b.wait - sec); G.score = Math.max(0, G.score - 20);
+  popText(SIDE_X, b.y + 110, text, '#c0602a', 30);
+  popText(SIDE_X, b.y + 160, '-' + sec + '초', '#e05555', 28);
+}
+function dropOn(b, train){
+  if (train[0].k !== b.k){
+    // 다른 크기 묶음: 문에서 튕겨 정류장으로(팻말 쪽으로 안 감)
+    train.forEach((g, i) => bounce(g, 'sad', i * 0.05));
+    G.groupMiss++; G.stats.wrong++; G.combo = 0;
+    b.flash = { text: b.k + '명씩 묶음만 타요!', t: 1.6 }; b.sq = 0.25;
+    S.wrong(); G.shake = Math.max(G.shake, 6);
+    penalty(b, 3, b.k + '명씩!');
+    return;
+  }
+  let idx = 0, over = false;
+  for (const g of train){
+    if (b.groupsIn < b.n){
+      b.groupsIn++; g.state = 'board'; freeSlot(g); g.wi = b.filled++; g.bus = b; g.bt = -idx * 0.13;
+      g.sx = g.x; g.sy = g.y; setMood(g, 'happy', 99);
+    } else {
+      over = true; g.state = 'wait'; g.delay = idx * 0.13 + 0.25;
+    }
+    idx++;
+  }
+  if (over){ G.groupMiss++; G.stats.over++; G.combo = 0; b.overflow = true; penalty(b, 2, b.n + '묶음만!'); }
+  if (b.groupsIn === b.n){ b.state = 'closing'; b.t = 0; b.closeDelay = Math.min(idx, b.n) * 0.13 + 0.45; }
+}
+function bounce(g, mood, delay){
+  // 버스 아래로 떨어지며 데굴데굴 → 제자리로
+  g.state = 'bounce'; g.vx = (g.x + groupW(g.k) / 2 < W / 2 ? -1 : 1) * (140 + Math.random() * 80); g.vy = -120 - Math.random() * 60; g.rot = 0;
+  g.bt = 0; g.delay = delay || 0; setMood(g, mood, 1.8); g.pop = 1.15;
+}
+
+function updateGroups(dt){
+  const h = G.held;
+  if (h){
+    const lead = h.groups[0];
+    lead.x = G.px + h.ox; lead.y = G.py + h.oy;
+    for (let i = 1; i < h.groups.length; i++){
+      const p = h.groups[i - 1], g = h.groups[i];
+      const k = 1 - Math.pow(0.0005, dt);
+      g.x = lerp(g.x, p.x + 30, k); g.y = lerp(g.y, p.y + 20, k);
+    }
+    // 같은 크기 묶음 위에 잠깐 머물면 줄줄이 붙음
+    let hov = null;
+    if (!busAt(G.px, G.py)){
+      for (const g of G.groups){ if (g.state === 'station' && g.k === lead.k && inRect(G.px, G.py, groupRect(g), 0)){ hov = g; break; } }
+    }
+    if (hov && hov === h.hover){
+      h.dwell += dt;
+      if (h.dwell >= 0.2){
+        hov.state = 'held'; hov.pop = 1.3; setMood(hov, 'wow', 99); h.groups.push(hov);
+        S.attach(h.groups.length); h.hover = null; h.dwell = 0;
+      }
+    } else { h.hover = hov; h.dwell = 0; }
+  }
+  for (const g of G.groups){
+    g.pop = lerp(g.pop, 1, 1 - Math.pow(0.001, dt));
+    g.sq *= Math.pow(0.01, dt);
+    if (g.moodT > 0){ g.moodT -= dt; if (g.moodT <= 0) g.mood = 'normal'; }
+    if (g.state === 'enter'){
+      g.et += dt;
+      if (g.et >= 0.35){ g.state = 'station'; g.sq = 0.3; puff(g.x + groupW(g.k) / 2, g.y + 10, 4); }
+    } else if (g.state === 'return'){
+      const tx = homeX(g), ty = G.slots[g.slot].y;
+      const dx = tx - g.x, dy = ty - g.y, d = Math.hypot(dx, dy), sp = 460 * dt;
+      g.hop += dt * 9;
+      if (d <= sp){ g.x = tx; g.y = ty; g.state = 'station'; g.sq = 0.3; }
+      else { g.x += dx / d * sp; g.y += dy / d * sp; }
+    } else if (g.state === 'exit'){
+      g.et = (g.et || 0) + dt; if (g.et > 0.3){ g.dead = true; puff(g.x + groupW(g.k) / 2, g.y - 20, 4); }
+    } else if (g.state === 'wait'){
+      g.delay -= dt;
+      if (g.delay <= 0){ bounce(g, 'dizzy', 0); S.overflow(); G.shake = Math.max(G.shake, 5); }
+    } else if (g.state === 'bounce'){
+      if (g.delay > 0){ g.delay -= dt; continue; }
+      g.bt += dt;
+      g.vy += 1100 * dt; g.x += g.vx * dt; g.y += g.vy * dt; g.rot += g.vx * dt * 0.02;
+      if (g.bt > 0.6){ g.rot = 0; g.state = 'return'; g.sq = 0.35; }
+    } else if (g.state === 'board'){
+      g.bt += dt;
+      if (g.bt < 0) continue;
+      const b = g.bus, wp = winPos(b, g.wi);
+      const k = clamp(g.bt / 0.3, 0, 1);
+      g.x = lerp(g.sx, wp.x - groupW(g.k) / 2, k); g.y = lerp(g.sy, wp.y, k) - Math.sin(k * Math.PI) * 60;
+      if (k >= 1){
+        g.dead = true; b.wins[g.wi] = { id: g.ids[0], k: g.k, t: 0 };
+        G.boards++; G.score += 2; b.sq = 0.18; b.cpop = 1;
+        S.board(g.wi);
+        burst(wp.x, wp.y - 10, 10, KCOL[g.k]);
+        G.hitstop = Math.max(G.hitstop, 0.03);
+      }
+    }
+  }
+  G.groups = G.groups.filter(g => !g.dead);
+}
+
+// ───────── 효과 ─────────
+function popText(x, y, text, color, size){
+  // 같은 자리 글자는 아래로 비켜 겹치지 않게
+  for (const p of G.pops) if (Math.abs(p.x - x) < 120 && Math.abs(p.y0 - y) < 40 && p.t < 0.9) y += 46;
+  G.pops.push({ x, y, y0: y, text, color, size, t: 0 });
+}
+function burst(x, y, n, col){ for (let i = 0; i < n; i++){ const a = Math.random() * 6.28, s = 120 + Math.random() * 220; G.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 120, life: 0.6 + Math.random() * 0.3, t: 0, r: 4 + Math.random() * 5, col, kind: 'dot' }); } }
+// 성공 별 조각: 버스 양 옆 아래에서 바깥쪽으로(가운데 식은 안 덮음)
+function confetti(b, n){
+  const cols = ['#ffd3dc', '#c9e8ff', '#fff1a8', '#c8efc4', '#e3d6ff', '#ffd0b0'];
+  for (let i = 0; i < n; i++){
+    const left = i % 2 === 0, a = left ? -Math.PI + 0.15 + Math.random() * 0.9 : -0.15 - Math.random() * 0.9, s = 250 + Math.random() * 280;
+    G.parts.push({ x: left ? b.x + 10 : b.x + BUS_W - 10, y: b.y + BUS_H, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1 + Math.random() * 0.4, t: 0, r: 5 + Math.random() * 5, col: pick(cols), kind: 'star', spin: Math.random() * 6 });
+  }
+}
+function puff(x, y, n){ for (let i = 0; i < n; i++) G.parts.push({ x: x + (Math.random() - 0.5) * 40, y, vx: (Math.random() - 0.5) * 80, vy: -20 - Math.random() * 40, life: 0.7, t: 0, r: 10 + Math.random() * 10, col: '#ffffff', kind: 'puff' }); }
+function updateFx(dt){
+  for (const p of G.parts){ p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.kind !== 'puff') p.vy += 700 * dt; else { p.vx *= 0.95; p.r += dt * 14; } }
+  G.parts = G.parts.filter(p => p.t < p.life);
+  for (const p of G.pops){ p.t += dt; p.y -= dt * 30; }
+  G.pops = G.pops.filter(p => p.t < 1.2);
+  G.shake = Math.max(0, G.shake - dt * 30);
+}
+
+// ───────── 갱신 ─────────
+function update(dt){
+  G.t += dt;
+  if (G.state === 'play'){
+    if (G.hitstop > 0){ G.hitstop -= dt; updateFx(dt * 0.3); return; }
+    G.playT += dt; G.timeLeft = Math.max(0, PLAY_TIME - G.playT);
+    spawnLogic(dt);
+    updateBuses(dt);
+    updateGroups(dt);
+    updateFx(dt);
+    bgmUpdate();
+    if (G.timeLeft <= 0) endGame();
+  } else {
+    G.resultT += dt;
+    updateFx(dt);
+  }
+}
+function endGame(){
+  if (G.held){ for (const g of G.held.groups) g.state = 'return'; G.held = null; }
+  G.state = 'result'; G.resultT = 0; S.end();
+}
+
+// ───────── 그리기 도구 ─────────
+function rr(x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function fs(fill, lw){ ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = lw || 3; ctx.strokeStyle = LINE; ctx.stroke(); }
+function text(s, x, y, size, color, align, stroke){
+  ctx.font = size + 'px ' + FONT; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle';
+  if (stroke){ ctx.lineWidth = stroke; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round'; ctx.strokeText(s, x, y); }
+  ctx.fillStyle = color || LINE; ctx.fillText(s, x, y);
+}
+function cloud(cx, cy, w, h, fill){
+  const n = Math.max(3, Math.round(w / 34)), circles = [];
+  for (let i = 0; i < n; i++){ const k = i / (n - 1); circles.push([cx - w / 2 + h * 0.5 + k * (w - h), cy - Math.sin(k * Math.PI) * h * 0.18, h * (0.5 + Math.sin(k * Math.PI) * 0.18)]); }
+  ctx.beginPath(); for (const c of circles){ ctx.moveTo(c[0] + c[2], c[1]); ctx.arc(c[0], c[1], c[2], 0, 6.283); }
+  ctx.lineWidth = 6; ctx.strokeStyle = LINE; ctx.stroke();
+  ctx.fillStyle = fill || '#fff'; ctx.fill();
+}
+
+// 배경
+function drawBG(){
+  const sky = ctx.createLinearGradient(0, 0, 0, 330);
+  sky.addColorStop(0, '#bfe6ff'); sky.addColorStop(1, '#e9f7ff');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, 340);
+  ctx.beginPath(); ctx.arc(940, 70, 38, 0, 6.283); fs('#fff3a6', 4);
+  for (const [x, y, w] of [[150, 50, 150], [520, 36, 120], [800, 120, 110]]){
+    const dx = ((x + G.t * 8) % 1200) - 100; cloud(dx, y, w, 40, '#ffffff');
+  }
+  ctx.beginPath(); ctx.moveTo(0, 330); ctx.quadraticCurveTo(160, 268, 340, 318); ctx.quadraticCurveTo(520, 262, 720, 316); ctx.quadraticCurveTo(880, 270, 1024, 312); ctx.lineTo(1024, 340); ctx.lineTo(0, 340); ctx.closePath();
+  fs('#cdeec0', 4);
+  ctx.fillStyle = '#f3dfc3'; ctx.fillRect(0, 330, W, 52);
+  ctx.strokeStyle = LINE; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 330); ctx.lineTo(W, 330); ctx.moveTo(0, 382); ctx.lineTo(W, 382); ctx.stroke();
+  const gr = ctx.createLinearGradient(0, 382, 0, H);
+  gr.addColorStop(0, '#dff5d2'); gr.addColorStop(1, '#c9ebb9');
+  ctx.fillStyle = gr; ctx.fillRect(0, 384, W, H - 384);
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  for (let i = 0; i < 26; i++){ const x = (i * 197) % 1000 + 12, y = 400 + (i * 89) % 350; ctx.beginPath(); ctx.arc(x, y, 3, 0, 6.283); ctx.fill(); }
+}
+function drawHUD(){
+  rr(14, 338, 150, 38, 19); fs('#fffaf0', 3);
+  text('출발 ' + G.ok + '대', 89, 358, 22, LINE);
+  const bw = 520, bx = 512 - bw / 2;
+  rr(bx, 344, bw, 26, 13); fs('#fffaf0', 3);
+  const k = G.timeLeft / PLAY_TIME;
+  if (k > 0){ rr(bx + 4, 348, (bw - 8) * k, 18, 9); ctx.fillStyle = k < 0.2 ? '#ff9b9b' : '#9fd8ff'; ctx.fill(); }
+  text(Math.ceil(G.timeLeft) + '초', 512, 358, 18, LINE);
+  rr(860, 338, 150, 38, 19); fs('#fffaf0', 3);
+  text(String(G.score), 935, 358, 24, LINE);
+}
+
+// 묶음 그리기
+function drawGroup(g, t){
+  const w = groupW(g.k), cx = g.x + w / 2;
+  let hopY = 0, sq = g.sq;
+  if (g.state === 'return'){ hopY = -Math.abs(Math.sin(g.hop)) * 10; sq += (Math.abs(Math.sin(g.hop)) < 0.25 ? 0.12 : -0.05); }
+  ctx.save();
+  ctx.translate(cx, g.y);
+  if (g.rot){ ctx.translate(0, -35); ctx.rotate(g.rot); ctx.translate(0, 35); }
+  ctx.scale(g.pop, g.pop);
+  if (g.state === 'enter'){ const k = clamp(g.et / 0.35, 0, 1), e = k < 0.7 ? k / 0.7 * 1.12 : 1.12 - (k - 0.7) / 0.3 * 0.12; ctx.scale(e, e); }
+  if (g.state === 'exit'){ const k = clamp(1 - g.et / 0.3, 0, 1); ctx.scale(k, k); }
+  if (g.state !== 'board'){
+    if (g.state === 'held'){ ctx.fillStyle = 'rgba(0,0,0,.10)'; ctx.beginPath(); ctx.ellipse(0, 30, w / 2, 10, 0, 0, 6.283); ctx.fill(); }
+    cloud(0, 8, w, 30, '#ffffff');
+    rr(-24, 6, 48, 22, 11); fs(KCOL[g.k], 2.5);
+    text(g.k + '명', 0, 17, 16, LINE);
+  }
+  const cs = charSize(g.k), step = charStep(g.k), x0 = -((g.k - 1) * step) / 2;
+  const look = clamp((G.px - cx) / 300, -1, 1);
+  ctx.strokeStyle = LINE; ctx.lineWidth = 3;
+  for (let i = 0; i < g.k - 1; i++){
+    const x1 = x0 + i * step + cs * 0.4, x2 = x0 + (i + 1) * step - cs * 0.4, y = -cs * 0.35 + hopY;
+    ctx.beginPath(); ctx.moveTo(x1, y); ctx.quadraticCurveTo((x1 + x2) / 2, y + 7, x2, y); ctx.stroke();
+  }
+  for (let i = 0; i < g.k; i++){
+    const bob = g.state === 'station' ? Math.sin(t * 4 + g.phase + i * 0.9) * 0.06 : 0;
+    const jump = g.mood === 'happy' && g.state !== 'board' ? -Math.abs(Math.sin(t * 10 + i)) * 8 : 0;
+    drawChar(ctx, g.ids[i], x0 + i * step, hopY + jump, cs, { mood: g.mood, t: t + g.phase + i * 0.7, squish: clamp(sq + bob, -0.4, 0.4), look });
+  }
+  ctx.restore();
+}
+
+// 버스 그리기
+function drawBus(b, t){
+  const x = b.x, y = b.y;
+  const jig = b.state === 'wait' && b.wait < b.waitMax * 0.25 ? Math.sin(t * 40) * 2 : 0;
+  ctx.save();
+  ctx.translate(x + BUS_W / 2 + jig, y + BUS_H);
+  ctx.scale(1 + b.sq * 0.08, 1 - b.sq * 0.12);
+  ctx.translate(-BUS_W / 2, -BUS_H);
+  for (const wx of [92, 348]) cloud(wx, BUS_H + 18, 110, 26, '#ffffff');
+  for (const wx of [92, 348]){ ctx.beginPath(); ctx.arc(wx, BUS_H, 22, 0, 6.283); fs('#6b5a5a', 4); ctx.beginPath(); ctx.arc(wx, BUS_H, 8, 0, 6.283); fs('#e8e0d8', 3); }
+  rr(0, 0, BUS_W, BUS_H, 30); fs('#ffdf7e', 5);
+  ctx.save(); rr(0, 0, BUS_W, BUS_H, 30); ctx.clip();
+  ctx.fillStyle = '#ffeab0'; ctx.fillRect(0, 0, BUS_W, 12);
+  ctx.fillStyle = '#ffb3c1'; ctx.fillRect(0, 104, BUS_W, 16);
+  ctx.restore();
+  const counted = b.state === 'count' || b.state === 'done' || b.state === 'fail' || b.state === 'leave';
+  for (let i = 0; i < 9; i++){
+    const wx = 22 + i * 37, wy = 18;
+    rr(wx, wy, 32, 52, 9); fs('#e6f6ff', 3);
+    const wn = b.wins[i];
+    if (!wn) continue;
+    wn.t += 1 / 60;
+    ctx.save(); rr(wx + 1.5, wy + 1.5, 29, 49, 8); ctx.clip();
+    const mood = b.state === 'fail' || (b.state === 'leave' && !b.right) ? 'sad' : (counted || b.state === 'closing') ? 'happy' : 'normal';
+    const pop = Math.min(1, wn.t * 5);
+    drawChar(ctx, wn.id, wx + 16, wy + 64 - pop * 8, 30, { mood, t: t + i, squish: (1 - pop) * 0.3 });
+    ctx.restore();
+    if ((b.state === 'done' || b.state === 'leave') && b.right){ const a = Math.sin(t * 14 + i) * 4; ctx.beginPath(); ctx.arc(wx + 27 + a, wy + 14, 5, 0, 6.283); fs('#fff', 2.5); }
+    // 창문 아래: 표 쓰기 전엔 묶음 번호(1, 2, 3…), 정답 확인 때 뛰어 세기(3, 6, 9…)
+    if (counted && i < b.lit) text(String(b.k * (i + 1)), wx + 16, 86, 19, KDARK[b.k]);
+    else if (b.state !== 'ticket'){ ctx.beginPath(); ctx.arc(wx + 16, 86, 12, 0, 6.283); fs(KCOL[wn.k], 2); text(String(i + 1), wx + 16, 87, 17, LINE); }
+  }
+  // 문
+  rr(362, 18, 64, 108, 10); fs('#e6f6ff', 3);
+  const dw = Math.max(2, 30 * b.door);
+  ctx.fillStyle = '#ffd36a'; ctx.strokeStyle = LINE; ctx.lineWidth = 3;
+  rr(362, 18, dw, 108, 8); ctx.fill(); ctx.stroke();
+  rr(426 - dw, 18, dw, 108, 8); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(BUS_W - 8, 128, 8, 0, 6.283); fs('#fff7c2', 3);
+  // 몇 묶음 탔는지(합계는 표를 쓰기 전엔 안 보임)
+  const cs = 1 + b.cpop * 0.18;
+  ctx.save(); ctx.translate(190, 116); ctx.scale(cs, cs);
+  rr(-80, -18, 160, 36, 18); fs('#fffaf0', 3);
+  text(counted && b.lit >= b.n ? '모두 ' + b.target + '명!' : b.groupsIn + '묶음 탔어요', 0, 1, 20, LINE);
+  ctx.restore();
+  ctx.restore();
+
+  // 숫자판(표 쓰기) — 이 버스 몸통 위에만
+  if (b.state === 'ticket'){
+    rr(b.x - 2, b.y, BUS_W + 4, 150, 22); ctx.fillStyle = 'rgba(255,250,240,.95)'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = LINE; ctx.stroke();
+    for (const kk of padKeys(b)){
+      const on = b.keyPop && b.keyPop.lb === kk.label && b.keyPop.t > 0, pr = on ? 3 : 0;
+      rr(kk.x, kk.y + 4, kk.w, kk.h - 4, 14); ctx.fillStyle = '#d9cbb8'; ctx.fill();
+      rr(kk.x, kk.y + pr, kk.w, kk.h - 4, 14); fs(kk.label === '지우기' ? '#ffe0e0' : '#ffffff', 3);
+      text(kk.label, kk.x + kk.w / 2, kk.y + kk.h / 2 - 1 + pr, kk.label === '지우기' ? 24 : 34, LINE);
+    }
+  }
+
+  // 팻말(버스 위)
+  const SW = 430, sx = x + (BUS_W - SW) / 2 + jig, sy = y - 82;
+  ctx.strokeStyle = LINE; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(sx + 110, sy + 70); ctx.lineTo(sx + 110, y + 2); ctx.moveTo(sx + SW - 110, sy + 70); ctx.lineTo(sx + SW - 110, y + 2); ctx.stroke();
+  if (b.state === 'ticket'){
+    // 운전사 꼬물이가 내민 표 「3×4=?  모두 몇 명?」
+    rr(sx, sy, SW, 72, 22); fs('#fff4d6', 4);
+    const q = b.k + '×' + b.n + '=';
+    ctx.font = '44px ' + FONT; const qw = ctx.measureText(q).width;
+    const bw = 96, total = qw + 10 + bw, lx = sx + SW / 2 - total / 2;
+    text(q, lx, sy + 32, 44, LINE, 'left');
+    rr(lx + qw + 10, sy + 7, bw, 50, 12); fs('#ffffff', 3);
+    const ans = b.typed;
+    text(ans || '?', lx + qw + 10 + bw / 2, sy + 33, 40, ans ? '#2f6fa8' : '#b8aaa0');
+    const k = clamp(1 - b.tt / TICKET_TIME, 0, 1);
+    rr(sx + 20, sy + 61, SW - 40, 6, 3); ctx.fillStyle = '#efe4d6'; ctx.fill();
+    if (k > 0){ rr(sx + 20, sy + 61, (SW - 40) * k, 6, 3); ctx.fillStyle = '#ffb347'; ctx.fill(); }
+    // 운전사와 말풍선(버스 오른쪽 빈 곳)
+    drawChar(ctx, CHAR_IDS[(b.k + b.n) % 8], SIDE_X - 60, b.y + 4, 60, { mood: 'wow', t, squish: Math.sin(t * 6) * 0.05 });
+    rr(SIDE_X - 30, b.y - 76, 150, 50, 20); fs('#ffffff', 3);
+    ctx.beginPath(); ctx.moveTo(SIDE_X - 10, b.y - 28); ctx.lineTo(SIDE_X - 40, b.y - 10); ctx.lineTo(SIDE_X + 10, b.y - 28); ctx.fillStyle = '#fff'; ctx.fill();
+    text('모두 몇 명?', SIDE_X + 45, b.y - 51, 24, LINE);
+  } else if (b.banner){
+    const s = 1 + Math.max(0, 0.4 - b.t) * 1.2;
+    ctx.save(); ctx.translate(sx + SW / 2, sy + 36); ctx.scale(s, s);
+    rr(-SW / 2, -36, SW, 72, 22); fs(b.banner.color, 4);
+    text(b.banner.text, 0, 2, 46, LINE);
+    ctx.restore();
+  } else {
+    rr(sx, sy, SW, 72, 22); fs(b.rev ? '#fff4d6' : '#fffaf0', 4);
+    if (b.flash){
+      text(b.flash.text, sx + SW / 2, sy + 32, 32, '#c0602a');
+    } else if (b.state === 'closing' || b.state === 'count'){
+      text(b.k + '명씩 ' + b.n + '묶음 가득!', sx + SW / 2, sy + 32, 32, LINE);
+    } else {
+      // 「3명씩 4묶음 태워요!」 — 곱하는 두 수만(곱은 안 보임)
+      rr(sx + 18, sy + 13, 104, 40, 20); fs(KCOL[b.k], 3);
+      text(b.k + '명씩', sx + 70, sy + 33, 26, LINE);
+      text(b.n + '묶음 태워요!', sx + 132, sy + 33, 32, LINE, 'left');
+    }
+    if (b.state === 'wait' || b.state === 'arrive'){
+      const k = clamp(b.wait / b.waitMax, 0, 1);
+      rr(sx + 20, sy + 60, SW - 40, 8, 4); ctx.fillStyle = '#efe4d6'; ctx.fill();
+      if (k > 0){ rr(sx + 20, sy + 60, (SW - 40) * k, 8, 4); ctx.fillStyle = k < 0.25 ? '#ff7b7b' : '#7cc98a'; ctx.fill(); }
+    }
+  }
+}
+
+// 손가락 그림(안내) — rot 0이면 손끝이 위, -π/2면 손끝이 왼쪽
+function drawHand(x, y, press, rot, size){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot === undefined ? -0.35 : rot); const s = (press ? 0.9 : 1) * (size || 1); ctx.scale(s, s);
+  rr(-9, 0, 18, 44, 9); fs('#ffe1cc', 3);
+  rr(-20, 30, 44, 42, 16); fs('#ffe1cc', 3);
+  ctx.beginPath(); ctx.ellipse(-22, 46, 9, 14, -0.5, 0, 6.283); fs('#ffe1cc', 3);
+  ctx.restore();
+}
+function handPath(t, pts, period){
+  // pts 사이를 차례로 이동(첫 점에서 누르고, 끝에서 뗌)
+  const p = (t % period) / period, segs = pts.length - 1;
+  if (p < 0.12) return { x: pts[0][0], y: pts[0][1], press: p > 0.06 };
+  if (p > 0.85) return { x: pts[segs][0], y: pts[segs][1], press: false };
+  const q = (p - 0.12) / 0.73 * segs, i = Math.min(segs - 1, Math.floor(q)), k = q - i, e = k * k * (3 - 2 * k);
+  return { x: lerp(pts[i][0], pts[i + 1][0], e), y: lerp(pts[i][1], pts[i + 1][1], e) - Math.sin(k * Math.PI) * 40, press: true };
+}
+function drawTutorial(t){
+  if (G.state !== 'play' || G.held) return;
+  const tb = ticketBus();
+  if (tb){
+    if (G.ok > 0 || G.stats.ticketBad + G.stats.ticketLate > 0 || tb.typed) return;
+    // 첫 표: 숫자판 오른쪽 밖에서 손끝으로 톡톡(키는 안 가림)
+    const kk = padKeys(tb), right = kk[5], tap = (t * 2) % 1 < 0.35;
+    ctx.globalAlpha = 0.9; drawHand(right.x + right.w + 8 - (tap ? 6 : 0), right.y + right.h / 2 + 30, tap, -Math.PI / 2); ctx.globalAlpha = 1;
+    return;
+  }
+  const b = G.buses.find(bb => bb.state === 'wait'); if (!b) return;
+  const tx = b.x + 394, ty = b.y + 70;
+  let pts = null;
+  if (G.boards === 0 && G.playT < 14){
+    const g = G.groups.find(gg => gg.state === 'station' && gg.k === b.k); if (!g) return;
+    const r = groupRect(g); pts = [[r.x + r.w / 2, r.y + 8], [tx, ty]];
+  } else if (G.trainDemo !== 'done' && G.ok >= 1 && b.n - b.groupsIn >= 2 && b.t < 7){
+    // 두 번째 버스부터 한 번: 같은 묶음 위에 잠깐 대면 줄줄이 붙는 것 보여 주기
+    const gs = G.groups.filter(gg => gg.state === 'station' && gg.k === b.k); if (gs.length < 2) return;
+    G.trainDemo = 'show';
+    const r1 = groupRect(gs[0]), r2 = groupRect(gs[1]);
+    pts = [[r1.x + r1.w / 2, r1.y + 8], [r2.x + r2.w / 2, r2.y + 8], [r2.x + r2.w / 2, r2.y + 8], [tx, ty]];
+  }
+  if (!pts) return;
+  const h = handPath(t, pts, pts.length > 2 ? 3 : 2);
+  ctx.globalAlpha = 0.9;
+  ctx.setLineDash([8, 10]); ctx.strokeStyle = 'rgba(61,48,48,.35)'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]); ctx.stroke(); ctx.setLineDash([]);
+  drawHand(h.x, h.y, h.press, undefined, 0.8);
+  ctx.globalAlpha = 1;
+}
+
+function drawFx(){
+  for (const p of G.parts){
+    const a = 1 - p.t / p.life;
+    ctx.globalAlpha = p.kind === 'puff' ? a * 0.8 : a;
+    if (p.kind === 'star'){
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.spin + p.t * 6);
+      ctx.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? p.r * 0.45 : p.r; ctx.lineTo(Math.cos(i * 0.628) * r, Math.sin(i * 0.628) * r); } ctx.closePath();
+      fs(p.col, 2); ctx.restore();
+    } else if (p.kind === 'puff'){
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fillStyle = '#fff'; ctx.fill();
+    } else { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); fs(p.col, 2); }
+  }
+  ctx.globalAlpha = 1;
+  for (const p of G.pops){
+    const k = p.t, s = k < 0.15 ? 0.5 + k / 0.15 * 0.8 : k < 0.3 ? 1.3 - (k - 0.15) / 0.15 * 0.3 : 1;
+    ctx.globalAlpha = k > 0.9 ? (1.2 - k) / 0.3 : 1;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(s, s); text(p.text, 0, 0, p.size, p.color, 'center', 7); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// 단추
+const BTN_START = { x: 392, y: 486, w: 240, h: 92 };
+const BTN_DAN = DANS.map((d, i) => ({ x: 109 + i * 164, y: 396, w: 150, h: 64 }));
+const BTN_MENU = { x: 16, y: 16, w: 150, h: 60 };
+const BTN_AGAIN = { x: 282, y: 600, w: 220, h: 84 };
+const BTN_PICK = { x: 522, y: 600, w: 220, h: 84 };
+function drawButton(r, label, on, size, col){
+  ctx.save(); const pr = G.pdown && inRect(G.px, G.py, r) && on ? 4 : 0;
+  rr(r.x, r.y + 8, r.w, r.h, 28); ctx.fillStyle = on ? '#c9a46a' : '#c9c0b6'; ctx.fill();
+  rr(r.x, r.y + pr, r.w, r.h, 28); fs(on ? (col || '#ffd36a') : '#e6e0d8', 5);
+  text(label, r.x + r.w / 2, r.y + r.h / 2 + pr + 2, size || 40, on ? LINE : '#9a8f86');
+  ctx.restore();
+}
+function drawTitle(t){
+  const demo = { x: BUS_X, y: 150 + Math.sin(t * 2) * 6, k: 3, n: 4, target: 12, groupsIn: 3, wins: [], state: 'wait', t: 1, wait: 10, waitMax: 10, door: 0, flash: null, banner: { text: '꼬물이 버스', color: '#fffaf0' }, sq: 0, cpop: 0, lit: 0 };
+  for (let i = 0; i < 9; i++) demo.wins.push(i < 3 ? { id: CHAR_IDS[(i * 3) % 8], k: 3, t: 1 } : null);
+  drawBus(demo, t);
+  rr(222, 326, 580, 56, 28); fs('#fffaf0', 4);
+  text('같은 묶음 친구들을 끌어서 버스에 태워요', 512, 355, 26, LINE);
+  BTN_DAN.forEach((r, i) => {
+    const on = G.dan === i;
+    rr(r.x, r.y + 5, r.w, r.h, 22); ctx.fillStyle = '#d9cbb8'; ctx.fill();
+    rr(r.x, r.y + (on ? 3 : 0), r.w, r.h, 22); fs(on ? '#9fe6a0' : '#fffaf0', on ? 5 : 3);
+    text(DANS[i].label, r.x + r.w / 2, r.y + r.h / 2 + (on ? 4 : 1), 28, LINE);
+  });
+  drawButton(BTN_START, '시작', true, 42);
+  drawButton(BTN_MENU, '← 메뉴', true, 28, '#fffaf0');
+  const demos = [[80, 660, 3], [700, 690, 2], [100, 745, 2], [770, 610, 5]];
+  for (const [x, y, k] of demos){
+    const step = charStep(k);
+    cloud(x + groupW(k) / 2, y + 8, groupW(k), 30);
+    for (let i = 0; i < k; i++) drawChar(ctx, CHAR_IDS[(x / 10 + i * 3) % 8 | 0], x + 15 + CH * 0.41 + i * step, y - Math.abs(Math.sin(t * 3 + i + x)) * 10, CH, { mood: i % 2 ? 'happy' : 'normal', t: t + i, squish: Math.sin(t * 6 + i) * 0.08 });
+  }
+}
+function drawResult(t){
+  ctx.fillStyle = 'rgba(61,48,48,.35)'; ctx.fillRect(0, 0, W, H);
+  rr(212, 70, 600, 640, 36); fs('#fffaf0', 5);
+  text('끝!', 512, 120, 52, LINE);
+  text(G.score + '점', 512, 196, 70, '#ff7a3c');
+  const good = G.miss === 0 || G.ok >= G.miss;   // 곱셈 실수 기준
+  for (let i = 0; i < 5; i++) drawChar(ctx, CHAR_IDS[(i * 3 + 1) % 8], 332 + i * 90, 330 - Math.abs(Math.sin(t * 5 + i)) * (good ? 12 : 3), 60, { mood: good ? 'happy' : 'sad', t: t + i });
+  text('출발 ' + G.ok + '대  ·  곱셈 실수 ' + G.miss + '번  ·  묶음 실수 ' + G.groupMiss + '번', 512, 378, 26, LINE);
+  text('다시 볼 식', 512, 430, 24, '#8a7a72');
+  const list = G.review.slice(0, 8);
+  if (!list.length) text('없어요! 아주 잘했어요', 512, 478, 28, '#2f8a62');
+  if (G.review.length > 8) text('그리고 ' + (G.review.length - 8) + '개 더', 512, 574, 20, '#8a7a72');
+  list.forEach((key, i) => {
+    const r = G.reviewInfo[key], col = i % 4, row = (i / 4) | 0;
+    const cx = 512 + (col - 1.5) * 136, cy = 474 + row * 56;
+    rr(cx - 62, cy - 22, 124, 44, 22); fs(KCOL[r.k], 3);
+    text(r.k + '×' + r.n + '=' + r.k * r.n, cx, cy + 1, 24, LINE);
+  });
+  const on = G.resultT >= 1;
+  drawButton(BTN_AGAIN, '다시', on, 40);
+  drawButton(BTN_PICK, '단 고르기', on, 32, '#c9e8ff');
+  drawButton(BTN_MENU, '← 메뉴', on, 28, '#fffaf0');
+}
+
+// ───────── 그리기 ─────────
+function render(){
+  const t = G.t;
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  if (G.shake > 0) ctx.translate((Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake);
+  drawBG();
+  if (G.state === 'title'){ drawTitle(t); ctx.restore(); return; }
+  for (const b of G.buses) drawBus(b, t);
+  drawHUD();
+  const order = ['station', 'enter', 'return', 'exit', 'wait', 'bounce', 'board'];
+  for (const st of order) for (const g of G.groups) if (g.state === st) drawGroup(g, t);
+  if (G.held){
+    for (let i = G.held.groups.length - 1; i >= 0; i--) drawGroup(G.held.groups[i], t);
+    const n = G.held.groups.length, ov = busAt(G.px, G.py);
+    rr(G.px + 24, G.py - 70, 96, 38, 19); fs(ov ? '#9fe6a0' : '#fffaf0', 3);
+    text(n + '묶음', G.px + 72, G.py - 50, 24, LINE);
+    if (G.held.hover && G.held.dwell > 0){ const r = groupRect(G.held.hover); ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + 30, 34, -1.57, -1.57 + 6.283 * G.held.dwell / 0.2); ctx.strokeStyle = KDARK[G.held.groups[0].k]; ctx.lineWidth = 6; ctx.stroke(); }
+  }
+  drawTutorial(t);
+  drawFx();
+  if (G.state === 'play' && G.combo >= 2) text(G.combo + '대 연속!', SIDE_X, 300, 22, '#ff7a3c', 'center', 5);
+  if (G.state === 'result') drawResult(t);
+  if (G.paused){ ctx.fillStyle = 'rgba(61,48,48,.4)'; ctx.fillRect(0, 0, W, H); text('잠깐 멈춤', 512, 384, 48, '#fff'); }
+  ctx.restore();
+}
+
+// ───────── 입력 ─────────
+function toLocal(e){ const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; }
+function goMenu(){ location.href = 'index.html'; }
+let pid = null;   // 지금 잡고 있는 손가락(다른 손가락은 무시)
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (pid !== null && pid !== e.pointerId) return;
+  pid = e.pointerId;
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+  [G.px, G.py] = toLocal(e); G.pdown = true;
+  audioInit(); if (ac && ac.state === 'suspended') ac.resume();
+  if (G.state === 'title'){
+    const di = BTN_DAN.findIndex(r => inRect(G.px, G.py, r));
+    if (di >= 0){ G.dan = di; S.click(); return; }
+    if (inRect(G.px, G.py, BTN_MENU)){ S.click(); goMenu(); return; }
+    if (inRect(G.px, G.py, BTN_START)){ S.click(); resetGame(); }
+    return;
+  }
+  if (G.state === 'result'){
+    if (G.resultT < 1) return;
+    if (inRect(G.px, G.py, BTN_AGAIN)){ S.click(); resetGame(); }
+    else if (inRect(G.px, G.py, BTN_PICK)){ S.click(); G.state = 'title'; G.buses = []; G.groups = []; G.pops = []; G.parts = []; }
+    else if (inRect(G.px, G.py, BTN_MENU)){ S.click(); goMenu(); }
+    return;
+  }
+  if (G.state === 'play' && !G.held){
+    const tb = ticketBus();
+    if (tb){ const kk = padKeys(tb).find(r => inRect(G.px, G.py, r)); if (kk){ padPress(tb, kk.label); return; } }
+    grabAt(G.px, G.py);
+  }
+});
+cv.addEventListener('pointermove', e => { if (pid !== null && e.pointerId !== pid) return; [G.px, G.py] = toLocal(e); });
+cv.addEventListener('pointerup', e => { if (e.pointerId !== pid) return; pid = null; [G.px, G.py] = toLocal(e); G.pdown = false; if (G.state === 'play') releaseHeld(); });
+cv.addEventListener('pointercancel', e => { if (e.pointerId !== pid) return; pid = null; G.pdown = false; if (G.state === 'play') releaseHeld(); });
+// 키보드: 숫자판이 열려 있을 때만 숫자(윗줄·숫자 패드)와 Backspace
+addEventListener('keydown', e => {
+  if (G.state !== 'play' || G.paused) return;
+  const tb = ticketBus(); if (!tb) return;
+  let d = null;
+  if (/^[0-9]$/.test(e.key)) d = e.key;
+  else if (/^Numpad[0-9]$/.test(e.code)) d = e.code.slice(6);
+  if (d !== null){ e.preventDefault(); padPress(tb, d); }
+  else if (e.key === 'Backspace'){ e.preventDefault(); padPress(tb, '지우기'); }
+});
+document.addEventListener('visibilitychange', () => { G.paused = document.hidden; if (ac){ if (G.paused) ac.suspend(); else ac.resume(); } });
+
+// ───────── 돌리기 ─────────
+let last = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!G.paused) update(dt);
+  render();
+}
+requestAnimationFrame(frame);
+
+// ───────── 검수 장치 ─────────
+window.__game = {
+  get state(){ return G.state; }, get score(){ return G.score; }, get ok(){ return G.ok; }, get miss(){ return G.miss; }, get groupMiss(){ return G.groupMiss; },
+  get timeLeft(){ return G.timeLeft; }, get review(){ return G.review.map(k => { const r = G.reviewInfo[k]; return r.k + '×' + r.n + '=' + r.k * r.n; }); },
+  get boards(){ return G.boards; }, get stats(){ return G.stats; }, get playT(){ return G.playT; },
+  get combo(){ return G.combo; }, get resultT(){ return G.resultT; }, get history(){ return G.history.slice(); }, get upcoming(){ return G.deck.slice(0, 8).map(p => p.k + '×' + p.n); },
+  get buses(){ return G.buses.map(b => ({ state: b.state, k: b.k, n: b.n, target: b.target, groupsIn: b.groupsIn, need: b.n - b.groupsIn, timeLeft: b.wait, x: b.x + BUS_W / 2, y: b.y + BUS_H / 2, rect: busRect(b) })); },
+  get groups(){ return G.groups.filter(g => g.state === 'station').map(g => { const r = groupRect(g); return { k: g.k, slot: g.slot, x: r.x + r.w / 2, y: r.y + r.h / 2 - 6, rect: r }; }); },
+  get held(){ return G.held ? { k: G.held.groups[0].k, n: G.held.groups.length } : null; },
+  get pad(){ const b = ticketBus(); return b ? { k: b.k, n: b.n, typed: b.typed, left: TICKET_TIME - b.tt, keys: padKeys(b).map(r => ({ label: r.label, x: r.x + r.w / 2, y: r.y + r.h / 2 })) } : null; },
+  buttons: { start: BTN_START, again: BTN_AGAIN, pick: BTN_PICK, menu: BTN_MENU, dan: BTN_DAN },
+  get dan(){ return DANS[G.dan].label; }, setDan(i){ G.dan = i; },
+  toClient(x, y){ const r = cv.getBoundingClientRect(); return { x: r.left + x / W * r.width, y: r.top + y / H * r.height }; },
+  start(){ audioInit(); resetGame(); },
+  tick(sec){ const n = Math.round(sec * 60); for (let i = 0; i < n; i++) update(1 / 60); render(); }
+};
+})();
+</script>
+</body>
+</html>
