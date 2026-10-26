@@ -190,8 +190,11 @@
     .side { position: sticky; width: auto; bottom: auto; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 10px; border-right: 0; border-bottom: 1px solid var(--line);
       background: color-mix(in srgb, var(--side) 88%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
     .logo { padding: 0 0 12px; } .moon { width: 32px; height: 32px; } .logo h1 { font-size: 20px; } .logo p { display: none; }
-    .meter { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 16px; margin: 0; padding: 6px 10px; gap: 7px; font-size: 11.5px; }
-    .meter b { font-size: 15px; }
+    .meter { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 16px; margin: 0; padding: 4px 10px; gap: 0 10px; font-size: 11.5px; line-height: 1.2;
+      flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 172px); }
+    .meter b { font-size: 15px; line-height: 1.1; }
+    /* 숫자가 커지면 로고 글자를 덮지 않고 두 줄로 */
+    .meter i { display: none; }
     .search { margin: 0 0 10px; }
     .nav { flex-direction: row; overflow-x: auto; overflow-y: hidden; gap: 6px; padding: 0 0 4px; scrollbar-width: none; }
     .nav::-webkit-scrollbar { display: none; }
@@ -433,7 +436,10 @@ var PLANE_COVER = 'data:image/webp;base64,UklGRlQuAABXRUJQVlA4IEguAAAwRAGdASocAu
       return (i === tops ? '<hr>' : '') + '<button type="button" data-pick="' + c.id + '">' + svg(ICON[c.id]) + '<span>' + esc(c.name) + '</span><small>' + n + '</small></button>';
     }).join('');
     bar = document.getElementById('bar');
+    // 목록이 오기 전에 찾기 칸에 쓴 글자는 지우지 않고 그대로 찾아요
+    var typed = q.value;
     pick(current, false);
+    if (typed.trim()) { q.value = typed; q.dispatchEvent(new Event('input')); }
   }
 
   function show(list, title, about, anim) {
@@ -475,11 +481,13 @@ var PLANE_COVER = 'data:image/webp;base64,UklGRlQuAABXRUJQVlA4IEguAAAwRAGdASocAu
 
   // 이름 찾기 — 이름·소개·꼬리표에서 찾고, 지우면 고른 코너로 돌아가요
   q.addEventListener('input', function () {
-    var w = q.value.trim().toLowerCase();
+    if (!live.length) return;   // 게임 목록이 오면 render() 가 다시 찾아요
+    // 띄어쓰기는 빼고 견줘요(「꼬물이구구단」도 찾게)
+    var w = q.value.replace(/\s+/g, '').toLowerCase();
     if (!w) { var keep = current; pick(keep, false); return; }
     Array.prototype.forEach.call(nav.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', 'false'); });
     moveBar();
-    var list = live.filter(function (g) { return (g.name + ' ' + g.about + ' ' + (g.tags || []).join(' ')).toLowerCase().indexOf(w) >= 0; });
+    var list = live.filter(function (g) { return (g.name + g.about + (g.tags || []).join('')).replace(/\s+/g, '').toLowerCase().indexOf(w) >= 0; });
     show(list, '「' + q.value.trim() + '」 찾기', '게임 ' + list.length + '개를 찾았어요', false);
   });
 
