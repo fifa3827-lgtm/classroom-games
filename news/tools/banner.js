@@ -6,6 +6,8 @@
 (function () {
   var KEY = 'moonlit-news-closed';
   function place(bar) {
+    var slot = document.getElementById('newsslot');
+    if (slot) { slot.appendChild(bar); return true; }
     var cab = document.querySelector('.cab');
     var row = cab && cab.parentElement;
     if (row && row.parentElement) { row.parentElement.insertBefore(bar, row); return true; }

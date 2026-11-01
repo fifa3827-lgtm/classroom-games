@@ -1,0 +1,8 @@
+# 파이썬이 저절로 만드는 파일
+__pycache__/
+*.pyc
+
+# 소개 화면·소식 도구의 빌드 결과와 캡처
+intro/tools/out/
+intro/tools/shots/
+news/tools/out/
