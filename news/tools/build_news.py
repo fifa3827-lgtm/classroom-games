@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """달빛 오락실 소식 페이지 만들기: posts.py → out/news/"""
-import html, json, os, shutil, sys
+import hashlib, html, json, os, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from posts import POSTS, CATS
 
@@ -8,6 +8,11 @@ SITE = "https://game.edoori.co.kr"
 OUT = sys.argv[1] if len(sys.argv) > 1 else "out/news"
 E = html.escape
 HERE = os.path.dirname(os.path.abspath(__file__))
+# news.css 주소 끝에 붙이는 버전 번호 = 파일 내용의 지문 (서버 캐시가 옛 css를 붙잡지 않게, intro 와 같은 방식)
+with open(os.path.join(HERE, "news.css"), "rb") as _f:
+    NCSSV = hashlib.md5(_f.read()).hexdigest()[:8]
+with open(os.path.join(HERE, "..", "..", "intro", "tools", "intro.css"), "rb") as _f:
+    ICSSV = hashlib.md5(_f.read()).hexdigest()[:8]   # 소개 화면(build.py)과 같은 지문
 
 
 def dot(d):
@@ -35,8 +40,8 @@ def head(title, desc, url, image, extra=""):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/intro/intro.css">
-<link rel="stylesheet" href="/news/news.css">
+<link rel="stylesheet" href="/intro/intro.css?v={ICSSV}">
+<link rel="stylesheet" href="/news/news.css?v={NCSSV}">
 {extra}
 </head>
 <body class="landscape">
@@ -70,7 +75,7 @@ def block(b):
         return f'<p class="btnrow"><a class="start" href="{E(b[2])}">{E(b[1])}</a></p>'
     if k == "game":
         _, emo, name, desc, href, img = b
-        return (f'<div class="gcard"><img src="{E(img)}" alt="{E(name)} 경기 장면" loading="lazy">'
+        return (f'<div class="gcard"><img src="{E(img)}" alt="{E(name)} 화면" loading="lazy">'
                 f'<div><h3>{emo} {E(name)}</h3><p>{E(desc)}</p>'
                 f'<a class="start" href="{E(href)}"><span aria-hidden="true">▶</span> {E(name)} 하러 가기</a></div></div>')
     raise ValueError(k)

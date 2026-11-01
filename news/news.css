@@ -5,9 +5,12 @@ main{display:block !important}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
 .tabs button{font:inherit;font-size:14.5px;color:var(--text);padding:6px 15px;border-radius:999px;background:var(--card);border:1px solid var(--line);cursor:pointer}
 .tabs button[aria-pressed="true"]{background:var(--gold);color:var(--night);border-color:var(--gold);font-weight:700}
+@media (max-width:400px){.tabs{gap:6px}.tabs button{font-size:13.5px;padding:6px 11px}}
+@media (max-width:340px){.tabs{gap:5px}.tabs button{font-size:12.5px;padding:5px 9px}}
 .tabs button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .list{display:grid;gap:16px;margin:0 0 30px}
 .post{display:grid;background:linear-gradient(var(--card),var(--night2));border:1px solid var(--line);border-radius:18px;overflow:hidden;text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s}
+.post[hidden]{display:none}
 .post:hover{border-color:var(--gold);transform:translateY(-2px)}
 .post:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .post img{width:100%;aspect-ratio:16/9;object-fit:cover;object-position:top;display:block;background:#0e0c26}

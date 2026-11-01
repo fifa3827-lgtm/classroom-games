@@ -18,10 +18,17 @@ BADGE = {"ok": ("가장 좋아요", "ok"), "good": ("좋아요", "good"), "soso"
 NUM = "①②③④⑤⑥⑦⑧⑨"
 
 
+# 같은 분류가 모자랄 때 먼저 채울 가까운 분류. 배움 놀이는 배움 놀이가 아닌 게임에서는 맨 뒤로
+NEAR = {"mystery": ["puzzle"], "puzzle": ["mystery"]}
+
+
 def similar(slug, cat):
-    same = [g for g in ALL if g[3] == cat and g[0] != slug]
-    other = [g for g in ALL if g[3] != cat and g[0] != slug]
-    pick = (same + other)[:3]
+    rest = [g for g in ALL if g[0] != slug]
+    same = [g for g in rest if g[3] == cat]
+    near = [g for g in rest if g[3] in NEAR.get(cat, [])]
+    other = [g for g in rest if g[3] != cat and g not in near and (cat == "learn" or g[3] != "learn")]
+    learn = [g for g in rest if cat != "learn" and g[3] == "learn"]
+    pick = (same + near + other + learn)[:3]
     out = []
     for s, emo, name, c, line in pick:
         href = f"../{s}/" if s in GAMES else f"/{s}/"
@@ -141,7 +148,7 @@ def page(slug, g):
     <ul class="devs">{dev}</ul>
     <div class="warn">
       <b>⚠️ 카카오톡·네이버 앱 안에서 열었다면</b>
-      <p>오른쪽 위 메뉴(⋮ 또는 ···)에서 「다른 브라우저로 열기」를 눌러 크롬이나 사파리로 열어 주세요. 앱 안에서는 전체 화면이 안 되고 저장이 풀릴 수 있어요.</p>
+      <p>오른쪽 위 메뉴(⋮ 또는 ···)에서 「다른 브라우저로 열기」를 눌러 크롬이나 사파리로 열어 주세요. {"앱 안에서는 전체 화면이 안 되고 저장이 풀릴 수 있어요." if g.get("fullscreen", True) else "앱 안에서는 저장이 풀릴 수 있어요."}</p>
     </div>
   </section>
 

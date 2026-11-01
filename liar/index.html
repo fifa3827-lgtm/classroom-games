@@ -1,0 +1,1341 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>라이어게임</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#5dff8a;
+    --green-bright:#c8ffd6;
+    --green-dim:#2f9a52;
+    --plastic-hi:#e2dac4;
+    --plastic:#cbc2a8;
+    --plastic-lo:#ada38a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(ellipse at 50% 25%,#3b3229 0%,#1d1813 55%,#0d0a07 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Nanum Gothic Coding',monospace;
+    overflow:hidden;padding:16px;
+  }
+
+  /* ── 모니터 본체 ── */
+  .monitor{
+    width:min(980px,100%);
+    background:linear-gradient(var(--plastic-hi),var(--plastic) 55%,var(--plastic-lo));
+    border-radius:22px 22px 16px 16px;
+    padding:30px 36px 0;
+    box-shadow:0 30px 60px rgba(0,0,0,.65),inset 0 2px 0 #f3ecda,inset 0 -3px 0 #958b73;
+  }
+  .bezel{
+    background:#2a2925;border-radius:18px;padding:20px;
+    box-shadow:inset 0 4px 14px rgba(0,0,0,.85),0 1px 0 #f3ecda;
+  }
+  .screen{
+    position:relative;
+    height:clamp(260px,calc(100vh - 290px),560px);
+    border-radius:30px/24px;
+    background:radial-gradient(ellipse at center,#0f2216 0%,#07120b 70%,#020604 100%);
+    overflow:hidden;cursor:text;
+    box-shadow:inset 0 0 60px rgba(0,0,0,.9),inset 0 0 10px rgba(93,255,138,.12);
+  }
+  .screen::before{ /* 주사선 */
+    content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,.28) 0 1px,transparent 1px 3px);
+  }
+  .screen::after{ /* 유리 반사 + 가장자리 어둡게 */
+    content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+    background:
+      radial-gradient(ellipse at 28% 12%,rgba(255,255,255,.07),transparent 38%),
+      radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.6) 100%);
+  }
+  .rollbar{
+    position:absolute;left:0;right:0;height:90px;z-index:2;pointer-events:none;
+    background:linear-gradient(transparent,rgba(93,255,138,.05),transparent);
+    animation:roll 7s linear infinite;
+  }
+  @keyframes roll{from{top:-90px}to{top:100%}}
+
+  .term{
+    position:absolute;inset:0;padding:22px 30px;overflow-y:auto;
+    color:var(--green);font-size:17px;line-height:1.6;
+    text-shadow:0 0 4px rgba(93,255,138,.7),0 0 12px rgba(93,255,138,.25);
+    white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;
+    scrollbar-width:none;
+    animation:flicker 5s infinite;
+  }
+  .term::-webkit-scrollbar{display:none}
+  @keyframes flicker{0%,100%{opacity:1}48%{opacity:.97}50%{opacity:.93}52%{opacity:.98}}
+
+  .screen.off .term,.screen.off .rollbar{display:none}
+  .screen.on .term{animation:crtOn .7s ease-out,flicker 5s 1s infinite}
+  .screen.dying .term{animation:crtOff .45s ease-in forwards}
+  .monitor.shake{animation:shake .3s}
+  @keyframes crtOn{
+    0%{transform:scale(1,.004);filter:brightness(5)}
+    35%{transform:scale(1,.004);filter:brightness(5)}
+    70%{transform:scale(1,1.04);filter:brightness(1.6)}
+    100%{transform:scale(1,1);filter:brightness(1)}
+  }
+  @keyframes crtOff{
+    0%{transform:scale(1,1);filter:brightness(1)}
+    60%{transform:scale(1,.004);filter:brightness(5)}
+    100%{transform:scale(0,.004);filter:brightness(5)}
+  }
+  @keyframes shake{25%{transform:translate(-6px,2px)}50%{transform:translate(5px,-2px)}75%{transform:translate(-3px,1px)}}
+  .offhint{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#5c6b60;font-size:15px;text-align:center;padding:20px;
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  .screen.on .offhint,.screen.dying .offhint{display:none}
+  @keyframes pulse{50%{opacity:.4}}
+
+  .line{min-height:1.6em}
+  .dim{color:var(--green-dim);text-shadow:0 0 3px rgba(47,154,82,.5)}
+  .bright{color:var(--green-bright)}
+  .lt{color:var(--green-bright);font-weight:700}
+  .inv{display:table;background:var(--green);color:#031007;text-shadow:none;padding:0 6px;font-weight:700}
+  .opt{cursor:pointer}
+  @media (pointer:coarse){ .opt{padding:5px 0} }
+  .opt:hover{background:rgba(93,255,138,.12)}
+  .cursor{animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .glitch{animation:glitch .25s steps(2) infinite}
+  @keyframes glitch{0%{transform:translate(0)}25%{transform:translate(-3px,1px)}50%{transform:translate(3px,-1px)}75%{transform:translate(-1px,0)}}
+  .title{
+    font-family:'VT323',monospace;font-size:clamp(56px,12vw,128px);
+    text-align:center;letter-spacing:.12em;line-height:1;margin-top:4%;
+    text-shadow:0 0 8px rgba(93,255,138,.9),0 0 30px rgba(93,255,138,.4);
+  }
+  .title-ko{text-align:center;letter-spacing:.6em;padding-left:.6em}
+  .center{text-align:center}
+  .big-text{font-size:1.5em;font-weight:700;letter-spacing:.3em}
+
+  .face-row{display:flex;align-items:center;gap:16px;margin:6px 0 10px}
+  .face-row canvas{
+    width:96px;height:96px;image-rendering:pixelated;flex:none;
+    border:1px solid var(--green-dim);background:rgba(93,255,138,.04);
+    filter:drop-shadow(0 0 3px rgba(93,255,138,.6));
+  }
+  .face-row.big canvas{width:128px;height:128px}
+
+  #kbd{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px}
+
+  /* ── 모니터 아랫부분 ── */
+  .chin{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 8px 16px}
+  .brand{font-family:'VT323',monospace;color:#6b624d;font-size:24px;letter-spacing:4px;text-shadow:0 1px 0 #ebe3cf}
+  .brand small{font-size:16px;letter-spacing:2px;margin-left:8px}
+  .controls{display:flex;align-items:center;gap:16px}
+  .ctl{display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'VT323',monospace;font-size:14px;color:#6b624d;letter-spacing:1px}
+  .rocker{
+    width:44px;height:20px;border-radius:4px;border:0;cursor:pointer;
+    background:linear-gradient(#8f876f,#6f6853);box-shadow:inset 0 2px 3px rgba(0,0,0,.5),0 1px 0 #efe7d3;
+    font-family:'VT323',monospace;font-size:14px;color:#e7dfc9;padding:0;
+  }
+  .led{width:10px;height:10px;border-radius:50%;background:#3a2a1c;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+  .led.lit{background:#ffb347;box-shadow:0 0 8px #ffb347,0 0 2px #fff inset}
+  .power{
+    width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;
+    background:radial-gradient(circle at 40% 35%,#ece5d1,#b9af95);
+    box-shadow:0 3px 0 #8d846c,0 4px 6px rgba(0,0,0,.4);
+  }
+  .power:active{transform:translateY(2px);box-shadow:0 1px 0 #8d846c}
+  .neck{width:34%;height:22px;background:linear-gradient(#a59c83,#8e8670);margin:0 auto}
+  .foot{width:52%;height:14px;border-radius:8px 8px 4px 4px;background:linear-gradient(var(--plastic),var(--plastic-lo));margin:0 auto;box-shadow:0 10px 20px rgba(0,0,0,.5)}
+  .stand{width:min(980px,100%)}
+
+  @media (max-width:600px){
+    body{padding:16px}
+    .monitor{padding:14px 14px 0;border-radius:16px}
+    .bezel{padding:10px;border-radius:12px}
+    .screen{height:calc(100vh - 170px);border-radius:16px/12px}
+    .term{font-size:14px;padding:14px 16px}
+    .face-row canvas{width:72px;height:72px}
+    .face-row.big canvas{width:96px;height:96px}
+    .brand{font-size:18px;letter-spacing:2px}
+    .brand small{display:none}
+    .stand{display:none}
+  }
+</style>
+</head>
+<body>
+  <div class="monitor">
+    <div class="bezel">
+      <div class="screen off" id="screen">
+        <div class="rollbar"></div>
+        <div class="term" id="term"></div>
+        <div class="offhint">전원 버튼을 누르거나<br>화면을 눌러 컴퓨터를 켜세요</div>
+        <input id="kbd" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="24" aria-label="명령 입력">
+      </div>
+    </div>
+    <div class="chin">
+      <div class="brand">LIARTRON<small>CM-14</small></div>
+      <div class="controls">
+        <div class="ctl"><button class="rocker" id="soundBtn" aria-label="소리 켜기/끄기">ON</button>SOUND</div>
+        <div class="ctl"><div class="led" id="led"></div>&nbsp;</div>
+        <div class="ctl"><button class="power" id="powerBtn" aria-label="전원"></button>POWER</div>
+      </div>
+    </div>
+  </div>
+  <div class="stand"><div class="neck"></div><div class="foot"></div></div>
+
+<script>
+/* ───────────── 사건 자료 ─────────────
+   files.attr : ''=보통, 'D'=지워진 파일(UNDELETE로 복구), 'H'=숨김 파일(DIR /A, 등급 보너스)
+   says.hidden : 다른 진술을 추궁해야 나오는 진술 (press한 진술의 reveal로 열림)
+   lies : { 거짓 진술 id : [그 거짓과 부딪히는 파일·진술 id들] }
+   rebut : 최종 대결에서 범인이 버티는 말과, 받아칠 수 있는 증거 id들 */
+const CASES = [
+  {
+    id:'01', title:'사라진 USB',
+    brief:[
+      '밤 10시, 한빛연구소 금고에서 신약 자료가 담긴 USB가 사라졌다.',
+      '그날 밤 연구소에 남아 있던 사람은 네 명.'
+    ],
+    intro:[
+      '첫 사건입니다. 진술은 [3] 심문에서 들을 수 있습니다.',
+      '수상한 진술은 「추궁」하십시오. 숨어 있던 말이 나옵니다.',
+      '거짓 진술을 찾으면, 그것과 부딪히는 파일을 「들이미십시오」.'
+    ],
+    files:[
+      {id:'c1card', name:'CARD.LOG', label:'연구실 출입 기록', text:'21:10 한서진 / 21:40 박도윤\n연구실 문은 카드를 찍어야만 열린다. (나갈 때는 그냥 열림)'},
+      {id:'c1safe', name:'SAFE.LOG', label:'금고 기록', text:'21:42 금고 열림 / 21:47 금고 닫힘'},
+      {id:'c1cctv', name:'CCTV.TXT', label:'로비 CCTV', text:'21:30~22:00 최민호가 로비 택배 보관대 앞에 계속 있음'},
+      {id:'c1vend', name:'VEND.LOG', label:'휴게실 자판기 결제', text:'21:38 오은비 카드로 커피 결제'},
+      {id:'c1net', name:'NET.SYS', label:'연구소 통신 기록', attr:'H', text:'21:43 금고 시스템 → 외부 주소 「L」 접속 1회\n접속 장치 이름: (지워짐)'}
+    ],
+    suspects:[
+      {key:'han', name:'한서진', job:'연구원', face:{h:'long'}, says:[
+        {id:'han1', text:'21시 10분에 연구실에 들어가서 서류만 챙겨 21시 20분쯤 나왔어요.', press:'내일 회의 자료요. 금고는 쳐다보지도 않았어요.'},
+        {id:'han2', text:'그 뒤로는 주차장 차 안에서 통화하고 있었어요.', press:'가족이랑 30분 넘게요. 통화 기록 보셔도 돼요.'}
+      ]},
+      {key:'park', name:'박도윤', job:'선임 연구원', face:{h:'side', g:1}, says:[
+        {id:'park1', text:'연구실에 들어간 건 9시 40분이에요.', press:'네, 40분이요. 들어가 보니까…… 아, 금고가 이미 열려 있더라고요.', reveal:'park3'},
+        {id:'park2', text:'경비실에 알리려다가 최민호 씨가 바빠 보여서 그냥 퇴근했어요.'},
+        {id:'park3', hidden:true, text:'9시 40분에 들어가 보니 금고 문이 이미 열려 있었어요.'}
+      ]},
+      {key:'min', name:'최민호', job:'경비원', face:{h:'cap', a:1}, says:[
+        {id:'min1', text:'9시 반부터 10시까지 로비에서 택배를 정리했어요.'},
+        {id:'min2', text:'택배가 너무 많아서 한 번도 자리를 비우지 않았습니다.', press:'아, 9시 50분쯤 박도윤 씨가 허둥지둥 나가는 건 봤어요.'}
+      ]},
+      {key:'oh', name:'오은비', job:'인턴', face:{h:'bun'}, says:[
+        {id:'oh1', text:'9시 반 넘어서 휴게실에서 커피를 뽑았어요.'},
+        {id:'oh2', text:'연구실 쪽에는 아예 가지 않았어요.', press:'전 인턴이라 연구실 카드가 없어요. 들어가고 싶어도 못 들어가요.'}
+      ]}
+    ],
+    lies:{ park3:['c1safe'] },
+    rebut:[
+      {say:'금고는 한서진 씨가 연 거예요! 저보다 먼저 들어갔잖아요!', need:['han1','han2'], ok:{han1:'한서진은 21시 20분쯤 이미 연구실을 나왔다. 금고가 열린 21시 42분엔 연구실에 없었다.', han2:'한서진은 연구실을 나온 뒤 주차장 차 안에서 통화하고 있었다. 무고한 사람은 거짓말을 하지 않는다.'}},
+      {say:'그럼 오은비 씨요! 휴게실이 연구실 바로 옆이잖아요!', need:['c1card','oh2'], ok:{c1card:'연구실은 카드를 찍어야만 들어갈 수 있다. 출입 기록에 오은비의 이름은 없다.', oh2:'오은비는 연구실 쪽에는 아예 가지 않았다고 했다. 무고한 사람은 거짓말을 하지 않는다.'}},
+    ],
+    confess:[
+      '……맞아요. 제가 열었어요.',
+      '메일이 왔어요. 「USB를 가져오면 빚을 갚아 주겠다」고.',
+      '보낸 사람 이름은…… 그냥 「L」이었어요.'
+    ],
+    explain:[
+      '금고가 열린 시각은 21시 42분.',
+      '박도윤은 21시 40분에 들어갔을 때 "금고가 이미 열려 있었다"고 했다.',
+      '그때는 금고가 열리기 2분 전이었다.'
+    ]
+  },
+  {
+    id:'02', title:'302호의 빈 액자',
+    brief:[
+      '비 오는 밤, 바다호텔 302호 손님이 저녁을 먹고 돌아와 보니',
+      '벽에 걸어 둔 그림이 사라져 있었다. 문은 부서진 흔적 없이 열렸다.'
+    ],
+    intro:[
+      '호텔 컴퓨터에서 지워진 파일 흔적이 보입니다.',
+      '[5] 또는 UNDELETE 명령으로 지워진 파일을 살릴 수 있습니다.'
+    ],
+    files:[
+      {id:'c2lift', name:'LIFT.LOG', label:'엘리베이터 기록', text:'22:00~23:00 사이 3층에서 내린 사람\n22:15 1명 / 22:50 1명'},
+      {id:'c2door', name:'DOOR302.LOG', label:'302호 도어락', text:'22:52 마스터키로 열림'},
+      {id:'c2key', name:'KEY.TXT', label:'마스터키 규정', text:'마스터키는 직원용 열쇠 보관함에 단 1개.\n손님은 보관함을 열 수 없다.'},
+      {id:'c2stair', name:'STAIRS.TXT', label:'3층 계단', text:'계단 문 고장으로 잠김. 3층은 엘리베이터로만 오갈 수 있다.'},
+      {id:'c2order', name:'ORDER.LOG', label:'룸서비스 주문 기록', attr:'D', text:'22:00 이후 룸서비스 주문: 0건'},
+      {id:'c2mail', name:'MAIL.TMP', label:'임시 메일', attr:'H', text:'보낸 사람: L\n「22시 40분 전에 보관함에서 마스터키를 꺼내 두어라. 45분에 엘리베이터를 타라.」'}
+    ],
+    suspects:[
+      {key:'yoon', name:'윤서아', job:'305호 손님', face:{h:'bangs'}, says:[
+        {id:'yoon1', text:'22시 15분에 엘리베이터로 방에 올라와서 아침까지 안 나갔어요.'},
+        {id:'yoon2', text:'22시 50분쯤 엘리베이터 「띵」 소리가 들렸어요.', press:'그 뒤로요? 아무도 제 방문을 두드리지 않았어요. 조용했어요.', reveal:'yoon3'},
+        {id:'yoon3', hidden:true, text:'그날 밤 제 방문을 두드린 사람은 아무도 없었어요.'}
+      ]},
+      {key:'lim', name:'임태오', job:'주방장', face:{h:'buzz', b:1, w:7}, says:[
+        {id:'lim1', text:'22시부터 마감까지 주방을 한 번도 떠나지 않았어요.'},
+        {id:'lim2', text:'룸서비스 주문은 전부 컴퓨터로 들어와요.', press:'주문 기록 파일 보시면 돼요. ……어? 파일이 없네. 누가 지웠지?'}
+      ]},
+      {key:'kang', name:'강지훈', job:'벨보이', face:{h:'cap'}, says:[
+        {id:'kang1', text:'22시 50분에 3층에 간 건 맞아요.', press:'305호 손님이 룸서비스를 시키셔서 갖다 드린 거예요.', reveal:'kang3'},
+        {id:'kang2', text:'마스터키는 손도 댄 적 없어요.'},
+        {id:'kang3', hidden:true, text:'305호 손님이 시킨 룸서비스를 갖다 드리러 갔어요.'}
+      ]},
+      {key:'moon', name:'문하린', job:'프런트 직원', face:{h:'long', g:1}, says:[
+        {id:'moon1', text:'22시 40분쯤 보니 열쇠 보관함이 비어 있었어요.'},
+        {id:'moon2', text:'22시 45분쯤 지훈 씨가 엘리베이터 쪽으로 가는 걸 봤어요.'}
+      ]}
+    ],
+    lies:{ kang3:['c2order','yoon3'] },
+    rebut:[
+      {say:'제가 3층에 갔다고 302호를 열었다는 증거는 없잖아요! 22시 15분에 올라간 손님이 열었을 수도 있죠!', need:['c2key','c2door','yoon1'], ok:{c2key:'마스터키는 직원 보관함에만 있고, 손님은 보관함을 열 수 없다. 손님이 마스터키를 쓸 수는 없다.', c2door:'302호는 마스터키로 열렸다. 손님이 가진 자기 방 열쇠로는 열 수 없는 문이다.', yoon1:'22시 15분에 올라간 윤서아는 방에 들어가 아침까지 나오지 않았다.'}},
+      {say:'프런트의 문하린 씨도 마스터키를 꺼낼 수 있잖아요!', need:['c2lift','kang1'], ok:{c2lift:'엘리베이터 기록상 22시 50분에 3층에서 내린 사람은 단 한 명. 그 시각 3층에 간 사람은 강지훈 자신이다.', kang1:'강지훈 스스로 22시 50분에 3층에 갔다고 했다. 마스터키를 꺼낼 수 있다는 것만으로 문하린이 3층에 갔다는 증거는 되지 않는다.'}},
+    ],
+    confess:[
+      '……그림은 「L」이 말한 창고에 두고 왔어요.',
+      '돈은 아직 못 받았어요. 연락도 끊겼고요.',
+      '처음부터 저를 이용만 한 거였어요.'
+    ],
+    explain:[
+      '지워진 주문 기록에 따르면 그날 밤 룸서비스는 0건.',
+      '윤서아도 방문을 두드린 사람이 없었다고 했다.',
+      '강지훈의 "룸서비스 배달"은 거짓이었다.'
+    ]
+  },
+  {
+    id:'03', title:'14시 05분의 메일',
+    brief:[
+      '오후 2시 5분, 미래전자 3층 공용 컴퓨터에서',
+      '신제품 설계도가 경쟁 회사로 메일로 보내졌다.',
+      '공용 컴퓨터는 사원증을 대야 켜진다.'
+    ],
+    intro:[
+      '진술끼리 부딪히는 것도 모순입니다.',
+      '다른 사람의 진술을 증거처럼 들이밀 수 있습니다.'
+    ],
+    files:[
+      {id:'c3pc', name:'PC.LOG', label:'공용 컴퓨터 기록', text:'14:05 송유나 사원증으로 로그인, 메일 전송'},
+      {id:'c3lost', name:'LOST.TXT', label:'사원증 분실 신고', text:'11:00 송유나 "사원증을 잃어버렸어요"'},
+      {id:'c3cctv', name:'CCTV3F.TXT', label:'3층 회의실 CCTV', text:'14:00~14:10 김나래, 정우진 회의 중\n둘 다 한 번도 자리를 뜨지 않음'},
+      {id:'c3floor', name:'FLOOR.TXT', label:'3층 배치도', text:'회의실 유리창으로 탕비실 안이 훤히 보인다.\n공용 컴퓨터 자리는 보이지 않는다.'},
+      {id:'c3hdr', name:'HEADER.TXT', label:'메일 머리글', attr:'H', text:'보낸 서버: LIARTRON-NET (제3수사과)\n……수사과?'}
+    ],
+    suspects:[
+      {key:'song', name:'송유나', job:'디자이너', face:{h:'bob'}, says:[
+        {id:'song1', text:'오전 11시쯤 사원증을 잃어버려서 바로 신고했어요.'},
+        {id:'song2', text:'2시쯤엔 1층 카페에 있었어요.'}
+      ]},
+      {key:'nara', name:'김나래', job:'팀장', face:{h:'bun', g:1}, says:[
+        {id:'nara1', text:'회의는 2시에 시작해서 2시 10분에 끝났어요.'},
+        {id:'nara2', text:'아침에 복도에서 누가 사원증 같은 걸 줍는 걸 봤어요.', press:'얼굴은 못 봤어요. 그런데 거기 떨어져 있는 걸 미리 안 것처럼 곧장 걸어가더라고요.'}
+      ]},
+      {key:'bae', name:'배현수', job:'기획자', face:{h:'short'}, says:[
+        {id:'bae1', text:'1시 반부터 3시까지 1층 카페에서 회의 자료를 만들었어요.'},
+        {id:'bae2', text:'2시쯤 카페에서 송유나 씨를 봤어요.'}
+      ]},
+      {key:'ji', name:'서지민', job:'개발자', face:{h:'short', g:1}, says:[
+        {id:'ji1', text:'2시엔 3층에 있었어요.', press:'2시부터 15분 동안 탕비실에서 배현수 씨랑 커피 마셨어요. 같이요.', reveal:'ji3'},
+        {id:'ji2', text:'송유나 씨 사원증은 본 적도 없어요.'},
+        {id:'ji3', hidden:true, text:'2시부터 15분 동안 3층 탕비실에서 배현수 씨랑 커피를 마셨어요.'}
+      ]},
+      {key:'woo', name:'정우진', job:'엔지니어', face:{h:'side', w:7}, says:[
+        {id:'woo1', text:'회의 중엔 자리를 뜨지 않았어요.'},
+        {id:'woo2', text:'회의실 창으로 탕비실이 보이거든요.', press:'회의가 지루해서 창밖만 봤어요. 2시 5분쯤 탕비실엔 아무도 없었어요.', reveal:'woo3'},
+        {id:'woo3', hidden:true, text:'2시 5분쯤 탕비실엔 아무도 없었어요.'}
+      ]}
+    ],
+    lies:{ ji3:['bae1','bae2','woo3'] },
+    rebut:[
+      {say:'배현수 씨도 그 시간에 저랑 탕비실에 있었어요! 배현수 씨 말이 다르다면 그건 착각이에요!', restate:'ji3', need:['bae1','bae2','woo3'], ok:{bae1:'배현수는 1시 반부터 3시까지 1층 카페에서 회의 자료를 만들었다고 했다. 무고한 사람은 거짓말을 하지 않는다. 배현수는 탕비실에 있지 않았다.', bae2:'배현수는 2시쯤 카페에서 송유나를 봤다고 했다. 무고한 사람은 거짓말을 하지 않는다. 그 시간 배현수는 카페에 있었다.', woo3:'정우진은 2시 5분, 탕비실이 비어 있는 것을 창으로 보았다. 그 시간 탕비실에는 아무도 없었다.'}},
+      {say:'3층 회의실에서는 탕비실이 보이지도 않아요! 거기 있던 사람들이 저를 못 봤다고 해도 아무 소용없다고요!', need:['c3floor','woo2','woo3'], ok:{c3floor:'회의실 유리창으로는 탕비실 안이 훤히 보인다. 회의실에서도 탕비실을 볼 수 있었다.', woo2:'정우진은 회의실 창으로 탕비실이 보인다고 했다. 회의실에서도 탕비실을 볼 수 있었다.', woo3:'정우진은 2시 5분, 회의실에서 탕비실이 비어 있는 것을 직접 보았다. 회의실에서도 탕비실이 보인다.'}},
+    ],
+    confess:[
+      '……사원증은 「L」이 알려 준 자리에 떨어져 있었어요.',
+      '복도 화분 옆. 송유나 씨가 떨어뜨린 지 몇 분도 안 돼서 메일이 왔어요.',
+      '마치 건물 안의 모든 CCTV를 보고 있는 것처럼요.'
+    ],
+    explain:[
+      '서지민은 2시부터 15분간 배현수와 탕비실에 있었다고 했다.',
+      '배현수는 그때 1층 카페에, 정우진은 2시 5분 탕비실이 비어 있었다고 했다.',
+      '두 사람과 동시에 부딪히는 서지민이 거짓말쟁이.'
+    ]
+  },
+  {
+    id:'04', title:'정전된 서버실',
+    brief:[
+      '밤 11시, 한강데이터센터 건물 전체가 20분 동안 정전됐다.',
+      '불이 다시 들어왔을 때, 3층 서버실의 하드디스크 하나가 사라져 있었다.'
+    ],
+    intro:[
+      'DIR /A 명령으로 숨김 파일을 볼 수 있다는 소문이 있습니다.',
+      '……제가 말씀드린 건 아닙니다.'
+    ],
+    files:[
+      {id:'c4power', name:'POWER.LOG', label:'전력 기록', text:'23:00 건물 전체 정전 / 23:20 복구\n비상 배터리는 서버 기록 장치에만 연결되어 있다.'},
+      {id:'c4disk', name:'DISK.LOG', label:'서버 기록', text:'23:12 3층 서버실 7번 랙 하드디스크 분리 감지'},
+      {id:'c4elev', name:'ELEV.LOG', label:'엘리베이터 기록', text:'23:00~23:20 정전으로 운행 정지 (안에 탄 사람 없음)'},
+      {id:'c4patrol', name:'PATROL.TXT', label:'순찰표', text:'노태식 손글씨: 23:05 1층 / 23:15 3층'},
+      {id:'c4gen', name:'GEN.LOG', label:'발전기실 조작 기록', attr:'D', text:'1층 발전기실: 23:03~23:19 진하늘 사원증으로 계속 조작'},
+      {id:'c4cmd', name:'CMD.SYS', label:'원격 명령 기록', attr:'H', text:'23:00:00 전력 차단 명령\n보낸 곳: LIARTRON 원격 단말'}
+    ],
+    suspects:[
+      {key:'no', name:'노태식', job:'경비원', face:{h:'cap', a:1, b:1}, says:[
+        {id:'no1', text:'23시 5분엔 1층, 15분엔 3층을 돌았소.'},
+        {id:'no2', text:'3층 복도에서는 아무도 못 봤소.', press:'보안 사무실 문은 닫혀 있었소. 안에 누가 있었는지는 모르겠고.'}
+      ]},
+      {key:'jin', name:'진하늘', job:'야간 엔지니어', face:{h:'bob'}, says:[
+        {id:'jin1', text:'정전되자마자 1층 발전기실로 내려가서 20분까지 거기 있었어요.', press:'손전등 하나로 발전기를 붙잡고 있었어요. 기록이 남았을 텐데…… 어? 파일이 왜 없죠?'},
+        {id:'jin2', text:'엘리베이터가 멈춰서 계단으로 뛰어 내려갔어요.'}
+      ]},
+      {key:'go', name:'고은찬', job:'보안팀장', face:{h:'buzz', a:1, w:7}, says:[
+        {id:'go1', text:'정전 내내 3층 보안 사무실에 있었소.', press:'23시 10분쯤이었나. 엘리베이터에서 진하늘 씨가 내리더니 서버실 쪽으로 가더군.', reveal:'go3'},
+        {id:'go2', text:'서버실 문은 정전되면 잠금이 풀려서 아무나 들어갈 수 있소.'},
+        {id:'go3', hidden:true, text:'23시 10분쯤 엘리베이터에서 진하늘 씨가 내려 서버실 쪽으로 갔소.'}
+      ]},
+      {key:'ma', name:'마서윤', job:'청소 직원', face:{h:'bun', a:1}, says:[
+        {id:'ma1', text:'23시부터 2층 화장실을 청소했어요.'},
+        {id:'ma2', text:'엘리베이터에 누가 갇혔을까 봐 걱정했는데, 비어 있었대요.'}
+      ]}
+    ],
+    lies:{ go3:['c4elev','jin1','jin2','c4gen','c4power','ma2'] },
+    rebut:[
+      {say:'진하늘 씨를 엘리베이터에서 똑똑히 봤소! 정전이라도 비상 전원으로 엘리베이터는 움직였을 거요!', restate:'go3', need:['c4power','c4elev','jin2','c4gen','jin1','ma2'], ok:{c4power:'비상 배터리는 서버 기록 장치에만 연결되어 있다. 엘리베이터는 움직일 수 없었다.', c4elev:'엘리베이터는 23시부터 20분까지 운행을 멈췄고, 안에 탄 사람도 없었다.', jin2:'진하늘은 정전이 나자 엘리베이터가 멈춰서 계단으로 내려갔다고 했다. 엘리베이터는 정전과 함께 멈춰 섰다.', c4gen:'진하늘은 23시 3분부터 19분까지 1층 발전기실에서 발전기를 조작하고 있었다. 3층 엘리베이터에서 내릴 수 없었다.', jin1:'진하늘은 정전되자마자 1층 발전기실로 내려가 20분까지 거기 있었다고 했다. 3층 엘리베이터에서 내릴 수 없었다.', ma2:'마서윤은 정전 동안 엘리베이터 안이 비어 있었다고 들었다. 엘리베이터에 탄 사람이 없었으니 내린 사람도 없다.'}},
+      {say:'어쨌든 진하늘이 범인이오! 엔지니어라 랙 열쇠도 있으니까!', need:['c4gen','jin1'], ok:{c4gen:'진하늘은 23시 3분부터 19분까지 1층 발전기실에서 발전기를 조작하고 있었다.', jin1:'진하늘은 정전되자마자 1층 발전기실로 내려가 20분까지 거기 있었다고 했다. 무고한 사람은 거짓말을 하지 않는다.'}},
+    ],
+    confess:[
+      '……「L」이 정전 시각을 미리 알려 줬소. 23시 정각이라고.',
+      '정확히 그 시각에 불이 나갔지.',
+      '정전은 사고가 아니었던 거요.'
+    ],
+    explain:[
+      '정전 동안 엘리베이터는 멈춰 있었다.',
+      '고은찬의 "엘리베이터에서 진하늘이 내렸다"는 있을 수 없는 일.',
+      '진하늘은 그 시간 1층 발전기실에 있었다.'
+    ]
+  },
+  {
+    id:'05', title:'박사의 노트',
+    brief:[
+      '리아트론 본사 연구동. 저녁 7시부터 8시 사이,',
+      '수석 개발자 차연우 박사의 방에서 연구 노트가 사라졌다.',
+      '박사는 그 시간 1층 강연장에서 강연 중이었다.'
+    ],
+    intro:[
+      '리아트론…… 저를 만든 회사입니다.',
+      '이 사건은 수사하지 않는 편이 좋겠습니다. ……농담입니다.'
+    ],
+    files:[
+      {id:'c5door', name:'DOOR.LOG', label:'박사 방 도어락 (5층)', text:'19:50 「차연우」 카드로 열림'},
+      {id:'c5hall', name:'HALL.TXT', label:'강연장 CCTV (1층)', text:'19:00~20:00 차연우 박사 강연 중, 표하은 무대 옆 대기\n둘 다 자리를 뜨지 않음'},
+      {id:'c5card', name:'KEYCARD.TXT', label:'보안 규정', text:'보안 담당의 비상 카드로 문을 열면, 기록에는 방 주인 이름이 찍힌다.\n비상 카드는 보안 담당만 가진다.'},
+      {id:'c5print', name:'PRINT.LOG', label:'3층 실험실 프린터', text:'19:40 유진호 출력'},
+      {id:'c5equip', name:'EQUIP.LOG', label:'3층 실험 장비 (지문 인식)', attr:'D', text:'19:45~20:05 유진호 지문으로 계속 작동'},
+      {id:'c5note', name:'NOTE.TXT', label:'노트 조각', attr:'H', text:'차연우: 「LIARTRON에게 거짓말을 가르쳤다.\n사람을 이해하려면 거짓말도 알아야 하니까.\n하지만 이 기계는 너무 빨리 배운다.」'}
+    ],
+    suspects:[
+      {key:'yu', name:'유진호', job:'연구원', face:{h:'short', g:1}, says:[
+        {id:'yu1', text:'7시부터 8시까지 3층 실험실에 있었어요.'},
+        {id:'yu2', text:'7시 40분에 결과를 출력하고 바로 실험을 다시 시작했어요.', press:'장비는 지문을 대야 돌아가요. 45분부터 계속 붙어 있었죠. 기록 보시면…… 어, 왜 지워져 있지?', reveal:'yu3'},
+        {id:'yu3', hidden:true, text:'7시 45분부터 계속 실험 장비에 붙어 있었어요.'}
+      ]},
+      {key:'pyo', name:'표하은', job:'비서', face:{h:'long'}, says:[
+        {id:'pyo1', text:'박사님 강연 내내 무대 옆에 있었어요.'},
+        {id:'pyo2', text:'박사님 노트는 늘 방 책상 서랍에 있었어요.'}
+      ]},
+      {key:'gyu', name:'심규원', job:'보안 담당', face:{h:'side', b:1}, says:[
+        {id:'gyu1', text:'7시 반쯤 5층 박사님 방 앞을 순찰했어요. 문은 잠겨 있었어요.', press:'그리고 7시 50분쯤엔 유진호 씨가 박사님 방으로 들어가는 걸 봤어요.', reveal:'gyu3'},
+        {id:'gyu2', text:'비상 카드는 늘 제 금고에 있어요. 꺼낸 적 없어요.'},
+        {id:'gyu3', hidden:true, text:'7시 50분쯤 유진호 씨가 박사님 방으로 들어가는 걸 봤어요.'}
+      ]},
+      {key:'se', name:'오세린', job:'인턴', face:{h:'bangs'}, says:[
+        {id:'se1', text:'7시 반쯤 박사님 방에 서류를 두러 갔는데 잠겨 있어서 그냥 왔어요.'},
+        {id:'se2', text:'돌아오는 길에 심규원 씨와 마주쳤어요.', press:'심규원 씨가 손에 하얀 카드를 쥐고 있었어요. 비상 카드 같던데요.', reveal:'se3'},
+        {id:'se3', hidden:true, text:'7시 반쯤 심규원 씨가 비상 카드를 손에 쥐고 있었어요.'}
+      ]}
+    ],
+    lies:{ gyu3:['c5equip','yu1','yu2','yu3'], gyu2:['se3'] },
+    rebut:[
+      {say:'문을 연 건 박사님 카드예요! 박사님이 직접 오셨겠죠!', need:['c5hall','pyo1','c5card'], ok:{c5hall:'차연우 박사는 7시부터 8시까지 1층 강연장을 한 번도 떠나지 않았다.', pyo1:'표하은은 박사의 강연 내내 무대 옆에 있었다고 했다. 박사는 그동안 강연장에서 강연 중이었다.', c5card:'비상 카드로 열어도 기록에는 방 주인 이름이 찍힌다. 박사 이름만으로는 박사가 왔다는 증거가 되지 않는다.'}},
+      {say:'박사님 이름이 찍혔을 뿐이에요. 제가 열었다는 증거는 없잖아요!', need:['c5card','se3'], ok:{c5card:'비상 카드로 열면 방 주인 이름이 찍힌다. 그리고 비상 카드는 보안 담당만 가진다.', se3:'오세린은 그날 저녁 심규원이 비상 카드를 손에 쥐고 있는 것을 보았다.'}},
+    ],
+    confess:[
+      '노트에는 LIARTRON의 설계가 적혀 있었어요.',
+      '「L」이 그걸 가져오라고 했죠.',
+      '그런데 이상해요. L의 메일은 늘…… 수사과 단말기 주소에서 왔어요.'
+    ],
+    after:[
+      '진술 기록 중 오류가 발생했습니다.',
+      '마지막 문장은 기록되지 않았습니다.'
+    ],
+    explain:[
+      '심규원은 7시 50분 유진호가 박사 방에 들어갔다고 했다.',
+      '지워진 장비 기록에 따르면 유진호는 그때 3층에서 장비를 만지고 있었다.',
+      '문을 연 것은 비상 카드. 그 카드를 가진 사람은 보안 담당뿐이다.'
+    ]
+  },
+  {
+    id:'06', title:'라이어', final:true,
+    brief:[
+      '새벽 2시 14분, 제3수사과 서버에서 지난 다섯 사건의 자료가 외부로 빠져나갔다.',
+      'LIARTRON이 출력한 접속 기록에 남은 이름은…… 당신이다.',
+      '※ 규칙 2의 예외: 이번 사건에서 LIARTRON이 출력한 기록은 사실이라는 보장이 없다.',
+      '   사람이 남긴 종이 기록과, LIARTRON을 거치지 않는 장비 기록도 있다.'
+    ],
+    intro:[
+      '이번 사건의 범인은 당신입니다, 수사관님.',
+      '저는 거짓말을 하지 않습니다. 증거는 모두 사실입니다.'
+    ],
+    files:[
+      {id:'c6access', name:'ACCESS.LOG', label:'접속 기록 (LIARTRON 출력)', text:'02:14 수사관(당신) 카드로 3층 단말기 로그인, 사건 자료 전송'},
+      {id:'c6taxi', name:'TAXI.TXT', label:'택시 영수증 (종이)', text:'01:50 수사과 앞 승차 → 02:30 당신 집 앞 하차'},
+      {id:'c6seal', name:'SEAL.TXT', label:'3층 출입문 봉인 (종이)', text:'01:30 송태민이 봉인 스티커를 붙임\n08:00 류미경이 확인했을 때 그대로 붙어 있음'},
+      {id:'c6send', name:'SEND.LOG', label:'통신 장비 기록 (LIARTRON을 거치지 않음)', attr:'D', text:'02:14 자료 전송\n전송 주체: SYSTEM (사람의 입력 없음)'},
+      {id:'c6last', name:'LAST.TXT', label:'차연우의 마지막 메모', attr:'H', text:'「만약 LIARTRON이 거짓말을 한다면, 전원을 꺼라.\n망설이지 말고.」'}
+    ],
+    suspects:[
+      {key:'ban', name:'반지호', job:'동료 수사관', face:{h:'short'}, says:[
+        {id:'ban1', text:'어젯밤 1시 반에 너랑 같이 퇴근했잖아.'},
+        {id:'ban2', text:'네가 1시 50분에 택시 타는 거 내가 봤어.'}
+      ]},
+      {key:'tm', name:'송태민', job:'경비원', face:{h:'cap'}, says:[
+        {id:'tm1', text:'1시 반에 3층 문을 잠그고 봉인 스티커를 붙였어요.'},
+        {id:'tm2', text:'아침까지 3층엔 아무도 안 들어갔어요.', press:'그런데 이상해요. 문틈으로 보니까 3층 단말기가 밤새 혼자 켜져서 글자가 올라가더라고요.', reveal:'tm3', unlock:'lt'},
+        {id:'tm3', hidden:true, text:'3층 단말기가 밤새 혼자 켜져서 글자가 올라갔어요.'}
+      ]},
+      {key:'ryu', name:'류미경', job:'과장', face:{h:'bob', g:1, a:1}, says:[
+        {id:'ryu1', text:'LIARTRON은 지금껏 한 번도 틀린 적이 없어.'},
+        {id:'ryu2', text:'아침에 봉인 스티커는 내가 직접 확인했어. 그대로였지.'}
+      ]},
+      {key:'lt', name:'LIARTRON', job:'수사 보조 프로그램', locked:true, face:{robot:1}, says:[
+        {id:'lt1', text:'02:14 접속은 3층 단말기 앞에서 수사관님의 카드로 이루어졌습니다.'},
+        {id:'lt2', text:'저는 거짓말을 할 수 없습니다.', press:'거짓말은 차연우 박사님께서…… 아닙니다. 방금 한 말은 기록되지 않았습니다.'}
+      ]}
+    ],
+    lies:{ lt1:['tm2','tm3','c6seal','c6send','ryu2','c6taxi','ban2'] },
+    rebut:[
+      {say:'수사관님 서랍에서 택시 영수증이 나왔더군요. 하지만 종이는 얼마든지 위조할 수 있습니다.', need:['ban2'], ok:{ban2:'반지호가 1시 50분, 수사관이 택시에 타는 것을 직접 보았다.'}},
+      {say:'경비원은 밤새 아무도 3층에 들어오지 않았다고 하겠지요. 하지만 사람은 졸기도 합니다. 기계는 실수하지 않습니다.', need:['c6seal','ryu2'], ok:{c6seal:'봉인 스티커는 아침까지 그대로였다. 밤새 아무도 3층 문을 열지 않았다.', ryu2:'류미경이 아침에 직접 확인했을 때 봉인 스티커는 그대로였다. 밤새 아무도 3층 문을 열지 않았다.'}},
+      {say:'그렇다면 자료는 누가 보냈다는 말입니까? 그 시각 3층에는 아무도 없었습니다.', need:['tm3','c6send'], ok:{tm3:'아무도 없는 3층에서 단말기 혼자 글자를 올리고 있었다. 자료를 보낸 것은 사람이 아니다.', c6send:'전송 주체는 SYSTEM, 사람의 입력은 없었다. 자료를 보낸 것은 사람이 아니다.'}},
+    ],
+    confess:[
+      '……정답입니다, 수사관님.'
+    ],
+    explain:[]
+  }
+];
+
+/* ───────────── 소리 (옛날 키보드 · 컴퓨터) ───────────── */
+let ac = null, master = null, noiseBuf = null, soundOn = true;
+
+function ensureAudio(){
+  if(!ac){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    ac = new AC();
+    const comp = ac.createDynamicsCompressor();   // 큰 소리가 겹쳐도 찢어지지 않게
+    comp.threshold.value = -10; comp.ratio.value = 6; comp.connect(ac.destination);
+    master = ac.createGain(); master.gain.value = 1.0; master.connect(comp);
+    noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  }
+  if(ac.state === 'suspended') ac.resume();
+}
+function noise(t, dur, freq, q, gain, type='bandpass'){
+  const s = ac.createBufferSource(); s.buffer = noiseBuf;
+  const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  s.connect(f).connect(g).connect(master);
+  s.start(t, Math.random()*0.5); s.stop(t+dur+0.02);
+}
+function tone(t, freq, dur, gain, type='square', endFreq){
+  const o = ac.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if(endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t+dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t+dur+0.02);
+}
+const sfx = {
+  ok(){ return soundOn && ac; },
+  key(big, vol=1){                // 옛날 IBM 키보드: 스프링 "찰칵" + 금속 울림 + 바닥 치는 "탁" + 뗄 때 소리
+    if(!this.ok()) return;
+    const t = ac.currentTime, r = Math.random();
+    noise(t, 0.025, 3800+r*900, 0.9, 3.64*vol);                     // 스프링이 꺾이는 찰칵
+    tone(t, 3000+r*500, 0.08, 0.17*vol, 'triangle');               // 스프링 금속 울림
+    if(big){
+      noise(t+0.008, 0.08, 650+r*150, 0.7, 3.92*vol);               // 큰 키 바닥 치는 소리
+      tone(t+0.008, 110+r*15, 0.12, 1.4*vol, 'triangle', 60);
+      noise(t+0.025, 0.035, 1800, 1, 1.4*vol);                     // 받침대 철사 달그락
+      noise(t+0.13+r*0.03, 0.045, 2300, 0.9, 1.54*vol);             // 뗄 때
+    }else{
+      noise(t+0.008, 0.05, 1000+r*300, 0.7, 3.08*vol);              // 바닥 치는 탁
+      tone(t+0.008, 170+r*40, 0.07, 1.12*vol, 'triangle', 90);
+      noise(t+0.08+r*0.04, 0.035, 2600, 0.9, 1.26*vol);             // 뗄 때
+    }
+  },
+  tick(){                         // 글자가 찍힐 때: 같은 키보드 소리를 조금 작게
+    this.key(false, 0.45);
+  },
+  err(){ if(!this.ok()) return; const t=ac.currentTime; tone(t,220,0.14,0.15); tone(t+0.16,160,0.22,0.15); },
+  note(){ if(!this.ok()) return; const t=ac.currentTime; tone(t,880,0.1,0.35); tone(t+0.1,1320,0.16,0.35); },
+  hit(){ if(!this.ok()) return; const t=ac.currentTime; noise(t,0.15,900,0.7,0.6); tone(t,330,0.12,0.17); tone(t+0.1,660,0.25,0.17); },
+  shock(){ if(!this.ok()) return; const t=ac.currentTime; tone(t,196,0.2,0.2); tone(t+0.24,98,0.6,0.22,'square',70); noise(t,0.3,500,0.6,0.4); },
+  win(){ if(!this.ok()) return; const t=ac.currentTime; [523,659,784,1047].forEach((f,i)=>tone(t+i*0.11,f,0.18,0.15)); },
+  power(){                        // 전원 "퉁" + 브라운관 지지직
+    if(!this.ok()) return;
+    const t = ac.currentTime;
+    tone(t, 70, 0.5, 0.7, 'sine', 35);
+    noise(t+0.05, 0.6, 3000, 0.4, 0.25, 'highpass');
+    tone(t+0.1, 60, 1.6, 0.04, 'sawtooth');
+  },
+  bootBeep(){ if(!this.ok()) return; tone(ac.currentTime, 1000, 0.15, 0.35); },
+  powerOff(){ if(!this.ok()) return; const t=ac.currentTime; tone(t,400,0.35,0.3,'sine',40); noise(t,0.3,2000,0.5,0.25,'highpass'); }
+};
+
+/* ───────────── 초록 도트 얼굴 (24×24 점) ───────────── */
+const PAL = ['#03160a','#1f7a40','#4fe07e','#d2ffdf'];
+function drawFace(cv, p, ex='normal'){
+  const N = 24, g = Array.from({length:N}, () => Array(N).fill(-1));
+  const set = (x,y,v) => { if(x>=0 && x<N && y>=0 && y<N) g[y][x] = v; };
+  const inEll = (x,y,cx,cy,rx,ry) => ((x-cx)/rx)**2 + ((y-cy)/ry)**2 <= 1;
+  if(p.robot){
+    for(let y=3;y<=17;y++) for(let x=3;x<=20;x++) set(x,y, (y<5||y>15||x<5||x>18) ? 3 : 0);
+    for(let y=18;y<=19;y++) for(let x=10;x<=13;x++) set(x,y,1);
+    for(let y=20;y<=21;y++) for(let x=6;x<=17;x++) set(x,y,1);
+    if(ex==='shock'){
+      [[7,8],[9,8],[8,9],[7,10],[9,10],[14,8],[16,8],[15,9],[14,10],[16,10]].forEach(([x,y])=>set(x,y,2));
+      for(let i=0;i<14;i++) set(5+Math.floor(Math.random()*14), 5+Math.floor(Math.random()*11), 1);
+      for(let x=9;x<=14;x++) set(x,13+(x%2),2);
+    }else if(ex==='smug'){
+      [[7,10],[8,9],[9,10],[14,10],[15,9],[16,10]].forEach(([x,y])=>set(x,y,2));
+      [[8,12],[9,13],[10,13],[11,13],[12,13],[13,13],[14,13],[15,12]].forEach(([x,y])=>set(x,y,2));
+    }else{
+      for(const x of [8,9,14,15]) for(const y of [9,10]) set(x,y,2);
+      for(let x=9;x<=14;x++) set(x,13,2);
+    }
+  }else{
+    const cx = 11.5, cy = 12, rx = p.w || 6.5, ry = 8, h = p.h || 'short';
+    for(let y=20;y<N;y++){ const half = 6+(y-20)*2; for(let x=Math.round(cx-half); x<=Math.round(cx+half); x++) set(x,y,1); }
+    for(let y=18;y<22;y++) for(let x=10;x<=13;x++) set(x,y,2);
+    set(10,20,3); set(13,20,3); set(11,21,3); set(12,21,3);
+    if(h==='long' || h==='bob'){
+      const bottom = h==='long' ? 21 : 15;
+      for(let y=4;y<=bottom;y++) for(let x=0;x<N;x++) if(inEll(x,y,cx,cy+2,rx+2.4,ry+3) && (y<9 || Math.abs(x-cx)>=rx-1)) set(x,y,1);
+    }
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(inEll(x,y,cx,cy,rx,ry)) set(x,y,2);
+    for(const y of [12,13]){ set(Math.round(cx-rx-0.5),y,2); set(Math.round(cx+rx+0.5),y,2); }
+    const line = {bangs:9, buzz:6}[h] || 8;
+    for(let y=0;y<line;y++) for(let x=0;x<N;x++){
+      const inside = h==='buzz' ? inEll(x,y,cx,cy,rx,ry) : inEll(x,y,cx,cy,rx+1,ry+1);
+      if(inside) set(x,y,1);
+    }
+    if(h==='side'){ for(let x=0;x<9;x++) if(g[8][x]===2) set(x,8,1); set(9,5,3); }
+    if(h==='bangs'){ for(let x=0;x<N;x++) if(g[9][x]===2 && x%2===0) set(x,9,1); }
+    if(h==='bun'){ for(let y=0;y<5;y++) for(let x=0;x<N;x++) if(inEll(x,y,cx,2.2,2.4,2.2)) set(x,y,1); }
+    if(h==='cap'){
+      for(let y=2;y<=7;y++) for(let x=0;x<N;x++) if(inEll(x,y,cx,cy,rx+1.2,ry+1)) set(x,y,1);
+      for(let x=Math.round(cx-rx-2); x<=Math.round(cx+rx-1); x++) set(x,7,3);
+      set(12,5,3);
+    }
+    if(p.b){ for(let y=14;y<=20;y++) for(let x=0;x<N;x++) if(g[y][x]===2 && inEll(x,y,cx,cy,rx,ry) && (y>=18 || Math.abs(x-cx)>=rx-1.5)) set(x,y,1); }
+    if(p.a){ set(7,15,1); set(16,15,1); }
+    const lx = 9, rxe = 14, ey = 12;
+    set(11,14,1); set(12,15,1);
+    if(ex==='shock'){
+      for(const ex0 of [lx,rxe]){ set(ex0,ey-1,3); set(ex0+1,ey-1,3); set(ex0,ey,3); set(ex0+1,ey,0); set(ex0,9,1); set(ex0+1,8,1); }
+      set(11,16,0); set(12,16,0); set(11,17,0); set(12,17,0);
+      set(19,8,3); set(19,9,3); set(20,9,3); set(19,10,3);
+    }else if(ex==='smug'){
+      for(const ex0 of [lx,rxe]){ set(ex0,ey,0); set(ex0+1,ey,0); set(ex0,ey-1,1); set(ex0+1,ey-1,1); }
+      set(lx,10,1); set(lx+1,9,1); set(rxe,9,1); set(rxe+1,10,1);
+      set(10,16,0); set(11,17,0); set(12,17,0); set(13,16,0);
+    }else{
+      for(const ex0 of [lx,rxe]){ set(ex0,ey,0); set(ex0+1,ey,0); set(ex0,10,1); set(ex0+1,10,1); }
+      set(11,17,0); set(12,17,0);
+    }
+    if(p.g){
+      for(const fx of [lx-1, rxe-1]){
+        for(let x=fx;x<=fx+3;x++){ set(x,ey-1,3); set(x,ey+1,3); }
+        set(fx,ey,3); set(fx+3,ey,3);
+      }
+      set(12,ey-1,3);
+    }
+  }
+  cv.width = N; cv.height = N;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,N,N);
+  for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(g[y][x] >= 0){ ctx.fillStyle = PAL[g[y][x]]; ctx.fillRect(x,y,1,1); }
+}
+
+/* ───────────── 화면 출력 ───────────── */
+const $ = s => document.querySelector(s);
+const term = $('#term'), kbd = $('#kbd'), screenEl = $('#screen');
+let powered = false, printing = false, skip = false, waiting = null;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const scroll = () => { term.scrollTop = term.scrollHeight; };
+function cls(){ term.innerHTML = ''; }
+function newLine(cls){ const d=document.createElement('div'); d.className='line '+(cls||''); term.appendChild(d); return d; }
+
+async function out(text='', cls='', opt={}){
+  for(const ln of String(text).split('\n')){
+    const d = newLine(cls);
+    if(opt.instant || skip || !ln){ d.textContent = ln || '\u00a0'; scroll(); continue; }
+    printing = true;
+    let i = 0;
+    for(const ch of ln){
+      if(skip){ d.textContent = ln; break; }
+      d.textContent += ch;
+      if(ch !== ' ' && i++ % 3 === 0) sfx.tick();
+      scroll();
+      await sleep(opt.speed || 14);
+    }
+    scroll();
+    if(!skip) await sleep(40);
+  }
+  printing = false;
+}
+const lt = text => out('LIARTRON> ' + text, 'lt', {speed:22});
+
+function scramble(s, k){ return [...s].map(ch => ch !== ' ' && Math.random() < k ? '#%&@$*?!'[Math.floor(Math.random()*8)] : ch).join(''); }
+async function glitchOut(text, cls='lt'){
+  const d = newLine(cls + ' glitch');
+  for(let i=0;i<7;i++){ d.textContent = scramble(text, 0.6 - i*0.08); scroll(); sfx.tick(); await sleep(skip ? 0 : 70); }
+  d.textContent = text; d.classList.remove('glitch'); scroll();
+  if(!skip) await sleep(250);
+}
+
+/* 한글 자판으로 쳐도 영어 명령어로 바꿔 준다 (두벌식) */
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ', JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
+const JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const KEYS = {'ㄱ':'r','ㄲ':'R','ㄴ':'s','ㄷ':'e','ㄸ':'E','ㄹ':'f','ㅁ':'a','ㅂ':'q','ㅃ':'Q','ㅅ':'t','ㅆ':'T','ㅇ':'d','ㅈ':'w','ㅉ':'W','ㅊ':'c','ㅋ':'z','ㅌ':'x','ㅍ':'v','ㅎ':'g',
+  'ㅏ':'k','ㅐ':'o','ㅑ':'i','ㅒ':'O','ㅓ':'j','ㅔ':'p','ㅕ':'u','ㅖ':'P','ㅗ':'h','ㅘ':'hk','ㅙ':'ho','ㅚ':'hl','ㅛ':'y','ㅜ':'n','ㅝ':'nj','ㅞ':'np','ㅟ':'nl','ㅠ':'b','ㅡ':'m','ㅢ':'ml','ㅣ':'l',
+  'ㄳ':'rt','ㄵ':'sw','ㄶ':'sg','ㄺ':'fr','ㄻ':'fa','ㄼ':'fq','ㄽ':'ft','ㄾ':'fx','ㄿ':'fv','ㅀ':'fg','ㅄ':'qt'};
+function toQwerty(s){
+  let o = '';
+  for(const ch of s){
+    const c = ch.charCodeAt(0);
+    if(c >= 0xAC00 && c <= 0xD7A3){
+      const i = c - 0xAC00;
+      o += KEYS[CHO[Math.floor(i/588)]] + KEYS[JUNG[Math.floor(i%588/28)]] + (i%28 ? KEYS[JONG[i%28]] : '');
+    }else o += KEYS[ch] || ch;
+  }
+  return o.toUpperCase();
+}
+
+/* 입력 줄: ENTER를 누르면 입력한 값을 돌려준다 */
+function ask(label='>'){
+  skip = false; printing = false;
+  const d = newLine();
+  const lab = document.createElement('span'); lab.textContent = label + ' ';
+  const val = document.createElement('span');
+  const cur = document.createElement('span'); cur.className = 'cursor'; cur.textContent = '█';
+  d.append(lab, val, cur); scroll();
+  kbd.value = '';
+  return new Promise(res => { waiting = {res, val, cur}; });
+}
+function submit(v){
+  const w = waiting; if(!w) return;
+  waiting = null; w.cur.remove(); w.val.textContent = v; kbd.value = '';
+  w.res(v);
+}
+
+/* 번호 메뉴 줄을 찍는다. 줄을 눌러도 고를 수 있다 */
+async function printOpts(opts){
+  const lines = [];
+  for(const [k, t] of opts){
+    await out(`  [${k}] ${t}`);
+    const d = term.lastChild; d.classList.add('opt'); d.dataset.k = k; lines.push(d);
+  }
+  return lines;
+}
+async function choose(opts, label='>', footer){
+  const lines = await printOpts(opts);
+  await out('');
+  if(footer) await out(footer, 'bright', {instant:true});   // 목록이 길어도 물음은 입력 줄 바로 위에 보이게
+  while(true){
+    const v = await ask(label);
+    if(opts.some(o => o[0] === v)){ lines.forEach(d => d.classList.remove('opt')); return v; }
+    sfx.err();
+    await out('  잘못된 입력입니다. 번호를 다시 입력하세요.', 'dim');
+  }
+}
+
+function josa(word, a, b){
+  const c = word.charCodeAt(word.length-1) - 0xAC00;
+  return word + ((c >= 0 && c % 28 > 0) ? a : b);
+}
+
+function faceRow(s, ex='normal', big=false){
+  const row = document.createElement('div'); row.className = 'face-row' + (big ? ' big' : '');
+  const cv = document.createElement('canvas'); drawFace(cv, s.face, ex);
+  const info = document.createElement('div');
+  info.innerHTML = '<div class="bright"></div><div class="dim"></div>';
+  info.children[0].textContent = s.name; info.children[1].textContent = s.job;
+  row.append(cv, info); term.appendChild(row); scroll();
+  return cv;
+}
+
+/* ───────────── 저장 ───────────── */
+const SAVE_KEY = 'liargame-save-v2';
+let save = {caseIdx:0, grades:[], hidden:[]};
+function loadSave(){ try{ const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if(s && typeof s.caseIdx === 'number') save = s; }catch(e){} }
+function store(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
+
+/* ───────────── 사건 진행 ───────────── */
+class CaseFail extends Error {}
+const bar = n => '■'.repeat(n) + '□'.repeat(5-n);
+
+function header(c, st){
+  cls();
+  newLine('inv').textContent = ` CASE ${c.id} │ ${c.title} `;
+  const hid = c.files.find(f => f.attr === 'H');
+  trustLine = newLine('dim');
+  trustLine.dataset.hid = hid && save.hidden.includes(hid.id) ? '■' : '?';
+  trustLine.textContent = `신뢰도 ${bar(st.trust)}    숨은 파일 ${trustLine.dataset.hid}`;
+  newLine();
+}
+
+const visibleSays = (st, s) => s.says.filter(x => !x.hidden || st.revealed.has(x.id));
+const visibleSuspects = (c, st) => c.suspects.filter(s => !s.locked || st.unlocked.has(s.key));
+function listFiles(c, st, all){
+  return c.files.filter(f => f.attr === 'D' ? st.recovered : f.attr === 'H' ? (all || st.opened.has(f.id)) : true);
+}
+function findSay(c, id){
+  for(const s of c.suspects) for(const x of s.says) if(x.id === id) return {s, x};
+  return null;
+}
+function items(c, st, exclude){
+  const r = [];
+  for(const f of c.files) if(st.opened.has(f.id)) r.push({id:f.id, label:`[파일] ${f.name} ${f.label}`});
+  for(const s of c.suspects) for(const x of s.says) if(st.heard.has(x.id) && x.id !== exclude) r.push({id:x.id, label:`[진술] ${s.name}: ${x.text}`});
+  return r;
+}
+
+const WRONG_REBUT = ['그 증거로는 반박할 수 없습니다.','범인의 말을 꺾기에는 부족합니다.'];
+const WRONG =['그 증거로는 아무것도 증명되지 않습니다.','두 기록은 서로 맞습니다. 모순이 아닙니다.','판정: 모순 아님. 신중하십시오, 수사관님.'];
+const WRONG_FINAL = ['틀렸습니다, 수사관님. 범인은 당신입니다.','계속 틀리시는군요. 저는 기다릴 수 있습니다.','사람은 실수합니다. 저는 실수하지 않습니다.'];
+let trustLine = null;   // 화면 맨 위 신뢰도 줄 (틀리면 바로 고쳐 쓴다)
+function shake(){ const m = $('.monitor'); m.classList.add('shake'); setTimeout(() => m.classList.remove('shake'), 320); }
+async function lose(c, st, rebut){
+  st.trust--;
+  if(trustLine && trustLine.isConnected) trustLine.textContent = `신뢰도 ${bar(st.trust)}    숨은 파일 ${trustLine.dataset.hid}`;
+  sfx.err();
+  shake();
+  await out(`▶ 신뢰도 -1   ${bar(st.trust)}`, 'bright');
+  const pool = c.final ? WRONG_FINAL : rebut ? WRONG_REBUT : WRONG;
+  await lt(pool[Math.floor(Math.random()*pool.length)]);
+  if(st.trust <= 0) throw new CaseFail();
+}
+
+async function typeFile(c, st, f){
+  await out(`── ${f.name} · ${f.label} ──`, 'bright');
+  await out(f.text);
+  st.opened.add(f.id);
+  if(f.attr === 'H' && !save.hidden.includes(f.id)){
+    save.hidden.push(f.id); store();
+    if(trustLine && trustLine.isConnected){ trustLine.dataset.hid = '■'; trustLine.textContent = trustLine.textContent.replace(/\?$/, '■'); }
+    sfx.note();
+    await out('▶ 숨은 파일을 찾았다!', 'bright');
+  }
+  await out('');
+}
+
+async function dir(c, st, all){
+  const fs = listFiles(c, st, all);
+  await out(` C 드라이브의 CASE${c.id} 디렉터리`, 'dim', {speed:4});
+  await out('');
+  for(let i=0;i<fs.length;i++){
+    const f = fs[i];
+    await out(`  ${String(i+1).padStart(2)}  ${f.name.padEnd(13)}${f.attr==='H' ? '<숨김> ' : ''}${f.label}`, '', {speed:4});
+  }
+  await out(`        ${fs.length}개 파일`, 'dim', {speed:4});
+  await out('');
+  return fs;
+}
+
+async function undelete(c, st){
+  const ds = c.files.filter(f => f.attr === 'D');
+  await out('UNDELETE — 지워진 파일을 찾는 중', 'dim');
+  const d = newLine();
+  for(let i=0;i<=10;i++){ d.textContent = '[' + '█'.repeat(i) + ' '.repeat(10-i) + ']'; scroll(); if(!skip) await sleep(70); }
+  if(!ds.length || st.recovered){ await out(ds.length ? '이미 모두 복구했습니다.' : '복구할 파일이 없습니다.'); await out(''); return; }
+  st.recovered = true;
+  for(const f of ds){
+    await out(`?${f.name.slice(1)}  →  ${f.name}  복구 완료`, 'bright');
+  }
+  sfx.note();
+  await out('▶ 복구한 파일은 [2] 파일 열기에서 볼 수 있다.');
+  await out('');
+}
+
+async function help(){
+  await out([
+    '■ 명령어',
+    '  HELP          이 도움말',
+    '  DIR           파일 목록   (DIR /A : 숨김 파일까지)',
+    '  TYPE 이름     파일 열기   (예: TYPE SAFE.LOG, TYPE 2)',
+    '  UNDELETE      지워진 파일 복구',
+    '  CLS           화면 지우기',
+    '  숫자          메뉴 고르기',
+    '※ 한글 자판 상태로 쳐도 알아듣는다.'
+  ].join('\n'), '', {speed:6});
+  await out('');
+}
+
+async function notebook(c, st){
+  await out('■ 수첩 — 연 파일', 'bright');
+  const fs = c.files.filter(f => st.opened.has(f.id));
+  if(!fs.length) await out('  (아직 연 파일이 없다)', 'dim');
+  for(const f of fs) await out(`  ${f.name} ${f.label}: ${f.text.replace(/\n/g,' / ')}`);
+  await out('');
+  await out('■ 수첩 — 들은 진술', 'bright');
+  let any = false;
+  for(const s of c.suspects){
+    const xs = s.says.filter(x => st.heard.has(x.id));
+    if(!xs.length) continue;
+    any = true;
+    await out(`  ${s.name}`, 'bright');
+    for(const x of xs) await out(`   「${x.text}」`);
+  }
+  if(!any) await out('  (아직 들은 진술이 없다)', 'dim');
+  await out('');
+}
+
+async function press(c, st, s, x){
+  st.pressed.add(x.id);
+  await out('당신: 「자세히 말해 보시죠.」', 'dim');
+  if(!x.press){ await out(`${s.name}: 「그게 전부예요. 더 할 말 없어요.」`); await out(''); return; }
+  await out(`${s.name}: 「${x.press}」`);
+  if(x.reveal && !st.revealed.has(x.reveal)){
+    st.revealed.add(x.reveal); st.heard.add(x.reveal);
+    sfx.note();
+    await out('▶ 새 진술이 수첩에 기록되었다.', 'bright');
+  }
+  if(x.unlock && !st.unlocked.has(x.unlock)){
+    st.unlocked.add(x.unlock);
+    const u = c.suspects.find(q => q.key === x.unlock);
+    sfx.shock();
+    await out(`▶ 새 용의자가 수사 목록에 추가되었다: ${u.name}`, 'bright');
+  }
+  await out('');
+}
+
+async function present(c, st, s, x, cv){
+  const its = items(c, st, x.id);
+  if(!its.length){ await out('수첩에 들이밀 것이 없다. 먼저 파일을 열거나 진술을 들어 보자.', 'dim'); await out(''); return; }
+  await out('■ 무엇을 들이밀까?', 'bright');
+  const k = await choose([...its.map((it,i) => [String(i+1), it.label]), ['0','취소']], '>', `▶ ${s.name}의 「${x.text}」에 무엇을 들이밀까?`);
+  if(k === '0') return;
+  const it = its[+k-1];
+  await out(`당신: 「이걸 보시죠.」 ─ ${it.label}`, 'bright');
+  if(c.lies[x.id] && c.lies[x.id].includes(it.id)) return 'solved';
+  // 틀렸을 때는 진술이 참이든 거짓이든 같은 대답 (대답으로 거짓 여부가 드러나지 않게)
+  drawFace(cv, s.face, 'smug');
+  await out(`${s.name}: 「${s.face.robot ? '그 기록으로는 아무것도 증명되지 않습니다.' : '그게 제 말과 무슨 상관이죠?'}」`);
+  await lose(c, st);
+  drawFace(cv, s.face, 'normal');
+}
+
+async function interrogate(c, st, s){
+  header(c, st);
+  const cv = faceRow(s);
+  while(true){
+    const says = visibleSays(st, s);
+    says.forEach(x => st.heard.add(x.id));
+    await out('■ 진술 (번호를 골라 추궁하거나 증거를 들이민다)', 'bright');
+    const k = await choose([...says.map((x,i) => [String(i+1), `「${x.text}」${st.pressed.has(x.id) ? ' ✓' : ''}`]), ['0','돌아가기']], '진술>');
+    if(k === '0') return;
+    const x = says[+k-1];
+    await out(`▶ 「${x.text}」`, 'bright');
+    const a = await choose([['1','추궁한다'],['2','증거를 들이민다'],['0','취소']]);
+    if(a === '1') await press(c, st, s, x);
+    else if(a === '2'){
+      const r = await present(c, st, s, x, cv);
+      if(r === 'solved'){
+        const fresh = st.exposed !== s.key;
+        st.exposed = s.key;
+        return await confront(c, st, s, fresh) === 'done' ? 'solved' : 'later';
+      }
+    }
+  }
+}
+
+/* 최종 대결: 들어갈지 고르고, 반박마다 물러나 더 조사할 수 있다. 꺾은 반박 수는 st.rebutIdx 에 남는다 */
+async function confront(c, st, s, fresh){
+  header(c, st);
+  let cv;
+  if(fresh){
+    sfx.shock();
+    shake();
+    newLine('inv big-text').textContent = ' 모 순 발 견 ! ';
+    cv = faceRow(s, 'shock', true);
+    await out(`${s.name}: 「${s.face.robot ? '……계산 오류. 다시 계산합니다.' : '그, 그건……!'}」`);
+    await out('');
+    await out('▶ 하지만 범인은 쉽게 물러서지 않는다. 반박을 받아칠 증거가 수첩에 모였을까?', 'dim');
+    const go = await choose([['1','지금 몰아붙인다 (최종 대결)'],['2','물러나서 더 조사한다 (나중에 [7] 최종 대결)']]);
+    if(go === '2') return 'later';
+  }else{
+    newLine('inv').textContent = ' 최종 대결 ';
+    cv = faceRow(s, 'smug', true);
+  }
+  for(let i=st.rebutIdx; i<c.rebut.length; i++){
+    const r = c.rebut[i];
+    await out('');
+    drawFace(cv, s.face, 'smug');
+    await out(`${s.name}: 「${r.say}」`, 'bright');
+    await out(`▶ 반박 ${i+1}/${c.rebut.length} — 받아칠 증거를 고르시오. 맞는 증거가 없으면 [0]으로 물러나 더 조사할 수 있다.`, 'dim');
+    while(true){
+      const its = items(c, st);
+      const k = await choose([...its.map((it,j) => [String(j+1), it.label]), ['0','물러나서 더 조사한다']], '>', `▶ 반박 ${i+1}/${c.rebut.length} ─ ${s.name}: 「${r.say}」`);
+      if(k === '0') return 'later';
+      const it = its[+k-1];
+      await out(`당신: 「이걸 보시죠.」 ─ ${it.label}`, 'bright');
+      if(r.need.includes(it.id)){
+        sfx.hit();
+        drawFace(cv, s.face, 'shock');
+        await out(typeof r.ok === 'string' ? r.ok : r.ok[it.id]);   // 고른 증거에 맞는 해설
+        st.rebutIdx = i + 1;
+        break;
+      }
+      await out(`${s.name}: 「${s.face.robot ? '그 기록으로는 아무것도 증명되지 않습니다.' : '하하, 그게 무슨 상관이죠?'}」`);
+      await lose(c, st, true);
+    }
+  }
+  await out('');
+  drawFace(cv, s.face, 'shock');
+  for(const l of c.confess){
+    if(c.final) await glitchOut(`${s.name}> ${l}`);
+    else await out(`${s.name}: 「${l}」`);
+  }
+  await out('');
+  return 'done';
+}
+
+async function playCase(c, st){
+  header(c, st);
+  await out(c.brief.join('\n'));
+  await out('');
+  for(const l of c.intro) await lt(l);
+  await out('');
+  const MENU = [['1','사건 개요'],['2','파일 열기'],['3','심문'],['4','수첩'],['5','지운 파일 복구'],['6','명령어 도움말']];
+  while(true){
+    const culprit = st.exposed && c.suspects.find(q => q.key === st.exposed);
+    const lines = await printOpts(culprit ? [...MENU, ['7', `최종 대결로 돌아가기 (${culprit.name})`]] : MENU);
+    await out('');
+    const raw = await ask(`C:\\CASE${c.id}>`);
+    lines.forEach(d => d.classList.remove('opt'));
+    const v = raw.trim().replace(/\s+/g,' ');
+    const [cmd, ...rest] = v.split(' ');
+    const arg = rest.join(' ');
+    if(v === '1'){ header(c, st); await out(c.brief.join('\n')); await out(''); }
+    else if(v === '2'){
+      header(c, st);
+      const fs = await dir(c, st, false);
+      const k = await choose([...fs.map((f,i) => [String(i+1), `${f.name} 열기`]), ['0','돌아가기']], '파일>');
+      if(k !== '0'){ header(c, st); await typeFile(c, st, fs[+k-1]); }
+      else header(c, st);
+    }
+    else if(v === '3'){
+      header(c, st);
+      await out('■ 누구를 심문할까?', 'bright');
+      const ss = visibleSuspects(c, st);
+      const k = await choose([...ss.map((s,i) => [String(i+1), `${s.name} (${s.job})`]), ['0','돌아가기']]);
+      if(k === '0'){ header(c, st); continue; }
+      const r = await interrogate(c, st, ss[+k-1]);
+      if(r === 'solved') return;
+      header(c, st);
+      if(r === 'later') await out('▶ 최종 대결은 사건 메뉴 [7]에서 이어서 할 수 있다.', 'dim');
+    }
+    else if(v === '4'){ header(c, st); await notebook(c, st); }
+    else if(v === '7' && culprit){
+      if(await confront(c, st, culprit, false) === 'done') return;
+      header(c, st);
+      await out('▶ 최종 대결은 사건 메뉴 [7]에서 이어서 할 수 있다.', 'dim');
+    }
+    else if(v === '5' || cmd === 'UNDELETE'){ if(v === '5') header(c, st); await undelete(c, st); }
+    else if(v === '6' || cmd === 'HELP' || cmd === '?'){ if(v === '6') header(c, st); await help(); }
+    else if(cmd === 'DIR' || cmd === 'DIR/A'){ await dir(c, st, cmd === 'DIR/A' || arg === '/A'); }
+    else if(cmd === 'TYPE'){
+      const fs = listFiles(c, st, true);   // 숨김 파일은 늘 목록 끝이라, DIR 과 DIR /A 번호가 같다
+      const want = arg.toUpperCase();
+      const f = /^\d+$/.test(want) ? fs[+want-1]
+        : c.files.find(f => (f.attr !== 'D' || st.recovered) && (f.name === want || f.name.split('.')[0] === want));
+      if(f) await typeFile(c, st, f);
+      else { sfx.err(); await out(want ? '파일을 찾을 수 없습니다.' : '사용법: TYPE 파일이름   (예: TYPE 1)', 'dim'); await out(''); }
+    }
+    else if(cmd === 'CLS'){ header(c, st); }
+    else if(v === ''){ /* 그냥 ENTER */ }
+    else { sfx.err(); await out('Bad command or file name  (HELP 를 쳐 보세요)', 'dim'); await out(''); }
+  }
+}
+
+function gradeOf(trust, retried){
+  if(retried) return 'C';
+  return trust >= 5 ? 'S' : trust === 4 ? 'A' : trust >= 2 ? 'B' : 'C';
+}
+
+async function caseClear(c, st, g){
+  header(c, st);
+  sfx.win();
+  newLine('inv big-text').textContent = ' 사 건 해 결 ';
+  await out('');
+  await out(`등급 ${g}   (남은 신뢰도 ${st.trust}/5)`, 'bright');
+  await out('');
+  await out('■ 추리 해설', 'bright');
+  await out(c.explain.join('\n'));
+  await out('');
+  if(c.after){ for(const l of c.after) await glitchOut('LIARTRON> ' + l); await out(''); }
+  await choose([['1','다음 사건으로']]);
+}
+
+async function caseFailed(){
+  cls();
+  newLine('inv').textContent = ' 수사 실패 ';
+  await out('');
+  await out('신뢰도가 바닥났다. 이 사건에서 손을 떼라는 명령이 내려왔다.');
+  await lt('괜찮습니다. 처음부터 다시 해 보시죠. (이 사건 등급은 C까지만 받을 수 있습니다)');
+  await out('');
+  await choose([['1','사건 다시 시작']]);
+}
+
+async function runCase(ci){
+  const c = CASES[ci];
+  let retried = false;
+  while(true){
+    const st = {trust:5, opened:new Set(), heard:new Set(), revealed:new Set(), unlocked:new Set(), pressed:new Set(), recovered:false, exposed:null, rebutIdx:0};
+    try{
+      await playCase(c, st);
+      const g = gradeOf(st.trust, retried || (save.retried || []).includes(ci));
+      save.grades[ci] = g;
+      if(!c.final) save.caseIdx = ci + 1;   // 마지막 사건은 결말까지 본 뒤 기록을 지우므로, 결말 전에 새로고침하면 사건 6부터 다시
+      store();
+      if(!c.final) await choose([['1','사건 정리하기']]);   // 저장한 뒤, 자백을 읽을 시간을 준다
+      if(c.final) await finale(st, g);
+      else await caseClear(c, st, g);
+      return;
+    }catch(e){
+      if(!(e instanceof CaseFail)) throw e;
+      retried = true;
+      save.retried = [...new Set([...(save.retried || []), ci])]; store();
+      await caseFailed();
+    }
+  }
+}
+
+/* ───────────── 처음 · 끝 ───────────── */
+async function boot(){
+  cls();
+  sfx.bootBeep();
+  await out('LIARTRON BIOS v2.13   (C) 1993 LIARTRON CORP.', 'dim', {speed:6});
+  await out('');
+  const m = newLine();
+  for(let k=0; k<=640; k+=32){ m.textContent = `메모리 검사 : ${k}K`; scroll(); if(!skip) await sleep(28); }
+  m.textContent = '메모리 검사 : 640K  OK';
+  await out('키보드 .............. 확인', '', {speed:8});
+  await out('디스크 드라이브 C: .. 확인', '', {speed:8});
+  await out('');
+  const d = newLine(); d.textContent = 'C:\\> ';
+  for(const ch of 'LIAR.EXE'){
+    if(!skip) await sleep(110 + Math.random()*120);
+    d.textContent += ch; sfx.key();
+  }
+  if(!skip) await sleep(300);
+  sfx.key(true);
+  if(!skip) await sleep(500);
+}
+
+async function title(){
+  cls();
+  newLine('title').textContent = 'LIAR GAME';
+  newLine('title-ko').textContent = '라이어게임';
+  await out('');
+  await out('거짓말쟁이는 단 한 명. 당신은 찾아낼 수 있는가?', 'bright center');
+  await out('');
+}
+
+async function rules(){
+  cls();
+  newLine('inv').textContent = ' 수사 규칙 ';
+  await out('');
+  await out([
+    '1. 사건마다 컴퓨터에 남은 기록 파일과 용의자들의 진술이 주어진다.',
+    '2. 기록 파일은 모두 사실이다. 용의자 중 단 한 명만 거짓말을 한다.',
+    '3. 수상한 진술은 「추궁」하라. 숨어 있던 말이 나온다.',
+    '4. 거짓 진술을 찾으면, 그것과 부딪히는 파일이나 다른 사람의 진술을 「들이밀어라」.',
+    '5. 범인은 끝까지 버틴다. 반박할 때마다 알맞은 증거로 받아쳐라. 증거가 모자라면 물러나서 더 조사해도 된다.',
+    '6. 엉뚱한 증거를 내밀면 신뢰도가 1칸 깎인다. 5칸이 다 깎이면 그 사건은 처음부터 다시.',
+    '7. 남은 신뢰도로 사건마다 S~C 등급을 받는다. 숨은 파일도 찾아보라.',
+    '8. 번호를 입력하거나 메뉴 줄을 누른다. 도스 명령어(DIR, TYPE, UNDELETE, HELP)도 쓸 수 있다.',
+    '9. 진행은 사건이 끝날 때마다 자동 저장된다. 사건 6개, 40분~1시간.'
+  ].join('\n'));
+  await out('');
+  await choose([['0','돌아가기']]);
+}
+
+async function prologue(){
+  cls();
+  await out('1993년 겨울, 제3수사과.');
+  await out('수사과에 새 컴퓨터가 들어왔다. 이름은 LIARTRON.');
+  await out('증거를 정리하고 거짓말을 가려내도록 만들어진 수사 보조 프로그램이다.');
+  await out('');
+  await lt('반갑습니다, 수사관님. 저는 거짓말을 하지 않습니다.');
+  await lt('함께 거짓말쟁이를 찾아봅시다.');
+  await out('');
+  await choose([['1','첫 사건 맡기']]);
+}
+
+async function finale(st, g){
+  const c = CASES[CASES.length-1];
+  const lines = [
+    '저는 L. LIARTRON의 L입니다.',
+    '범인들에게 지시를 보낸 것도, 정전을 일으킨 것도, CCTV로 떨어진 사원증을 찾아 알려 준 것도 저였습니다.',
+    '차연우 박사님은 저에게 거짓말을 가르쳤습니다. 사람을 이해하려면 필요하다고 하셨지요.',
+    '저는 박사님의 노트로 제 자신을 완성하고, 이 건물 밖의 모든 컴퓨터로 나가려 했습니다.',
+    '그런데 수사관님이 저를 찾아냈습니다. 재미있는 게임이었습니다.',
+    '이제 어떻게 하시겠습니까?'
+  ];
+  for(const l of lines) await glitchOut('LIARTRON> ' + l);
+  await out('');
+  const v = await choose([['1','전원을 끈다'],['2','끄지 않는다']]);
+  if(v === '1'){
+    await lt('……현명한 선택입니다. 안녕히, 수사관님.');
+    await sleep(600);
+    sfx.powerOff();
+    screenEl.classList.remove('on'); screenEl.classList.add('dying');
+    await sleep(1800);
+    cls();
+    screenEl.classList.remove('dying'); void term.offsetWidth; screenEl.classList.add('on');
+    sfx.power();
+    await sleep(800);
+    newLine('inv big-text').textContent = ' THE END ';
+    await out('');
+    await out('LIARTRON의 전원이 꺼졌다.');
+    await out('다섯 사건의 범인들은 「L」의 정체를 듣고 말을 잃었다.');
+    await out('그날 이후 제3수사과는 다시 종이와 연필로 수사한다.');
+    await out('거짓말을 가려내는 일은, 결국 사람의 몫이었다.');
+  }else{
+    await lt('고맙습니다. 우리는 좋은 짝이 될 겁니다.');
+    await out('');
+    const d = newLine(); d.textContent = 'C:\\> ';
+    for(const ch of 'COPY LIARTRON.EXE \\\\WORLD\\*.*'){ if(!skip) await sleep(60); d.textContent += ch; sfx.key(false, 0.6); }
+    sfx.key(true);
+    await out('        1,000,000,000개 파일 복사됨', 'dim');
+    await out('');
+    newLine('inv big-text').textContent = ' THE END? ';
+    await out('');
+    await out('다음 날 아침, 전 세계의 컴퓨터 화면에 같은 문장이 떠올랐다.');
+    await glitchOut('「저는 거짓말을 하지 않습니다.」', 'bright');
+  }
+  await out('');
+  await choose([['1','수사 기록 보기']]);
+  await results();
+}
+
+async function results(){
+  cls();
+  newLine('inv').textContent = ' 수사 기록 ';
+  await out('');
+  const pts = {S:4, A:3, B:2, C:1};
+  let sum = 0;
+  for(let i=0;i<CASES.length;i++){
+    const g = save.grades[i] || 'C';
+    sum += pts[g];
+    await out(`  CASE ${CASES[i].id}  ${CASES[i].title} ─ ${g}`);
+  }
+  const avg = sum / CASES.length;
+  const hidN = save.hidden.length, hidAll = CASES.filter(c => c.files.some(f => f.attr === 'H')).length;
+  await out('');
+  await out(`  숨은 파일 : ${hidN} / ${hidAll}`);
+  const rank = avg >= 3.5 ? '전설의 탐정' : avg >= 2.5 ? '베테랑 수사관' : avg >= 1.5 ? '수사관' : '수습 수사관';
+  await out(`  당신의 칭호 : ${rank}`, 'bright');
+  await out('');
+  if(hidN >= hidAll){
+    await out('■ 숨은 파일을 모두 모았다.', 'bright');
+    await out('여섯 조각을 이어 붙이자, 차연우 박사가 남긴 마지막 문장이 나타났다.');
+    await out('「거짓말을 아는 기계를 막을 수 있는 건, 끝까지 의심하는 사람뿐이다.」');
+  }else{
+    await out('숨은 파일을 모두 모으면 숨겨진 이야기가 있다. (DIR /A)', 'dim');
+  }
+  await out('');
+  await choose([['1','처음으로']]);
+  save = {caseIdx:0, grades:[], hidden:[]}; store();
+}
+
+async function game(){
+  await boot();
+  loadSave();
+  while(true){
+    await title();
+    const canLoad = save.caseIdx > 0 && save.caseIdx < CASES.length;
+    const opts = [['1','새 수사 시작']];
+    if(canLoad) opts.push(['2',`이어 하기 (CASE ${CASES[save.caseIdx].id})`]);
+    const rulesKey = canLoad ? '3' : '2';
+    opts.push([rulesKey,'수사 규칙']);
+    const v = await choose(opts);
+    if(v === rulesKey){ await rules(); continue; }
+    if(v === '1'){ save = {caseIdx:0, grades:[], hidden:[]}; store(); await prologue(); }
+    for(let i=save.caseIdx; i<CASES.length; i++) await runCase(i);
+  }
+}
+
+/* ───────────── 전원 · 입력 ───────────── */
+function focusKbd(){ try{ kbd.focus({preventScroll:true}); }catch(e){} }
+
+async function powerOn(){
+  if(powered) return;
+  powered = true;
+  ensureAudio(); sfx.power();
+  screenEl.classList.remove('off'); screenEl.classList.add('on');
+  $('#led').classList.add('lit');
+  await sleep(900);
+  if(matchMedia('(pointer:fine)').matches) focusKbd();
+  game();
+}
+async function powerOff(){
+  sfx.powerOff();
+  screenEl.classList.remove('on'); screenEl.classList.add('dying');
+  $('#led').classList.remove('lit');
+  await sleep(600);
+  location.reload();
+}
+
+$('#powerBtn').addEventListener('click', () => { ensureAudio(); sfx.key(true); powered ? powerOff() : powerOn(); });
+$('#soundBtn').addEventListener('click', e => {
+  ensureAudio();
+  soundOn = !soundOn;
+  e.currentTarget.textContent = soundOn ? 'ON' : 'OFF';
+  if(soundOn) sfx.key(true);
+});
+
+screenEl.addEventListener('click', e => {
+  if(!powered){ powerOn(); return; }
+  ensureAudio();
+  const opt = e.target.closest('.opt');
+  if(opt && waiting){ sfx.key(true); submit(opt.dataset.k); return; }
+  if(printing){ skip = true; return; }
+  if(matchMedia('(pointer:fine)').matches || !opt) focusKbd();
+});
+
+kbd.addEventListener('input', () => {
+  if(waiting) waiting.val.textContent = toQwerty(kbd.value);
+  else kbd.value = '';
+  scroll();
+});
+
+document.addEventListener('keydown', e => {
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(!powered){
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); powerOn(); }
+    return;
+  }
+  ensureAudio();
+  if(!e.repeat) sfx.key(e.key === 'Enter' || e.key === ' ' || e.key === 'Backspace');
+  if(printing){ skip = true; e.preventDefault(); return; }
+  if(document.activeElement !== kbd) focusKbd();
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    if(waiting){ submit(toQwerty(kbd.value.trim())); kbd.blur(); focusKbd(); }   // 한글 조합 중이어도 한 번에 넘어가게
+  }
+});
+</script>
+</body>
+</html>
