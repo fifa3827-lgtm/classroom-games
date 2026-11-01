@@ -797,7 +797,8 @@ function header(c, st){
 const visibleSays = (st, s) => s.says.filter(x => !x.hidden || st.revealed.has(x.id));
 const visibleSuspects = (c, st) => c.suspects.filter(s => !s.locked || st.unlocked.has(s.key));
 function listFiles(c, st, all){
-  return c.files.filter(f => f.attr === 'D' ? st.recovered : f.attr === 'H' ? (all || st.opened.has(f.id)) : true);
+  // 숨김 파일은 DIR /A 로 한 번 찾았거나 열어 본 뒤로는 계속 목록에 보인다
+  return c.files.filter(f => f.attr === 'D' ? st.recovered : f.attr === 'H' ? (all || st.seenHidden || st.opened.has(f.id)) : true);
 }
 function findSay(c, id){
   for(const s of c.suspects) for(const x of s.says) if(x.id === id) return {s, x};
@@ -841,6 +842,7 @@ async function typeFile(c, st, f){
 
 async function dir(c, st, all){
   const fs = listFiles(c, st, all);
+  if(all) st.seenHidden = true;
   await out(` C 드라이브의 CASE${c.id} 디렉터리`, 'dim', {speed:4});
   await out('');
   for(let i=0;i<fs.length;i++){
@@ -1055,7 +1057,7 @@ async function playCase(c, st){
     else if(v === '6' || cmd === 'HELP' || cmd === '?'){ if(v === '6') header(c, st); await help(); }
     else if(cmd === 'DIR' || cmd === 'DIR/A'){ await dir(c, st, cmd === 'DIR/A' || arg === '/A'); }
     else if(cmd === 'TYPE'){
-      const fs = listFiles(c, st, true);   // 숨김 파일은 늘 목록 끝이라, DIR 과 DIR /A 번호가 같다
+      const fs = listFiles(c, st, false);   // 지금 보이는 목록 그대로 센다 (숨김 파일은 DIR /A 로 찾은 뒤에만, 늘 목록 끝)
       const want = arg.toUpperCase();
       const f = /^\d+$/.test(want) ? fs[+want-1]
         : c.files.find(f => (f.attr !== 'D' || st.recovered) && (f.name === want || f.name.split('.')[0] === want));
@@ -1101,7 +1103,7 @@ async function runCase(ci){
   const c = CASES[ci];
   let retried = false;
   while(true){
-    const st = {trust:5, opened:new Set(), heard:new Set(), revealed:new Set(), unlocked:new Set(), pressed:new Set(), recovered:false, exposed:null, rebutIdx:0};
+    const st = {trust:5, opened:new Set(), heard:new Set(), revealed:new Set(), unlocked:new Set(), pressed:new Set(), recovered:false, seenHidden:false, exposed:null, rebutIdx:0};
     try{
       await playCase(c, st);
       const g = gradeOf(st.trust, retried || (save.retried || []).includes(ci));
