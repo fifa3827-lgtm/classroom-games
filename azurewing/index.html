@@ -732,7 +732,7 @@ function onTap(x,y,e){
   switch(G.state){
     case'title':G.state='select';sfx('select');goFull();break;
     case'select':if(x<80&&y>160&&y<420){G.sel=(G.sel+PLANES.length-1)%PLANES.length;sfx('select');}else if(x>W-80&&y>160&&y<420){G.sel=(G.sel+1)%PLANES.length;sfx('select');}
-      else if(y>H-170&&y<H-100&&Math.abs(x-W/2)<130)startGame();break;
+      else if(y>H-124&&y<H-52&&Math.abs(x-W/2)<130)startGame();break;
     case'play':
       if(G.paused){if(Math.abs(x-W/2)<120){if(Math.abs(y-(H/2+10))<26)G.paused=false;else if(Math.abs(y-(H/2+70))<26)toTitle();}return;}
       if(inC(x,y,BTN.pause)){G.paused=true;G.menu=0;return;}
