@@ -10,6 +10,7 @@ plan={
  'mitgeurim2':['mitgeurim2-0.png','mitgeurim2-1.png'],
  'myungyun':['myungyun-0.png','myungyun-1.png'],
  'sky1945':['sky1945-0.png','sky1945-1.png'],
+ 'azurewing':['azurewing-0.png','azurewing-1.png','azurewing-2.png','azurewing-3.png'],
  'puzzle25':['puzzle25-0.png','puzzle25-1.png','puzzle25-2.png'],
  'hangul':['hangul-1.png','hangul-2.png'],
  'lumenfall':['lumenfall-0.png','lumenfall-1.png','lumenfall-2.png'],
