@@ -10,20 +10,20 @@ export const LV_SCALE2 = { 1: 1, 2: 1.08, 3: 1.16, '4a': 1.24, '4b': 1.24 };
 
 // 석궁: 받침 + 위에서 본 석궁(오른쪽 향함). top=받침 바닥에서 축(높이 비율), pivot=석궁 그림 속 축, tip=축→바늘 끝(폭 비율), bw=폭
 export const CROSSBOW = {
-  1: { top: 0.57, pivot: [0.10, 0.47], tip: 0.95, bw: 150 },
-  2: { top: 0.73, pivot: [0.10, 0.47], tip: 0.95, bw: 158 },
-  3: { top: 0.74, pivot: [0.10, 0.47], tip: 0.95, bw: 166 },
-  '4a': { top: 0.76, pivot: [0.10, 0.5], tip: 0.95, bw: 178 },
-  '4b': { top: 0.72, pivot: [0.10, 0.5], tip: 0.95, bw: 178 },
+  1: { top: 0.65, pivot: [0.10, 0.47], tip: 0.95, bw: 150 },
+  2: { top: 0.82, pivot: [0.10, 0.47], tip: 0.95, bw: 158 },
+  3: { top: 0.82, pivot: [0.10, 0.47], tip: 0.95, bw: 166 },
+  '4a': { top: 0.81, pivot: [0.10, 0.5], tip: 0.95, bw: 178 },
+  '4b': { top: 0.8, pivot: [0.10, 0.5], tip: 0.95, bw: 178 },
 };
 // 대포·궁수 4단계 (render.js 의 CANNON·ARCHER 에 합침)
 export const CANNON4 = {
-  '4a': { top: 0.62, pivot: [0.2, 0.5], tip: 0.8, bw: 118 },
-  '4b': { top: 0.65, pivot: [0.15, 0.5], tip: 0.88, bw: 150 },
+  '4a': { top: 0.73, pivot: [0.2, 0.5], tip: 0.8, bw: 118 },
+  '4b': { top: 0.8, pivot: [0.15, 0.5], tip: 0.88, bw: 150 },
 };
 export const ARCHER4 = {
-  '4a': { top: 0.74, spots: [[-0.14, 0.01], [0.14, 0.01]], fig: 'c', fh: 84 },
-  '4b': { top: 0.74, spots: [[0, 0.01]], fig: 'd', fh: 92 },
+  '4a': { top: 0.77, spots: [[-0.14, 0.01], [0.14, 0.01]], fig: 'c', fh: 84 },
+  '4b': { top: 0.8, spots: [[0, 0.01]], fig: 'd', fh: 92 },
 };
 // 병사 그림: 1~3단계 soldier_fig_*, 기사단 soldier_fig_k_*, 창병 soldier_fig_s_*
 const SOLDIER_FIG = { 1: 'soldier_fig', 2: 'soldier_fig', 3: 'soldier_fig', '4a': 'soldier_fig_k', '4b': 'soldier_fig_s' };

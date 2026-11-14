@@ -14,19 +14,17 @@ const POS = {
   c1: { candle: [0.19, 0.44], window: [0.87, 0.16], beamTo: [0.42, 0.95] },
   c1fg: { flame: [0.262, 0.139] },           // 앞 촛대 그림 안 불꽃 자리
   c3: { candle: [0.075, 0.2], bottle: [0.47, 0.74], bottleH: 0.4 },   // bottle: 병 바닥 가운데
-  c3bottle: { mouth: [0.5, 0.12] },          // 병 그림 안 주둥이 자리
+  c3bottle: { mouth: [0.5, 0.15] },          // 서 있는 병 그림 안 주둥이
+  c3fallen: { len: 0.8, base: 0.0, floor: 0.9, mouth: [0.8, 0.3], stream: [0.95, 0.88] },   // 누운 병 그림: 병 길이(폭 비율), 바닥 끝, 땅에 닿는 높이, 주둥이, 흘러내린 끝
+          // 병 그림 안 주둥이 자리
   // 눈 무리(박마다 한 무리씩 켜짐, 마지막은 가운데 큰 기사). [x, y, r] 비율 — intro_c5_eyes 와 c5_bg 차이로 찾음
   c5: { eyes: [
-    [[0.267, 0.414, 0.009], [0.300, 0.412, 0.009]],
-    [[0.701, 0.417, 0.009], [0.736, 0.408, 0.009]],
-    [[0.431, 0.342, 0.014], [0.458, 0.326, 0.015], [0.442, 0.316, 0.008], [0.472, 0.291, 0.008], [0.486, 0.295, 0.012], [0.493, 0.317, 0.008], [0.494, 0.243, 0.009], [0.422, 0.373, 0.008]],
-    [[0.031, 0.529, 0.008], [0.017, 0.760, 0.008], [0.035, 0.772, 0.008]],
-    [[0.710, 0.561, 0.008], [0.714, 0.638, 0.008], [0.736, 0.688, 0.010]],
-    [[0.082, 0.823, 0.009], [0.106, 0.814, 0.008], [0.115, 0.829, 0.009], [0.152, 0.770, 0.008]],
-    [[0.227, 0.686, 0.008], [0.257, 0.680, 0.011], [0.303, 0.678, 0.010]],
-    [[0.454, 0.520, 0.008], [0.468, 0.544, 0.017], [0.437, 0.787, 0.008]],
-    [[0.480, 0.439, 0.013], [0.541, 0.432, 0.013]],
-  ] },
+    [[0.267, 0.414, 0.009], [0.300, 0.412, 0.009]],      // 왼쪽 기사
+    [[0.257, 0.680, 0.011], [0.303, 0.678, 0.010]],      // 젤리
+    [[0.701, 0.417, 0.009], [0.736, 0.408, 0.009]],      // 오른쪽 기사
+    [[0.699, 0.677, 0.008, 1], [0.736, 0.688, 0.010]],   // 태엽 쥐(먼 눈·가까운 눈). 넷째 값 1 = 눈 빛 그림에 없어 코드로 눈동자 빛을 그림
+    [[0.480, 0.439, 0.013], [0.541, 0.432, 0.013]],      // 가운데 큰 기사(마지막)
+  ], times: [33.0, 34.0, 35.0, 36.0, 37.2] },
   c6: { path: [[0.42, 0.66], [0.55, 0.5], [0.68, 0.62], [0.78, 0.42], [0.9, 0.48], [1.05, 0.3]] },
   c6hand: { tip: [0.93, 0.07] },             // 손 그림 안 바늘 끝
 };
@@ -60,10 +58,11 @@ const SFX_PLAN = [
   [39.8, 'in_whoosh', 0.5], [41.3, 'in_glint', 0.9], [42.0, 'in_thread', 1], [44.2, 'in_thread', 0.6, 1.15],
   [47.55, 'in_whoosh', 0.6], [53.85, 'in_title', 1],
 ];
-const EYE_T0 = 33.0;         // 첫 눈이 켜지는 때(박마다 하나씩)
+const EYE_T0 = 33.0;
+const HEART = [0.3, 1.8, 3.2, 3.6, 4.0, 4.4, 4.7, 5.12, 5.8];   // in_heart.ogg 소리 봉우리(초)         // 첫 눈이 켜지는 때(박마다 하나씩)
 const THREAD_T = [42.0, 46.6];
 
-const IMG_LIST = ['intro_c1_bg', 'intro_c1_fg', 'intro_c2_bg', 'intro_c2_fg', 'intro_c3_bg', 'intro_c3_bottle', 'intro_c4_bg', 'intro_c4_red',
+const IMG_LIST = ['intro_c1_bg', 'intro_c1_fg', 'intro_c2_bg', 'intro_c2_fg', 'intro_c3_bg', 'intro_c3_bottle', 'intro_c3_fallen', 'intro_c3_cork', 'intro_c3_puddle', 'intro_c3_splash', 'intro_c4_bg', 'intro_c4_red',
   'intro_c5_bg', 'intro_c5_eyes', 'intro_c6_bg', 'intro_c6_hand', 'intro_c7_bg'];
 const FIRST = ['intro_c1_bg', 'intro_c1_fg', 'intro_c2_bg', 'intro_c2_fg'];
 const SFX_LIST = ['in_room', 'in_whoosh', 'in_wobble', 'in_crash', 'in_ooze', 'in_heart', 'in_eye', 'in_glint', 'in_thread', 'in_stitch', 'in_title'];
@@ -122,6 +121,19 @@ function loadMusic() {
 }
 
 function makeDust() { return Array.from({ length: 70 }, (_, i) => { const r = rnd(i * 97 + 13); return { x: r(), y: r(), z: 0.4 + r() * 0.8, p: r() * 6.28, s: 0.3 + r() * 0.7 }; }); }
+// 매끈한 얼룩(점 사이를 곡선으로 이음)
+function blobSmooth(ctx, cx, cy, r, seed, t) {
+  const N = 96, P = [];
+  for (let i = 0; i < N; i++) {
+    const a = i / N * Math.PI * 2;
+    const k = 1 + 0.14 * Math.sin(3 * a + seed) + 0.08 * Math.sin(5 * a + seed * 2.1 + t * 0.8) + 0.035 * Math.sin(9 * a + seed * 3.3 - t * 1.3);
+    P.push([cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k]);
+  }
+  const mid = i => { const p = P[i % N], q = P[(i + 1) % N]; return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; };
+  let s = mid(N - 1); ctx.moveTo(s[0], s[1]);
+  for (let i = 0; i < N; i++) { const e = mid(i); ctx.quadraticCurveTo(P[i][0], P[i][1], e[0], e[1]); }
+  ctx.closePath();
+}
 // 유기적인 얼룩 모양(물감)
 function blob(ctx, cx, cy, r, seed, t, sy = 1) {
   const N = 48;
@@ -138,11 +150,11 @@ const STYLE_ID = 'intro-scene-style';
 const CSS = `
 .intro-root{position:fixed;inset:0;z-index:20}
 #ui .intro-root,.intro-root{pointer-events:none}
-.intro-skip,#ui .intro-root .intro-skip{position:absolute;top:calc(14px + var(--safe-t,0px));right:calc(14px + var(--safe-r,0px));pointer-events:auto;
-  min-width:44px;min-height:44px;padding:0 18px;border-radius:22px;font-family:'Batang',serif;font-size:14px;letter-spacing:.12em;
-  color:rgba(240,226,200,.82);background:rgba(10,8,6,.38);border:1px solid rgba(243,197,90,.28);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
-  opacity:0;transition:opacity .6s;cursor:pointer}
-#ui .intro-root .intro-skip.show,.intro-skip.show{opacity:1}
+.intro-skip,#ui .intro-root .intro-skip{position:absolute;top:calc(8px + var(--safe-t,0px));right:calc(8px + var(--safe-r,0px));pointer-events:none;
+  min-width:44px;min-height:44px;padding:0 14px;font-family:'Batang',serif;font-size:15px;letter-spacing:.14em;color:rgba(240,226,200,.85);
+  background:none;border:0;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.7);opacity:0;visibility:hidden;transition:opacity .6s,visibility 0s .6s;cursor:pointer}
+.intro-skip::after{content:'';display:block;height:1px;margin-top:3px;background:repeating-linear-gradient(90deg,rgba(243,197,90,.7) 0 6px,transparent 6px 10px)}
+#ui .intro-root .intro-skip.show,.intro-skip.show{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .6s}
 .intro-skip:active{transform:scale(.96)}
 `;
 
@@ -156,23 +168,25 @@ export class IntroScene {
     this.state = 'load';           // load → gate(누르기 기다림) → play → title
     this.t = this.titleOnly ? T_TITLE + 0.01 : 0;
     this.srcs = []; this.started = false; this.pressShown = false;
-    this.fast = null;              // 건너뛰기·제목만: 빠른 제목 꿰매기 시작 시각
+    this.stitchAt = null;          // 건너뛰기·제목만·누름: 빠른 제목 꿰매기 기준 시각(실제 시계)
+    this.clockAt = 0; this.stitchSrcs = [];
     this.buf = document.createElement('canvas'); this.bctx = this.buf.getContext('2d');
     this.mask = document.createElement('canvas'); this.mask.width = 480; this.mask.height = 270;
     this.tmp = document.createElement('canvas'); this.tmp.width = 960; this.tmp.height = 540;
     this.makeGrain();
     this.dust = makeDust();
-    this.drops = Array.from({ length: 46 }, (_, i) => { const r = rnd(i * 31 + 7); return { a: -Math.PI * (0.05 + r() * 0.9), v: 0.35 + r() * 0.75, s: 0.004 + r() * 0.012, d: r() * 0.12 }; });
     if (!document.getElementById(STYLE_ID)) { const st = document.createElement('style'); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
     this.root = document.createElement('div'); this.root.className = 'intro-root';
-    this.skipBtn = document.createElement('button'); this.skipBtn.className = 'intro-skip'; this.skipBtn.textContent = '건너뛰기';
-    this.skipBtn.addEventListener('click', e => { e.stopPropagation(); this.skip(); });
+    this.skipBtn = document.createElement('button'); this.skipBtn.className = 'intro-skip'; this.skipBtn.textContent = '건너뛰기 ▸';
+    this.skipBtn.addEventListener('click', e => { e.stopPropagation(); if (this.now() >= (this.skipLiveAt ?? 1e12)) this.skip(); });
     this.root.appendChild(this.skipBtn);
     (document.getElementById('ui') || document.body).appendChild(this.root);
     this.onDown = e => { if (!e.target.closest?.('.intro-skip')) this.press(e); };
+    this.onClick = e => { if (this.state === 'title' && this.pressShown && !e.target.closest?.('.intro-skip') && this.now() - this.pressShownAt > 0.45) { e.stopPropagation(); e.preventDefault(); this.finish(); } };
     this.onKey = e => { if (e.key === 'Enter' || e.key === ' ') this.press(e); else if (e.key === 'Escape' && this.state === 'play') this.skip(); };
     window.addEventListener('pointerdown', this.onDown);
     window.addEventListener('keydown', this.onKey);
+    window.addEventListener('click', this.onClick, true);
     this.resize();
     this.load();
   }
@@ -195,9 +209,9 @@ export class IntroScene {
   press(e) {
     if (this.state === 'gate') { this.begin(); return; }
     if (this.state === 'title') {
-      if (this.pressShown) { this.finish(); return; }
-      // 꿰매는 중이면 바로 끝까지
-      this.fast = { at: this.now() - 10, keepClock: true };
+      if (this.pressShown) { if (e?.type === 'keydown' && this.now() - this.pressShownAt > 0.45) this.finish(); return; }   // 누르기는 click에서 끝냄
+      // 꿰매는 중이면 바로 끝까지(남은 꿰매기 소리는 멈춤). 시계·먼지·카메라는 계속 흐름
+      this.stitchAt = this.now() - 10; this.stopStitchSounds();
     }
   }
   now() { return performance.now() / 1000; }
@@ -217,13 +231,13 @@ export class IntroScene {
       const m = ctx.createBufferSource(); m.buffer = cache.music; m.connect(this.gain); m.start(this.t0);
       this.srcs.push(m); this.musicSrc = m;
       audio.playMusic(null, 0.6);
-      for (const [at, n, v, r] of SFX_PLAN) this.playAt(n, this.t0 + at, v, r);
-      POS.c5.eyes.forEach((_, i, a) => this.playAt('in_eye', this.t0 + this.eyeT(i), i === a.length - 1 ? 0.95 : 0.5, i === a.length - 1 ? 0.75 : 0.9 + (i % 3) * 0.08));
+      for (const [at, n, v, r] of SFX_PLAN) { const x = this.playAt(n, this.t0 + at, v, r); if (n === 'in_title') this.stitchSrcs.push(x); }
+      POS.c5.eyes.forEach((_, i, a) => this.playAt('in_eye', this.t0 + this.eyeT(i), i === a.length - 1 ? 0.95 : 0.6, i === a.length - 1 ? 0.75 : 0.9 + (i % 3) * 0.08));
       for (const k of [0.3, 0.55, 0.8]) this.playAt('in_glint', this.t0 + lerp(THREAD_T[0], THREAD_T[1], k), 0.45, 1.1);
       this.titleLetterSfx(this.t0 + T_STITCH, (T_STITCH_END - T_STITCH));
       this.clock = 'audio';
     } else { this.clock = 'dt'; this.t = 0; }
-    setTimeout(() => this.alive && this.state === 'play' && this.skipBtn.classList.add('show'), 900);
+    setTimeout(() => { if (this.alive && this.state === 'play') { this.skipBtn.classList.add('show'); this.skipLiveAt = this.now() + 0.5; } }, 900);
   }
   playAt(name, at, vol = 1, rate = 1) {
     const b = cache.sfx[name], ctx = audio.ctx;
@@ -233,10 +247,12 @@ export class IntroScene {
     src.connect(g); g.connect(audio.sfxBus);
     src.start(Math.max(ctx.currentTime, at));
     this.srcs.push(src);
+    return src;
   }
+  stopStitchSounds() { for (const x of this.stitchSrcs) { try { x?.stop(); } catch {} } this.stitchSrcs = []; }
   titleLetterSfx(at, dur) {
     const n = this.letterCount();
-    for (let i = 0; i < n; i++) this.playAt('in_stitch', at + (i + 0.5) / n * dur, 0.4, 0.92 + (i % 4) * 0.05);
+    for (let i = 0; i < n; i++) this.stitchSrcs.push(this.playAt('in_stitch', at + (i + 0.5) / n * dur, 0.4, 0.92 + (i % 4) * 0.05));
   }
   letterCount() { return 'TheLastStitch'.length; }
   stopSounds() {
@@ -248,7 +264,7 @@ export class IntroScene {
 
   // 건너뛰기: 남은 예약 소리·음악을 모두 멈추고 제목으로
   skip() {
-    if (this.state !== 'play' && this.state !== 'gate') return;
+    if (this.state !== 'play') return;
     this.stopSounds();
     this.enterTitle(true);
   }
@@ -258,12 +274,12 @@ export class IntroScene {
     this.markSeen();
     if (fast) {
       this.clock = 'fast';
-      this.fast = { at: this.now() };
+      this.clockAt = this.stitchAt = this.now();
       this.t = T_TITLE + 2.2;
       audio.playMusic('title', 1.5);
       loadImg('intro_c7_bg');
       const ctx = audio.ctx;
-      if (ctx) { this.titleLetterSfx(ctx.currentTime + 0.5, 2.0); this.playAt('in_title', ctx.currentTime + 2.3, 0.8); }
+      if (ctx) { this.titleLetterSfx(ctx.currentTime + 0.5, 2.0); this.stitchSrcs.push(this.playAt('in_title', ctx.currentTime + 2.3, 0.8)); }
     }
   }
   finish() {
@@ -273,13 +289,13 @@ export class IntroScene {
     this.opts.onDone?.({ t: this.t });
   }
   // 시험용: 원하는 시각으로 옮겨 그리기(소리 없음)
-  seek(t) { this.stopSounds(); this.clock = 'manual'; this.t = t; this.state = t >= T_TITLE ? 'title' : 'play'; if (t >= T_PRESS) this.pressShown = true; this.started = true; }
+  seek(t) { this.stopSounds(); this.clock = 'manual'; this.t = t; this.stitchAt = null; this.state = t >= T_TITLE ? 'title' : 'play'; this.pressShown = t >= T_PRESS; this.pressShownAt = -1; this.started = true; }
 
   time(dt) {
     if (this.clock === 'audio') {
       const ctx = audio.ctx; this.t = ctx.currentTime - this.t0;
     } else if (this.clock === 'dt') this.t += dt;
-    else if (this.clock === 'fast' && this.fast && !this.fast.keepClock) this.t = T_TITLE + 2.2 + (this.now() - this.fast.at);
+    else if (this.clock === 'fast') this.t = T_TITLE + 2.2 + (this.now() - this.clockAt);
     return this.t;
   }
 
@@ -320,15 +336,18 @@ export class IntroScene {
     const tt = this.now();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const fs = clamp(Math.min(W, H) * 0.042, 15, 22);
-    // 바늘과 실
-    const cx = W / 2, cy = H * 0.44, r = fs * 1.4;
-    ctx.strokeStyle = 'rgba(243,197,90,.85)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
-    ctx.beginPath();
-    const sp = ready ? 1 : (tt * 1.4) % 1;
-    for (let i = 0; i <= 40; i++) { const k = i / 40; const a = k * Math.PI * 2 * 0.86 + tt * (ready ? 0.6 : 3); const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 0.42; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-    ctx.globalAlpha = ready ? 0.9 : 0.5 + 0.3 * Math.sin(sp * 6.28); ctx.stroke(); ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#d9dde3'; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.moveTo(cx - r * 0.2, cy + r * 0.9); ctx.lineTo(cx + r * 0.2, cy - r * 0.9); ctx.stroke();
+    // 실패 그림(게임 아이콘) + 천천히 도는 금실 고리
+    const cx = W / 2, cy = H * 0.44, r = fs * 1.9;
+    if (!this.spool) { this.spool = new Image(); this.spool.src = 'assets/ui/icon_spool.webp'; }
+    if (this.spool.complete && this.spool.naturalWidth) {
+      const sz = r * 1.5, bob = ready ? Math.sin(tt * 1.6) * 2 : 0;
+      ctx.save(); ctx.translate(cx, cy + bob); if (!ready) ctx.rotate(Math.sin(tt * 3) * 0.08);
+      ctx.drawImage(this.spool, -sz / 2, -sz / 2, sz, sz); ctx.restore();
+    }
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.6);
+    gg.addColorStop(0, `rgba(255,190,90,${ready ? 0.18 + 0.06 * Math.sin(tt * 2.6) : 0.1})`); gg.addColorStop(1, 'rgba(255,160,60,0)');
+    ctx.fillStyle = gg; ctx.fillRect(cx - r * 1.6, cy - r * 1.6, r * 3.2, r * 3.2); ctx.restore();
     ctx.font = `400 ${fs}px Batang, serif`; ctx.fillStyle = 'rgba(240,226,200,.9)';
     if (ready) {
       ctx.globalAlpha = 0.65 + 0.35 * Math.sin(tt * 2.6);
@@ -405,17 +424,26 @@ export class IntroScene {
     }
   }
   // 잉크가 화면을 덮으며 다음 컷이 드러남
+  // 잉크가 화면을 덮으며 다음 컷이 드러남. 가장자리는 작은 판에 그린 얼룩을 크게 늘려 부드럽게(물감이 스며든 느낌)
   inkWipe(ctx, k) {
-    const { dpr } = this.view;
-    const [mx, my] = this.mouthScreen || [this.W * 0.55, this.H * 0.6];
-    const R = Math.hypot(this.W, this.H) * 1.15 * easeIn(k * 0.85 + 0.15 * k * k) + 2;
-    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.beginPath(); blob(ctx, mx, my, R, 2.3, k * 4); blob(ctx, mx + R * 0.35, my - R * 0.2, R * 0.6, 5.1, k * 3);
-    ctx.save(); ctx.clip(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(this.buf, 0, 0); ctx.restore();
-    ctx.lineWidth = Math.max(6, R * 0.05); ctx.strokeStyle = 'rgba(120,6,18,.9)'; ctx.stroke();
-    ctx.lineWidth = Math.max(1.5, R * 0.008); ctx.strokeStyle = 'rgba(255,120,120,.35)'; ctx.stroke();
+    const { W, H } = this, cv = this.view.cv;
+    const [mx, my] = this.mouthScreen || [W * 0.55, H * 0.6];
+    const R = Math.hypot(W, H) * 1.15 * easeIn(k * 0.85 + 0.15 * k * k) + 2;
+    const q = 6, mw = Math.ceil(W / q), mh = Math.ceil(H / q);
+    const m = (this.wmask ||= document.createElement('canvas')); if (m.width !== mw || m.height !== mh) { m.width = mw; m.height = mh; }
+    const r = (this.wrim ||= document.createElement('canvas')); if (r.width !== mw || r.height !== mh) { r.width = mw; r.height = mh; }
+    const full = (this.wfull ||= document.createElement('canvas')); if (full.width !== cv.width || full.height !== cv.height) { full.width = cv.width; full.height = cv.height; }
+    const cx = (mx + R * 0.12) / q, cy = (my - R * 0.05) / q, rr = R / q;
+    const mc = m.getContext('2d'); mc.clearRect(0, 0, mw, mh); mc.fillStyle = '#fff'; mc.beginPath(); blobSmooth(mc, cx, cy, rr, 2.3, k * 4); mc.fill();
+    const rc = r.getContext('2d'); rc.clearRect(0, 0, mw, mh); rc.fillStyle = 'rgba(70,0,8,.92)'; rc.beginPath(); blobSmooth(rc, cx, cy, rr * 1.05 + 3, 2.3, k * 4); rc.fill();
+    const fc = full.getContext('2d'); fc.globalCompositeOperation = 'source-over'; fc.clearRect(0, 0, full.width, full.height);
+    fc.drawImage(this.buf, 0, 0); fc.globalCompositeOperation = 'destination-in'; fc.imageSmoothingQuality = 'high'; fc.drawImage(m, 0, 0, full.width, full.height); fc.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(r, 0, 0, cv.width, cv.height);      // 젖은 진홍 가장자리
+    ctx.drawImage(full, 0, 0);
     ctx.restore();
   }
+
 
   drawCut(ctx, i, t) {
     [this.cut1, this.cut2, this.cut3, this.cut4, this.cut5, this.cut6, this.cut7][i].call(this, ctx, t, t - CUT_T[i][0]);
@@ -424,15 +452,15 @@ export class IntroScene {
   // 컷 1: 어두운 작업실. 앞 촛불에 초점 → 뒤로 초점 이동, 천천히 다가감
   cut1(ctx, t) {
     const cam = this.cam({ h: [[0, 0.5, 0.52, 1.06], [8.3, 0.52, 0.5, 1.2]], v: [[0, 0.3, 0.52, 1.0], [8.3, 0.52, 0.5, 1.08]] }, t);
-    const focus = ease(seg(t, 2.6, 5.0));           // 0: 앞이 또렷, 1: 뒤가 또렷
-    const tf = this.bg(ctx, 'intro_c1_bg', cam, (1 - focus) * 0.85 + seg(t, 7.6, 8.3) * 0.9);
+    const focus = ease(seg(t, 3.4, 5.6));           // 0: 뒤가 또렷(앞이 흐림) → 1: 앞 촛불이 또렷(뒤가 흐림)
+    const tf = this.bg(ctx, 'intro_c1_bg', cam, Math.max(focus * 0.8, seg(t, 7.6, 8.3) * 0.9));
     this.moonbeam(ctx, tf, POS.c1.window, POS.c1.beamTo, t, 1);
     this.glow(ctx, tf, POS.c1.candle, 0.16, t, 1);
     this.drawDust(ctx, t, 1, 0.9);
     const o = this.ori === 'v' ? { x: -0.04, y: 1.03, px: 0, py: 1, h: 0.36 } : { x: -0.01, y: 1.04, px: 0, py: 1, h: 0.7 };
     o.dx = -(cam.x - 0.5) * 900 * 0.35 * tf.s; o.dy = (t * 2);
-    const r = this.layer(ctx, 'intro_c1_fg', o, tf, 0.15 + focus * 0.85);
-    if (r) this.flameGlow(ctx, r.x + POS.c1fg.flame[0] * r.w, r.y + POS.c1fg.flame[1] * r.h, r.h * 0.35, t, 0.5 + 0.5 * (1 - focus));
+    const r = this.layer(ctx, 'intro_c1_fg', o, tf, 0.95 - focus * 0.9);
+    if (r) this.flameGlow(ctx, r.x + POS.c1fg.flame[0] * r.w, r.y + POS.c1fg.flame[1] * r.h, r.h * 0.35, t, 0.5 + 0.5 * focus);
   }
   // 컷 2: 선반 위 왕국들. 옆으로 미끄러지며 앞 물건이 더 빨리 지나감
   cut2(ctx, t, lt) {
@@ -457,64 +485,76 @@ export class IntroScene {
   // 컷 3: 잉크병이 흔들리다 느리게 기울어 쓰러짐 → 쾅, 흔들림, 잉크가 쏟아짐
   cut3(ctx, t) {
     const slow = ease(seg(t, 21.5, 23.6));
-    const cam = this.cam({ h: [[15.7, 0.5, 0.56, 1.12], [21.5, 0.48, 0.6, 1.24], [23.8, 0.5, 0.62, 1.32], [24.3, 0.55, 0.63, 1.3], [25.4, 0.56, 0.63, 1.28]],
-      v: [[15.7, 0.56, 0.58, 1.0], [21.5, 0.5, 0.6, 1.08], [23.7, 0.52, 0.62, 1.1], [24.2, 0.6, 0.63, 1.08], [25.4, 0.62, 0.63, 1.06]] }, t);
+    const cam = this.cam({ h: [[15.7, 0.5, 0.55, 1.1], [21.5, 0.48, 0.55, 1.15], [23.8, 0.5, 0.56, 1.19], [24.3, 0.55, 0.58, 1.19], [25.4, 0.56, 0.58, 1.17]],
+      v: [[15.7, 0.47, 0.56, 1.0], [21.5, 0.48, 0.57, 1.0], [23.7, 0.52, 0.58, 1.0], [24.1, 0.7, 0.6, 1.0], [24.5, 0.76, 0.6, 1.0], [25.4, 0.77, 0.6, 1.0]] }, t);
     let shake = [0, 0];
     if (t > 24) { const d = Math.exp(-(t - 24) * 5.5) * Math.min(this.W, this.H) * 0.035; shake = [Math.sin(t * 91) * d, Math.cos(t * 77) * d * 0.8]; }
     const tf = this.bg(ctx, 'intro_c3_bg', cam, seg(t, 15.7, 16.4) > 0 ? 1 - ease(seg(t, 15.7, 16.6)) : 1, shake);
     this.glow(ctx, tf, POS.c3.candle, 0.2, t, 0.9);
     // 병 기울기: 흔들림(16~20) → 느린 기울기(20~23.7) → 빠르게 쓰러짐(23.7~24.0)
-    let ang = 0, piv = 0;
-    if (t < 20) { const k = seg(t, 16.2, 20); ang = Math.sin(t * 7.5) * 0.05 * k * (0.6 + 0.4 * Math.sin(t * 1.3)); piv = 0; }
-    else if (t < 23.7) { ang = lerp(0.03, 0.42, easeIn(seg(t, 20, 23.7)) * 0.7 + seg(t, 20, 23.7) * 0.3) + Math.sin(t * 9) * 0.015 * (1 - seg(t, 20, 23.7)); piv = 1; }
-    else { ang = lerp(0.42, Math.PI / 2 + 0.06, easeIn(seg(t, 23.7, 24.0))); piv = 1; if (t > 24) ang = Math.PI / 2 + 0.06 - Math.sin((t - 24) * 18) * 0.05 * Math.exp(-(t - 24) * 6); }
+    let ang = 0;
+    if (t < 20) { const k = seg(t, 16.2, 19.0) * (1 - seg(t, 19.4, 20)); ang = Math.sin((t - 16.2) * 7.5) * 0.06 * k; }
+    else if (t < 23.7) { const k = seg(t, 20, 23.7); ang = lerp(0, 0.42, easeIn(k) * 0.7 + k * 0.3) + Math.sin((t - 20) * 9) * 0.012 * k * (1 - k) * 4; }
+    else { ang = lerp(0.42, Math.PI / 2 + 0.06, easeIn(seg(t, 23.7, 24.0))); if (t > 24) ang = Math.PI / 2 + 0.06 - Math.sin((t - 24) * 18) * 0.05 * Math.exp(-(t - 24) * 6); }
     const bt = cache.img.intro_c3_bottle;
     const [bx, by] = this.w2s(tf, POS.c3.bottle[0], POS.c3.bottle[1]);
     if (bt) {
       const h = POS.c3.bottleH * tf.ih * tf.s, w = h * bt.width / bt.height;
-      // 잉크 웅덩이(쓰러진 뒤)
-      if (t > 23.98) this.inkPool(ctx, bx + w * 0.5 + h * 0.6, by - w * 0.15, h, t - 23.98);
-      ctx.save();
-      const pvx = bx + (piv ? w * 0.42 : 0), pvy = by;
-      ctx.translate(pvx, pvy); ctx.rotate(ang);
-      ctx.drawImage(bt, -w / 2 - (piv ? w * 0.42 : 0), -h, w, h);
-      // 주둥이 위치(화면) 기억 → 잉크 덮개 시작점
-      const mx = -w / 2 - (piv ? w * 0.42 : 0) + POS.c3bottle.mouth[0] * w, my = -h + POS.c3bottle.mouth[1] * h;
-      this.mouthScreen = [pvx + mx * Math.cos(ang) - my * Math.sin(ang), pvy + mx * Math.sin(ang) + my * Math.cos(ang)];
-      ctx.restore();
-      if (t > 23.98) this.splash(ctx, this.mouthScreen, h, t - 23.98);
+      const right = ang >= 0;                          // 기우는 쪽 모서리를 축으로(흔들릴 때는 양쪽 모서리)
+      const pvx = bx + (right ? 1 : -1) * w * 0.42, pvy = by;
+      const off = (right ? -1 : 1) * w * 0.42;         // 축에서 병 가운데까지
+      const up = 1 - clamp(Math.abs(ang) / 1.2, 0, 1);  // 바닥 그림자(서 있을 때)
+      if (up > 0) {
+        ctx.save(); ctx.globalAlpha = 0.6 * up;
+        const sg = ctx.createRadialGradient(bx, by, 0, bx, by, w * 0.75);
+        sg.addColorStop(0, 'rgba(0,0,0,.85)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(bx, by, w * 0.75, w * 0.15, 0, 0, 6.283); ctx.fill(); ctx.restore();
+      }
+      const rot = ([x, y]) => [pvx + x * Math.cos(ang) - y * Math.sin(ang), pvy + x * Math.sin(ang) + y * Math.cos(ang)];
+      const fall = cache.img.intro_c3_fallen, F = POS.c3fallen;
+      if (t <= 23.98 || !fall) {
+        // 서 있는·기우는 병(마개까지 한 장)
+        this.dbgBottle = [[off - w / 2, -h], [off + w / 2, -h], [off - w / 2, 0], [off + w / 2, 0]].map(rot);   // 시험용: 병 네 귀퉁이(화면)
+        this.mouthScreen = rot([off - w / 2 + POS.c3bottle.mouth[0] * w, -h + POS.c3bottle.mouth[1] * h]);
+        ctx.save(); ctx.translate(pvx, pvy); ctx.rotate(ang); ctx.drawImage(bt, off - w / 2, -h, w, h); ctx.restore();
+      } else {
+        // 쓰러진 병(따로 그린 그림): 오른쪽 모서리를 축으로 누운 자리에 놓음 + 웅덩이·튀는 잉크·날아가는 마개
+        const l = t - 23.98;
+        const fw = h / F.len, fh = fw * fall.height / fall.width;
+        const fx = pvx - F.base * fw, fy = pvy - fh * F.floor;
+        const bump = Math.sin(l * 18) * 0.03 * Math.exp(-l * 6) * fh;           // 쿵 하고 살짝 튐
+        const tip = [fx + F.stream[0] * fw, fy + F.stream[1] * fh];
+        this.mouthScreen = tip;
+        this.dbgBottle = [[fx, fy], [fx + fw * 0.82, fy], [fx, fy + fh], [fx + fw * 0.82, fy + fh]];
+        const pud = cache.img.intro_c3_puddle;
+        if (pud) {      // 웅덩이: 흘러나온 끝에서 점점 넓어짐
+          const k = easeOut(l / 1.3), pw = h * 1.5 * (0.15 + 0.85 * k), ph = pw * pud.height / pud.width;
+          ctx.save(); ctx.globalAlpha = clamp(l / 0.15, 0, 1);
+          ctx.drawImage(pud, tip[0] - pw * 0.42, tip[1] - ph * 0.35, pw, ph); ctx.restore();
+        }
+        ctx.drawImage(fall, fx, fy - bump, fw, fh);
+        const sp = cache.img.intro_c3_splash;
+        if (sp && l < 0.55) {   // 쾅 하는 순간 튀어 오르는 잉크
+          const k = easeOut(l / 0.35), sw = h * 0.95 * (0.45 + 0.55 * k), sh = sw * sp.height / sp.width;
+          ctx.save(); ctx.globalAlpha = 1 - seg(l, 0.22, 0.55);
+          ctx.drawImage(sp, tip[0] - sw * 0.5, tip[1] - sh * 0.92, sw, sh); ctx.restore();
+        }
+        const ck = cache.img.intro_c3_cork;
+        if (ck) {       // 마개: 포물선으로 날아가며 돈다
+          const cw = w * 0.42, chh = cw * ck.height / ck.width;
+          const x0 = fx + F.mouth[0] * fw, y0 = fy + F.mouth[1] * fh;
+          const x = x0 + h * 1.0 * l, y = y0 - h * 1.5 * l + h * 4.2 * l * l;
+          if (y < this.H + chh) { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 2 + l * 9); ctx.drawImage(ck, -cw / 2, -chh / 2, cw, chh); ctx.restore(); }
+        }
+      }
     }
     this.drawDust(ctx, t, 3, 0.5, 1 - slow * 0.8);
     // 쾅! 하는 순간 번쩍(밝기 200을 넘지 않게 약하게)
     if (t > 23.98 && t < 24.4) { ctx.fillStyle = `rgba(255,220,200,${0.22 * (1 - seg(t, 23.98, 24.4))})`; ctx.fillRect(0, 0, this.W, this.H); }
   }
-  inkPool(ctx, x, y, h, lt) {
-    const r = h * 1.1 * easeOut(lt / 1.2);
-    ctx.save();
-    const g = ctx.createRadialGradient(x - r * 0.2, y - r * 0.1, r * 0.1, x, y, r * 1.1);
-    g.addColorStop(0, '#d01a2c'); g.addColorStop(0.6, '#8e0a18'); g.addColorStop(1, '#4a0008');
-    ctx.fillStyle = g; ctx.beginPath(); blob(ctx, x, y, r, 1.7, lt * 2, 0.32); ctx.fill();
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25;
-    ctx.fillStyle = '#ff9a9a'; ctx.beginPath(); blob(ctx, x - r * 0.25, y - r * 0.08, r * 0.25, 4.2, lt, 0.25); ctx.fill();
-    ctx.restore();
-  }
-  splash(ctx, [mx, my], h, lt) {
-    if (lt > 1.4) return;
-    ctx.save();
-    for (const d of this.drops) {
-      const l = lt - d.d; if (l <= 0) continue;
-      const v = d.v * h * 3.2;
-      const x = mx + Math.cos(d.a) * v * l + h * 0.8 * l, y = my + Math.sin(d.a) * v * l + 0.5 * h * 7 * l * l;
-      const r = d.s * h * 4 * (1 - seg(l, 0.6, 1.3));
-      if (r <= 0.3) continue;
-      ctx.fillStyle = '#b3121f'; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
-      ctx.fillStyle = 'rgba(255,150,150,.5)'; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.35, 0, 6.283); ctx.fill();
-    }
-    ctx.restore();
-  }
   // 컷 4: 붉은 물감이 숲 왕국으로 번짐(물든 그림을 퍼지는 얼룩 모양으로 드러냄), 심장박동
   cut4(ctx, t) {
-    const beat = t > 26 && t < 31.6 ? Math.exp(-((t - 26) % 1) * 7) : 0;
+    let beat = 0; for (const pk of HEART) { const d = t - 26 - pk; if (d >= 0 && d < 1) beat = Math.max(beat, Math.exp(-d * 7)); }
     const cam = this.cam({ h: [[24.35, 0.52, 0.5, 1.08], [32.2, 0.5, 0.52, 1.2]], v: [[24.35, 0.62, 0.5, 1.0], [32.2, 0.42, 0.52, 1.06]] }, t);
     cam.z += beat * 0.008;
     const tf = this.bg(ctx, 'intro_c4_bg', cam, 0);
@@ -543,10 +583,10 @@ export class IntroScene {
       ctx.fillStyle = g; ctx.fillRect(0, 0, this.W, this.H);
     }
   }
-  eyeT(i) { return EYE_T0 + i * 0.5 + (i === POS.c5.eyes.length - 1 ? 0.5 : 0); }
+  eyeT(i) { return POS.c5.times[i] ?? EYE_T0 + i; }
   // 컷 5: 물든 말들의 눈이 박마다 하나씩 켜짐
   cut5(ctx, t) {
-    const cam = this.cam({ h: [[31.85, 0.5, 0.5, 1.06], [40.25, 0.5, 0.48, 1.22]], v: [[31.85, 0.3, 0.5, 1.0], [36, 0.55, 0.5, 1.04], [40.25, 0.7, 0.48, 1.1]] }, t);
+    const cam = this.cam({ h: [[31.85, 0.5, 0.5, 1.06], [40.25, 0.5, 0.48, 1.22]], v: [[31.85, 0.29, 0.5, 1.0], [34.3, 0.29, 0.5, 1.0], [34.85, 0.71, 0.48, 1.0], [36.4, 0.72, 0.48, 1.0], [37.05, 0.51, 0.47, 1.0], [40.25, 0.51, 0.45, 1.06]] }, t);
     const tf = this.bg(ctx, 'intro_c5_bg', cam, seg(t, 39.8, 40.25) * 0.8);
     const eyes = POS.c5.eyes, lit = cache.img.intro_c5_eyes;
     if (eyes.length) {
@@ -566,9 +606,16 @@ export class IntroScene {
         T.globalCompositeOperation = 'destination-in'; T.drawImage(this.mask, 0, 0, TW, TH); T.globalCompositeOperation = 'source-over';
         ctx.drawImage(this.tmp, tf.ox, tf.oy, tf.iw * tf.s, tf.ih * tf.s);
       }
+      this.dbgEyes = eyes.map(grp => grp.map(([ex, ey]) => this.w2s(tf, ex, ey)));   // 시험용: 눈 자리(화면)
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      eyes.forEach((grp, i) => grp.forEach(([ex, ey, er]) => {
+      eyes.forEach((grp, i) => grp.forEach(([ex, ey, er, own]) => {
         const a = easeOut(seg(t, this.eyeT(i), this.eyeT(i) + 0.25)); if (a <= 0) return;
+        if (own) {      // 눈동자 빛(작고 밝은 알맹이)
+          const [cx, cy] = this.w2s(tf, ex, ey), cr = er * tf.iw * tf.s * 0.75;
+          const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, cr);
+          cg.addColorStop(0, `rgba(255,236,170,${a})`); cg.addColorStop(0.5, `rgba(255,150,60,${0.9 * a})`); cg.addColorStop(1, 'rgba(255,80,20,0)');
+          ctx.fillStyle = cg; ctx.fillRect(cx - cr, cy - cr, cr * 2, cr * 2);
+        }
         const flick = 0.85 + 0.15 * Math.sin(t * 13 + i * 2.1);
         const fl = 1 + 1.5 * Math.exp(-(t - this.eyeT(i)) * 6);   // 켜지는 순간 번쩍
         const [sx, sy] = this.w2s(tf, ex, ey); const r = er * tf.iw * tf.s * 3.2 * fl;
@@ -594,7 +641,7 @@ export class IntroScene {
     let tip = null;
     if (im) {
       const unit = tf.ih * tf.s, hh = o.h * unit, ww = hh * im.width / im.height;
-      o.dx = -ww * 0.5 * (1 - inK) - (cam.x - 0.3) * tf.iw * tf.s * 0.25 * (this.ori === 'v' ? 1 : 0);
+      o.dx = -ww * 0.5 * (1 - inK);
       o.dy = hh * 0.35 * (1 - inK) + Math.sin(t * 1.6) * 2;
       const r = this.layer(ctx, 'intro_c6_hand', o, tf, 0);
       if (r) tip = [r.x + POS.c6hand.tip[0] * r.w, r.y + POS.c6hand.tip[1] * r.h];
@@ -674,12 +721,12 @@ export class IntroScene {
   // 제목 꿰매기 진행(0~1)
   stitchK(t) {
     if (this.final) return 1;
-    if (this.fast) return seg(this.now(), this.fast.at + 0.4, this.fast.at + 2.4);
+    if (this.stitchAt != null) return seg(this.now(), this.stitchAt + 0.4, this.stitchAt + 2.4);
     return seg(t, T_STITCH, T_STITCH_END);
   }
   pressK(t) {
     if (this.final) return this.finalPress ? 1 : 0;
-    if (this.fast) return seg(this.now(), this.fast.at + 2.8, this.fast.at + 3.6);
+    if (this.stitchAt != null) return seg(this.now(), this.stitchAt + 2.8, this.stitchAt + 3.6);
     return seg(t, T_PRESS, T_PRESS + 0.9);
   }
   title(ctx, t) {
@@ -758,7 +805,7 @@ export class IntroScene {
       }
     }
     // 다 꿰맨 뒤: 빛이 글자 위를 한 번 지나감
-    const sh = this.final ? 0 : this.fast ? seg(this.now(), this.fast.at + 2.4, this.fast.at + 3.6) : seg(t, T_STITCH_END, T_STITCH_END + 1.4);
+    const sh = this.final ? 0 : this.stitchAt != null ? seg(this.now(), this.stitchAt + 2.4, this.stitchAt + 3.6) : seg(t, T_STITCH_END, T_STITCH_END + 1.4);
     if (sh > 0 && sh < 1) {
       ctx.globalCompositeOperation = 'lighter';
       const x = lerp(W * 0.1, W * 0.9, sh);
@@ -768,13 +815,17 @@ export class IntroScene {
       ctx.globalCompositeOperation = 'source-over';
     }
     // 부제
-    const sub = this.final ? 1 : this.fast ? seg(this.now(), this.fast.at + 2.2, this.fast.at + 3.2) : seg(t, T_STITCH_END + 0.2, T_STITCH_END + 1.4);
+    const sub = this.final ? 1 : this.stitchAt != null ? seg(this.now(), this.stitchAt + 2.2, this.stitchAt + 3.2) : seg(t, T_STITCH_END + 0.2, T_STITCH_END + 1.4);
     if (sub > 0) {
       const ss = Math.max(13, fs * 0.22);
       ctx.font = `700 ${ss}px Batang, serif`; ctx.textAlign = 'center';
       ctx.fillStyle = `rgba(240,222,186,${0.92 * sub})`;
-      ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 6;
+      ctx.shadowColor = 'rgba(0,0,0,1)'; ctx.shadowBlur = 12;
       const sp = 'letterSpacing' in ctx;
+      const sy = top + (lines.length - 1) * lh + fs * 0.5 + base + ss * 1.7;
+      ctx.save(); ctx.shadowBlur = 0; ctx.translate(W / 2, sy); ctx.scale(1, 0.32);         // 부제 뒤 옅은 어둠(그림 위에서도 읽히게)
+      const sb = ctx.createRadialGradient(0, 0, 0, 0, 0, ss * 6); sb.addColorStop(0, `rgba(6,4,3,${0.6 * sub})`); sb.addColorStop(1, 'rgba(6,4,3,0)');
+      ctx.fillStyle = sb; ctx.fillRect(-ss * 6, -ss * 6, ss * 12, ss * 12); ctx.restore();
       if (sp) ctx.letterSpacing = `${ss * 0.45}px`;
       ctx.fillText('마지막 한 땀', W / 2 + (sp ? ss * 0.22 : 0), top + (lines.length - 1) * lh + fs * 0.5 + base + ss * 1.7);
       if (sp) ctx.letterSpacing = '0px';
@@ -783,17 +834,22 @@ export class IntroScene {
     // 눌러서 시작
     const pk = this.pressK(t);
     if (pk > 0) {
-      this.pressShown = true;
-      const ps = clamp(Math.min(W, H) * 0.04, 15, 22);
-      const y = H * (this.ori === 'v' ? 0.86 : 0.86) - (this.view.inset?.b || 0);
-      ctx.font = `400 ${ps}px Batang, serif`; ctx.textAlign = 'center';
-      const pulse = 0.55 + 0.45 * Math.sin(this.now() * 2.4);
-      ctx.fillStyle = `rgba(250,236,206,${pk * pulse})`;
-      ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 8;
-      ctx.fillText('눌러서 시작', W / 2, y);
+      if (!this.pressShown) { this.pressShown = true; this.pressShownAt = this.now(); }
+      const ps = clamp(Math.min(W, H) * 0.05, 19, 30);
+      const y = H * 0.86 - (this.view.inset?.b || 0);
+      const back = ctx.createRadialGradient(W / 2, y, 0, W / 2, y, ps * 6);
+      back.addColorStop(0, `rgba(6,4,3,${0.72 * pk})`); back.addColorStop(1, 'rgba(6,4,3,0)');
+      ctx.save(); ctx.translate(W / 2, y); ctx.scale(1, 0.38); ctx.translate(-W / 2, -y); ctx.fillStyle = back; ctx.fillRect(W / 2 - ps * 6, y - ps * 6, ps * 12, ps * 12); ctx.restore();
+      ctx.font = `700 ${ps}px Batang, serif`; ctx.textAlign = 'center';
+      const pulse = 0.8 + 0.2 * Math.sin(this.now() * 2.4);
+      if ('letterSpacing' in ctx) ctx.letterSpacing = `${ps * 0.18}px`;
+      ctx.fillStyle = `rgba(255,242,214,${pk * pulse})`;
+      ctx.shadowColor = 'rgba(0,0,0,.95)'; ctx.shadowBlur = 10;
+      ctx.fillText('눌러서 시작', W / 2 + ('letterSpacing' in ctx ? ps * 0.09 : 0), y);
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = `rgba(243,197,90,${0.6 * pk * pulse})`; ctx.lineWidth = 1.2; ctx.setLineDash([6, 5]);
-      ctx.beginPath(); ctx.moveTo(W / 2 - ps * 3.2, y + ps * 0.95); ctx.lineTo(W / 2 + ps * 3.2, y + ps * 0.95); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = `rgba(243,197,90,${0.85 * pk * pulse})`; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]);
+      ctx.beginPath(); ctx.moveTo(W / 2 - ps * 3.4, y + ps * 0.95); ctx.lineTo(W / 2 + ps * 3.4, y + ps * 0.95); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
   }
@@ -849,7 +905,7 @@ export class IntroScene {
   // 맨 위: 처음 어둠에서 밝아짐, 비네트, 필름 결, 위아래 검은 띠, 자막
   drawOverlay(ctx, t) {
     const { W, H } = this;
-    if (this.clock === 'fast' && this.fast && !this.fast.keepClock) { const k = seg(this.now(), this.fast.at, this.fast.at + 0.7); if (k < 1) { ctx.fillStyle = `rgba(0,0,0,${0.85 * (1 - k)})`; ctx.fillRect(0, 0, W, H); } }
+    if (this.clock === 'fast' && !this.final) { const k = seg(this.now(), this.clockAt, this.clockAt + 0.7); if (k < 1) { ctx.fillStyle = `rgba(0,0,0,${0.85 * (1 - k)})`; ctx.fillRect(0, 0, W, H); } }
     if (this.clock !== 'fast' && t < 1.6) { ctx.fillStyle = `rgba(0,0,0,${0.6 * (1 - ease(t / 1.6))})`; ctx.fillRect(0, 0, W, H); }
     const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.62);
     v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
@@ -881,26 +937,36 @@ export class IntroScene {
   }
   wrap(ctx, s, maxW) {
     if (ctx.measureText(s).width <= maxW) return [s];
-    // 문장부호 뒤에서 먼저 나눔
+    // 두 줄로: 문장부호 뒤를 먼저, 아니면 두 줄 길이가 비슷해지는 띄어쓰기에서 나눔
     const m = s.match(/^(.+?[.,]) (.+)$/);
     if (m && ctx.measureText(m[1]).width <= maxW && ctx.measureText(m[2]).width <= maxW) return [m[1], m[2]];
-    const words = s.split(' '); const out = []; let cur = '';
+    const words = s.split(' '); let best = null;
+    for (let i = 1; i < words.length; i++) {
+      const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
+      const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
+      if (wa > maxW || wb > maxW) continue;
+      const d = Math.abs(wa - wb); if (!best || d < best.d) best = { d, l: [a, b] };
+    }
+    if (best) return best.l;
+    const out = []; let cur = '';
     for (const w of words) { const nx = cur ? cur + ' ' + w : w; if (ctx.measureText(nx).width > maxW && cur) { out.push(cur); cur = w; } else cur = nx; }
     if (cur) out.push(cur); return out;
   }
+
 
   destroy() {
     this.alive = false;
     this.stopSounds();
     window.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('click', this.onClick, true);
     this.root.remove();
   }
 }
 // 미리 받아 두기(제목 화면 전에 불러 두고 싶을 때)
 IntroScene.preload = () => Promise.all([...IMG_LIST.map(loadImg), loadSfx(), loadMusic()]);
 // 시험용(자동 검사가 시간표를 읽음)
-export const INTRO_TIMING = { CUT_T, CAPTIONS, T_TITLE, T_PRESS };
+export const INTRO_TIMING = { CUT_T, CAPTIONS, T_TITLE, T_PRESS, EYE_TIMES: POS.c5.times };
 
 // 제목 화면만 그리기(인트로가 끝난 뒤 다른 장면이 같은 그림·같은 글자 자리 위에 단추를 띄울 때).
 //   drawIntroTitle(app.view, t, { press })  — 매 프레임 부름. t: 인트로 onDone({ t })로 받은 값에서 이어서 늘리면 카메라가 이어짐.
@@ -910,7 +976,7 @@ export function drawIntroTitle(view, t = 56, { press = false } = {}) {
   if (!painter) {
     painter = Object.create(IntroScene.prototype);
     painter.makeGrain(); painter.dust = makeDust();
-    painter.clock = 'fast'; painter.fast = null; painter.final = true; painter.state = 'title';
+    painter.clock = 'fast'; painter.stitchAt = null; painter.final = true; painter.state = 'title';
     loadImg('intro_c7_bg');
     document.fonts?.load?.('700 40px "Cinzel Deco"').catch(() => {});
   }

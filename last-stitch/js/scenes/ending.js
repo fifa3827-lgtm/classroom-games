@@ -3,7 +3,7 @@
 //   onDone: 끝 화면에서 「처음 화면으로」를 누르면 부름
 import { audio } from '../engine/audio.js';
 import { SCENES } from '../data/story.js';
-import { StoryScene, loadStoryImg, storySfx, playSfx } from './story.js';
+import { StoryScene, loadStoryImg, storySfx, playSfx, drawStoryImage, drawStoryBlur, storyRect } from './story.js';
 
 const HOLES = [[0.306, 0.496], [0.689, 0.496]];   // end_stitch 그림 안 두 바늘구멍(비율)
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -16,22 +16,22 @@ const CSS = `
 #ui .en-root,#ui .en-root *,.en-root,.en-root *{pointer-events:none}
 #ui .en-root .en-btn{pointer-events:auto}
 .en-hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(40px + var(--safe-b,0px));width:min(560px,calc(100% - 40px));text-align:center;
-  font-size:clamp(15px,2vmin + 6px,19px);line-height:1.7;text-shadow:0 1px 2px #000,0 0 16px rgba(0,0,0,.8);opacity:0;transition:opacity .6s}
+  font-size:clamp(16px,2vmin + 7px,21px);line-height:1.7;text-shadow:0 1px 2px #000,0 0 6px #000,0 0 18px rgba(0,0,0,.9);opacity:0;transition:opacity .6s}
 .en-hint.on{opacity:1}
 .en-end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(30px + var(--safe-t,0px)) 24px calc(30px + var(--safe-b,0px));
   text-align:center;opacity:0;transition:opacity 1.6s}
 .en-end.on{opacity:1}
-.en-end .en-t{font-family:'Cinzel Deco',serif;font-size:clamp(30px,7vmin,60px);color:#f3c55a;letter-spacing:.02em;
+.en-end .en-t{font-family:'Cinzel Deco',serif;font-variant-ligatures:none;font-feature-settings:'liga' 0,'dlig' 0;font-size:clamp(30px,7vmin,60px);color:#f3c55a;letter-spacing:.02em;
   background:linear-gradient(#fff4d2,#f3c55a 50%,#b5771f);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 3px 6px rgba(0,0,0,.7))}
 .en-end .en-fin{font-size:clamp(18px,3vmin,24px);letter-spacing:.6em;padding-left:.6em;color:#eadbbd;margin-top:-4px}
 .en-end .en-stitch{width:min(260px,60vw);height:2px;margin:6px 0 4px;background:repeating-linear-gradient(90deg,#f3c55a 0 14px,transparent 14px 22px);opacity:.85}
 .en-end .en-rows{display:grid;grid-template-columns:auto auto;gap:6px 22px;font-size:clamp(15px,2vmin + 6px,18px);margin:4px 0}
 .en-end .en-rows span:nth-child(odd){text-align:right;color:#cdb991}
 .en-end .en-rows span:nth-child(even){text-align:left;color:#fff3da;font-weight:700}
-.en-end .en-hard{max-width:420px;padding:12px 18px;border:1px dashed rgba(243,197,90,.6);border-radius:6px;background:rgba(40,20,10,.45);font-size:clamp(14px,1.8vmin + 6px,17px);line-height:1.7}
+.en-end .en-hard{max-width:440px;padding:10px 4px;font-size:clamp(15px,1.8vmin + 7px,18px);line-height:1.75;text-shadow:0 1px 3px #000}
 .en-end .en-hard b{color:#ffb38a}
-.en-end button{pointer-events:auto;margin-top:10px;min-height:48px;padding:0 30px;border-radius:24px;font-family:'Batang',serif;font-size:17px;letter-spacing:.12em;
-  color:#2a180c;background:linear-gradient(#ffe7a6,#e9b44c);box-shadow:0 4px 14px rgba(0,0,0,.5),inset 0 -2px 0 rgba(120,70,10,.4);cursor:pointer}
+.en-end button{pointer-events:auto;margin-top:12px;width:min(260px,70vw);aspect-ratio:512/150;min-height:56px;font-family:'Batang',serif;font-weight:700;font-size:clamp(16px,1.2vmin + 11px,19px);letter-spacing:.12em;
+  color:#3a1e0a;text-shadow:0 1px 0 rgba(255,220,160,.6);background:url(assets/ui/button_long.webp) center/100% 100% no-repeat;border:0;cursor:pointer;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
 .en-end button:active{transform:scale(.97)}
 `;
 
@@ -59,7 +59,7 @@ export class EndingScene {
   }
   holeScreen() {
     const im = this.img('end_stitch'); if (!im) return null;
-    const r = this.imgRect(im);
+    const r = storyRect(this.view, im, 0);
     return HOLES.map(([x, y]) => [r.x + x * r.w, r.y + y * r.h]);
   }
   imgRect(im) {
@@ -107,13 +107,13 @@ export class EndingScene {
     this.phase = 'end'; this.t = 0;
     const s = this.opts.stats || {};
     const rows = [];
-    if (s.time != null) { const m = Math.floor(s.time / 60), sec = Math.round(s.time % 60); rows.push(['걸린 시간', m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분 ${sec}초`]); }
+    if (s.time != null) { const tt = Math.round(s.time), m = Math.floor(tt / 60), sec = tt % 60; rows.push(['걸린 시간', m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분 ${sec}초`]); }
     if (s.stars != null) rows.push(['모은 별', s.starsMax ? `${s.stars} / ${s.starsMax}` : `${s.stars}`]);
     if (s.thimbles != null) rows.push(['모은 골무', `${s.thimbles}`]);
     const end = this.root.querySelector('.en-end');
     end.innerHTML = `<div class="en-t">The Last Stitch</div><div class="en-fin">끝</div><div class="en-stitch"></div>
       ${rows.length ? `<div class="en-rows">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('')}</div>` : ''}
-      <div class="en-hard"><b>어려운 모드</b>가 열렸어요.<br>${this.opts.hardText || '더 거세진 붉은 물감에 맞서 모든 왕국을 다시 지켜 보세요.'}</div>
+      <div class="en-stitch"></div><div class="en-hard"><b>어려운 모드</b>가 열렸어요.<br>${this.opts.hardText || '더 거세진 붉은 물감에 맞서<br>모든 왕국을 다시 지켜 보세요.'}</div>
       <button class="en-btn">처음 화면으로</button>`;
     end.querySelector('.en-btn').addEventListener('click', () => { if (!this.left) { this.left = true; this.opts.onDone?.(); } });
     requestAnimationFrame(() => end.classList.add('on'));
@@ -131,16 +131,9 @@ export class EndingScene {
     else if (this.phase === 'end') this.drawEnd(ctx, W, H);
   }
   drawImgPage(ctx, name, a = 1, dark = 0) {
-    const im = this.img(name); if (!im) return null;
-    const { W, H } = this.view;
-    const cs = Math.max(W / im.width, H / im.height) * 1.08;
-    ctx.globalAlpha = a;
-    ctx.drawImage(im, W / 2 - im.width * cs / 2, H / 2 - im.height * cs / 2, im.width * cs, im.height * cs);
-    ctx.fillStyle = 'rgba(8,6,4,.6)'; ctx.fillRect(0, 0, W, H);
-    const r = this.imgRect(im);
-    ctx.drawImage(im, r.x, r.y, r.w, r.h);
-    if (dark) { ctx.fillStyle = `rgba(8,6,4,${dark})`; ctx.fillRect(0, 0, W, H); }
-    ctx.globalAlpha = 1;
+    if (!this.img(name)) return null;
+    const r = drawStoryImage(ctx, this.view, name, 0, a);
+    if (dark) { ctx.fillStyle = `rgba(8,6,4,${dark})`; ctx.fillRect(0, 0, this.view.W, this.view.H); }
     return r;
   }
   img(name) { return EndingScene.imgs[name] || null; }
@@ -150,6 +143,9 @@ export class EndingScene {
     if (!r) return;
     const hs = HOLES.map(([x, y]) => [r.x + x * r.w, r.y + y * r.h]);
     const unit = Math.min(W, H);
+    const band = ctx.createLinearGradient(0, H * 0.62, 0, H);                  // 안내 글 자리 어둡게
+    band.addColorStop(0, 'rgba(8,6,4,0)'); band.addColorStop(0.45, `rgba(8,6,4,${0.7 * fade})`); band.addColorStop(1, `rgba(8,6,4,${0.9 * fade})`);
+    ctx.fillStyle = band; ctx.fillRect(0, H * 0.62, W, H * 0.38);
     const lw = Math.max(3, unit * 0.012);
     ctx.save();
     // 구멍 빛(맥박)
@@ -212,7 +208,8 @@ export class EndingScene {
     ctx.restore();
   }
   drawEnd(ctx, W, H) {
-    this.drawImgPage(ctx, 'end_4', ease(this.t / 2) * 0.55, 0.5);
+    drawStoryBlur(ctx, this.view, 'end_4', ease(this.t / 2) * 0.7);
+    ctx.fillStyle = 'rgba(8,6,4,.55)'; ctx.fillRect(0, 0, W, H);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const p of this.pts) {
       const x = ((p.x + this.t * 0.004 * p.s) % 1) * W, y = ((p.y - this.t * 0.012 * p.s) % 1 + 1) % 1 * H;

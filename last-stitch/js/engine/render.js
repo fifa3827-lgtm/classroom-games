@@ -2,10 +2,11 @@
 import { IMG } from './assets.js';
 import { pathAt } from './game.js';
 import { TOWERS, towerStats } from '../data/towers.js';
+import { lvKey, TOWER_W2, LV_SCALE2, CROSSBOW, CANNON4, ARCHER4, drawSoldier, enemyLook, drawMound, drawEnemyAura, drawBellRings, drawShotM2, drawSkillFx, drawTowerStun } from './render_m2.js';
 
 const PAD_R = 62;
-const TOWER_W = { archer: 150, cannon: 150, ice: 140, lightning: 140 };
-const LV_SCALE = [0, 1, 1.08, 1.16];
+const TOWER_W = { archer: 150, cannon: 150, ice: 140, lightning: 140, ...TOWER_W2 };
+const LV_SCALE = LV_SCALE2;
 // 그림이 원래 보는 쪽: 대포 왼쪽(-1), 궁수 오른쪽(+1). 포구: [가운데에서 x(폭 비율), 바닥에서 y(높이 비율)]
 const FACE = { cannon: -1, archer: 1 };
 const MUZZLE = {
@@ -28,7 +29,15 @@ export const ARCHER = {
   2: { top: 0.57, spots: [[-0.17, 0.01], [0.17, 0.01]], fig: 'a', fh: 82 },
   3: { top: 0.73, spots: [[-0.13, 0.01], [0.13, 0.01]], fig: 'b', fh: 82 },
 };
-const hasArchers = t => t.type === 'archer' && IMG[`archer_base_${t.level}`] && IMG[`archer_fig_${ARCHER[t.level].fig}_0`];
+Object.assign(CANNON, CANNON4); Object.assign(ARCHER, ARCHER4);
+const hasArchers = t => t.type === 'archer' && IMG[`archer_base_${lvKey(t)}`] && IMG[`archer_fig_${ARCHER[lvKey(t)].fig}_0`];
+// 받침 + 도는 윗부분(대포 포신·석궁): [받침 그림, 윗부분 그림, 설정]
+const turret = t => {
+  const k = lvKey(t);
+  if (t.type === 'cannon') return [IMG[`cannon_base_${k}`], IMG[`cannon_barrel_${k}`], CANNON[k]];
+  if (t.type === 'crossbow') return [IMG[`crossbow_base_${k}`], IMG[`crossbow_arm_${k}`], CROSSBOW[k]];
+  return [];
+};
 function archerFrame(a) {
   // a: 화면 기준 각도(오른쪽 0, 아래 +). → [그림 번호, 뒤집기]
   const left = Math.cos(a) < 0;
@@ -37,7 +46,7 @@ function archerFrame(a) {
   const idx = n > 3 * Math.PI / 8 ? 0 : n > Math.PI / 8 ? 1 : n > -Math.PI / 8 ? 2 : n > -3 * Math.PI / 8 ? 3 : 4;
   return [idx, left ? -1 : 1];
 }
-const hasBarrel = t => t.type === 'cannon' && IMG[`cannon_base_${t.level}`] && IMG[`cannon_barrel_${t.level}`];
+const hasBarrel = t => { const [a, b, c] = turret(t); return !!(a && b && c); };
 const faceFlip = t => hasBarrel(t) || hasArchers(t) ? 1 : FACE[t.type] ? (t.aim === FACE[t.type] ? 1 : -1) : 1;
 
 // 그림의 흰 실루엣(맞을 때 번쩍) · 파란 실루엣(느려짐) 캐시
@@ -108,19 +117,18 @@ export class Renderer {
     const img = this.towerImg(t);
     const [x, y] = game.padPos(t.pad);
     if (!img) return game.towerTop(t);
-    const w = TOWER_W[t.type] * LV_SCALE[t.level], h = w * img.height / img.width;
+    const w = TOWER_W[t.type] * LV_SCALE[lvKey(t)], h = w * img.height / img.width;
     if (hasArchers(t)) {
-      const A = ARCHER[t.level];
+      const A = ARCHER[lvKey(t)];
       const k = (t.shotN || 0) % A.spots.length, sp = A.spots[k];
       return [x + sp[0] * w, y + PAD_R * 0.32 - A.top * h + sp[1] * h - A.fh * 0.55];
     }
     if (hasBarrel(t)) {
-      const C = CANNON[t.level], ang = t._ra ?? t.ang ?? this.idleAng(game, t);
-      const bimg = IMG[`cannon_barrel_${t.level}`];
+      const C = turret(t)[2], ang = t._ra ?? t.ang ?? this.idleAng(game, t);
       const len = C.tip * C.bw;
       return [x + Math.cos(ang) * len, y + PAD_R * 0.32 - C.top * h + Math.sin(ang) * len * PERSP];
     }
-    const m = MUZZLE[t.type][t.level];
+    const m = MUZZLE[t.type]?.[t.level] || MUZZLE[t.type]?.[3] || [0, 0.82];
     return [x + m[0] * w * faceFlip(t), y + PAD_R * 0.32 - m[1] * h];
   }
   shoot(game, ev) {
@@ -128,7 +136,13 @@ export class Renderer {
     t.shotN = (t.shotN || 0) + 1;
     const [mx, my] = this.muzzle(game, t);
     const sh = ev.shot;
-    if (sh) { sh.x = mx; sh.y = my; if (sh.k === 'ball') { sh.x0 = mx; sh.y0 = my; } sh.trail = []; }
+    if (sh) {
+      sh.x = mx; sh.y = my; if (sh.k === 'ball') { sh.x0 = mx; sh.y0 = my; } sh.trail = [];
+      if (sh.k === 'needle' && sh.tgt) {
+        const E = sh.tgt, tx = E.x, ty = E.y - E.def.size * 0.4, l = Math.hypot(tx - mx, ty - my) || 1;
+        sh.vx = (tx - mx) / l; sh.vy = (ty - my) / l; sh.ang = Math.atan2(sh.vy, sh.vx); sh.left = Math.max(sh.left, l + 160);
+      }
+    }
     this.pulseTower(t);
     const dir = t.aim || 1;
     if (t.type === 'cannon') {
@@ -136,6 +150,11 @@ export class Renderer {
       const ca = Math.cos(t._ra ?? 0), sa = Math.sin(t._ra ?? 0);
       for (let i = 0; i < 6; i++) this.parts.push({ x: mx, y: my, vx: (hasBarrel(t) ? ca : dir) * (40 + Math.random() * 80), vy: (hasBarrel(t) ? sa * 60 : 0) - 30 - Math.random() * 50, g: -20, life: 0, max: 0.7 + Math.random() * 0.4, size: 12 + Math.random() * 10, col: '#d9d2c4', kind: 'puff' });
       this.shake(2);
+    } else if (t.type === 'crossbow') {
+      this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.12, size: 26, col: '#eef4ff', kind: 'flash' });
+      this.shake(2);
+    } else if (t.type === 'poison') {
+      this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.2, size: 30, col: '#b6f06a', kind: 'flash' });
     } else if (t.type === 'archer') {
       this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.1, size: 16, col: '#fff6d8', kind: 'flash' });
     } else if (t.type === 'ice') {
@@ -232,15 +251,18 @@ export class Renderer {
       ctx.beginPath(); ctx.ellipse(x, y, r, r, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
     }
 
+    drawBellRings(this, game);
     // 탑·적을 위→아래 순으로
     const items = [];
     for (const t of game.towers) items.push([game.padPos(t.pad)[1], 0, t]);
     for (const e of game.enemies) items.push([e.y, 1, e]);
+    for (const t of game.towers) if (t.soldiers) for (const s of t.soldiers) items.push([s.dead > 0 ? s.hy : s.y, 3, s]);
     if (U.preview) items.push([geo.pads[U.preview.pad][1], 2, U.preview]);
     items.sort((a, b) => a[0] - b[0]);
     for (const [, k, o] of items) {
       if (k === 0) this.drawTower(game, o);
       else if (k === 1) this.drawEnemy(game, o);
+      else if (k === 3) drawSoldier(this, game, o);
       else this.drawGhost(game, o);
     }
 
@@ -323,10 +345,11 @@ export class Renderer {
     this.parts = this.parts.filter(p => p.life < p.max);
     if (this.parts.length > 600) this.parts.splice(0, this.parts.length - 600);
 
+    drawSkillFx(this, game);
     // 체력 막대
     for (const e of game.enemies) {
-      if (e.hp >= e.maxHp || e.d < 0) continue;
-      const w = 50, h = 8, x = e.x - w / 2, y = e.y - e.def.size * 1.15 - 6;
+      if (e.hp >= e.maxHp || e.d < 0 || e.hidden || !e.seen) continue;
+      const w = e.def.elite ? 72 : 50, h = 8, x = e.x - w / 2, y = e.y - e.def.size * 1.15 - 6 - (e.def.fly ? 46 : e.def.float ? 16 : 0);
       ctx.fillStyle = 'rgba(20,10,5,.75)'; this.rr(x - 2, y - 2, w + 4, h + 4, 5); ctx.fill();
       const f = Math.max(0, e.hp / e.maxHp);
       ctx.fillStyle = f > 0.5 ? '#7ad04a' : f > 0.25 ? '#f2c13a' : '#ef4b3a';
@@ -372,12 +395,12 @@ export class Renderer {
     t._idleOri = game.ori;
     return (t._idle = best ? Math.atan2(best[1] - y, best[0] - x) : 2.4);
   }
-  towerImg(t) { return hasArchers(t) ? IMG[`archer_base_${t.level}`] : hasBarrel(t) ? IMG[`cannon_base_${t.level}`] : IMG[`${t.type}_${t.level}`]; }
+  towerImg(t) { return hasArchers(t) ? IMG[`archer_base_${lvKey(t)}`] : hasBarrel(t) ? turret(t)[0] : IMG[`${t.type}_${lvKey(t)}`] || IMG[`${t.type}_${Math.min(3, t.level)}`]; }
   drawTower(game, t) {
     const { ctx } = this;
     const [x, y] = game.padPos(t.pad);
     const img = this.towerImg(t);
-    const w = TOWER_W[t.type] * LV_SCALE[t.level];
+    const w = TOWER_W[t.type] * LV_SCALE[lvKey(t)];
     // 떨어지기: 0.28초 동안 위에서 내려와 눌렸다 펴짐
     let dy = 0, sqx = 1, sqy = 1;
     const d0 = this.drops.get(t.id);
@@ -396,6 +419,9 @@ export class Renderer {
     if (!img) return;
     const h = w * img.height / img.width;
     const flip = faceFlip(t);
+    // 누르기 판정용: 이 탑을 이루는 그림 조각(맵 좌표, 내려앉는 연출 빼고)
+    const by = y + PAD_R * 0.32;
+    t._hit = [{ img, x0: x - w / 2, y0: by - h, w, h, flip: flip < 0 }];
     const barrel = hasBarrel(t);
     const kick = !barrel && r0 !== undefined && this.t - r0 < 0.15 ? Math.sin((this.t - r0) / 0.15 * Math.PI) * (t.type === 'cannon' ? 9 : 3) * -(t.aim || 1) : 0;
     ctx.save();
@@ -403,7 +429,7 @@ export class Renderer {
     ctx.scale(sqx * flip, sqy);
     ctx.drawImage(img, -w / 2, -h, w, h);
     if (hasArchers(t)) {
-      const A = ARCHER[t.level];
+      const A = ARCHER[lvKey(t)];
       const [fi, fl] = archerFrame(t.ang ?? Math.PI / 2);
       const fimg = IMG[`archer_fig_${A.fig}_${fi}`];
       if (fimg) {
@@ -416,13 +442,16 @@ export class Renderer {
           ctx.scale(fl, pull);
           ctx.drawImage(fimg, -fw / 2, -fh, fw, fh);
           ctx.restore();
+          t._hit.push({ img: fimg, x0: x + sp[0] * w - fw / 2, y0: by - A.top * h + sp[1] * h - fh, w: fw, h: fh, flip: fl < 0 });
         });
       }
     }
     if (barrel) {
       // 포신이 과녁 쪽으로 부드럽게 돈다
-      const C = CANNON[t.level], bimg = IMG[`cannon_barrel_${t.level}`];
-      const want = t.ang ?? this.idleAng(game, t);
+      const [, bimg, C] = turret(t);
+      let want = t._aim ?? t.ang ?? this.idleAng(game, t);
+      const E = t.tgt;
+      if (E && E.alive) { const px = x, py = y + PAD_R * 0.32 - C.top * h; want = t._aim = Math.atan2((E.y - E.def.size * 0.4 - py) / PERSP, E.x - px); }
       if (t._ra === undefined) t._ra = want;
       let d = want - t._ra; d = Math.atan2(Math.sin(d), Math.cos(d));
       t._ra += d * Math.min(1, this.dt * 14);
@@ -435,13 +464,18 @@ export class Renderer {
       ctx.scale(1, PERSP);
       ctx.rotate(t._ra);
       ctx.drawImage(bimg, -C.pivot[0] * bw - back, -C.pivot[1] * bh, bw, bh);
+      // 도는 윗부분은 축에서 끝까지 굵은 선으로 판정
+      const L = C.tip * bw, py0 = by - C.top * h;
+      t._hit.push({ seg: [x, py0, x + Math.cos(t._ra) * L, py0 + Math.sin(t._ra) * L * PERSP], r: Math.max(18, bh * 0.45) });
     }
     ctx.restore();
+    drawTowerStun(this, game, t, x, y + PAD_R * 0.32 + dy, h);
     // 마법 탑의 빛
-    if (t.type === 'lightning' || t.type === 'ice') {
+    if (t.type === 'lightning' || t.type === 'ice' || t.type === 'poison') {
       const top = y + PAD_R * 0.32 + dy - h * 0.86;
       const g = ctx.createRadialGradient(x, top, 2, x, top, 46);
-      const c = t.type === 'lightning' ? '200,150,255' : '170,225,255';
+      const c = t.type === 'lightning' ? '200,150,255' : t.type === 'poison' ? '160,240,90' : '170,225,255';
+      if (t.type === 'poison' && this.dt > 0 && Math.random() < 0.08) this.parts.push({ x: x + (Math.random() - 0.5) * 40, y: top, vx: 0, vy: -26, g: -10, life: 0, max: 1.1, size: 9 + Math.random() * 8, col: '#a6e05a', kind: 'puff' });
       const p = 0.35 + 0.2 * Math.sin(this.t * 3 + t.id);
       g.addColorStop(0, `rgba(${c},${p})`); g.addColorStop(1, `rgba(${c},0)`);
       ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, top, 46, 0, Math.PI * 2); ctx.fill();
@@ -474,6 +508,9 @@ export class Renderer {
     const { ctx } = this;
     const img = IMG[e.def.img];
     if (!img) return;
+    const look = enemyLook(this, game, e);
+    if (look.mound) { drawMound(this, e); return; }
+    drawEnemyAura(this, game, e);
     const w = e.def.size, h = w * img.height / img.width;
     const age = this.t * 1 + e.id * 0.37;
     const speedK = e.stunT > 0 ? 0 : (1 - e.slow);
@@ -483,12 +520,12 @@ export class Renderer {
     const tilt = Math.sin(ph) * 0.07;
     const flip = e.dx < -0.25 ? -1 : 1;
     // 들어오는 순간 서서히 나타남
-    const fade = Math.min(1, (e.d + 20) / 40);
+    const fade = Math.min(1, (e.d + 20) / 40) * look.alpha;
     ctx.globalAlpha = fade;
     ctx.fillStyle = 'rgba(30,15,10,.3)';
-    ctx.beginPath(); ctx.ellipse(e.x, e.y, w * 0.36 * (1 - hop / 60), w * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(e.x, e.y, w * 0.36 * (1 - hop / 60) * look.shadow, w * 0.15 * look.shadow, 0, 0, Math.PI * 2); ctx.fill();
     ctx.save();
-    ctx.translate(e.x, e.y - hop);
+    ctx.translate(e.x, e.y - hop - look.lift);
     ctx.rotate(tilt); ctx.scale(flip * (1 + sq), 1 - sq);
     ctx.drawImage(img, -w / 2, -h, w, h);
     const sinceHit = game.time - e.hitT;
@@ -552,6 +589,7 @@ export class Renderer {
   }
   drawShot(sh) {
     const { ctx } = this;
+    if (drawShotM2(this, sh)) return;
     if (sh.trail) { sh.trail.push([sh.x, sh.y]); if (sh.trail.length > (sh.k === 'ball' ? 10 : 7)) sh.trail.shift(); }
     const tr = sh.trail || [];
     if (tr.length > 1) {

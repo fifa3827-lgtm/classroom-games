@@ -9,7 +9,7 @@ export const ENEMIES = {
   knight: { name: '방패 기사', hp: 140, speed: 40,  reward: 16, lives: 2, mat: 'metal', size: 106, img: 'enemy_knight', hop: 0.45, physResist: 0.5 },
   mini:   { name: '작은 방울', hp: 14,  speed: 74,  reward: 2,  lives: 1, mat: 'paint', size: 54, img: 'enemy_blob',   hop: 1.2 },
   splitblob: { name: '갈라지는 방울', hp: 70, speed: 52, reward: 8, lives: 1, mat: 'paint', size: 92, img: 'enemy_splitblob', hop: 0.9, split: 2 },
-  crane:  { name: '종이학',     hp: 45,  speed: 70,  reward: 9,  lives: 1, mat: 'wood',  size: 92, img: 'enemy_crane', hop: 0, fly: true },
+  crane:  { name: '종이학',     hp: 45,  speed: 70,  reward: 9,  lives: 1, mat: 'wood',  size: 130, img: 'enemy_crane', hop: 0, fly: true },
   snowman:{ name: '눈사람 병정', hp: 110, speed: 44, reward: 12, lives: 1, mat: 'wood',  size: 96, img: 'enemy_snowman', hop: 0.35, frostImmune: true },
   mole:   { name: '두더지 말',  hp: 90,  speed: 54,  reward: 11, lives: 1, mat: 'wood',  size: 90, img: 'enemy_mole', hop: 0.5, burrow: [3.2, 1.6] },
   scissorbug: { name: '가위벌레', hp: 75, speed: 66, reward: 12, lives: 1, mat: 'metal', size: 86, img: 'enemy_scissorbug', hop: 0.3, cutter: true },

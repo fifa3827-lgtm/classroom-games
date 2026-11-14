@@ -14,14 +14,15 @@ pad = Image.new('RGBA', (tw * 2, th * 2), (0, 0, 0, 0))
 ax, ay = int(px * tw), th // 2
 pad.paste(top, (tw - ax, th - ay), top)
 pad = pad.resize((pad.width, int(pad.height * 0.9)))   # 3/4 시점으로 살짝 눌림
-rot = pad.rotate(35, resample=Image.BICUBIC, expand=False)
-W, H = bw * 2, bh * 2
+rot = pad.rotate(35, resample=Image.BICUBIC, expand=True)
+W, H = bw * 3, bh * 3
 can = Image.new('RGBA', (W, H), (0, 0, 0, 0))
 ox, oy = (W - bw) // 2, H - bh - 10
 can.paste(base, (ox, oy), base)
 cx, cy = ox + bw // 2, oy + int(bh * (1 - tr))
 can.alpha_composite(rot, (cx - rot.width // 2, cy - rot.height // 2))
 can = can.crop(can.getbbox())
+m = max(6, can.width // 40); full = Image.new('RGBA', (can.width + 2 * m, can.height + 2 * m), (0, 0, 0, 0)); full.paste(can, (m, m)); can = full
 can.thumbnail((360, 360), Image.LANCZOS)
 can.save(sys.argv[3], quality=90, method=6)
 print('OK', sys.argv[3], can.size)

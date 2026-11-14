@@ -7,12 +7,13 @@ tr, hr = float(sys.argv[4]), float(sys.argv[5])
 xs = [float(v) for v in (sys.argv[6] if len(sys.argv) > 6 else '0').split(',')]
 bw, bh = base.size
 fh = int(bh * hr); fw = int(fig.width * fh / fig.height); fig = fig.resize((fw, fh), Image.LANCZOS)
-W, H = bw * 2, bh * 2
+W, H = bw * 3, bh * 3
 can = Image.new('RGBA', (W, H), (0, 0, 0, 0))
 ox, oy = (W - bw) // 2, H - bh - 10
 can.paste(base, (ox, oy), base)
 for x in xs:
     fx = ox + int(bw * (0.5 + x)) - fw // 2; fy = oy + int(bh * (1 - tr)) - fh
     can.alpha_composite(fig, (fx, fy))
-can = can.crop(can.getbbox()); can.thumbnail((360, 360), Image.LANCZOS)
+can = can.crop(can.getbbox())
+m = max(6, can.width // 40); full = Image.new('RGBA', (can.width + 2 * m, can.height + 2 * m), (0, 0, 0, 0)); full.paste(can, (m, m)); can = full; can.thumbnail((360, 360), Image.LANCZOS)
 can.save(sys.argv[3], quality=90, method=6); print('OK', sys.argv[3], can.size)

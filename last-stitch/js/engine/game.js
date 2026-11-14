@@ -570,7 +570,7 @@ export class Game {
       if (!best) { t.cd = 0.05; continue; }
       t.cd = s.rate / (1 + this.auraFor(t));
       t.aim = best.x < px ? -1 : 1;
-      { const [tx0, ty0] = this.towerTop(t); t.ang = Math.atan2(best.y - best.def.size * 0.4 - ty0, best.x - tx0); }
+      { const [tx0, ty0] = this.towerTop(t); t.ang = Math.atan2(best.y - best.def.size * 0.4 - ty0, best.x - tx0); t.tgt = best; }
       const [ox, oy] = this.towerTop(t);
       const nShots = this.shots.length;
       const air = s.antiAir && best.def.fly ? s.antiAir : 1;

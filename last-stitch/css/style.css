@@ -164,3 +164,45 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 @keyframes tap { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px) scale(.92); } }
 
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ── M2: 손 기술 단추 (세로: 아래 왼쪽 엄지 자리, 가로: 오른쪽 아래) ── */
+.skills { display: flex; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+.land .skills { order: 9; }
+.skill { position: relative; width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
+  background: url('../assets/ui/button_round.webp') center/contain no-repeat; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+.skill img { width: 40px; height: 40px; object-fit: contain; position: relative; z-index: 1; }
+.skill .cd { position: absolute; inset: 3px; border-radius: 50%; z-index: 2; pointer-events: none;
+  background: conic-gradient(rgba(20,12,6,.68) var(--p, 0deg), transparent 0); }
+.skill .n { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; font-weight: 700; font-size: 18px; color: #fff4d6; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.skill.wait img { filter: grayscale(.8); }
+.skill.aim { animation: aimGlow .9s infinite; }
+@keyframes aimGlow { 50% { filter: drop-shadow(0 0 10px #ffd66b) drop-shadow(0 0 4px #fff3c4); transform: scale(1.08); } }
+.skill:active { transform: scale(.92); }
+/* 실패가 많으면 겹쳐 쌓아 자리를 아낌 */
+.spools.many img + img { margin-left: -12px; }
+@media (max-width: 400px) {
+  .callwave { min-width: 150px; padding: 0 24px; font-size: 14px; gap: 4px; }
+  .hud-bot { gap: 6px; }
+  .skills { gap: 4px; }
+  .skill { width: 48px; height: 48px; }
+  .skill img { width: 36px; height: 36px; }
+}
+.callwave .bonus { color: #6a3a06; font-weight: 700; }
+/* 낮은 가로 화면: 창이 화면 안에 들어오게 촘촘히 */
+@media (max-height: 430px) {
+  .modal h2 { font-size: 21px; margin-bottom: 0; }
+  .modal .row { margin: 1px 4px; }
+  .modal .btns { gap: 4px; margin-top: 2px; }
+  .modal p { margin: 2px 0 6px; }
+  .modal .box .btn { height: 48px; }
+  .modal .box .btn.small { height: 44px; }
+  .modal .toggle { height: 44px; flex-shrink: 0; }
+}
+/* 4단계 갈래 단추 */
+.ring .opt.br { background: radial-gradient(circle at 50% 40%, #fff9e6 0%, #f3d98a 62%, #c98a1e 100%); border-color: #7a4a10; }
+.ring .opt.br em { position: absolute; top: -8px; left: -6px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  font-style: normal; font-weight: 700; font-size: 13px; color: #fff; background: #3f6fd8; border: 2px solid #fff; font-family: 'Batang', serif; }
+/* 결과 창: 받은 골무 */
+.modal .gain { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 6px; font-weight: 700; color: var(--ink); }
+.modal .gain img { width: 26px; height: 26px; }
+.modal .gain small { flex-basis: 100%; font-weight: 400; font-size: 12px; color: var(--ink-soft); }

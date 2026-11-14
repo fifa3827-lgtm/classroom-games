@@ -57,7 +57,7 @@ export class MapScene {
     const on = (a, fn) => { root.querySelector(`[data-a=${a}]`).onclick = () => { if (this.modal) return; audio.play('button'); fn(); }; };
     on('back', () => this.app.go('title', { quick: true }));
     on('tools', () => this.app.go('toolbox', { back: 'map', focus: this.focus }));
-    on('settings', () => { this.closeSheet(); this.modal = openSettings(this.app, () => { this.modal = null; }); });
+    on('settings', () => { this.closeSheet(); this.modal = openSettings(this.app, () => { this.modal = null; this.root.querySelector('.scr-thimble .v').textContent = thimblesFree(this.app.data); this.layout(); }); });
     on('prev', () => this.showChapter(this.ch - 1));
     on('next', () => this.showChapter(this.ch + 1));
     root.querySelector('.scr-thimble .v').textContent = thimblesFree(this.app.data);
@@ -126,13 +126,19 @@ export class MapScene {
     const svg = this.levelsEl.querySelector('.scr-thread');
     const r = this.levelsEl.getBoundingClientRect();
     svg.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`);
-    const pts = this.nodes.map(n => { const b = n.querySelector('.hoop').getBoundingClientRect(); return [b.left + b.width / 2 - r.left, b.top + b.height / 2 - r.top]; });
+    const hb = this.nodes.map(n => { const b = n.querySelector('.hoop').getBoundingClientRect(); return { cx: b.left + b.width / 2 - r.left, cy: b.top + b.height / 2 - r.top, rw: b.width / 2, top: b.top - r.top }; });
     let dpath = '';
-    pts.forEach((p, i) => {
-      if (!i) { dpath += `M${p[0]},${p[1]}`; return; }
-      const q = pts[i - 1], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
-      dpath += this.ori === 'v' ? ` C${q[0]},${my} ${p[0]},${my} ${p[0]},${p[1]}` : ` C${mx},${q[1]} ${mx},${p[1]} ${p[0]},${p[1]}`;
-    });
+    for (let i = 1; i < hb.length; i++) {
+      const q = hb[i - 1], p = hb[i];
+      if (this.ori === 'v') {
+        // 위 수틀의 옆구리 → 옆으로 나가 → 아래 수틀 꼭대기로 (이름·별은 수틀 밑에 있어 피함)
+        const sx = q.cx + Math.sign(p.cx - q.cx) * q.rw, sy = q.cy, ex = p.cx, ey = p.top - 12;
+        dpath += ` M${sx},${sy} C${ex},${sy} ${ex},${sy} ${ex},${ey}`;
+      } else {
+        const mx = (p.cx + q.cx) / 2;
+        dpath += ` M${q.cx},${q.cy} C${mx},${q.cy} ${mx},${p.cy} ${p.cx},${p.cy}`;
+      }
+    }
     const d = this.app.data, ids = idsOf(this.ch);
     const doneN = ids.filter(id => d.stars[id]).length;
     svg.innerHTML = `<path d="${dpath}" class="bg"/><path d="${dpath}" class="st"/>`;

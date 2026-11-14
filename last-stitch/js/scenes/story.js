@@ -52,17 +52,18 @@ const CSS = `
 .st-root{position:fixed;inset:0;z-index:20;font-family:'Batang','Noto Serif KR',serif}
 #ui .st-root,#ui .st-root *,.st-root,.st-root *{pointer-events:none}
 #ui .st-root .st-skip{pointer-events:auto}
-.st-skip{position:absolute;top:calc(14px + var(--safe-t,0px));right:calc(14px + var(--safe-r,0px));pointer-events:auto!important;
-  min-width:44px;min-height:44px;padding:0 18px;border-radius:22px;font-family:'Batang',serif;font-size:14px;letter-spacing:.12em;
-  color:rgba(240,226,200,.82);background:rgba(10,8,6,.38);border:1px solid rgba(243,197,90,.28);cursor:pointer;transition:opacity .4s}
+.st-skip{position:absolute;top:calc(8px + var(--safe-t,0px));right:calc(8px + var(--safe-r,0px));pointer-events:auto!important;
+  min-width:44px;min-height:44px;padding:0 14px;font-family:'Batang',serif;font-size:15px;letter-spacing:.14em;color:rgba(240,226,200,.85);
+  background:none;border:0;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.7);cursor:pointer;transition:opacity .4s}
+.st-skip::after{content:'';display:block;height:1px;margin-top:3px;background:repeating-linear-gradient(90deg,rgba(243,197,90,.7) 0 6px,transparent 6px 10px)}
 .st-skip:active{transform:scale(.96)}
 .st-text{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(26px + var(--safe-b,0px));width:min(640px,calc(100% - 40px));
   text-align:center;color:#f3e8d2;font-size:clamp(16px,2.3vmin + 6px,20px);line-height:1.8;letter-spacing:.01em;
   text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.7);min-height:5.4em;display:flex;flex-direction:column;justify-content:flex-end;transition:opacity .45s}
-.st-text .st-line{white-space:pre-wrap;word-break:keep-all}
+.st-text .st-line{white-space:pre-wrap;word-break:keep-all;text-wrap:balance}
 .st-text .st-ch{opacity:0;transition:opacity .25s}
 .st-text .st-ch.on{opacity:1}
-.st-next{margin-top:10px;height:18px;font-size:13px;letter-spacing:.2em;color:rgba(243,197,90,.75);opacity:0;transition:opacity .4s}
+.st-next{margin-top:10px;height:22px;font-size:clamp(14px,.8vmin + 9px,17px);letter-spacing:.2em;color:rgba(243,197,90,.9);opacity:0;transition:opacity .4s}
 .st-next.on{opacity:1;animation:stblink 1.6s ease-in-out infinite}
 @keyframes stblink{50%{opacity:.35}}
 .st-dots{display:flex;gap:7px;justify-content:center;margin-bottom:12px}
@@ -80,11 +81,11 @@ const CSS = `
   transform:perspective(900px) rotateX(70deg) translateY(40px) rotate(-1.2deg);transform-origin:50% 0;transition:transform .7s cubic-bezier(.2,.9,.25,1.1)}
 .st-diary.on .st-page{transform:perspective(900px) rotateX(0) translateY(0) rotate(-1.2deg)}
 .st-page::before{content:'';position:absolute;left:18px;top:14px;bottom:14px;border-left:2px dashed rgba(201,138,30,.8)}
-.st-page h3{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.3em;color:#8a5a2a}
-.st-page .st-date{font-size:13px;color:#7a5634;margin-bottom:14px}
+.st-page h3{margin:0 0 4px;font-size:clamp(13px,.6vmin + 9px,16px);font-weight:700;letter-spacing:.3em;color:#8a5a2a}
+.st-page .st-date{font-size:clamp(13px,.6vmin + 9px,16px);color:#7a5634;margin-bottom:14px}
 .st-page p{margin:0;font-size:clamp(15px,1.6vmin + 9px,18px);line-height:2;word-break:keep-all}
-.st-page .st-sign{margin-top:16px;text-align:right;font-size:13px;color:#8a5a2a;letter-spacing:.2em}
-.st-page .st-tap{margin-top:14px;text-align:center;font-size:12px;letter-spacing:.2em;color:rgba(90,58,30,.6)}
+.st-page .st-sign{margin-top:16px;text-align:right;font-size:clamp(13px,.6vmin + 9px,15px);color:#8a5a2a;letter-spacing:.2em}
+.st-page .st-tap{margin-top:14px;text-align:center;font-size:clamp(13px,.6vmin + 9px,15px);letter-spacing:.2em;color:rgba(90,58,30,.8)}
 `;
 
 export class StoryScene {
@@ -96,7 +97,7 @@ export class StoryScene {
     this.prev = null; this.fadeT = 1; this.outT = 0;
     if (!document.getElementById(STYLE_ID)) { const st = document.createElement('style'); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
     this.root = document.createElement('div'); this.root.className = 'st-root';
-    this.root.innerHTML = `<button class="st-skip">건너뛰기</button>
+    this.root.innerHTML = `<button class="st-skip">건너뛰기 ▸</button>
       <div class="st-text"><div class="st-dots"></div><div class="st-line"></div><div class="st-next">눌러서 넘기기 ▸</div></div>
       <div class="st-diary"><div class="st-page"><h3>장인의 일기</h3><div class="st-date"></div><p></p><div class="st-sign">— 스승님의 글씨</div><div class="st-tap">눌러서 덮기</div></div></div>`;
     (document.getElementById('ui') || document.body).appendChild(this.root);
@@ -110,8 +111,8 @@ export class StoryScene {
     window.addEventListener('keydown', this.onKey);
     if (opts.music !== null) audio.playMusic(opts.music || 'story', 1.5);
     this.resize();
-    Promise.all([loadStoryImg(this.pages[0]?.img), storySfx('st_page'), storySfx('st_unfold')]).then(() => {
-      if (!this.alive) return;
+    Promise.all([this.pages.length ? loadStoryImg(this.pages[0].img) : null, storySfx('st_page'), storySfx('st_unfold')]).then(() => {
+      if (!this.alive || this.state === 'out' || !this.pages.length) return;
       this.pages.slice(1).forEach(p => loadStoryImg(p.img));
       this.go(0);
     });
@@ -137,7 +138,7 @@ export class StoryScene {
       if (p.diary && !this.diaryShown) { this.openDiary(p.diary); return; }
       this.go(this.i + 1); return;
     }
-    if (this.state === 'diary' && this.t - this.diaryAt > 0.5) { this.closeDiary(); }
+    if (this.state === 'diary' && this.t - this.diaryAt > 1.2) { this.closeDiary(); }
   }
   showAll() { for (const c of this.chars) c.classList.add('on'); this.shown = this.chars.length; this.state = 'wait'; this.waitAt = this.t; this.$('.st-next').classList.add('on'); }
   openDiary(n) {
@@ -166,7 +167,14 @@ export class StoryScene {
     const { ctx, dpr, W, H } = this.view;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#0b0806'; ctx.fillRect(0, 0, W, H);
-    if (this.i < 0) return;
+    if (this.i >= 0) this.drawPages(ctx, W, H);
+    if (this.state === 'out') {
+      this.outT += dt;
+      ctx.fillStyle = `rgba(0,0,0,${clamp(this.outT / 0.7, 0, 1)})`; ctx.fillRect(0, 0, W, H);
+      if (this.outT > 0.75 && !this.finished) { this.finished = true; this.opts.onDone?.(); }
+    }
+  }
+  drawPages(ctx, W, H) {
     const fk = ease(this.fadeT / 0.8);
     if (this.prev && fk < 1) this.drawPage(ctx, this.prev.img, this.prev.t + this.t, 1);
     this.drawPage(ctx, this.pages[this.i].img, this.t, this.prev ? fk : ease(this.fadeT / 1.0));
@@ -180,48 +188,58 @@ export class StoryScene {
       while (this.shown < Math.min(want, this.chars.length)) this.chars[this.shown++].classList.add('on');
       if (this.shown >= this.chars.length) { this.state = 'wait'; this.waitAt = this.t; setTimeout(() => this.alive && this.state === 'wait' && this.$('.st-next').classList.add('on'), 500); }
     }
-    if (this.state === 'out') {
-      this.outT += dt;
-      ctx.fillStyle = `rgba(0,0,0,${clamp(this.outT / 0.7, 0, 1)})`; ctx.fillRect(0, 0, W, H);
-      if (this.outT > 0.75 && !this.finished) { this.finished = true; this.opts.onDone?.(); }
-    }
   }
   // 세로 그림: 세로 화면은 거의 꽉 채우고, 가로 화면은 가운데 + 양옆 흐린 그림
-  drawPage(ctx, name, t, a) {
-    const im = cache.img[name]; if (!im) return;
-    const { W, H } = this.view;
-    ctx.globalAlpha = a;
-    const bl = blurOf(name);
-    const cs = Math.max(W / im.width, H / im.height) * 1.08;
-    if (bl) { ctx.drawImage(bl, W / 2 - im.width * cs / 2, H / 2 - im.height * cs / 2, im.width * cs, im.height * cs); ctx.fillStyle = `rgba(8,6,4,${0.45 * a})`; ctx.fillRect(0, 0, W, H); }
-    const contain = Math.min(W / im.width, H / im.height);
-    const s = (W < H ? Math.min(cs / 1.08, contain * 1.14) : contain) * (1.02 + 0.04 * clamp(t / 12, 0, 1));
-    const w = im.width * s, h = im.height * s;
-    const x = W / 2 - w / 2, y = H / 2 - h / 2 - (W < H ? 0 : 0) - h * 0.01 * clamp(t / 12, 0, 1);
-    ctx.drawImage(im, x, y, w, h);
-    ctx.globalAlpha = 1;
-    // 가장자리를 흐린 바탕에 녹임
-    if (x > 1) {
-      const f = Math.min(w * 0.12, 80);
-      for (const [x0, x1] of [[x, x + f], [x + w, x + w - f]]) {
-        const g = ctx.createLinearGradient(x0, 0, x1, 0);
-        g.addColorStop(0, `rgba(10,7,5,${0.85 * a})`); g.addColorStop(1, 'rgba(10,7,5,0)');
-        ctx.fillStyle = g; ctx.fillRect(Math.min(x0, x1), 0, f, H);
-      }
-    }
-    if (y > 1) {
-      const f = Math.min(h * 0.08, 60);
-      for (const [y0, y1] of [[y, y + f], [y + h, y + h - f]]) {
-        const g = ctx.createLinearGradient(0, y0, 0, y1);
-        g.addColorStop(0, `rgba(10,7,5,${0.85 * a})`); g.addColorStop(1, 'rgba(10,7,5,0)');
-        ctx.fillStyle = g; ctx.fillRect(0, Math.min(y0, y1), W, f);
-      }
-    }
-  }
+  drawPage(ctx, name, t, a) { drawStoryImage(ctx, this.view, name, t, a); }
   destroy() {
     this.alive = false;
     window.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('keydown', this.onKey);
     this.root.remove();
   }
+}
+
+// 세로 장면 그림 한 장: 세로 화면은 거의 꽉 채우고, 가로 화면은 가운데 + 양옆은 같은 그림을 흐리게 늘려 채움.
+// 돌려주는 값: 선명한 그림이 놓인 자리 {x, y, w, h}
+export function drawStoryImage(ctx, view, name, t = 0, a = 1) {
+  const im = cache.img[name]; if (!im) return null;
+  const { W, H } = view;
+  ctx.globalAlpha = a;
+  const bl = blurOf(name);
+  const cs = Math.max(W / im.width, H / im.height) * 1.08;
+  if (bl) { ctx.drawImage(bl, W / 2 - im.width * cs / 2, H / 2 - im.height * cs / 2, im.width * cs, im.height * cs); ctx.fillStyle = `rgba(8,6,4,${0.45 * a})`; ctx.fillRect(0, 0, W, H); }
+  const r = storyRect(view, im, t);
+  ctx.drawImage(im, r.x, r.y, r.w, r.h);
+  ctx.globalAlpha = 1;
+  // 가장자리를 흐린 바탕에 부드럽게 녹임(어두운 테가 생기지 않게 약하게)
+  if (r.x > 1) {
+    const f = Math.min(r.w * 0.1, 70);
+    for (const [x0, x1] of [[r.x, r.x + f], [r.x + r.w, r.x + r.w - f]]) {
+      const g = ctx.createLinearGradient(x0, 0, x1, 0);
+      g.addColorStop(0, `rgba(14,10,7,${0.4 * a})`); g.addColorStop(1, 'rgba(14,10,7,0)');
+      ctx.fillStyle = g; ctx.fillRect(Math.min(x0, x1), 0, f, H);
+    }
+  }
+  if (r.y > 1) {
+    const f = Math.min(r.h * 0.06, 50);
+    for (const [y0, y1] of [[r.y, r.y + f], [r.y + r.h, r.y + r.h - f]]) {
+      const g = ctx.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, `rgba(14,10,7,${0.5 * a})`); g.addColorStop(1, 'rgba(14,10,7,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, Math.min(y0, y1), W, f);
+    }
+  }
+  return r;
+}
+export function storyRect(view, im, t = 0) {
+  const { W, H } = view;
+  const contain = Math.min(W / im.width, H / im.height), cover = Math.max(W / im.width, H / im.height);
+  const s = (W < H ? Math.min(cover, contain * 1.14) : contain) * (1.02 + 0.04 * clamp(t / 12, 0, 1));
+  const w = im.width * s, h = im.height * s;
+  return { x: W / 2 - w / 2, y: H / 2 - h / 2 - h * 0.01 * clamp(t / 12, 0, 1), w, h };
+}
+// 흐린 그림만 깔기(끝 화면 바탕)
+export function drawStoryBlur(ctx, view, name, a = 1) {
+  const im = cache.img[name]; const bl = im && blurOf(name); if (!bl) return;
+  const { W, H } = view; const cs = Math.max(W / im.width, H / im.height) * 1.08;
+  ctx.globalAlpha = a; ctx.drawImage(bl, W / 2 - im.width * cs / 2, H / 2 - im.height * cs / 2, im.width * cs, im.height * cs); ctx.globalAlpha = 1;
 }

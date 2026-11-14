@@ -3,14 +3,35 @@ import { Game, DT } from '../engine/game.js';
 import { Renderer, PAD_R, TOWER_W } from '../engine/render.js';
 import { IMG } from '../engine/assets.js';
 import { audio, vibrate } from '../engine/audio.js';
-import { TOWERS, TOWER_ORDER, towerStats, ELEM_NAME, MAX_LEVEL, threadCombo, SHARE_DESC } from '../data/towers.js';
+import { TOWERS, TOWER_ORDER_ALL, towerStats, ELEM_NAME, MAX_LEVEL, threadCombo, SHARE_DESC, BRANCHES, SKILLS } from '../data/towers.js';
+import { fxEvent, iconSrc } from '../engine/render_m2.js';
+import { recordWin, thimblesFree } from '../engine/save.js';
 import { SAFE } from '../data/levels.js';
 
-const SHOT_SFX = { archer: ['arrow_shoot', 0.45], cannon: ['cannon_fire', 0.7], ice: ['ice_shot', 0.5], lightning: ['lightning_zap', 0.55] };
+const SHOT_SFX = { archer: ['arrow_shoot', 0.45], cannon: ['cannon_fire', 0.7], ice: ['ice_shot', 0.5], lightning: ['lightning_zap', 0.55], poison: ['hit_paint', 0.5, 0.7], crossbow: ['arrow_shoot', 0.75, 0.62] };
 const HIT_SFX = { paint: 'hit_paint', wood: 'hit_wood', metal: 'hit_metal' };
 const ICON = {
   pause: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.5" height="14" rx="1.5"/><rect x="13.5" y="5" width="4.5" height="14" rx="1.5"/></svg>',
 };
+// 그림의 알파를 64칸 격자로 줄여 두고 누른 곳(u,v: 0~1) 둘레에 불투명한 칸이 있는지 본다
+const ALPHA = new Map();
+function alphaNear(img, u, v, flip, du, dv) {
+  let a = ALPHA.get(img);
+  if (!a) {
+    const W = 64, H = Math.max(8, Math.round(64 * img.height / img.width));
+    try {
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, W, H);
+      const d = x.getImageData(0, 0, W, H).data; a = { W, H, m: new Uint8Array(W * H) };
+      for (let k = 0; k < W * H; k++) a.m[k] = d[k * 4 + 3] > 70 ? 1 : 0;
+    } catch { a = { W: 1, H: 1, m: new Uint8Array([1]) }; }
+    ALPHA.set(img, a);
+  }
+  if (flip) u = 1 - u;
+  const x0 = Math.floor((u - du) * a.W), x1 = Math.floor((u + du) * a.W), y0 = Math.floor((v - dv) * a.H), y1 = Math.floor((v + dv) * a.H);
+  for (let yy = Math.max(0, y0); yy <= Math.min(a.H - 1, y1); yy++) for (let xx = Math.max(0, x0); xx <= Math.min(a.W - 1, x1); xx++) if (a.m[yy * a.W + xx]) return true;
+  return false;
+}
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 export class LevelScene {
@@ -22,7 +43,7 @@ export class LevelScene {
     this.timers = []; this.alive = true; this.realT = 0;
     this.press = null; this.menu = null;
     this.ori = this.view.resize();
-    this.game = new Game(level, this.ori, { seed: (Math.random() * 1e9) | 0 });
+    this.game = new Game(level, this.ori, { seed: (Math.random() * 1e9) | 0, mods: level.test ? {} : this.app.mods?.() });
     this.buildHud();
     this.applyOrientation(true);
     this.tut = level.tutorial ? { step: 0 } : null;
@@ -50,7 +71,15 @@ export class LevelScene {
     const bot = this.hudBot = el('div', 'hud-bot');
     this.spoolBox = el('div', 'spools'); this.spoolBox.title = '실패: 이을 수 있는 실';
     this.bWave = el('button', 'callwave ready', '');
-    bot.append(this.spoolBox, el('div', 'grow pass'), this.bWave);
+    this.skillBox = el('div', 'skills');
+    this.skillBtns = {};
+    for (const k of ['needles', 'rewind']) {
+      const b = el('button', 'skill', `<img src="assets/ui/${SKILLS[k].icon}.webp" alt=""><i class="cd"></i><span class="n"></span>`);
+      b.setAttribute('aria-label', SKILLS[k].name);
+      b.onclick = () => this.pickSkill(k);
+      this.skillBtns[k] = b; this.skillBox.append(b);
+    }
+    bot.append(this.skillBox, this.spoolBox, el('div', 'grow pass'), this.bWave);
     ui.append(top, bot);
     this.bSpeed.onclick = () => { this.speed = this.speed === 1 ? 2 : 1; this.bSpeed.textContent = this.speed + '×'; this.bSpeed.classList.toggle('on', this.speed === 2); audio.play('button'); };
     this.bPause.onclick = () => { audio.play('button'); this.openPause(); };
@@ -70,6 +99,16 @@ export class LevelScene {
     set('lives', g.lives, this.cLives);
     set('gold', g.gold, this.cGold);
     set('wave', `${Math.max(0, g.wave + 1)}/${g.level.waves.length}`, this.cWave);
+    for (const k in this.skillBtns) {
+      const b = this.skillBtns[k], left = g.skillCd[k], max = g.skillMax?.[k] || 1;
+      const key = left > 0 ? Math.ceil(left) : (this.aim === k ? 'aim' : 'ok');
+      if (h['sk' + k] !== key || left > 0) {
+        h['sk' + k] = key;
+        b.classList.toggle('wait', left > 0); b.classList.toggle('aim', this.aim === k);
+        b.querySelector('.cd').style.setProperty('--p', left > 0 ? (left / max * 360) + 'deg' : '0deg');
+        b.querySelector('.n').textContent = left > 0 ? Math.ceil(left) : '';
+      }
+    }
     const sp = `${g.spoolsMax}|${g.threads.length}|${g.spoolCool.length}`;
     if (h.sp !== sp) {
       h.sp = sp;
@@ -79,6 +118,7 @@ export class LevelScene {
         if (i >= g.spoolsMax - g.threads.length - g.spoolCool.length) im.className = i >= g.spoolsMax - g.spoolCool.length ? 'cool' : 'used';
         this.spoolBox.append(im);
       }
+      this.spoolBox.classList.toggle('many', g.spoolsMax > 2);
     }
     let wv;
     if (!g.started) wv = '<span>▶ 시작</span>';
@@ -162,18 +202,32 @@ export class LevelScene {
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onCancel);
   }
+  // 탑 고르기: 실제로 그린 그림의 불투명한 곳(알파)을 누르면 그 탑. 여럿이면 앞(받침이 아래쪽)에 그려진 탑.
+  // 그림이 아직 없으면(첫 장면 전) 받침 둘레로 판정
   towerAtScreen(sx, sy) {
     const g = this.game;
     const [wx, wy] = this.view.s2w(sx, sy);
-    let best = null, bd = 1e9;
-    for (const t of g.towers) {
-      const [x, y] = g.padPos(t.pad);
-      const w = TOWER_W[t.type] * 0.5, h = TOWERS[t.type].h + 40;
-      const inBox = wx > x - w && wx < x + w && wy > y - h && wy < y + PAD_R * 0.7;
-      const d = Math.hypot(wx - x, (wy - y) * 1.4);
-      if ((inBox || d < PAD_R * 1.15) && d < bd) { bd = d; best = t; }
-    }
-    return best;
+    // ① 그림을 정확히 누른 탑(앞 탑 우선) ② 없으면 손가락 여유를 두고 다시 ③ 받침 둘레
+    const pick = slop => {
+      let best = null, by = -1e9;
+      for (const t of g.towers) {
+        if (!t._hit) continue;
+        const y = g.padPos(t.pad)[1];
+        if (y <= by) continue;
+        for (const q of t._hit) {
+          let hit = false;
+          if (q.seg) { const [ax, ay, bx, bb] = q.seg, dx = bx - ax, dy = bb - ay, l2 = dx * dx + dy * dy || 1; const u = Math.max(0, Math.min(1, ((wx - ax) * dx + (wy - ay) * dy) / l2)); hit = Math.hypot(wx - ax - dx * u, wy - ay - dy * u) < q.r + slop; }
+          else if (wx >= q.x0 - slop && wx <= q.x0 + q.w + slop && wy >= q.y0 - slop && wy <= q.y0 + q.h + slop) hit = alphaNear(q.img, (wx - q.x0) / q.w, (wy - q.y0) / q.h, q.flip, slop / q.w, slop / q.h);
+          if (hit) { best = t; by = y; break; }
+        }
+      }
+      return best;
+    };
+    let t = pick(0) || pick(Math.max(6, 8 / this.view.s));
+    if (t) return t;
+    let bd = 1e9;
+    for (const o of g.towers) { const [x, y] = g.padPos(o.pad), d = Math.hypot(wx - x, (wy - y) * 1.4); if (d < PAD_R * 1.05 && d < bd) { bd = d; t = o; } }
+    return t;
   }
   padAtScreen(sx, sy) {
     const v = this.view;
@@ -183,7 +237,7 @@ export class LevelScene {
   }
   threadAtScreen(sx, sy, mid = false) {
     const [wx, wy] = this.view.s2w(sx, sy);
-    let best = null, bd = Math.max(34, 18 / this.view.s);
+    let best = null, bd = Math.max(34, 22 / this.view.s);
     for (const th of this.game.threads) {
       const a = this.game.towerTop(th.a), b = this.game.towerTop(th.b), m = th._mid || [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
       for (let i = mid ? 4 : 0; i <= (mid ? 16 : 20); i++) {
@@ -200,9 +254,11 @@ export class LevelScene {
     if (this.tutTip) this.tutTip.dataset.until = this.realT;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY;
+    if (this.aim) { this.useAim(sx, sy); return; }
     const thMid = this.threadAtScreen(sx, sy, true);
     const emptyPad = thMid ? -1 : this.padAtScreen(sx, sy);
-    const padFirst = emptyPad >= 0 && !this.game.towerAt(emptyPad) ? emptyPad : -1;
+    let padFirst = emptyPad >= 0 && !this.game.towerAt(emptyPad) ? emptyPad : -1;
+    if (padFirst >= 0) { const ft = this.towerAtScreen(sx, sy); if (ft && this.game.padPos(ft.pad)[1] > this.game.padPos(padFirst)[1]) padFirst = -1; }
     const t = thMid || padFirst >= 0 ? null : this.towerAtScreen(sx, sy);
     const th = thMid || (t || padFirst >= 0 ? null : this.threadAtScreen(sx, sy));
     const pad = padFirst >= 0 ? padFirst : t || th ? -1 : this.padAtScreen(sx, sy);
@@ -289,8 +345,8 @@ export class LevelScene {
   positionMenu() {
     const m = this.menu; if (!m) return;
     let [x, y] = this.view.w2s(...m.anchor);
-    const R = 86, W = this.view.W, H = this.view.H;
-    { const ins = this.insets(); const ry = this.short() ? 52 : R; const rx = this.short() ? 150 : R; x = Math.max(rx + 8, Math.min(W - rx - 8, x)); y = Math.max(ins.t + ry, Math.min(H - ins.b - (this.short() ? 50 : 122), y)); }
+    const R = m.R ?? 86, W = this.view.W, H = this.view.H;
+    { const ins = this.insets(); const ry = m.ry ?? (this.short() ? 52 : R); const rx = m.rx ?? (this.short() ? 150 : R); x = Math.max(rx + 8, Math.min(W - rx - 8, x)); y = Math.max(ins.t + ry, Math.min(H - ins.b - (m.rb ?? (this.short() ? 50 : 122)), y)); }
     m.node.style.left = x + 'px'; m.node.style.top = y + 'px';
     if (m.tip) {
       const ins = this.insets();
@@ -300,7 +356,8 @@ export class LevelScene {
         // 낮은 화면: 단추가 한 줄. 줄 위나 아래에 설명 칸, 둘 다 모자라면 설명 칸을 맨 위에 두고 줄을 그 밑으로 내린다
         m.tip.style.maxWidth = '230px';
         const tw2 = m.tip.offsetWidth, th2 = m.tip.offsetHeight;
-        const busyL = x - 150 - 36, busyR = x + 150 + 36;   // 단추 줄 + 탑
+        const half = m.rx ?? 150;
+        const busyL = x - half - 36, busyR = x + half + 36;   // 단추 줄 + 탑
         if (busyL - 8 >= tw2) { tx = busyL - 4 - tw2 / 2; ty = y - th2 / 2; }
         else if (W - busyR - 8 >= tw2) { tx = busyR + 4 + tw2 / 2; ty = y - th2 / 2; }
         else {
@@ -326,12 +383,12 @@ export class LevelScene {
       m.tip.style.left = tx + 'px'; m.tip.style.top = ty + 'px'; m.tip.style.bottom = '';
     }
   }
-  makeMenu(anchor, opts) {
+  makeMenu(anchor, opts, size) {
     this.closeMenu();
     const node = el('div', 'ring');
     const tip = el('div', 'tip parch'); tip.style.display = 'none';
     this.ui.append(node, tip);
-    this.menu = { node, tip, anchor, opts, sel: -1, openedAt: performance.now() };
+    this.menu = { node, tip, anchor, opts, sel: -1, openedAt: performance.now(), ...(size || {}) };
     opts.forEach((o, i) => {
       const b = el('button', 'opt' + (o.cls ? ' ' + o.cls : ''), o.html);
       b.style.left = o.dx + 'px'; b.style.top = o.dy + 'px';
@@ -367,56 +424,109 @@ export class LevelScene {
   costHtml(c) { return `<span class="cost"><img src="assets/ui/icon_coin.webp" alt="">${c}</span>`; }
   openBuildMenu(pad) {
     const g = this.game;
-    const pos = this.short() ? [[-111, 0], [-37, 0], [37, 0], [111, 0]] : [[-52, -50], [52, -50], [-52, 54], [52, 54]];
+    const types = TOWER_ORDER_ALL.filter(t => g.towerAllowed(t));
+    const n = types.length, big = n > 4;
+    const pos = !big ? (this.short() ? [[-111, 0], [-37, 0], [37, 0], [111, 0]] : [[-52, -50], [52, -50], [-52, 54], [52, 54]])
+      : this.short() ? types.map((_, i) => [(i % 4) * 74 - 111, i < 4 ? -38 : 40])
+      : types.map((_, i) => { const a = -Math.PI / 2 + (i + 0.5) / n * Math.PI * 2; return [Math.round(Math.cos(a) * 96), Math.round(Math.sin(a) * 96)]; });
     this.r.ui.pads = false;
-    const opts = TOWER_ORDER.map((type, i) => {
+    const opts = types.map((type, i) => {
       const T = TOWERS[type], st = towerStats(type, 1);
       return {
         dx: pos[i][0], dy: pos[i][1], label: T.name,
         html: `<img src="assets/towers/${type}_1.webp" alt="">${this.costHtml(g.cost(type))}`,
         cls: g.gold < g.cost(type) ? 'poor' : '',
         disabled: () => g.gold < g.cost(type),
-        info: () => `<b>${T.name}</b> <span class="st">· 실 속성 ${ELEM_NAME[T.elem]}</span><div>${T.desc}</div><div class="st">피해 ${Math.round(st.dmg)} · 사거리 ${Math.round(st.range)} · ${g.gold < g.cost(type) ? '<span style="color:#b3361f">금화가 모자라요</span>' : '한 번 더 누르면 세웁니다'}</div>`,
+        info: () => `<b>${T.name}</b> <span class="st">· 실 속성 ${ELEM_NAME[T.elem]}</span><div>${T.desc}</div><div class="st">${this.statLine(st)} · ${g.gold < g.cost(type) ? '<span style="color:#b3361f">금화가 모자라요</span>' : '한 번 더 누르면 세웁니다'}</div>`,
         focus: () => { this.r.ui.preview = { pad, type }; const p = g.padPos(pad); this.r.ui.range = [p[0], p[1], st.range]; this.r.ui.rangeOk = g.gold >= g.cost(type); },
         act: () => { const t = g.build(pad, type); this.closeMenu(); if (t && this.tut) this.tutAfterBuild(); },
       };
     });
-    this.makeMenu(g.padPos(pad), opts);
+    this.makeMenu(g.padPos(pad), opts, big ? (this.short() ? { ry: 80, rb: 80 } : { R: 132, ry: 136, rx: 132, rb: 140 }) : null);
     this.menu.pad = pad;
     // 가난한 상태 갱신용
     this.menu.refresh = () => this.refreshMenu();
   }
+  // 탑 수치 한 줄 (종탑·병영은 다르게)
+  statLine(st) {
+    if (st.proj === 'none' && st.aura) return `둘레 탑 공격 속도 +${Math.round(st.aura * 100)}% · 범위 ${Math.round(st.range)}`;
+    if (st.soldiers) return `병사 ${st.soldiers} · 체력 ${Math.round(st.sHp)} · 피해 ${Math.round(st.dmg)}`;
+    if (st.dot) return `독 초당 ${Math.round(st.dot)} · 사거리 ${Math.round(st.range)}`;
+    return `피해 ${Math.round(st.dmg)} · 사거리 ${Math.round(st.range)}`;
+  }
   openTowerMenu(t) {
     const g = this.game;
-    const T = TOWERS[t.type], st = towerStats(t.type, t.level);
+    const T = TOWERS[t.type], st = g.stats4(t);
     const up = g.upgradePrice(t);
     const nx = t.level < MAX_LEVEL ? towerStats(t.type, t.level + 1) : null;
     const links = g.threads.filter(th => th.a === t || th.b === t).map(th => `${th.combo.name}(${th.crosses ? '길 위' : '힘 나눔'})`);
-    const opts = [
-      {
-        dx: this.short() ? -66 : 0, dy: this.short() ? 0 : -68, label: '올리기',
-        html: nx ? `<img src="assets/towers/${t.type}_${t.level + 1}.webp" alt="">${this.costHtml(up)}` : '<span class="sym">★</span>',
-        cls: !nx || g.gold < up ? 'poor' : '',
-        disabled: () => !nx || g.gold < up,
-        info: () => nx ? `<b>${T.name} ${t.level + 1}단계</b><div class="st">피해 ${Math.round(st.dmg)} → ${Math.round(nx.dmg)} · 사거리 ${Math.round(st.range)} → ${Math.round(nx.range)}</div><div class="st">${g.gold < up ? '<span style="color:#b3361f">금화가 모자라요</span>' : '한 번 더 누르면 올립니다'}</div>` : `<b>${T.name} 최고 단계</b><div class="st">갈래 고르기는 다음 왕국에서 열립니다.</div>`,
-        focus: () => { const p = g.padPos(t.pad); this.r.ui.range = [p[0], p[1], (nx || st).range]; this.r.ui.rangeOk = true; },
-        act: () => { if (g.upgrade(t)) this.closeMenu(); },
-      },
-      {
-        dx: this.short() ? 66 : 0, dy: this.short() ? 0 : 70, label: '팔기', cls: 'sell',
-        html: `<span class="sym" style="font-size:22px">팔기</span>${this.costHtml(g.sellPrice(t))}`,
-        info: () => `<b>팔기</b><div class="st">금화 ${g.sellPrice(t)}개를 돌려받습니다.${links.length ? ' 이어진 실도 풀립니다.' : ''} 한 번 더 누르면 팝니다.</div>`,
-        focus: () => {},
-        act: () => { g.sell(t); this.closeMenu(); },
-      },
-    ];
-    this.makeMenu(g.padPos(t.pad), opts);
+    const sh = this.short();
+    const poor = '<span style="color:#b3361f">금화가 모자라요</span>';
+    const sellOpt = (dx, dy) => ({
+      dx, dy, label: '팔기', cls: 'sell',
+      html: `<span class="sym" style="font-size:22px">팔기</span>${this.costHtml(g.sellPrice(t))}`,
+      info: () => `<b>팔기</b><div class="st">금화 ${g.sellPrice(t)}개를 돌려받습니다.${links.length ? ' 이어진 실도 풀립니다.' : ''} 한 번 더 누르면 팝니다.</div>`,
+      focus: () => {},
+      act: () => { g.sell(t); this.closeMenu(); },
+    });
+    let opts;
+    if (t.level === MAX_LEVEL && g.branchOpen()) {
+      // 4단계 갈래 둘 중 하나
+      const price = g.branchPrice(t);
+      const br = k => {
+        const B = BRANCHES[t.type][k], bs = towerStats(t.type, 4, k);
+        return {
+          dx: sh ? (k === 'a' ? -74 : 0) : (k === 'a' ? -56 : 56), dy: sh ? 0 : -60, label: B.name, cls: 'br' + (g.gold < price ? ' poor' : ''),
+          html: `<img src="${iconSrc(t.type, '4' + k)}" alt=""><em>${k === 'a' ? '가' : '나'}</em>${this.costHtml(price)}`,
+          disabled: () => g.gold < price,
+          info: () => `<b>${B.name}</b> <span class="st">· 4단계 갈래</span><div>${B.desc}</div><div class="st">${this.statLine(bs)}</div><div class="st">${g.gold < price ? poor : '한 번 더 누르면 이 갈래로 올립니다(되돌릴 수 없어요)'}</div>`,
+          focus: () => { const p = g.padPos(t.pad); this.r.ui.range = [p[0], p[1], bs.range * (1 + (g.mods.range?.[t.type] || 0))]; this.r.ui.rangeOk = true; },
+          act: () => { if (g.branch(t, k)) this.closeMenu(); },
+        };
+      };
+      opts = [br('a'), br('b'), sellOpt(sh ? 74 : 0, sh ? 0 : 70)];
+    } else {
+      const top = t.level === 4;
+      opts = [
+        {
+          dx: sh ? -66 : 0, dy: sh ? 0 : -68, label: '올리기',
+          html: nx ? `<img src="${iconSrc(t.type, String(t.level + 1))}" alt="">${this.costHtml(up)}` : '<span class="sym">★</span>',
+          cls: !nx || g.gold < up ? 'poor' : '',
+          disabled: () => !nx || g.gold < up,
+          info: () => nx ? `<b>${T.name} ${t.level + 1}단계</b><div class="st">${this.statLine(st)} → ${this.statLine(nx)}</div><div class="st">${g.gold < up ? poor : '한 번 더 누르면 올립니다'}</div>`
+            : top ? `<b>${st.branchName} · 최고 단계</b><div class="st">${BRANCHES[t.type][t.branch].desc}</div>` : `<b>${T.name} 최고 단계</b><div class="st">갈래 고르기는 다음 왕국에서 열립니다.</div>`,
+          focus: () => { const p = g.padPos(t.pad); this.r.ui.range = [p[0], p[1], (nx || st).range]; this.r.ui.rangeOk = true; },
+          act: () => { if (g.upgrade(t)) this.closeMenu(); },
+        },
+        sellOpt(sh ? 66 : 0, sh ? 0 : 70),
+      ];
+    }
+    this.makeMenu(g.padPos(t.pad), opts, opts.length === 3 && sh ? { rx: 112 } : null);
     this.menu.refresh = () => this.refreshMenu();
     this.r.ui.sel = t;
-    const p = g.padPos(t.pad); this.r.ui.range = [p[0], p[1], st.range]; this.r.ui.rangeOk = true;
-    this.menu.tip.innerHTML = `<div class="in"><b>${T.name} ${t.level}단계</b> <span class="st">· 실 속성 ${ELEM_NAME[T.elem]}</span><div class="st">피해 ${Math.round(st.dmg)} · 사거리 ${Math.round(st.range)}${links.length ? ' · ' + links.join(', ') : ''}</div><div class="st">꾹 눌러 다른 탑으로 끌면 실이 이어집니다.</div></div>`;
+    const p = g.padPos(t.pad); this.r.ui.range = [p[0], p[1], g.rangeOf(t)]; this.r.ui.rangeOk = true;
+    const title = t.level === 4 ? st.branchName : `${T.name} ${t.level}단계`;
+    const hint = t.level === MAX_LEVEL && g.branchOpen() ? '갈래 가·나 가운데 하나를 골라 4단계로 올릴 수 있어요.' : '꾹 눌러 다른 탑으로 끌면 실이 이어집니다.';
+    this.menu.tip.innerHTML = `<div class="in"><b>${title}</b> <span class="st">· 실 속성 ${ELEM_NAME[T.elem]}</span><div class="st">${this.statLine(st)}${links.length ? ' · ' + links.join(', ') : ''}</div><div class="st">${hint}</div></div>`;
     this.menu.tip.style.display = '';
     this.positionMenu();
+  }
+  // ── 손 기술: 단추를 누르고 맵을 누른다 ──
+  pickSkill(k) {
+    if (this.talking || this.paused || this.game.result) return;
+    audio.play('button');
+    if (this.aim === k) { this.aim = null; this.toast('손 기술을 거뒀어요.'); return; }
+    if (!this.game.skillReady(k)) { this.toast(`${SKILLS[k].name}은(는) ${Math.ceil(this.game.skillCd[k])}초 뒤에 다시 쓸 수 있어요.`); return; }
+    this.closeMenu();
+    this.aim = k;
+    this.toast(`${SKILLS[k].name}: 맵에서 쓸 곳을 누르세요. 단추를 다시 누르면 거둬요.`);
+  }
+  useAim(sx, sy) {
+    const k = this.aim; this.aim = null;
+    const [wx, wy] = this.view.s2w(sx, sy);
+    if (!this.game.useSkill(k, wx, wy)) return;
+    vibrate(30);
+    this.toastEl?.remove();
   }
   openThreadMenu(th) {
     const opts = [{
@@ -543,7 +653,7 @@ export class LevelScene {
 
   // ── 일시정지·결과 ──
   openPause() {
-    if (this.game.result) return;
+    if (this.game.result || this.paused) return;
     this.paused = true; this.closeMenu(); audio.duck(true);
     const S = this.app.settings;
     const m = el('div', 'modal');
@@ -551,25 +661,36 @@ export class LevelScene {
       <div class="row"><span>음악</span><input type="range" min="0" max="1" step="0.05" value="${S.music}" data-k="music"></div>
       <div class="row"><span>효과음</span><input type="range" min="0" max="1" step="0.05" value="${S.sfx}" data-k="sfx"></div>
       <div class="row"><span>진동</span><button class="toggle ${S.vibe ? 'on' : ''}" aria-label="진동"></button></div>
-      <div class="btns"><button class="btn" data-a="go">계속하기</button><button class="btn small" data-a="retry">처음부터</button></div></div>`;
+      <div class="btns"><button class="btn" data-a="go">계속하기</button><div class="btns row2"><button class="btn small" data-a="retry">처음부터</button><button class="btn small" data-a="map">지도로</button></div></div></div>`;
     this.ui.append(m);
     m.querySelectorAll('input[type=range]').forEach(r => r.oninput = () => { S[r.dataset.k] = +r.value; audio.setVolume(r.dataset.k, +r.value); this.app.save(); });
     const tg = m.querySelector('.toggle');
     tg.onclick = () => { S.vibe = !S.vibe; tg.classList.toggle('on', S.vibe); this.app.save(); vibrate(20); };
     m.querySelector('[data-a=go]').onclick = () => { audio.play('button'); m.remove(); this.paused = false; audio.duck(false); };
     m.querySelector('[data-a=retry]').onclick = () => { audio.play('button'); this.app.startLevel(this.level.id); };
+    m.querySelector('[data-a=map]').onclick = () => { audio.play('button'); this.app.go('map', { focus: this.level.id }); };
   }
   showResult(win) {
-    const g = this.game;
-    const m = el('div', 'modal');
+    const g = this.game, L = this.level, A = this.app;
     const stars = win ? g.stars : 0;
+    // 저장: 가장 좋은 별, 새로 받은 골무 (시험판은 저장 안 함)
+    const gained = win ? (this.winGain || 0) : 0;
+    if (!L.test) A.save();
+    const m = el('div', 'modal');
     m.innerHTML = `<div class="box parch"><h2>${win ? '왕국을 지켰다!' : '성문이 뚫렸다…'}</h2>
       ${win ? `<div class="stars">${[1, 2, 3].map(() => '<img src="assets/ui/icon_star.webp" alt="">').join('')}</div>` : ''}
       <p>${win ? `남은 생명 ${g.lives}/${g.maxLives} · 쓰러뜨린 적 ${g.stats.kills}` : `웨이브 ${g.wave + 1}/${g.level.waves.length}에서 멈췄어요. 탑 자리와 실 잇기를 바꿔 보세요.`}</p>
-      <div class="btns"><button class="btn" data-a="retry">${win ? '다시 하기' : '다시 도전'}</button></div></div>`;
+      ${gained ? `<p class="gain"><img src="assets/ui/icon_thimble.webp" alt="">골무 ${gained}개를 받았어요<small>장인의 공구함에서 쓸 수 있어요 · 남은 골무 ${thimblesFree(A.data)}</small></p>` : ''}
+      <div class="btns">${win && !L.test ? '<button class="btn" data-a="next">다음으로</button>' : ''}<div class="btns row2">
+        <button class="btn small" data-a="retry">${win ? '다시 하기' : '다시 도전'}</button><button class="btn small" data-a="map">지도로</button></div></div></div>`;
     this.ui.append(m);
     if (win) m.querySelectorAll('.stars img').forEach((im, i) => { if (i < stars) this.later(0.5 + i * 0.35, () => { im.classList.add('on'); audio.play('star', { rate: 1 + i * 0.12 }); }); });
-    m.querySelector('[data-a=retry]').onclick = () => { audio.play('button'); this.app.startLevel(this.level.id); };
+    if (gained) this.later(0.6 + stars * 0.35, () => audio.play('coin'));
+    const once = fn => () => { if (m.dataset.done) return; m.dataset.done = '1'; audio.play('button'); fn(); };
+    m.querySelector('[data-a=retry]').onclick = once(() => A.startLevel(L.id));
+    m.querySelector('[data-a=map]').onclick = once(() => A.go('map', { focus: L.id }));
+    const nb = m.querySelector('[data-a=next]');
+    if (nb) nb.onclick = once(() => A.afterWin(L.id));
   }
 
   // ── 사건 → 연출·소리 ──
@@ -583,7 +704,7 @@ export class LevelScene {
           this.later(0.24, () => { R.dust(p[0], p[1] + 10, 16); R.shake(5); audio.play('tower_place'); vibrate(15); });
           break;
         }
-        case 'upgrade': { const p = g.padPos(ev.tower.pad); R.dropTower(ev.tower); this.later(0.24, () => { R.sparks(p[0], p[1] - 60, '#ffd96a', 18, 220); R.dust(p[0], p[1] + 10, 10); R.shake(4); }); audio.play('tower_upgrade'); vibrate(15); break; }
+        case 'upgrade': { const p = g.padPos(ev.tower.pad); if (ev.branch) this.later(0.3, () => R.float(p[0], p[1] - 160, g.stats4(ev.tower).branchName, '#ffe08a')); R.dropTower(ev.tower); this.later(0.24, () => { R.sparks(p[0], p[1] - 60, '#ffd96a', 18, 220); R.dust(p[0], p[1] + 10, 10); R.shake(4); }); audio.play('tower_upgrade'); vibrate(15); break; }
         case 'sell': { const p = g.padPos(ev.tower.pad); R.dust(p[0], p[1], 14); R.float(p[0], p[1] - 40, '+' + g.sellPrice(ev.tower), '#ffe48a', 'icon_coin'); audio.play('tower_sell'); break; }
         case 'link': {
           R.wobbleThread(ev.thread);
@@ -595,7 +716,7 @@ export class LevelScene {
           break;
         }
         case 'cut': if (!ev.silent) audio.play('thread_cut'); break;
-        case 'shoot': { const [n, v] = SHOT_SFX[ev.tower.type]; audio.play(n, { vol: v, gap: 0.06 }); R.shoot(g, ev); break; }
+        case 'shoot': { const [n, v, rate] = SHOT_SFX[ev.tower.type] || ['button', 0]; if (v) audio.play(n, { vol: v, gap: 0.06, rate }); R.shoot(g, ev); break; }
         case 'hit': {
           if (ev.src && ev.src.type !== 'lightning') audio.play(HIT_SFX[ev.mat], { vol: 0.45, gap: 0.05 });
           const e = ev.enemy;
@@ -629,8 +750,14 @@ export class LevelScene {
         }
         case 'wave': audio.play('wave_start'); this.banner(`웨이브 ${ev.n}`, ev.n === ev.total ? '마지막 웨이브' : ''); break;
         case 'bonus': audio.play('coin'); this.bump(this.cGold); break;
-        case 'win': audio.play('victory'); audio.duck(true); this.later(1.4, () => this.showResult(true)); break;
+        case 'win': {
+          // 연출보다 먼저 저장 (1.4초 안에 닫아도 별·골무가 남게)
+          const L = this.level, A = this.app;
+          if (!L.test) { const first = !(A.data.stars[L.id] > 0); this.winGain = recordWin(A.data, L.id, g.stars); A.markWin?.(L.id, first); A.save(); }
+          audio.play('victory'); audio.duck(true); this.later(1.4, () => this.showResult(true)); break;
+        }
         case 'lose': audio.play('defeat'); audio.duck(true); this.later(1.2, () => this.showResult(false)); break;
+        default: { const r = fxEvent(R, g, ev); if (r) audio.play(r[0], { vol: r[1], gap: 0.08 }); }
       }
     }
     g.events.length = 0;
@@ -648,6 +775,7 @@ export class LevelScene {
     for (let i = this.timers.length - 1; i >= 0; i--) if (this.timers[i].at <= this.realT) { const t = this.timers[i]; this.timers.splice(i, 1); if (this.alive) t.fn(); }
     let dt = 0;
     if (!this.paused && !this.talking) {
+      if (this.game.started && !this.game.result && !this.level.test) this.app.data.playTime = (this.app.data.playTime || 0) + dtReal;
       dt = dtReal * this.speed;
       this.acc += dt;
       let n = 0;
@@ -665,6 +793,7 @@ export class LevelScene {
     this.r.draw(this.game, this.paused ? 0 : dtReal * (this.talking ? 1 : this.speed));
   }
   destroy() {
+    if (this.alive && !this.level.test) this.app.save();   // 판 도중 나가도 걸린 시간 저장
     this.alive = false; this.timers = [];
     document.removeEventListener('visibilitychange', this.onVis);
     this.unbind();

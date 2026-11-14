@@ -57,6 +57,7 @@ export class ToolboxScene {
     this.root.querySelector('.scr-thimble .v').textContent = `${free} / ${thimblesEarned(d)}`;
     this.root.querySelectorAll('[data-t]').forEach(b => { b.classList.toggle('on', b.dataset.t === this.tab); b.setAttribute('aria-selected', b.dataset.t === this.tab); });
     const list = this.root.querySelector('.scr-list');
+    if (this.shownTab !== this.tab) { list.scrollTop = 0; this.shownTab = this.tab; }
     list.innerHTML = '';
     if (!thimblesEarned(d)) list.append(el('p', 'scr-hint', '판을 지키면 받은 별만큼 골무가 생겨요. 골무로 여기서 탑·실·손 기술을 영구히 강화합니다.'));
     if (this.tab === 'tower') {

@@ -4,6 +4,7 @@ import { loadAll, loadImage, TOWER_IMGS, ENEMY_IMGS, UI_IMGS, CANNON_PARTS, ARCH
 import { audio } from './engine/audio.js';
 import { getLevel, LEVELS } from './data/levels.js';
 import { LevelScene } from './scenes/level.js';
+import { M2_IMGS } from './engine/render_m2.js';
 import { loadSave, writeSave, modsFrom, thimblesEarned } from './engine/save.js';
 import { MAPS } from './data/maps.js';
 import { SCENES } from './data/story.js';
@@ -14,8 +15,8 @@ const SFX = ['tower_place', 'tower_upgrade', 'tower_sell', 'thread_pull', 'threa
   'ice_shot', 'lightning_zap', 'hit_paint', 'hit_wood', 'hit_metal', 'enemy_pop', 'life_lost', 'wave_start', 'button', 'coin', 'fire_burn', 'freeze',
   'zap_chain', 'skill_needles', 'skill_rewind', 'star', 'boss_appear', 'whoosh', 'victory', 'defeat'];
 
-// 주소에 아무것도 없을 때 처음 화면. (M1 검수 동안은 'level' — 자동 검사가 바로 판을 기다림)
-const FIRST_SCREEN = 'level';
+// 주소에 아무것도 없을 때 처음 화면 (자동 검사는 ?level=1-1 로 판을 바로 연다)
+const FIRST_SCREEN = 'intro';
 // 제목·지도·공구함 배경
 const MENU_IMGS = [['menu_v', 'assets/intro/intro_c7_bg.webp'], ['menu_h', 'assets/intro/intro_c7_bg.webp']];
 
@@ -31,6 +32,9 @@ const app = {
   mods() { return modsFrom(this.data); },
   // 장면 바꾸기. 같은 장면 안 예약(setTimeout 등)은 장면이 스스로 alive로 막는다
   async go(name, opt = {}) {
+    // 아직 못 본 장 끝 이야기·엔딩이 있으면 지도 대신 그것부터 (본 뒤에야 지움 → 놓치거나 새로고침해도 다시 나옴)
+    const P = this.data.pending;
+    if (name === 'map' && P) return P.kind === 'ending' ? this.go('ending', {}) : this.go('story', { key: P.key, then: 'map', thenOpt: { focus: P.focus }, clear: true });
     const token = this.goToken = (this.goToken || 0) + 1;
     let Next;
     if (name === 'level') {
@@ -54,10 +58,15 @@ const app = {
       Next = class { constructor(app, o) { return new mod.IntroScene(app, { onDone: r => app.go('title', { t: r?.t, quick: true }), ...(o.replay ? { titleOnly: false } : {}) }); } };
     } else if (name === 'story') {
       const mod = await import('./scenes/story.js');
-      Next = class { constructor(app, o) { return new mod.StoryScene(app, o.key, { onDone: () => app.go(o.then || 'map', o.thenOpt || {}) }); } };
+      Next = class { constructor(app, o) { return new mod.StoryScene(app, o.key, { onDone: () => {
+        if (o.clear) delete app.data.pending;
+        if (o.seen) app.data[o.seen] = true;
+        if (o.clear || o.seen) app.save();
+        app.go(o.then || 'map', o.thenOpt || {});
+      } }); } };
     } else if (name === 'ending') {
       const mod = await import('./scenes/ending.js');
-      Next = class { constructor(app, o) { return new mod.EndingScene(app, { stats: o.stats || app.endStats(), onDone: () => app.go('title', { quick: true }) }); } };
+      Next = class { constructor(app, o) { return new mod.EndingScene(app, { stats: o.stats || app.endStats(), onDone: () => { delete app.data.pending; app.data.cleared = true; app.save(); app.go('title', { quick: true }); } }); } };
     } else return;
     if (token !== this.goToken) return;
     this.scene?.destroy();
@@ -68,15 +77,19 @@ const app = {
   startLevel(id) { return this.go('level', { id }); },
   // 판 고르기: 마지막 판 앞에는 장인의 마지막 일기 장면
   enterLevel(id) {
-    if (id === LAST_ID && !this.data.seenFinal) { this.data.seenFinal = true; this.save(); return this.go('story', { key: 'before_final', then: 'level', thenOpt: { id } }); }
+    if (id === LAST_ID && !this.data.seenFinal) return this.go('story', { key: 'before_final', then: 'level', thenOpt: { id }, seen: 'seenFinal' });
     return this.go('level', { id });
   },
-  // 판을 깬 뒤: 장의 마지막 판이면 이야기 장면, 마지막 판이면 엔딩, 아니면 지도(다음 판에 초점)
+  // 판을 처음 깬 순간(결과 창보다 먼저) 부름: 장의 마지막 판이면 이야기, 마지막 판이면 엔딩을 「볼 것」으로 저장
+  markWin(id, first) {
+    if (!first) return;
+    const ids = Object.keys(MAPS).sort(), nx = ids[ids.indexOf(id) + 1], ch = id.split('-')[0];
+    if (id === LAST_ID) this.data.pending = { kind: 'ending' };
+    else if (nx && nx.split('-')[0] !== ch && SCENES[`ch${ch}_after`]) this.data.pending = { kind: 'story', key: `ch${ch}_after`, focus: nx };
+  },
+  // 결과 창 「다음으로」: 지도로 (볼 장면이 있으면 go 가 먼저 틀어 줌), 다음 판에 초점
   afterWin(id) {
-    if (id === LAST_ID) return this.go('ending', {});
-    const ids = Object.keys(MAPS).sort(), i = ids.indexOf(id), nx = ids[i + 1];
-    const ch = id.split('-')[0];
-    if (nx && nx.split('-')[0] !== ch && SCENES[`ch${ch}_after`]) return this.go('story', { key: `ch${ch}_after`, then: 'map', thenOpt: { focus: nx } });
+    const ids = Object.keys(MAPS).sort(), nx = ids[ids.indexOf(id) + 1];
     return this.go('map', { focus: nx || id });
   },
   endStats() {
@@ -92,7 +105,7 @@ async function boot() {
   audio.setVolume('music', app.settings.music);
   audio.setVolume('sfx', app.settings.sfx);
   app.view.resize();
-  await Promise.all([loadAll([...TOWER_IMGS, ...CANNON_PARTS, ...ARCHER_PARTS, ...ENEMY_IMGS, ...UI_IMGS]), audio.load(SFX), document.fonts?.load?.('16px Dodum').catch(() => {})]);
+  await Promise.all([loadAll([...TOWER_IMGS, ...CANNON_PARTS, ...ARCHER_PARTS, ...ENEMY_IMGS, ...UI_IMGS, ...M2_IMGS]), audio.load(SFX), document.fonts?.load?.('16px Dodum').catch(() => {})]);
   const q = new URLSearchParams(location.search);
   if (q.get('level')) await app.go('level', { id: q.get('level') });
   else await app.go(q.get('screen') || FIRST_SCREEN, {});
