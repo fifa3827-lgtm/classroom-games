@@ -39,6 +39,7 @@ export const M2_IMGS = [
   ...['ice', 'lightning', 'poison', 'bell', 'barracks'].flatMap(t => BR.map(l => [`${t}_${l}`, `assets/towers/${t}_${l}.webp`])),
   ...['c', 'd'].flatMap(v => [0, 1, 2, 3, 4].map(i => [`archer_fig_${v}_${i}`, `assets/towers/archer_fig_${v}_${i}.webp`])),
   ...['soldier_fig', 'soldier_fig_k', 'soldier_fig_s'].flatMap(v => [0, 1, 2, 3, 4].map(i => [`${v}_${i}`, `assets/towers/${v}_${i}.webp`])),
+  ...['inkbottle', 'bear', 'bear_stop', 'snake', 'ship', 'ship_broken', 'hand'].map(b => [`boss_${b}`, `assets/bosses/boss_${b}.webp`]),
   ...['splitblob', 'crane', 'snowman', 'mole', 'scissorbug', 'bishop', 'ghost', 'crab', 'golem', 'rook', 'queen', 'clockknight', 'inkgiant'].map(e => [`enemy_${e}`, `assets/enemies/enemy_${e}.webp`]),
 ];
 // 메뉴에 쓸 한 장 그림(4단계는 갈래 그림이 없으면 3단계)
@@ -106,6 +107,8 @@ export function drawSoldier(R, game, s) {
 // ── 적 모습 바꾸기 ── (render.drawEnemy 안에서 부름) → { alpha, lift, shadow, mound, skip }
 export function enemyLook(R, game, e) {
   const D = e.def, o = { alpha: 1, lift: 0, shadow: 1, mound: false };
+  if (D.boss === 'bear' && e.pauseT > 0) o.img = 'boss_bear_stop';
+  if (D.boss === 'ship' && !(e.bottle > 0)) o.img = 'boss_ship_broken';
   if (D.fly) { o.lift = 46 + Math.sin(R.t * 3 + e.id) * 6; o.shadow = 0.6; }
   if (D.float) o.lift = 16 + Math.sin(R.t * 2.2 + e.id) * 5;
   if (D.ghost && !e.seen) o.alpha = 0.22 + 0.08 * Math.sin(R.t * 3 + e.id);
@@ -129,6 +132,64 @@ export function drawEnemyAura(R, game, e) {
     ctx.beginPath(); ctx.ellipse(e.x, e.y, D.haste[0], D.haste[0] * 0.55, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
   if (e.haste > 1 && R.dt > 0 && Math.random() < 0.15) R.parts.push({ x: e.x - e.dx * 30, y: e.y - 10, vx: -e.dx * 80, vy: -e.dy * 80, g: 0, life: 0, max: 0.3, size: 4, col: '#ffb09a', kind: 'spark' });
   if (D.windup && e.pauseT > 0) { R.parts.push({ x: e.x + 18, y: e.y - D.size * 0.7, vx: 0, vy: -30, g: 0, life: 0, max: 0.25, size: 3, col: '#ffe08a', kind: 'spark' }); }
+}
+
+// 보스 머리 위 표시 (그림을 그린 뒤): top = 그림 꼭대기 y
+export function drawBossMarks(R, game, e, top) {
+  const { ctx } = R, D = e.def;
+  if (!D.boss) return;
+  // 모래시계는 그림 오른쪽 위, 병 금은 그림 꼭대기 위
+  if (D.boss === 'snake' && e.glass > 0) {
+    // 꼬리의 모래시계: 남은 양 + 뒤집기까지 남은 시간
+    const x = e.x + 52, y = top - 6, k = e.glass / e.glassMax, f = (e.flipT || 0) / 9;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(f > 0.9 ? (f - 0.9) * 10 * Math.PI : 0);
+    ctx.fillStyle = 'rgba(40,24,10,.75)'; ctx.fillRect(-17, -28, 34, 56);
+    ctx.fillStyle = '#f6d48a'; ctx.beginPath(); ctx.moveTo(-11, -22); ctx.lineTo(11, -22); ctx.lineTo(0, 0); ctx.closePath(); ctx.globalAlpha = 1 - f; ctx.fill();
+    ctx.globalAlpha = 1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(11 * f, 22); ctx.lineTo(-11 * f, 22); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(20,10,5,.75)'; R.rr(x - 26, y - 42, 52, 9, 4); ctx.fill();
+    ctx.fillStyle = '#f2c13a'; R.rr(x - 25, y - 41, 50 * k, 7, 3); ctx.fill();
+  }
+  if (D.boss === 'ship' && e.bottle > 0) {
+    // 병에 남은 금(3개): 실 밑을 지날 때마다 하나씩 금이 감
+    for (let i = 0; i < 3; i++) {
+      const x = e.x - 48 + i * 48, y = top - 30, on = i >= e.bottle;
+      ctx.fillStyle = 'rgba(30,20,12,.7)'; ctx.beginPath(); ctx.arc(x, y, 21, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = on ? '#fff3c4' : 'rgba(220,240,255,.45)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.stroke();
+      if (on) { ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 10, y - 12); ctx.lineTo(x + 3, y - 2); ctx.lineTo(x - 4, y + 2); ctx.lineTo(x + 10, y + 13); ctx.stroke(); }
+    }
+    if (R.dt > 0 && Math.random() < 0.08) R.parts.push({ x: e.x + (Math.random() - 0.5) * D.size * 0.7, y: e.y - Math.random() * D.size, vx: 0, vy: -20, g: 0, life: 0, max: 0.6, size: 3, col: '#e6f6ff', kind: 'spark' });
+  }
+}
+
+// ── 보스 바닥 효과: 잉크 웅덩이, 붉은 선 ──
+export function drawBossFloor(R, game) {
+  const { ctx } = R;
+  for (const p of game.puddles) {
+    const a = Math.min(1, p.t / 2) * (p.frozen ? 0.85 : 0.8);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1, 0.55); ctx.globalAlpha = a;
+    const g = ctx.createRadialGradient(-p.r * 0.3, -p.r * 0.3, 2, 0, 0, p.r);
+    if (p.frozen) { g.addColorStop(0, '#f4fbff'); g.addColorStop(0.6, '#a8dcf6'); g.addColorStop(1, 'rgba(120,190,230,0)'); }
+    else { g.addColorStop(0, '#ff6a5a'); g.addColorStop(0.55, '#b0160f'); g.addColorStop(1, 'rgba(110,8,6,0)'); }
+    ctx.fillStyle = g; ctx.beginPath();
+    for (let i = 0; i <= 12; i++) { const an = i / 12 * Math.PI * 2, rr = p.r * (0.82 + 0.18 * Math.sin(p.id + i * 2.1)); ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+    ctx.fill();
+    if (!p.frozen) { ctx.fillStyle = 'rgba(255,220,210,.5)'; ctx.beginPath(); ctx.ellipse(-p.r * 0.3, -p.r * 0.35, p.r * 0.25, p.r * 0.12, -0.4, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  for (const l of game.redLines) {
+    const age = game.time - l.born, grow = Math.min(1, age / 0.5), fade = Math.min(1, l.t / 1.5);
+    const bx = l.a[0] + (l.b[0] - l.a[0]) * grow, by = l.a[1] + (l.b[1] - l.a[1]) * grow;
+    ctx.globalAlpha = 0.85 * fade; ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(90,0,0,.5)'; ctx.lineWidth = 34;
+    ctx.beginPath(); ctx.moveTo(l.a[0], l.a[1] + 6); ctx.lineTo(bx, by + 6); ctx.stroke();
+    ctx.strokeStyle = '#d8231a'; ctx.lineWidth = 24;
+    ctx.beginPath(); ctx.moveTo(l.a[0], l.a[1]); ctx.lineTo(bx, by); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,140,120,.6)'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(l.a[0], l.a[1] - 5); ctx.lineTo(bx, by - 5); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
 }
 
 // ── 종탑: 둘레로 퍼지는 소리 고리 ──
@@ -221,6 +282,20 @@ export function fxEvent(R, game, ev) {
       return [ev.k === 'needles' ? 'skill_needles' : 'skill_rewind', 0.9];
     }
     case 'needles_hit': { R.shake(7 + ev.n); for (let i = 0; i < 14; i++) R.dust(ev.x + (Math.random() - 0.5) * ev.r * 1.4, ev.y + (Math.random() - 0.5) * ev.r * 0.8, 2, '#d9cdb5'); return null; }
+    case 'puddle': { const p = ev.puddle; R.splat(p.x, p.y, '#b0160f', 8, 1); return ['hit_paint', 0.35]; }
+    case 'puddle_freeze': { const p = ev.puddle; R.sparks(p.x, p.y, '#dff6ff', 14, 140); return ['freeze', 0.5]; }
+    case 'bear_stop': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.6, '#ffe08a', 12, 140); R.float(e.x, e.y - e.def.size, '태엽이 풀렸다!', '#ffe08a'); return ['zap_chain', 0.5]; }
+    case 'bear_go': { const e = ev.enemy; R.dust(e.x, e.y, 16); R.shake(8); return ['cannon_hit', 0.6]; }
+    case 'hourglass': { const e = ev.enemy; R.sparks(e.x, e.y - 60, '#f6d48a', 24, 220); if (ev.n) R.float(e.x, e.y - e.def.size, '모래시계가 뒤집혔다!', '#f6d48a'); return ['whoosh', 0.7]; }
+    case 'glass_break': { const e = ev.enemy; R.sparks(e.x, e.y - 40, '#fff3c4', 30, 260); R.shake(12); R.float(e.x, e.y - e.def.size, '모래시계가 깨졌다!', '#fff3c4'); return ['hit_metal', 1]; }
+    case 'immune': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.5, '#e6f6ff', 4, 100); return ['hit_metal', 0.25]; }
+    case 'bottle_crack': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.5, '#e6f6ff', 18, 200); R.shake(6); R.float(e.x, e.y - e.def.size, `병에 금이 갔다! (${3 - ev.left}/3)`, '#e6f6ff'); return ['hit_metal', 0.8]; }
+    case 'bottle_break': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.5, '#e6f6ff', 40, 300); R.shake(16); R.float(e.x, e.y - e.def.size, '병이 깨졌다!', '#fff3c4'); return ['cannon_hit', 1]; }
+    case 'redline': {
+      if (ev.blocked) { const l = ev.line, m = [(l.a[0] + l.b[0]) / 2, (l.a[1] + l.b[1]) / 2]; R.sparks(m[0], m[1], '#ffe08a', 20, 220); R.float(m[0], m[1], '실이 붉은 선을 막았다!', '#ffe08a'); return ['thread_ting', 0.8]; }
+      return ['whoosh', 0.6];
+    }
+    case 'redline_clash': { const l = ev.line, m = [(l.a[0] + l.b[0]) / 2, (l.a[1] + l.b[1]) / 2]; R.sparks(m[0], m[1], '#ffe08a', 20, 220); return ['thread_ting', 0.7]; }
     case 'rewound': {
       const e = ev.enemy;
       (R.rewindTrails ||= []).push({ fx: ev.fx, fy: ev.fy, e, t0: R.t });

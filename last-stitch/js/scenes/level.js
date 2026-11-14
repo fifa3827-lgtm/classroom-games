@@ -549,10 +549,15 @@ export class LevelScene {
     this.ui.append(b);
     this.later(2.7, () => b.remove());
   }
+  // 가운데 알림: 앞 알림이 떠 있으면 사라진 뒤에 차례로 (겹쳐 뭉개지지 않게)
   banner(main, sub) {
-    const b = el('div', 'banner', `${main}${sub ? `<small>${sub}</small>` : ''}`);
-    this.ui.append(b);
-    this.later(1.9, () => b.remove());
+    const wait = Math.max(0, (this.bannerUntil || 0) - this.realT);
+    this.bannerUntil = this.realT + wait + 1.9;
+    this.later(wait, () => {
+      const b = el('div', 'banner', `${main}${sub ? `<small>${sub}</small>` : ''}`);
+      this.ui.append(b);
+      this.later(1.9, () => b.remove());
+    });
   }
 
   // ── 말풍선·안내 ──
@@ -748,6 +753,13 @@ export class LevelScene {
           else if (ev.kind === 'rail') { audio.play('zap_chain', { vol: 0.6, gap: 0.2 }); R.rail(ev.thread); }
           break;
         }
+        case 'boss': {
+          const e = ev.enemy;
+          audio.play('boss_appear'); R.shake(10); vibrate(60);
+          this.banner(e.def.name, '보스'); if (this.level.bossMusic) audio.playMusic(this.level.bossMusic);
+          this.boss = e; this.showBossBar();
+          break;
+        }
         case 'wave': audio.play('wave_start'); this.banner(`웨이브 ${ev.n}`, ev.n === ev.total ? '마지막 웨이브' : ''); break;
         case 'bonus': audio.play('coin'); this.bump(this.cGold); break;
         case 'win': {
@@ -761,6 +773,21 @@ export class LevelScene {
       }
     }
     g.events.length = 0;
+  }
+  // 보스 체력 띠 (위 정보 띠 바로 밑)
+  showBossBar() {
+    this.bossBar?.remove();
+    const b = this.bossBar = el('div', 'bossbar pass', `<span class="nm"></span><span class="bar"><i></i></span>`);
+    b.querySelector('.nm').textContent = this.boss.def.name;
+    this.ui.append(b);
+    this.updateBossBar();
+  }
+  updateBossBar() {
+    const e = this.boss, b = this.bossBar;
+    if (!e || !e.alive || this.game.result) { b.remove(); this.bossBar = null; this.boss = null; return; }
+    b.style.top = (this.hudTop.getBoundingClientRect().bottom + 2) + 'px';
+    b.querySelector('i').style.width = (Math.max(0, e.hp / e.maxHp) * 100) + '%';
+    b.classList.toggle('shield', e.bottle > 0);
   }
   bump(node) { node.classList.remove('bump'); void node.offsetWidth; node.classList.add('bump'); }
   flashRed() {
@@ -789,6 +816,7 @@ export class LevelScene {
     this.handleEvents();
     if (this.menu?.refresh) this.menu.refresh();
     this.updateHud();
+    if (this.bossBar) this.updateBossBar();
     this.tutUpdate();
     this.r.draw(this.game, this.paused ? 0 : dtReal * (this.talking ? 1 : this.speed));
   }

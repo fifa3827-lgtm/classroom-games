@@ -2,7 +2,7 @@
 import { IMG } from './assets.js';
 import { pathAt } from './game.js';
 import { TOWERS, towerStats } from '../data/towers.js';
-import { lvKey, TOWER_W2, LV_SCALE2, CROSSBOW, CANNON4, ARCHER4, drawSoldier, enemyLook, drawMound, drawEnemyAura, drawBellRings, drawShotM2, drawSkillFx, drawTowerStun } from './render_m2.js';
+import { lvKey, TOWER_W2, LV_SCALE2, CROSSBOW, CANNON4, ARCHER4, drawSoldier, enemyLook, drawMound, drawEnemyAura, drawBellRings, drawShotM2, drawSkillFx, drawTowerStun, drawBossFloor, drawBossMarks } from './render_m2.js';
 
 const PAD_R = 62;
 const TOWER_W = { archer: 150, cannon: 150, ice: 140, lightning: 140, ...TOWER_W2 };
@@ -214,7 +214,7 @@ export class Renderer {
     // 적이 들어오는 곳: 정보 띠 바로 아래 길 위에 빨간 화살표
     const incoming = !game.result && (game.spawning.length > 0 || !game.started || (game.betweenT > 0 && game.betweenT < 6));
     if (incoming) {
-      const topY = (v.inset.t + 24 - v.oy) / v.s, leftX = (24 - v.ox) / v.s, rightX = (v.W - 24 - v.ox) / v.s, botY = (v.H - 24 - v.oy) / v.s;
+      const topY = (v.inset.t + 24 - v.oy) / v.s, leftX = (24 - v.ox) / v.s, rightX = (v.W - 24 - v.ox) / v.s, botY = (v.H - Math.max(24, (v.inset.b || 0) + 10) - v.oy) / v.s;
       for (const P of geo.paths) {
         let d = 0, pt = null;
         for (; d < P.len * 0.5; d += 8) { const q = pathAt(P, d); if (q[1] > topY && q[0] > leftX && q[0] < rightX && q[1] < botY) { pt = q; break; } }
@@ -251,6 +251,7 @@ export class Renderer {
       ctx.beginPath(); ctx.ellipse(x, y, r, r, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
     }
 
+    drawBossFloor(this, game);
     drawBellRings(this, game);
     // 탑·적을 위→아래 순으로
     const items = [];
@@ -348,7 +349,7 @@ export class Renderer {
     drawSkillFx(this, game);
     // 체력 막대
     for (const e of game.enemies) {
-      if (e.hp >= e.maxHp || e.d < 0 || e.hidden || !e.seen) continue;
+      if (e.hp >= e.maxHp || e.d < 0 || e.hidden || !e.seen || e.def.boss) continue;
       const w = e.def.elite ? 72 : 50, h = 8, x = e.x - w / 2, y = e.y - e.def.size * 1.15 - 6 - (e.def.fly ? 46 : e.def.float ? 16 : 0);
       ctx.fillStyle = 'rgba(20,10,5,.75)'; this.rr(x - 2, y - 2, w + 4, h + 4, 5); ctx.fill();
       const f = Math.max(0, e.hp / e.maxHp);
@@ -506,9 +507,9 @@ export class Renderer {
   }
   drawEnemy(game, e) {
     const { ctx } = this;
-    const img = IMG[e.def.img];
-    if (!img) return;
     const look = enemyLook(this, game, e);
+    const img = IMG[look.img || e.def.img] || IMG[e.def.img];
+    if (!img) return;
     if (look.mound) { drawMound(this, e); return; }
     drawEnemyAura(this, game, e);
     const w = e.def.size, h = w * img.height / img.width;
@@ -533,6 +534,7 @@ export class Renderer {
     else if (e.slow > 0 || e.stunT > 0) { ctx.globalAlpha = fade * (e.stunT > 0 ? 0.55 : 0.32); ctx.drawImage(tinted(img, e.stunT > 0 ? '#bfefff' : '#6cc8ff'), -w / 2, -h, w, h); }
     ctx.restore();
     ctx.globalAlpha = 1;
+    drawBossMarks(this, game, e, e.y - hop - look.lift - h);
     if (this.dt > 0 && e.burnT > 0 && Math.random() < 0.35) this.ember(e.x, e.y - h * 0.5);
     if (this.dt > 0 && e.slow > 0 && Math.random() < 0.08) this.parts.push({ x: e.x + (Math.random() - 0.5) * w * 0.6, y: e.y - Math.random() * h, vx: 0, vy: 20, g: 0, life: 0, max: 0.6, size: 5, col: '#dff6ff', kind: 'frost' });
     if (this.dt > 0 && e.stunT > 0 && Math.random() < 0.3) this.sparks(e.x, e.y - h * 0.6, '#bfefff', 1, 90);

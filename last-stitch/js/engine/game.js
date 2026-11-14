@@ -78,6 +78,7 @@ export class Game {
     this.result = null;
     this.nextId = 1;
     this.stats = { kills: 0, leaked: 0, built: 0, linked: 0, goldSpent: 0, skills: 0 };
+    this.puddles = []; this.redLines = []; this.grave = [];   // 보스: 잉크 웅덩이·붉은 선·쓰러진 적(뱀이 되살림)
   }
 
   setOrientation(ori) {
@@ -91,6 +92,10 @@ export class Game {
     this.updatePositions();
     if (this.threads) for (const th of this.threads) th.crosses = this.threadCrosses(th.a, th.b);
     if (this.towers) for (const t of this.towers) if (t.type === 'barracks') this.placeRally(t);
+    if (old && this.puddles) {
+      for (const p of this.puddles) { p.d = p.d / old.paths[p.path].len * this.geo.paths[p.path].len; [p.x, p.y] = pathAt(this.geo.paths[p.path], p.d); }
+      for (const l of this.redLines) { l.d = l.d / old.paths[l.path].len * this.geo.paths[l.path].len; this.placeLine(l); }
+    }
   }
   pathOf(e, geo = this.geo) { return e.def.fly ? geo.fly[e.path] : geo.paths[e.path]; }
 
@@ -214,7 +219,7 @@ export class Game {
     if (k === 'needles') {
       this.pending.push({ at: this.time + 0.35, fn: () => {
         let n = 0;
-        for (const e of this.enemies) if (e.alive && !e.hidden && (e.x - x) ** 2 + ((e.y - y) * 1.25) ** 2 < I.r * I.r) { this.damage(e, I.dmg, 'phys'); n++; }
+        for (const e of this.enemies) if (e.alive && !e.hidden && (e.x - x) ** 2 + ((e.y - y) * 1.25) ** 2 < I.r * I.r) { if (e.bottle > 0 && !e.cracked.has('needles')) { e.cracked.add('needles'); this.crackBottle(e, null); } this.damage(e, I.dmg, 'phys'); n++; }
         this.emit('needles_hit', { x, y, r: I.r, n });
       } });
     } else if (k === 'rewind') {
@@ -252,6 +257,7 @@ export class Game {
       }
     }
     this.enemyAbilities(dt);
+    if (this.puddles.length || this.redLines.length) this.bossField(dt);
     this.moveEnemies(dt);
     this.threadEffects(dt);
     this.soldierStep(dt);
@@ -271,10 +277,16 @@ export class Game {
     const def = ENEMIES[s.type];
     const hp = this.hpFor(s.type);
     const npath = this.geo.paths.length;
-    const path = s.path >= 0 ? s.path % npath : (this.nextId % npath);
-    const e = this.newEnemy(s.type, def, hp, path, -20, (this.rand() - 0.5) * 34);
+    // 길을 정하지 않은 적: 번갈아. 옆길이 짧은 판(split)은 그 비율만 옆길로
+    const split = this.level.split, auto = split ? (this.nextId % Math.round(1 / split) === 0 ? 1 : 0) : this.nextId % npath;
+    const path = def.boss ? 0 : s.path >= 0 ? s.path % npath : auto % npath;
+    const e = this.newEnemy(s.type, def, hp, path, -20, def.boss ? 0 : (this.rand() - 0.5) * 34);
+    if (def.boss === 'snake') { e.glass = e.glassMax = hp * 0.3; e.flipT = 0; }
+    if (def.boss === 'ship') { e.bottle = 3; e.cracked = new Set(); }
+    if (def.boss === 'bear') { e.walkT = 0; }
     this.enemies.push(e);
     this.placeEnemy(e);
+    if (def.boss) this.emit('boss', { enemy: e });
     return e;
   }
   newEnemy(type, def, hp, path, d, lane) {
@@ -305,6 +317,78 @@ export class Game {
   stunE(e, dur, frost) { if (frost && e.def.frostImmune) return; e.stunT = Math.max(e.stunT, e.def.elite ? dur * 0.5 : dur); }
   poisonE(e, dps, dur) { e.poisonDps = Math.max(e.poisonT > 0 ? e.poisonDps : 0, dps); e.poisonT = Math.max(e.poisonT, dur); }
 
+  // ── 보스 규칙 ──
+  bossStep(e, dt) {
+    const B = e.def.boss;
+    if (B === 'inkbottle' && e.d > 0) {
+      // 지나간 자리에 잉크 웅덩이 (위에 선 적은 빨라짐, 얼리면 오히려 느려짐)
+      e.abT += dt;
+      if (e.abT >= 2.4) { e.abT = 0; const p = { id: this.nextId++, path: e.path, d: e.d, x: e.x, y: e.y, r: 70, t: 14, frozen: false }; this.puddles.push(p); this.emit('puddle', { puddle: p }); }
+    } else if (B === 'bear') {
+      // 태엽: 걷다가(빠르게) 다 풀리면 멈춤. 멈춘 동안 더 아프게 맞음
+      if (e.pauseT > 0) { if ((e.pauseT -= dt) <= 0) { e.pauseT = 0; this.emit('bear_go', { enemy: e }); } return; }
+      e.wind = 1.35;
+      if ((e.walkT += dt) >= 6) { e.walkT = 0; e.pauseT = 3.5; e.wind = 1; e.vuln = 1.6; e.vulnT = 3.5; this.emit('bear_stop', { enemy: e }); }
+    } else if (B === 'snake' && e.glass > 0 && e.d > 0) {
+      // 꼬리의 모래시계를 뒤집어 쓰러진 적을 되살림 (시계를 깨면 멈춤)
+      if ((e.flipT += dt) >= 9) {
+        e.flipT = 0;
+        const back = this.grave.splice(-4, 4);
+        back.forEach((type, i) => { const c = this.spawnChild(e, type, i / 3); c.d = Math.max(0, e.d - 40 - i * 26); this.placeEnemy(c); });
+        this.emit('hourglass', { enemy: e, n: back.length });
+      }
+    } else if (B === 'ship' && e.bottle > 0) {
+      // 병을 실로 묶어 깨뜨림: 길을 가로지르는 실 밑을 지날 때마다 금이 감(실마다 한 번)
+      for (const th of this.threads) {
+        if (!th.crosses || e.cracked.has(th.id)) continue;
+        const p = this.padPos(th.a.pad), q = this.padPos(th.b.pad);
+        if (segDist(e.x, e.y, p[0], p[1], q[0], q[1])[0] < THREAD_RANGE + e.def.size * 0.25) this.crackBottle(e, th);
+      }
+    } else if (B === 'hand' && e.d > 0) {
+      // 붉은 선: 앞쪽 길을 가로질러 그음. 내 실이 그 선을 가로지르면 지워짐. 남은 선 위의 적은 빨라짐
+      if ((e.abT += dt) >= 6.5) {
+        e.abT = 0;
+        const P = this.geo.paths[e.path], d = Math.min(P.len - 120, e.d + 260 + this.rand() * 200);
+        const line = { id: this.nextId++, path: e.path, d, t: 11, born: this.time };
+        this.placeLine(line);
+        const block = this.threads.find(th => segInter(this.padPos(th.a.pad), this.padPos(th.b.pad), line.a, line.b));
+        this.emit('redline', { line, blocked: !!block, thread: block });
+        if (!block) this.redLines.push(line);
+        if ((e.lines = (e.lines || 0) + 1) % 3 === 0) for (let i = 0; i < 3; i++) this.spawnChild(e, 'blob', i / 2);
+      }
+    }
+  }
+  placeLine(l) {
+    const [x, y, dx, dy] = pathAt(this.geo.paths[l.path], l.d), L = 150;
+    l.a = [x - dy * L, y + dx * L]; l.b = [x + dy * L, y - dx * L];
+  }
+  crackBottle(e, th) {
+    if (!(e.bottle > 0)) return;
+    if (th) e.cracked.add(th.id);
+    e.bottle--;
+    this.emit(e.bottle > 0 ? 'bottle_crack' : 'bottle_break', { enemy: e, left: e.bottle });
+  }
+  bossField(dt) {
+    // 잉크 웅덩이
+    for (let i = this.puddles.length - 1; i >= 0; i--) if ((this.puddles[i].t -= dt) <= 0) this.puddles.splice(i, 1);
+    for (const p of this.puddles) for (const e of this.enemies) {
+      if (!e.alive || e.def.fly || e.def.boss || (e.x - p.x) ** 2 + ((e.y - p.y) * 1.4) ** 2 > p.r * p.r) continue;
+      if (p.frozen) this.slowE(e, 0.35, 0.3); else e.haste = Math.max(e.haste, 1.45);
+    }
+    // 붉은 선
+    for (let i = this.redLines.length - 1; i >= 0; i--) {
+      const l = this.redLines[i];
+      if ((l.t -= dt) <= 0) { this.redLines.splice(i, 1); continue; }
+      const th = this.threads.find(th => segInter(this.padPos(th.a.pad), this.padPos(th.b.pad), l.a, l.b));
+      if (th) { this.redLines.splice(i, 1); this.emit('redline_clash', { line: l, thread: th }); continue; }
+      for (const e of this.enemies) if (e.alive && !e.def.boss && segDist(e.x, e.y, l.a[0], l.a[1], l.b[0], l.b[1])[0] < 40) e.haste = Math.max(e.haste, 1.6);
+    }
+  }
+  // 얼음이 닿은 곳 둘레의 잉크 웅덩이를 얼림
+  freezePuddles(x, y, r) {
+    for (const p of this.puddles) if (!p.frozen && (p.x - x) ** 2 + (p.y - y) ** 2 < (r + p.r) ** 2) { p.frozen = true; p.t = Math.max(p.t, 10); this.emit('puddle_freeze', { puddle: p }); }
+  }
+
   // 적의 특수 능력 (움직이기 전에)
   enemyAbilities(dt) {
     const bells = this.towers.filter(t => t.type === 'bell');
@@ -312,6 +396,7 @@ export class Game {
     for (const e of this.enemies) {
       if (!e.alive) continue;
       const D = e.def;
+      if (D.boss) this.bossStep(e, dt);
       if (D.ghost) e.seen = bells.some(b => { const p = this.padPos(b.pad), r = this.rangeOf(b); return (e.x - p[0]) ** 2 + (e.y - p[1]) ** 2 < r * r; });
       if (D.burrow && e.d > 0) {
         e.abT += dt;
@@ -385,6 +470,7 @@ export class Game {
 
   damage(e, amt, dtype, src, quiet) {
     if (!e.alive || e.hidden) return 0;
+    if (e.bottle > 0) { if (!quiet && this.time - (e.immuneT || -9) > 0.4) { e.immuneT = this.time; this.emit('immune', { enemy: e }); } return 0; }
     let a = amt * e.vuln * (e.meltT > 0 ? 1.3 : 1);
     if (dtype === 'phys' && e.def.physResist && !(e.meltT > 0)) a *= 1 - e.def.physResist;
     let infuse = null;
@@ -395,6 +481,10 @@ export class Game {
         if (TOWERS[o.type].elem === 'pierce' && TOWERS[src.type].elem !== 'pierce') a *= 1.2;
         if (th.combo.id === 'amp') a *= 1.4;
       }
+    }
+    if (e.glass > 0) {
+      const g = a * 0.35; e.glass -= g; a -= g;
+      if (e.glass <= 0) { e.glass = 0; this.emit('glass_break', { enemy: e }); }
     }
     e.hp -= a;
     // 실로 나눠 받은 속성: 맞은 적에게 상대 탑의 힘이 섞여 들어간다
@@ -412,6 +502,7 @@ export class Game {
     if (e.def.shed && e.hp > 0) while (e.hp / e.maxHp < e.shedNext) { e.shedNext -= e.def.shed; this.spawnChild(e, 'mini', this.rand()); }
     if (e.hp <= 0) {
       e.alive = false; this.gold += e.def.reward; this.stats.kills++;
+      if (!e.def.boss && !e.child) { this.grave.push(e.type); if (this.grave.length > 12) this.grave.shift(); }
       if (e.blocked) this.release(e.blocked);
       this.emit('kill', { enemy: e, reward: e.def.reward });
       if (e.def.split) for (let i = 0; i < e.def.split; i++) this.spawnChild(e, 'mini', i / Math.max(1, e.def.split - 1));
@@ -579,6 +670,7 @@ export class Game {
         if (s.blizzard) {
           // 눈보라: 사거리 안 모두
           for (const e of this.enemies) if (this.canTarget(e, s) && (e.x - px) ** 2 + (e.y - py) ** 2 <= range * range) { this.damage(e, s.dmg, s.dtype, t); if (e.alive) this.slowE(e, s.slow, s.slowDur); }
+          this.freezePuddles(px, py, range);
           this.emit('blizzard', { tower: t, r: range });
         } else {
           t.hits = (t.hits || 0) + 1;
@@ -660,6 +752,7 @@ export class Game {
         s.done = true;
         if (!gone) {
           this.damage(e, s.dmg, s.dtype, s.src);
+          if (s.k === 'shard') this.freezePuddles(e.x, e.y, 40);
           if (s.k === 'shard' && e.alive) { this.slowE(e, s.slow, s.slowDur); if (s.freeze) { this.stunE(e, 1.2, true); this.emit('freeze', { enemy: e }); } }
         }
       } else if (gone) {

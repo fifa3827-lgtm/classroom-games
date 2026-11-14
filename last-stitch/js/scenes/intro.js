@@ -33,7 +33,7 @@ const POS = {
 const CUT_T = [
   [0, 8.3],      // 1 작업실
   [7.7, 16.3],   // 2 선반 위 왕국들 (8.0 박에 초점 이동으로 넘어감)
-  [15.7, 25.4],  // 3 잉크병 (24.0 쓰러짐)
+  [15.7, 25.0],  // 3 잉크병 (24.0 쓰러짐, 25.0까지 잉크가 다음 컷을 번져 드러냄)
   [24.35, 32.15],// 4 물감 번짐 (잉크가 화면을 덮으며 넘어감)
   [31.85, 40.25],// 5 붉은 눈
   [39.75, 48.6], // 6 바늘과 금빛 실
@@ -52,11 +52,11 @@ const CAPTIONS = [
 ];
 // 효과음 시간표 [시각, 이름, 크기, 빠르기]
 const SFX_PLAN = [
-  [0.05, 'in_room', 0.9], [7.75, 'in_whoosh', 0.5], [15.65, 'in_whoosh', 0.55],
+  [0.05, 'in_room', 0.9], [6.5, 'in_whoosh', 0.5], [14.4, 'in_whoosh', 0.55],
   [16.2, 'in_wobble', 0.7], [18.1, 'in_wobble', 0.8, 0.94], [20.0, 'in_wobble', 0.85, 0.82], [21.9, 'in_wobble', 0.9, 0.7],
   [23.92, 'in_crash', 1], [24.3, 'in_ooze', 0.7], [25.8, 'in_ooze', 0.85, 0.9], [26.0, 'in_heart', 1],
-  [39.8, 'in_whoosh', 0.5], [41.3, 'in_glint', 0.9], [42.0, 'in_thread', 1], [44.2, 'in_thread', 0.6, 1.15],
-  [47.55, 'in_whoosh', 0.6], [53.85, 'in_title', 1],
+  [38.5, 'in_whoosh', 0.45], [41.3, 'in_glint', 0.9], [42.0, 'in_thread', 1], [44.2, 'in_thread', 0.6, 1.15],
+  [46.3, 'in_whoosh', 0.6], [53.85, 'in_title', 1],
 ];
 const EYE_T0 = 33.0;
 const HEART = [0.3, 1.8, 3.2, 3.6, 4.0, 4.4, 4.7, 5.12, 5.8];   // in_heart.ogg 소리 봉우리(초)         // 첫 눈이 켜지는 때(박마다 하나씩)
@@ -121,19 +121,6 @@ function loadMusic() {
 }
 
 function makeDust() { return Array.from({ length: 70 }, (_, i) => { const r = rnd(i * 97 + 13); return { x: r(), y: r(), z: 0.4 + r() * 0.8, p: r() * 6.28, s: 0.3 + r() * 0.7 }; }); }
-// 매끈한 얼룩(점 사이를 곡선으로 이음)
-function blobSmooth(ctx, cx, cy, r, seed, t) {
-  const N = 96, P = [];
-  for (let i = 0; i < N; i++) {
-    const a = i / N * Math.PI * 2;
-    const k = 1 + 0.14 * Math.sin(3 * a + seed) + 0.08 * Math.sin(5 * a + seed * 2.1 + t * 0.8) + 0.035 * Math.sin(9 * a + seed * 3.3 - t * 1.3);
-    P.push([cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k]);
-  }
-  const mid = i => { const p = P[i % N], q = P[(i + 1) % N]; return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; };
-  let s = mid(N - 1); ctx.moveTo(s[0], s[1]);
-  for (let i = 0; i < N; i++) { const e = mid(i); ctx.quadraticCurveTo(P[i][0], P[i][1], e[0], e[1]); }
-  ctx.closePath();
-}
 // 유기적인 얼룩 모양(물감)
 function blob(ctx, cx, cy, r, seed, t, sy = 1) {
   const N = 48;
@@ -172,7 +159,7 @@ export class IntroScene {
     this.clockAt = 0; this.stitchSrcs = [];
     this.buf = document.createElement('canvas'); this.bctx = this.buf.getContext('2d');
     this.mask = document.createElement('canvas'); this.mask.width = 480; this.mask.height = 270;
-    this.tmp = document.createElement('canvas'); this.tmp.width = 960; this.tmp.height = 540;
+    this.tmp = document.createElement('canvas'); this.tmp.width = 1672; this.tmp.height = 941;   // 그림 원래 크기(번진 부분도 또렷하게)
     this.makeGrain();
     this.dust = makeDust();
     if (!document.getElementById(STYLE_ID)) { const st = document.createElement('style'); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
@@ -424,46 +411,37 @@ export class IntroScene {
     }
   }
   // 잉크가 화면을 덮으며 다음 컷이 드러남
-  // 잉크가 화면을 덮었다가(윤기 있는 잉크 그림으로 채움) 옅어지며 다음 컷이 드러남. 가장자리는 작은 판에 그려 늘려 부드럽게
+  // 쏟아진 잉크가 웅덩이에서 고르지 않게 번져 나가며, 그 자리에 컷④(이미 조금 물든 숲 왕국)가 드러남.
+  // 덮는 그림이 곧 컷④ 화면이라, 다 덮은 뒤 되돌아가거나 겹쳐 비치는 일이 없음
   inkWipe(ctx, k, t) {
     const { W, H } = this, cv = this.view.cv;
-    const [mx, my] = this.mouthScreen || [W * 0.55, H * 0.6];
-    const g = seg(t, 24.35, 25.05), rv = ease(seg(t, 24.95, 25.4));
-    const g2 = seg(t, 24.5, 25.0), R = Math.hypot(W, H) * 1.2 * (easeIn(g2) * 0.6 + g2 * 0.4) + 2;   // 번지는 잉크는 튀는 잉크 뒤를 따라옴
-    if (rv > 0) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = rv; ctx.drawImage(this.buf, 0, 0); ctx.restore(); }
-    if (rv >= 1) return;
-    const q = 6, mw = Math.ceil(W / q), mh = Math.ceil(H / q);
-    const m = (this.wmask ||= document.createElement('canvas')); if (m.width !== mw || m.height !== mh) { m.width = mw; m.height = mh; }
+    const g = seg(t, 24.4, 24.98);
+    if (g <= 0) return;
+    if (g >= 1) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(this.buf, 0, 0); ctx.restore(); return; }
     const full = (this.wfull ||= document.createElement('canvas')); if (full.width !== cv.width || full.height !== cv.height) { full.width = cv.width; full.height = cv.height; }
-    const mc = m.getContext('2d'); mc.clearRect(0, 0, mw, mh); mc.fillStyle = '#fff'; mc.beginPath(); blobSmooth(mc, lerp(mx, W / 2, ease(g)) / q, lerp(my, H / 2, ease(g)) / q, R / q, 2.3, t * 4); mc.fill();
-    const fc = full.getContext('2d'); const dpr = this.view.dpr;
+    const fc = full.getContext('2d');
     fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalCompositeOperation = 'source-over'; fc.globalAlpha = 1; fc.clearRect(0, 0, full.width, full.height);
-    // 잉크 바탕: 짙은 진홍 + 웅덩이 그림의 윤기(가운데만 잘라 크게)
-    fc.fillStyle = '#4a0209'; fc.fillRect(0, 0, full.width, full.height);
-    const pud = cache.img.intro_c3_puddle;
-    if (pud) {
-      fc.globalAlpha = 0.9;
-      const sx = pud.width * 0.22, sy = pud.height * 0.3, sw = pud.width * 0.56, sh = pud.height * 0.4;
-      const cw = full.width * 1.25, ch = full.height * 1.25, ox = (mx * dpr) - cw * 0.5 + Math.sin(t * 1.3) * 20, oy = (my * dpr) - ch * 0.45;
-      fc.drawImage(pud, sx, sy, sw, sh, ox, oy, cw, ch);
-      fc.globalAlpha = 1;
-    }
-    const sh2 = fc.createRadialGradient(mx * dpr, my * dpr, 0, mx * dpr, my * dpr, Math.hypot(full.width, full.height) * 0.8);   // 가운데 밝고 바깥 어둡게
-    sh2.addColorStop(0, 'rgba(255,110,110,.2)'); sh2.addColorStop(1, 'rgba(20,0,2,.5)');
-    fc.fillStyle = sh2; fc.fillRect(0, 0, full.width, full.height);
-    fc.globalCompositeOperation = 'destination-in'; fc.imageSmoothingQuality = 'high'; fc.drawImage(m, 0, 0, full.width, full.height);
-    fc.globalCompositeOperation = 'source-over';
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1 - rv; ctx.drawImage(full, 0, 0); ctx.restore();
-    // 튀는 잉크가 화면(카메라) 쪽으로 덮쳐 옴: 윤기·방울이 살아 있는 그림을 크게 키움
-    const sp = cache.img.intro_c3_splash;
-    if (sp) {
-      const base = Math.min(W, H) * 0.55, sc = lerp(1, 5.5, easeIn(g) * 0.8 + g * 0.2);
-      const sw = base * sc, shh = sw * sp.height / sp.width;
-      const cx = lerp(mx, W / 2, ease(g)), cy = lerp(my, H / 2, ease(g));
-      ctx.save(); ctx.setTransform(this.view.dpr, 0, 0, this.view.dpr, 0, 0); ctx.globalAlpha = (1 - rv) * clamp(g * 4, 0, 1);
-      ctx.translate(cx, cy); ctx.rotate(-0.15 + g * 0.3); ctx.drawImage(sp, -sw / 2, -shh * 0.6, sw, shh); ctx.restore();
-    }
+    fc.drawImage(this.buf, 0, 0);
+    const [mx, my] = this.mouthScreen || [W * 0.55, H * 0.65];
+    const far = Math.max(Math.hypot(mx, my), Math.hypot(W - mx, my), Math.hypot(mx, H - my), Math.hypot(W - mx, H - my));
+    const r = far * 1.25 * (0.08 + 0.92 * (easeIn(g) * 0.5 + g * 0.5));
+    // 번지는 모양: 크기·방향이 다른 부드러운 덩이 여러 개를 겹쳐 고르지 않게(작은 판에 그려 늘림)
+    const q = 4, mw = Math.ceil(W / q), mh = Math.ceil(H / q);
+    const mk = (this.wmask ||= document.createElement('canvas')); if (mk.width !== mw || mk.height !== mh) { mk.width = mw; mk.height = mh; }
+    const mc = mk.getContext('2d'); mc.clearRect(0, 0, mw, mh);
+    const LOBES = [[0, 0, 1], [0.35, -0.25, 0.75], [-0.4, -0.1, 0.7], [0.15, 0.3, 0.65], [-0.2, -0.45, 0.6], [0.55, 0.1, 0.55], [-0.6, 0.25, 0.5]];
+    LOBES.forEach(([dx, dy, rs], i) => {
+      const grow = clamp(g * 1.15 - i * 0.03, 0, 1), rr = r * rs * (0.4 + 0.6 * grow), cx = (mx + dx * r * 0.55) / q, cy = (my + dy * r * 0.55) / q;
+      if (rr <= 0) return;
+      const lg = mc.createRadialGradient(cx, cy, 0, cx, cy, rr / q);
+      lg.addColorStop(0, 'rgba(0,0,0,1)'); lg.addColorStop(0.6, 'rgba(0,0,0,.95)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+      mc.fillStyle = lg; mc.fillRect(0, 0, mw, mh);
+    });
+    fc.globalCompositeOperation = 'destination-in'; fc.imageSmoothingQuality = 'high'; fc.drawImage(mk, 0, 0, full.width, full.height); fc.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(full, 0, 0); ctx.restore();
   }
+
+
 
 
 
@@ -508,7 +486,7 @@ export class IntroScene {
   cut3(ctx, t) {
     const slow = ease(seg(t, 21.5, 23.6));
     const cam = this.cam({ h: [[15.7, 0.5, 0.55, 1.1], [21.5, 0.48, 0.55, 1.15], [23.8, 0.5, 0.56, 1.19], [24.3, 0.55, 0.58, 1.19], [25.4, 0.56, 0.58, 1.17]],
-      v: [[15.7, 0.47, 0.56, 1.0], [21.5, 0.48, 0.57, 1.0], [23.7, 0.52, 0.58, 1.0], [24.1, 0.6, 0.6, 1.0], [24.5, 0.64, 0.6, 1.0], [25.4, 0.65, 0.6, 1.0]] }, t);
+      v: [[15.7, 0.47, 0.56, 1.0], [21.5, 0.48, 0.57, 1.0], [23.7, 0.52, 0.58, 1.0], [24.1, 0.62, 0.6, 1.0], [24.5, 0.66, 0.6, 1.0], [25.4, 0.665, 0.6, 1.0]] }, t);
     let shake = [0, 0];
     if (t > 24) { const d = Math.exp(-(t - 24) * 5.5) * Math.min(this.W, this.H) * 0.035; shake = [Math.sin(t * 91) * d, Math.cos(t * 77) * d * 0.8]; }
     const tf = this.bg(ctx, 'intro_c3_bg', cam, seg(t, 15.7, 16.4) > 0 ? 1 - ease(seg(t, 15.7, 16.6)) : 1, shake);
@@ -542,26 +520,30 @@ export class IntroScene {
       this.mouthScreen = rot([off - w / 2 + M[0] * w, -ih2 + M[1] * ih2]);
       const [mx, my] = this.mouthScreen;
       const pud = cache.img.intro_c3_puddle;
+      const V = this.ori === 'v';             // 세로 화면은 폭이 좁아 물보라·웅덩이·마개를 작게, 주둥이 쪽으로 모음
       if (down && pud) {        // 웅덩이: 주둥이 앞 탁자 위에서 점점 넓어짐
-        const k = easeOut(l / 1.3), pw = h * 1.5 * (0.12 + 0.88 * k), ph = pw * pud.height / pud.width;
+        const k = easeOut(l / 1.3), pw = h * (V ? 0.95 : 1.5) * (0.12 + 0.88 * k), ph = pw * pud.height / pud.width;
         ctx.save(); ctx.globalAlpha = clamp(l / 0.12, 0, 1);
-        ctx.drawImage(pud, mx - pw * 0.12, pvy - ph * 0.62, pw, ph); ctx.restore();
+        ctx.drawImage(pud, mx - pw * (V ? 0.5 : 0.12), pvy - ph * 0.62, pw, ph); ctx.restore();
+        this.dbgSplash = [mx - pw * (V ? 0.5 : 0.12), mx + pw * (V ? 0.5 : 0.88)];
       }
       ctx.save(); ctx.translate(pvx, pvy); ctx.rotate(ang); ctx.drawImage(img, off - w / 2, -ih2, w, ih2); ctx.restore();
       const sp = cache.img.intro_c3_splash;
-      if (down && sp && l < 0.55) {   // 쾅 하는 순간 주둥이에서 튀어 오르는 잉크
-        const k = easeOut(l / 0.35), sw = h * 0.9 * (0.45 + 0.55 * k), sh = sw * sp.height / sp.width;
-        ctx.save(); ctx.globalAlpha = 1 - seg(l, 0.22, 0.55);
-        ctx.drawImage(sp, mx - sw * 0.35, pvy - sh * 0.95, sw, sh); ctx.restore();
+      if (down && sp) {   // 쾅 하는 순간 주둥이에서 튀어 올랐다가 제자리에서 사라지는 잉크
+        const k = easeOut(l / 0.35), sw = h * (V ? 0.75 : 0.9) * (0.45 + 0.55 * k), sh = sw * sp.height / sp.width, ax = V ? 0.5 : 0.35;
+        if (t < 24.65) { ctx.save(); ctx.globalAlpha = 1 - seg(t, 24.35, 24.65); ctx.drawImage(sp, mx - sw * ax, pvy - sh * 0.95, sw, sh); ctx.restore(); }
+        if (t < 24.45) this.dbgSplash = [Math.min(this.dbgSplash?.[0] ?? 1e9, mx - sw * ax), Math.max(this.dbgSplash?.[1] ?? -1e9, mx + sw * (1 - ax))];
       }
       const ck = cache.img.intro_c3_cork;
       if (down && ck) {         // 마개: 튀어 올랐다가 탁자에 떨어져 구르다 멈춤
         const cw = w * 0.42, chh = cw * ck.height / ck.width;
         const floor = pvy - chh * 0.45;
-        let x = mx + h * 0.9 * l, y = my - h * 1.4 * l + h * 4.2 * l * l, r = Math.PI / 2 + l * 9;
+        const vx = h * (V ? 0.35 : 0.9), slide = h * (V ? 0.15 : 0.5);
+        let x = mx + vx * l, y = my - h * 1.4 * l + h * 4.2 * l * l, r = Math.PI / 2 + l * 9;
         const tl = (1.4 + Math.sqrt(1.96 + 4 * 4.2 * Math.max(0, (floor - my) / h))) / (2 * 4.2);   // 탁자에 닿는 때
-        if (l > tl) { const d = l - tl; x = mx + h * 0.9 * tl + h * 0.5 * (1 - Math.exp(-d * 4)); y = floor - Math.abs(Math.sin(d * 14)) * h * 0.08 * Math.exp(-d * 6); r = Math.PI / 2 + tl * 9 + (1 - Math.exp(-d * 4)) * 2.5; }
+        if (l > tl) { const d = l - tl; x = mx + vx * tl + slide * (1 - Math.exp(-d * 4)); y = floor - Math.abs(Math.sin(d * 14)) * h * 0.08 * Math.exp(-d * 6); r = Math.PI / 2 + tl * 9 + (1 - Math.exp(-d * 4)) * 2.5; }
         ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.drawImage(ck, -cw / 2, -chh / 2, cw, chh); ctx.restore();
+        this.dbgCork = [x - cw / 2, x + cw / 2];
       }
     }
     this.drawDust(ctx, t, 3, 0.5, 1 - slow * 0.8);
@@ -571,11 +553,11 @@ export class IntroScene {
   // 컷 4: 붉은 물감이 숲 왕국으로 번짐(물든 그림을 퍼지는 얼룩 모양으로 드러냄), 심장박동
   cut4(ctx, t) {
     let beat = 0; for (const pk of HEART) { const d = t - 26 - pk; if (d >= 0 && d < 1) beat = Math.max(beat, Math.exp(-d * 7)); }
-    const cam = this.cam({ h: [[24.35, 0.52, 0.5, 1.08], [32.2, 0.5, 0.52, 1.2]], v: [[24.35, 0.62, 0.5, 1.0], [32.2, 0.42, 0.52, 1.06]] }, t);
+    const cam = this.cam4(t);
     cam.z += beat * 0.008;
     const tf = this.bg(ctx, 'intro_c4_bg', cam, 0);
     const red = cache.img.intro_c4_red;
-    const k = seg(t, 25.0, 31.6);
+    const k = 0.32 + 0.68 * seg(t, 24.9, 31.6);       // 잉크가 걷히면 이미 3할쯤 물든 채로 이어서 번짐
     if (red && k > 0) {
       const m = this.mask.getContext('2d'); const MW = this.mask.width, MH = this.mask.height;
       m.clearRect(0, 0, MW, MH); m.fillStyle = '#fff';
@@ -585,6 +567,7 @@ export class IntroScene {
         if (kk <= 0) return;
         m.beginPath(); blob(m, sx * MW, sy * MH, R * MW * 0.55 * kk, j * 1.7 + 0.5, t * 0.6); m.fill();
       });
+      if (this.tmp.width !== red.width) { this.tmp.width = red.width; this.tmp.height = red.height; }
       const T = this.tmp.getContext('2d'); const TW = this.tmp.width, TH = this.tmp.height;
       T.globalCompositeOperation = 'source-over'; T.clearRect(0, 0, TW, TH);
       T.drawImage(red, 0, 0, TW, TH);
@@ -599,6 +582,7 @@ export class IntroScene {
       ctx.fillStyle = g; ctx.fillRect(0, 0, this.W, this.H);
     }
   }
+  cam4(t) { return this.cam({ h: [[24.35, 0.52, 0.5, 1.08], [32.2, 0.5, 0.52, 1.2]], v: [[24.35, 0.62, 0.5, 1.0], [32.2, 0.42, 0.52, 1.06]] }, t); }
   eyeT(i) { return POS.c5.times[i] ?? EYE_T0 + i; }
   // 컷 5: 물든 말들의 눈이 박마다 하나씩 켜짐
   cut5(ctx, t) {

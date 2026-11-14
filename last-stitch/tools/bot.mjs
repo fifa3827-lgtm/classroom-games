@@ -2,12 +2,14 @@
 // 사용: node tools/bot.mjs [판번호...] [--n 40]
 import { Game } from '../js/engine/game.js';
 import { getLevel, LEVELS } from '../js/data/levels.js';
-import { TOWER_ORDER } from '../js/data/towers.js';
+import { TOWER_ORDER, TOWER_ORDER_ALL } from '../js/data/towers.js';
 
 const args = process.argv.slice(2);
 const nIdx = args.indexOf('--n');
 const N = nIdx >= 0 ? +args[nIdx + 1] : 40;
-const ids = args.filter((a, i) => !a.startsWith('--') && (nIdx < 0 || i !== nIdx + 1));
+const sIdx = args.indexOf('--s');
+const onlyS = sIdx >= 0 ? args[sIdx + 1].split(',') : null;
+const ids = args.filter((a, i) => !a.startsWith('--') && (nIdx < 0 || i !== nIdx + 1) && (sIdx < 0 || i !== sIdx + 1));
 const levels = ids.length ? ids : LEVELS.filter(l => !l.test).map(l => l.id);
 
 // 빈자리를 「길에 가까운 정도」로 줄 세운다(길 점들과 사거리 안에 드는 수)
@@ -24,6 +26,8 @@ const STRATS = {
   // 섞어서 + 올리기 + 실
   mixed_thread: { types: ['archer', 'cannon', 'ice', 'lightning'], upgrade: true, thread: true },
   mixed_nothread: { types: ['archer', 'cannon', 'ice', 'lightning'], upgrade: true, thread: false },
+  // 판에서 열린 탑을 모두 섞고, 갈래·실·손 기술까지 쓰는 사람
+  full: { types: 'all', upgrade: true, thread: true, branch: true, skills: true },
   // 서툰 사람: 탑 3개까지만, 올리기 안 함
   lazy: { types: ['archer', 'cannon'], upgrade: false, thread: false, maxTowers: 3 },
 };
@@ -31,6 +35,7 @@ const STRATS = {
 function play(level, strat, seed) {
   const g = new Game(level, 'v', { seed });
   const pads = [...g.geo.pads.keys()].sort((a, b) => padScore(g, b) - padScore(g, a));
+  if (strat.types === 'all') strat = { ...strat, types: TOWER_ORDER_ALL.filter(t => g.towerAllowed(t) && t !== 'bell') };
   let ti = 0, tick = 0;
   const think = () => {
     // 세우기
@@ -40,10 +45,16 @@ function play(level, strat, seed) {
       if (g.gold >= g.cost(type)) { g.build(free[0], type); ti++; return; }
       if (!strat.upgrade || g.towers.length < 3) return;
     }
-    // 올리기: 가장 길에 가까운 탑부터
+    // 올리기: 가장 길에 가까운 탑부터 (갈래까지)
     if (strat.upgrade) {
-      const t = g.towers.filter(t => g.upgradePrice(t)).sort((a, b) => padScore(g, b.pad) - padScore(g, a.pad))[0];
-      if (t && g.gold >= g.upgradePrice(t)) g.upgrade(t);
+      const t = g.towers.filter(t => g.upgradePrice(t) || (strat.branch && g.branchOpen() && t.level === 3)).sort((a, b) => padScore(g, b.pad) - padScore(g, a.pad))[0];
+      if (t && t.level === 3) g.branch(t, t.id % 2 ? 'a' : 'b');
+      else if (t && g.gold >= g.upgradePrice(t)) g.upgrade(t);
+    }
+    // 손 기술: 적이 가장 많이 모인 곳 / 성문에 가장 가까운 적
+    if (strat.skills && g.enemies.length) {
+      const front = g.enemies.filter(e => e.d > 0).sort((a, b) => g.progress(b) - g.progress(a))[0];
+      if (front && g.progress(front) > 0.55) { if (g.skillReady('rewind')) g.useSkill('rewind', front.x, front.y); else if (g.skillReady('needles')) g.useSkill('needles', front.x, front.y); }
     }
     // 실: 길을 가로지르는 짝을 잇는다
     if (strat.thread && g.spoolsFree() > 0) {
@@ -75,6 +86,7 @@ console.log('판   전략             승률   평균생명  별3   시간(분)'
 for (const id of levels) {
   const L = getLevel(id);
   for (const [name, st] of Object.entries(STRATS)) {
+    if (onlyS && !onlyS.includes(name)) continue;
     const rs = [];
     for (let i = 0; i < N; i++) rs.push(play(L, st, 1000 + i * 7919));
     const w = rs.filter(r => r.win).length / N;

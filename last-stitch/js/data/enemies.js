@@ -22,6 +22,12 @@ export const ENEMIES = {
   queen:  { name: '여왕 말',    hp: 340, speed: 40, reward: 40, lives: 3, mat: 'wood',  size: 130, img: 'enemy_queen', hop: 0.3, elite: true, haste: [160, 1.35] },
   clockknight: { name: '태엽 기사', hp: 420, speed: 30, reward: 42, lives: 3, mat: 'metal', size: 136, img: 'enemy_clockknight', hop: 0.35, elite: true, physResist: 0.3, windup: [3, 0.18, 2.2] },
   inkgiant: { name: '먹물 거인', hp: 760, speed: 28, reward: 50, lives: 4, mat: 'paint', size: 160, img: 'enemy_inkgiant', hop: 0.2, elite: true, inkCut: true },
+  // 보스 (판 마지막 웨이브). boss: 규칙 이름(game.js bossStep)
+  inkbottle: { name: '쏟아진 잉크병', hp: 1500, speed: 24, reward: 150, lives: 10, mat: 'paint', size: 210, img: 'boss_inkbottle', hop: 0.12, elite: true, boss: 'inkbottle' },
+  bear:   { name: '태엽 곰',       hp: 2200, speed: 30, reward: 180, lives: 10, mat: 'wood',  size: 220, img: 'boss_bear', hop: 0.2, elite: true, boss: 'bear' },
+  snake:  { name: '모래시계 뱀',   hp: 2600, speed: 22, reward: 200, lives: 12, mat: 'wood',  size: 230, img: 'boss_snake', hop: 0.1, elite: true, boss: 'snake' },
+  ship:   { name: '병 속의 해적선', hp: 2600, speed: 20, reward: 220, lives: 15, mat: 'wood',  size: 240, img: 'boss_ship', hop: 0.08, elite: true, boss: 'ship' },
+  hand:   { name: '붉은 손',       hp: 5200, speed: 17, reward: 300, lives: 20, mat: 'paint', size: 250, img: 'boss_hand', hop: 0.1, elite: true, boss: 'hand' },
 };
 export const CHAPTER_HP = 1.35; // 장마다 체력 배수
 export const ENEMY_ORDER = ['blob', 'pawn', 'mouse', 'knight', 'splitblob', 'crane', 'snowman', 'mole', 'scissorbug', 'bishop', 'ghost', 'crab', 'golem', 'rook', 'queen', 'clockknight', 'inkgiant'];

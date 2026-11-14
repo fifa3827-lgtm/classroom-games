@@ -79,6 +79,18 @@ console.log('적 17종');
 { // 17종 전부 길 끝까지 가는지(막힘 없음)
   for (const type of ENEMY_ORDER) { const g = G(); const e = put(g, type, 0); e.hp = e.maxHp = 1e9; run(g, 120); ok(!g.enemies.includes(e) && g.lives < L.lives, type + ' 성문 도착'); }
 }
+console.log('보스 5종');
+{ const g = G(); const e = put(g, 'inkbottle', 200); e.hp = e.maxHp = 1e9; run(g, 3); ok(g.puddles.length > 0, '잉크병 웅덩이');
+  const p = g.puddles[0], b = put(g, 'pawn', 0); b.x = p.x; b.y = p.y; b.d = 1; g.enemyAbilities(0); g.bossField(0); ok(b.haste > 1.3, '웅덩이 위 빨라짐');
+  g.freezePuddles(p.x, p.y, 10); b.haste = 1; g.bossField(0); ok(p.frozen && b.slow > 0.3, '얼린 웅덩이는 느리게'); }
+{ const g = G(); const e = put(g, 'bear', 100); e.hp = e.maxHp = 1e9; run(g, 6.5); ok(e.pauseT > 0 && e.vuln > 1.5, '곰 멈춤·약해짐'); const d0 = e.d; run(g, 1); ok(Math.abs(e.d - d0) < 0.5, '멈춘 곰 안 움직임'); run(g, 3.5); ok(e.d > d0 + 5, '곰 다시 걸음'); }
+{ const g = G(); const e = put(g, 'snake', 300); e.hp = e.maxHp = 1e9; e.glass = 1e9; g.grave.push('pawn', 'pawn', 'blob'); const n0 = g.enemies.length; run(g, 9.2); ok(g.enemies.length >= n0 + 3, '뱀 모래시계가 되살림');
+  const g2 = G(); const s2 = put(g2, 'snake', 300); g2.damage(s2, s2.glassMax * 3, 'magic'); ok(s2.glass === 0 && s2.hp < s2.maxHp, '모래시계 깨짐'); }
+{ const g = G(); g.gold = 1e5; const e = put(g, 'ship', 0); const h = e.hp; g.damage(e, 100, 'magic'); ok(e.hp === h, '병 속 무적');
+  let pairs = []; for (let i = 0; i < g.geo.pads.length; i++) for (let j = i + 1; j < g.geo.pads.length; j++) pairs.push([i, j]);
+  for (const [i, j] of pairs) { if (g.spoolsFree() <= 0) break; const a = g.towerAt(i) || g.build(i, 'archer'), b = g.towerAt(j) || g.build(j, 'archer'); if (g.linkCheck(a, b) === 'ok' && g.threadCrosses(a, b)) g.link(a, b); else continue; }
+  g.useSkill('needles', e.x, e.y); run(g, 0.5); ok(e.bottle < 3, '바늘비가 병에 금'); e.hp = e.maxHp = 1e9; e.bottle = 1; e.cracked.clear(); run(g, 120); ok(e.bottle === 0 || !g.enemies.includes(e), '실 밑을 지나며 병 깨짐 (bottle ' + e.bottle + ')'); }
+{ const g = G(); const e = put(g, 'hand', 100); e.hp = e.maxHp = 1e9; run(g, 7); ok(g.redLines.length > 0 || g.events.some(v => v.t === 'redline'), '붉은 손 선 긋기'); }
 console.log('손 기술');
 { const g = G(); const e = put(g, 'pawn', 500); const h = e.hp; ok(g.useSkill('needles', e.x, e.y), '바늘비 씀'); ok(!g.useSkill('needles', e.x, e.y), '바늘비 대기'); run(g, 0.5); ok(e.hp < h, '바늘비 피해'); run(g, 30); ok(g.skillReady('needles'), '바늘비 다시'); }
 { const g = G(); const e = put(g, 'pawn', 500); const d0 = e.d; g.useSkill('rewind', e.x, e.y); ok(e.d < d0 - 100, '되감기'); }

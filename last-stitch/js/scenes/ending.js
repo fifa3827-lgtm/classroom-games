@@ -21,7 +21,7 @@ const CSS = `
 .en-end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(30px + var(--safe-t,0px)) 24px calc(30px + var(--safe-b,0px));
   text-align:center;opacity:0;transition:opacity 1.6s}
 .en-end.on{opacity:1}
-.en-end .en-t{font-family:'Cinzel Deco',serif;font-variant-ligatures:none;font-feature-settings:'liga' 0,'dlig' 0;font-size:clamp(30px,7vmin,60px);color:#f3c55a;letter-spacing:.02em;
+.en-end .en-t{font-family:'Cinzel Deco',serif;font-variant-ligatures:none;font-feature-settings:'liga' 0,'dlig' 0;font-size:clamp(30px,7vmin,60px);color:#f3c55a;letter-spacing:.06em;padding-left:.06em;
   background:linear-gradient(#fff4d2,#f3c55a 50%,#b5771f);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 3px 6px rgba(0,0,0,.7))}
 .en-end .en-fin{font-size:clamp(18px,3vmin,24px);letter-spacing:.6em;padding-left:.6em;color:#eadbbd;margin-top:-4px}
 .en-end .en-stitch{width:min(260px,60vw);height:2px;margin:6px 0 4px;background:repeating-linear-gradient(90deg,#f3c55a 0 14px,transparent 14px 22px);opacity:.85}
@@ -111,7 +111,7 @@ export class EndingScene {
     if (s.stars != null) rows.push(['모은 별', s.starsMax ? `${s.stars} / ${s.starsMax}` : `${s.stars}`]);
     if (s.thimbles != null) rows.push(['모은 골무', `${s.thimbles}`]);
     const end = this.root.querySelector('.en-end');
-    end.innerHTML = `<div class="en-t">The Last Stitch</div><div class="en-fin">끝</div><div class="en-stitch"></div>
+    end.innerHTML = `<div class="en-t">THE LAST STITCH</div><div class="en-fin">끝</div><div class="en-stitch"></div>
       ${rows.length ? `<div class="en-rows">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('')}</div>` : ''}
       <div class="en-stitch"></div><div class="en-hard"><b>어려운 모드</b>가 열렸어요.<br>${this.opts.hardText || '더 거세진 붉은 물감에 맞서<br>모든 왕국을 다시 지켜 보세요.'}</div>
       <button class="en-btn">처음 화면으로</button>`;
