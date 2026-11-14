@@ -93,11 +93,35 @@ export class LevelScene {
     return { t: tb.bottom + 4, b: Math.max(0, this.view.H - bb.top) + 4, l: 0, r: 0 };
   }
   // 안전 구역: 빈자리 위에 서는 탑 머리(약 200)까지 보이게 위쪽을 넓힌다
-  safeRect() {
-    const g = this.game.geo, s = SAFE[this.ori].slice();
-    const top = Math.min(...g.pads.map(p => p[1])) - 330;
-    s[1] = Math.min(s[1], top / g.H);   // 맵 위끝보다 위일 수도 있음(그때는 흐린 바탕이 위에 보임)
-    return s;
+  safeRect() { return SAFE[this.ori].slice(); }
+  // 화면 맞춤: 먼저 맞춘 뒤, 정보 띠 칩·단추 밑에 머리가 들어가는 탑 자리가 있으면 그만큼만 위쪽을 넓혀 다시 맞춘다
+  // 화면 맞춤: 먼저 맞춘 뒤, 탑 머리(빈자리 위 295)가 화면 위 끝(정보 띠 밑 자리면 띠 아래끝)보다 위로 나가면
+  // ① 맵을 아래로 밀 수 있는 만큼 밀고 ② 모자라면 안전 구역 위쪽을 조금씩 넓혀(맵이 조금 작아짐) 다시 맞춘다.
+  fitView() {
+    const g = this.game.geo, v = this.view, ins = this.insets();
+    const s = this.safeRect();
+    const rects = [...this.hudTop.children].filter(c => !c.classList.contains('grow')).map(c => c.getBoundingClientRect());
+    const hudB = Math.max(0, ...rects.map(r => r.bottom));
+    const lack = () => {
+      let d = 0;
+      for (const [x, y] of g.pads) {
+        const [sx, hy] = v.w2s(x, y - 295);
+        const half = 90 * v.s;
+        const under = rects.some(r => sx + half > r.left - 4 && sx - half < r.right + 4);
+        d = Math.max(d, (under ? hudB + 2 : 2) - hy);
+      }
+      return d;
+    };
+    for (let k = 0; k < 30; k++) {
+      v.fit(g.W, g.H, s, ins);
+      let d = lack();
+      if (d <= 0) return;
+      // ① 아래로 밀기: 맵이 화면을 덮는 동안(oy ≤ 0)이고 안전 구역 아래끝이 아래 띠 위에 남는 만큼
+      const room = Math.min(-v.oy, (v.H - ins.b) - v.w2s(0, s[3] * g.H)[1]);
+      if (room > 0) { const m = Math.min(room, d); v.oy += m; d -= m; }
+      if (d <= 0) return;
+      s[1] -= 0.015;   // ② 위쪽을 조금 넓힘
+    }
   }
   applyOrientation(first) {
     const ori = this.ori;
@@ -110,14 +134,15 @@ export class LevelScene {
     const M = this.level.map[ori];
     const img = IMG[`map_${this.level.id}_${ori}`];
     this.r.setMap(img);
-    this.view.fit(this.game.geo.W, this.game.geo.H, this.safeRect(), this.insets());
+    this.fitView();
     this.closeMenu();
   }
   resize() {
     const ori = this.view.resize();
     if (ori !== this.ori) { this.ori = ori; this.applyOrientation(false); }
-    else this.view.fit(this.game.geo.W, this.game.geo.H, this.safeRect(), this.insets());
+    else this.fitView();
     if (this.menu) this.positionMenu();
+    if (this.tutTip) this.placeTip(this.tutTip, this.tutTip._keep || []);
   }
 
   // ── 누르기 ──
@@ -155,12 +180,12 @@ export class LevelScene {
     this.game.geo.pads.forEach(([x, y], i) => { const d = Math.hypot(wx - x, (wy - y) * 1.3); if (d < bd) { bd = d; best = i; } });
     return best;
   }
-  threadAtScreen(sx, sy) {
+  threadAtScreen(sx, sy, mid = false) {
     const [wx, wy] = this.view.s2w(sx, sy);
-    let best = null, bd = 34;
+    let best = null, bd = Math.max(34, 18 / this.view.s);
     for (const th of this.game.threads) {
       const a = this.game.towerTop(th.a), b = this.game.towerTop(th.b), m = th._mid || [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-      for (let i = 0; i <= 20; i++) {
+      for (let i = mid ? 4 : 0; i <= (mid ? 16 : 20); i++) {
         const u = i / 20, q = 1 - u;
         const x = q * q * a[0] + 2 * q * u * m[0] + u * u * b[0], y = q * q * a[1] + 2 * q * u * m[1] + u * u * b[1];
         const d = Math.hypot(wx - x, wy - y);
@@ -174,8 +199,9 @@ export class LevelScene {
     if (this.tutTip) this.tutTip.dataset.until = this.realT;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY;
-    const t = this.towerAtScreen(sx, sy);
-    const th = t ? null : this.threadAtScreen(sx, sy);
+    const thMid = this.threadAtScreen(sx, sy, true);
+    const t = thMid ? null : this.towerAtScreen(sx, sy);
+    const th = thMid || (t ? null : this.threadAtScreen(sx, sy));
     const pad = t || th ? -1 : this.padAtScreen(sx, sy);
     this.press = { id: e.pointerId, sx, sy, t, th, pad: pad >= 0 && !this.game.towerAt(pad) ? pad : -1, moved: false, at: performance.now() };
   }
@@ -236,8 +262,14 @@ export class LevelScene {
       const cross = g.threadCrosses(D.from, D.over);
       b.innerHTML = `<div class="in"><b>${c.name}</b><div class="st">${cross ? c.desc : '길 위를 지나지 않아요. 두 탑이 힘만 나눠요.'}</div><div class="st">나눠 받는 힘: ${this.shareText(D.from, D.over)}</div></div>`;
     } else b.innerHTML = `<div class="in"><div class="st">${{ far: '실이 닿지 않아요', dup: '이미 이어졌어요', nospool: '남은 실패가 없어요' }[why] || ''}</div></div>`;
-    b.style.left = '50%'; b.style.top = (this.insets().t + 4) + 'px';
+    b.style.left = '50%';
     this.ui.append(b); this.dTip = b;
+    const ins = this.insets(), fy = this.view.w2s(...this.game.padPos(D.over.pad))[1];
+    if (this.short()) {
+      const fx = this.view.w2s(...this.game.padPos(D.over.pad))[0];
+      b.style.transform = 'none'; b.style.top = (ins.t + 4) + 'px';
+      b.style.left = (fx > this.view.W / 2 ? 8 : this.view.W - b.offsetWidth - 8) + 'px';
+    } else b.style.top = (fy < this.view.H / 2 ? this.view.H - ins.b - b.offsetHeight - 4 : ins.t + 4) + 'px';
   }
   shareText(a, b) {
     const ea = TOWERS[a.type].elem, eb = TOWERS[b.type].elem;
@@ -250,17 +282,30 @@ export class LevelScene {
     this.menu = null;
     Object.assign(this.r.ui, { pads: false, sel: null, range: null, preview: null, selThread: null });
   }
+  short() { return this.view.H - this.insets().t - this.insets().b < 330; }
   positionMenu() {
     const m = this.menu; if (!m) return;
     let [x, y] = this.view.w2s(...m.anchor);
     const R = 86, W = this.view.W, H = this.view.H;
-    x = Math.max(R + 8, Math.min(W - R - 8, x)); y = Math.max(R + 60, Math.min(H - R - 70, y));
+    { const ins = this.insets(); const ry = this.short() ? 52 : R; const rx = this.short() ? 150 : R; x = Math.max(rx + 8, Math.min(W - rx - 8, x)); y = Math.max(ins.t + ry, Math.min(H - ins.b - ry, y)); }
     m.node.style.left = x + 'px'; m.node.style.top = y + 'px';
     if (m.tip) {
-      const above = y > H * 0.45;
-      m.tip.style.left = Math.max(140, Math.min(W - 140, x)) + 'px';
-      m.tip.style.top = above ? '' : (y + R + 40) + 'px';
-      m.tip.style.bottom = above ? (H - y + R + 34) + 'px' : '';
+      const ins = this.insets();
+      const tw = m.tip.offsetWidth || 260, th = m.tip.offsetHeight || 110;
+      let tx, ty;
+      if (this.short()) {
+        // 낮은 화면: 단추가 한 줄. 줄 위나 아래에 설명 칸, 둘 다 모자라면 설명 칸을 맨 위에 두고 줄을 그 밑으로 내린다
+        tx = x;
+        if (y - 44 - th >= ins.t + 4) ty = y - 44 - th;
+        else if (y + 44 + th <= H - ins.b - 4) ty = y + 44;
+        else { ty = ins.t + 4; y = Math.min(H - ins.b - 34, ty + th + 40); m.node.style.top = y + 'px'; }
+      } else {
+        tx = x;
+        ty = y > H * 0.45 ? y - R - 34 - th : y + R + 40;
+      }
+      tx = Math.max(tw / 2 + 6, Math.min(W - tw / 2 - 6, tx));
+      ty = Math.max(ins.t + 4, Math.min(H - ins.b - th - 4, ty));
+      m.tip.style.left = tx + 'px'; m.tip.style.top = ty + 'px'; m.tip.style.bottom = '';
     }
   }
   makeMenu(anchor, opts) {
@@ -304,7 +349,7 @@ export class LevelScene {
   costHtml(c) { return `<span class="cost"><img src="assets/ui/icon_coin.webp" alt="">${c}</span>`; }
   openBuildMenu(pad) {
     const g = this.game;
-    const pos = [[-52, -50], [52, -50], [-52, 54], [52, 54]];
+    const pos = this.short() ? [[-111, 0], [-37, 0], [37, 0], [111, 0]] : [[-52, -50], [52, -50], [-52, 54], [52, 54]];
     this.r.ui.pads = false;
     const opts = TOWER_ORDER.map((type, i) => {
       const T = TOWERS[type], st = towerStats(type, 1);
@@ -331,7 +376,7 @@ export class LevelScene {
     const links = g.threads.filter(th => th.a === t || th.b === t).map(th => `${th.combo.name}(${th.crosses ? '길 위' : '힘 나눔'})`);
     const opts = [
       {
-        dx: 0, dy: -68, label: '올리기',
+        dx: this.short() ? -66 : 0, dy: this.short() ? 0 : -68, label: '올리기',
         html: nx ? `<img src="assets/towers/${t.type}_${t.level + 1}.webp" alt="">${this.costHtml(up)}` : '<span class="sym">★</span>',
         cls: !nx || g.gold < up ? 'poor' : '',
         disabled: () => !nx || g.gold < up,
@@ -340,7 +385,7 @@ export class LevelScene {
         act: () => { if (g.upgrade(t)) this.closeMenu(); },
       },
       {
-        dx: 0, dy: 70, label: '팔기', cls: 'sell',
+        dx: this.short() ? 66 : 0, dy: this.short() ? 0 : 70, label: '팔기', cls: 'sell',
         html: `<span class="sym" style="font-size:22px">팔기</span>${this.costHtml(g.sellPrice(t))}`,
         info: () => `<b>팔기</b><div class="st">금화 ${g.sellPrice(t)}개를 돌려받습니다.${links.length ? ' 이어진 실도 풀립니다.' : ''} 한 번 더 누르면 팝니다.</div>`,
         focus: () => {},
@@ -358,7 +403,7 @@ export class LevelScene {
   openThreadMenu(th) {
     const opts = [{
       dx: 0, dy: 0, label: '실 끊기',
-      html: '<span class="sym">✂</span>',
+      html: '<span class="sym" style="font-size:18px">끊기</span>',
       info: () => `<b>${th.combo.name}</b><div class="st">${th.combo.desc}</div><div class="st">한 번 더 누르면 끊습니다. 실패는 4초 뒤 다시 쓸 수 있어요.</div>`,
       focus: () => {},
       act: () => { this.game.cut(th); this.closeMenu(); },
@@ -395,7 +440,7 @@ export class LevelScene {
     this.talkI = i;
     const L = lines[i];
     this.bubble.style.top = this.ori === 'v' ? '30%' : '26%';
-    this.bubble.innerHTML = `<div class="in"><div><div class="who">${L.who}</div>${L.text}<div class="next">눌러서 넘기기 ▸</div></div></div>`;
+    this.bubble.innerHTML = `<div class="in"><div><div class="who">${L.who}</div>${L.text}<div class="next">눌러서 넘기기</div></div></div>`;
   }
   tutStep(n) {
     const T = this.tut; if (!T || n < T.step) return;
@@ -403,7 +448,7 @@ export class LevelScene {
     this.hand?.remove(); this.hand = null; this.tutTip?.remove(); this.tutTip = null;
     const g = this.game;
     const tipAt = (text, keep = []) => {
-      const b = el('div', 'bubble parch pass'); b.innerHTML = `<div class="in"><div>${text}</div></div>`;
+      const b = el('div', 'bubble tutor parch pass'); b.innerHTML = `<div class="in"><div>${text}</div></div>`;
       this.ui.append(b); this.tutTip = b; this.placeTip(b, keep);
       b.dataset.until = this.realT + (n === 4 ? 7 : 6);
     };
@@ -434,23 +479,47 @@ export class LevelScene {
     T.dragA = best?.[0]; T.dragB = best?.[1];
   }
   // 안내 풍선을 빈자리·탑을 덜 가리는 높이로 옮긴다
+  // 안내 풍선 자리 고르기: 화면 안 여러 자리(가로·세로) 가운데 빈자리·성문·길·손가락을 가장 덜 가리는 곳.
+  // 폰 가로처럼 낮은 화면은 위 정보 띠 가운데 빈 곳도 후보로 넣는다.
   placeTip(b, keep = []) {
     if (!b) return;
-    const g = this.game, H = this.view.H;
+    b._keep = keep;
+    const g = this.game, v = this.view, W = v.W, H = v.H;
     const ins = this.insets();
-    const h = b.offsetHeight || 90;
-    const pads = g.geo.pads.map((p, i) => [...this.view.w2s(...p), keep.includes(i) ? 50 : 1]);
-    const cands = [];
-    for (let y = ins.t + 6; y + h < H - ins.b - 6; y += 12) cands.push(y);
-    let best = cands[0], bc = 1e9;
-    for (const y of cands) {
+    b.style.left = '50%'; b.style.transform = 'translateX(-50%)'; b.style.width = '';
+    const w0 = b.offsetWidth, h0 = b.offsetHeight || 90;
+    const pads = g.geo.pads.map((p, i) => { const [x, y] = v.w2s(...p); return [x, y, keep.includes(i) ? 60 : 4, g.towerAt(i) ? 280 : 50]; });
+    const R = 62 * v.s;
+    const pts = []; for (const P of g.geo.paths) for (let i = 0; i < P.pts.length; i += 2) pts.push(v.w2s(...P.pts[i]));
+    const gate = v.w2s(...g.geo.gate);
+    const cost = (l, t, w, h) => {
       let c = 0;
-      // 빈자리(탑 머리 포함: 위로 110px)와 겹치면 벌점, 안내가 가리키는 자리는 큰 벌점
-      for (const [, py, w] of pads) if (py > y - 30 && py - 110 < y + h) c += w;
-      c += Math.abs(y - H * 0.4) / H;  // 같으면 가운데쯤
-      if (c < bc) { bc = c; best = y; }
+      for (const [x, y, wt, head] of pads) if (x + R > l && x - R < l + w && y + R * 0.7 > t && y - head * v.s < t + h) c += wt;
+      for (const [x, y] of pts) if (x > l && x < l + w && y > t && y < t + h) c += 0.25;
+      if (gate[0] + 90 * v.s > l && gate[0] - 90 * v.s < l + w && gate[1] + 40 * v.s > t && gate[1] - 160 * v.s < t + h) c += 3;
+      return c;
+    };
+    const cands = [];
+    for (let t = ins.t + 4; t + h0 < H - ins.b - 4; t += 8) for (const cx of [W / 2, W * 0.3, W * 0.7]) {
+      const l = Math.max(6, Math.min(W - w0 - 6, cx - w0 / 2));
+      cands.push([l, t, w0, h0]);
     }
-    b.style.top = best + 'px';
+    // 정보 띠 가운데 빈 곳(칩 오른쪽 끝 ~ 단추 왼쪽 끝)
+    const kids = [...this.hudTop.children].filter(c => !c.classList.contains('grow')).map(c => c.getBoundingClientRect());
+    const left = Math.max(...kids.filter(r => r.left < W / 2).map(r => r.right), 0) + 8;
+    const right = Math.min(...kids.filter(r => r.left >= W / 2).map(r => r.left), W) - 8;
+    if (right - left >= 260) {
+      b.style.width = Math.min(right - left, 460) + 'px';
+      const hh = b.offsetHeight; b.style.width = '';
+      cands.push([left + (right - left - Math.min(right - left, 460)) / 2, 4, Math.min(right - left, 460), hh, true]);
+    }
+    let best = cands[0], bc = 1e9;
+    for (const cd of cands) { const c = cost(...cd) + Math.abs(cd[1] + cd[3] / 2 - H * 0.45) / H * 0.5; if (c < bc) { bc = c; best = cd; } }
+    b.style.transform = 'none';
+    b.style.left = best[0] + 'px'; b.style.top = best[1] + 'px';
+    b.style.width = best[4] ? best[2] + 'px' : w0 + 'px';
+    // 손가락이 글자 위에 오면 손가락을 숨긴다(그 동안 빛 고리가 대신 알림)
+    this.tipRect = [best[0], best[1], best[0] + best[2], best[1] + best[3]];
   }
   tutAfterBuild() {
     if (this.tut.step === 1) { this.r.ui.pads = false; this.tutStep(2); }
@@ -465,6 +534,7 @@ export class LevelScene {
       this.hand.style.left = x + 'px'; this.hand.style.top = y + 'px';
       this.hand.style.display = this.menu ? 'none' : '';
       if (this.tutTip) this.tutTip.style.display = this.menu ? 'none' : '';
+      if (this.tutTip && this.tipRect) { const r = this.tipRect; this.hand.style.opacity = x > r[0] - 30 && x < r[2] + 10 && y > r[1] - 50 && y < r[3] + 10 ? 0 : 1; }
     }
     if (T.step === 2 && this.tutTip && this.menu) this.tutTip.style.display = 'none';
     else if (T.step === 2 && this.tutTip) this.tutTip.style.display = '';
@@ -477,6 +547,7 @@ export class LevelScene {
         const u = (this.realT % 2) / 2, k = u < 0.2 ? 0 : u > 0.8 ? 1 : (u - 0.2) / 0.6;
         this.hand.style.left = (a[0] + (b[0] - a[0]) * k) + 'px'; this.hand.style.top = (a[1] + (b[1] - a[1]) * k) + 'px';
         this.hand.style.opacity = u > 0.9 ? 0 : 1;
+      if (this.tutTip && this.tipRect) { const hx = parseFloat(this.hand.style.left), hy = parseFloat(this.hand.style.top); const r = this.tipRect; if (hx > r[0] - 30 && hx < r[2] + 10 && hy > r[1] - 50 && hy < r[3] + 10) this.hand.style.opacity = 0; }
       } else if (this.hand) this.hand.style.display = 'none';
       if (this.tutTip) this.tutTip.style.display = this.menu ? 'none' : '';
     }

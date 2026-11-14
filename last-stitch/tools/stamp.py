@@ -1,7 +1,9 @@
 # 고친 파일이 브라우저·서버 캐시에 막히지 않게, index.html 에 파일마다 내용 해시를 붙인 import map 을 쓴다.
 # 코드를 고칠 때마다(특히 올리기 전) 돌린다. 사용: python tools/stamp.py
-import os, re, glob, hashlib, json
+import os, re, glob, hashlib, json, subprocess, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 글을 고치면 글꼴에 없는 글자가 생기므로 글꼴부터 다시 만든다
+subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'fonts.py')], check=True, cwd=os.path.join(ROOT, 'tools'), capture_output=True)
 def h(p): return hashlib.md5(open(p, 'rb').read()).hexdigest()[:8]
 imports = {}
 for f in sorted(glob.glob(os.path.join(ROOT, 'js', '**', '*.js'), recursive=True)):
@@ -15,6 +17,7 @@ if '<script type="importmap">' in s:
 else:
     s = s.replace('<script type="module"', block + '\n<script type="module"')
 s = re.sub(r'src="(\./)?js/main\.js(\?v=\w+)?"', 'src="./js/main.js?v=' + h(os.path.join(ROOT, 'js', 'main.js')) + '"', s)
-s = re.sub(r'href="css/style\.css(\?v=\w+)?"', f'href="css/style.css?v={h(os.path.join(ROOT, "css", "style.css"))}"', s)
+fv = hashlib.md5(b''.join(open(f, 'rb').read() for f in sorted(glob.glob(os.path.join(ROOT, 'assets', 'fonts', '*.woff2'))))).hexdigest()[:6]
+s = re.sub(r'href="css/style\.css(\?v=\w+)?"', f'href="css/style.css?v={h(os.path.join(ROOT, "css", "style.css"))}{fv}"', s)
 open(idx, 'w', encoding='utf-8').write(s)
 print('stamped', len(imports), 'modules')
