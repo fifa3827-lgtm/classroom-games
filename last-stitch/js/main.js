@@ -1,6 +1,6 @@
 // 시작점: 불러오기, 설정 저장, 장면 돌리기
 import { View } from './engine/view.js';
-import { loadAll, TOWER_IMGS, ENEMY_IMGS, UI_IMGS, CANNON_PARTS } from './engine/assets.js';
+import { loadAll, TOWER_IMGS, ENEMY_IMGS, UI_IMGS, CANNON_PARTS, ARCHER_PARTS } from './engine/assets.js';
 import { audio } from './engine/audio.js';
 import { getLevel, LEVELS } from './data/levels.js';
 import { LevelScene } from './scenes/level.js';
@@ -33,7 +33,7 @@ async function boot() {
   audio.setVolume('music', app.settings.music);
   audio.setVolume('sfx', app.settings.sfx);
   app.view.resize();
-  await Promise.all([loadAll([...TOWER_IMGS, ...CANNON_PARTS, ...ENEMY_IMGS, ...UI_IMGS]), audio.load(SFX), document.fonts?.load?.('16px Dodum').catch(() => {})]);
+  await Promise.all([loadAll([...TOWER_IMGS, ...CANNON_PARTS, ...ARCHER_PARTS, ...ENEMY_IMGS, ...UI_IMGS]), audio.load(SFX), document.fonts?.load?.('16px Dodum').catch(() => {})]);
   const first = new URLSearchParams(location.search).get('level') || LEVELS[0].id;
   await app.startLevel(first);
   document.getElementById('boot').classList.add('hide');
