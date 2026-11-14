@@ -48,6 +48,8 @@ export function towerStats(type, level) {
 // 실 조합: 두 탑의 속성을 섞은 효과
 // kind: burn(불붙음), stun(멈춤+피해), steam(느려짐+받는피해↑), rail(실 따라 번개 왕복), echo(두 탑 공격력↑), chill(느려짐), spark(한 번 큰 피해)
 export const THREAD_RANGE = 36;   // 실 양쪽 폭
+// 실로 이으면 상대 탑의 속성을 나눠 받는다(맞힌 적에게 섞여 들어감)
+export const SHARE_DESC = { pierce: '피해 +20%', fire: '불붙음', frost: '느려짐', shock: '가끔 멈춤', echo: '공격력 +30%' };
 export const THREAD_MAX_LEN = 400;
 export function threadCombo(e1, e2) {
   const has = (a, b) => (e1 === a && e2 === b) || (e1 === b && e2 === a);

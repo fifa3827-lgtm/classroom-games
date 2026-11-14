@@ -14,7 +14,7 @@ if '<script type="importmap">' in s:
     s = re.sub(r'<script type="importmap">.*?</script>', lambda m: block, s, flags=re.S)
 else:
     s = s.replace('<script type="module"', block + '\n<script type="module"')
-s = re.sub(r'src="js/main\.js(\?v=\w+)?"', 'src="./js/main.js"', s)
+s = re.sub(r'src="(\./)?js/main\.js(\?v=\w+)?"', 'src="./js/main.js?v=' + h(os.path.join(ROOT, 'js', 'main.js')) + '"', s)
 s = re.sub(r'href="css/style\.css(\?v=\w+)?"', f'href="css/style.css?v={h(os.path.join(ROOT, "css", "style.css"))}"', s)
 open(idx, 'w', encoding='utf-8').write(s)
 print('stamped', len(imports), 'modules')

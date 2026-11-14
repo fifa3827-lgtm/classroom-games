@@ -18,6 +18,7 @@ class AudioSys {
     this.sfxBus = this.ctx.createGain(); this.sfxBus.gain.value = this.vol.sfx; this.sfxBus.connect(this.master);
     this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = this.vol.music; this.musicBus.connect(this.master);
     const resume = () => {
+      this.resumeAt = performance.now();
       if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
       if (this.music && this.music.el.paused && this.music.want) this.music.el.play().catch(() => {});
       this.unlocked = true;
@@ -46,7 +47,9 @@ class AudioSys {
   // 효과음: 높낮이 ±5% 흔들기, 같은 소리 동시에 최대 4개, 너무 잦으면 건너뜀
   play(name, opt = {}) {
     const b = this.buffers[name];
-    if (!b || !this.ctx || this.ctx.state !== 'running') return;
+    if (!b || !this.ctx) return;
+    // 막 깨우는 중(같은 터치 안)이면 예약해 둔다. 숨겨진 동안처럼 오래 멈춘 때는 쌓지 않는다
+    if (this.ctx.state !== 'running' && !(performance.now() - (this.resumeAt || -1e9) < 800)) return;
     const now = this.ctx.currentTime;
     const list = (this.playing[name] ||= []).filter(s => s.end > now);
     this.playing[name] = list;

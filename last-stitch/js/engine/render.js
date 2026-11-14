@@ -186,8 +186,10 @@ export class Renderer {
       const pulse = 0.5 + 0.5 * Math.sin(this.t * 5);
       geo.pads.forEach(([x, y], i) => {
         if (game.towerAt(i)) return;
-        ctx.strokeStyle = `rgba(255,236,170,${0.35 + 0.45 * pulse})`; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.ellipse(x, y, PAD_R * 0.95, PAD_R * 0.62, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowColor = '#ffcf4a'; ctx.shadowBlur = 18;
+        ctx.strokeStyle = `rgba(255,214,90,${0.55 + 0.45 * pulse})`; ctx.lineWidth = 8;
+        ctx.beginPath(); ctx.ellipse(x, y, PAD_R * (1.02 + 0.06 * pulse), PAD_R * 0.66 * (1.02 + 0.06 * pulse), 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
       });
     }
     // 적이 들어오는 곳: 정보 띠 바로 아래 길 위에 빨간 화살표
@@ -213,6 +215,7 @@ export class Renderer {
     // 실 그림자(효과가 미치는 땅 위 줄)
     for (const th of game.threads) {
       const p = game.padPos(th.a.pad), q = game.padPos(th.b.pad);
+      if (!th.crosses) continue;
       ctx.strokeStyle = 'rgba(30,20,10,.16)'; ctx.lineWidth = 36 * 2; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
       ctx.strokeStyle = this.hexA(th.combo.color, 0.22); ctx.lineWidth = 8;
@@ -475,9 +478,9 @@ export class Renderer {
     else if (e.slow > 0 || e.stunT > 0) { ctx.globalAlpha = fade * (e.stunT > 0 ? 0.55 : 0.32); ctx.drawImage(tinted(img, e.stunT > 0 ? '#bfefff' : '#6cc8ff'), -w / 2, -h, w, h); }
     ctx.restore();
     ctx.globalAlpha = 1;
-    if (e.burnT > 0 && Math.random() < 0.35) this.ember(e.x, e.y - h * 0.5);
-    if (e.slow > 0 && Math.random() < 0.08) this.parts.push({ x: e.x + (Math.random() - 0.5) * w * 0.6, y: e.y - Math.random() * h, vx: 0, vy: 20, g: 0, life: 0, max: 0.6, size: 5, col: '#dff6ff', kind: 'frost' });
-    if (e.stunT > 0 && Math.random() < 0.3) this.sparks(e.x, e.y - h * 0.6, '#bfefff', 1, 90);
+    if (this.dt > 0 && e.burnT > 0 && Math.random() < 0.35) this.ember(e.x, e.y - h * 0.5);
+    if (this.dt > 0 && e.slow > 0 && Math.random() < 0.08) this.parts.push({ x: e.x + (Math.random() - 0.5) * w * 0.6, y: e.y - Math.random() * h, vx: 0, vy: 20, g: 0, life: 0, max: 0.6, size: 5, col: '#dff6ff', kind: 'frost' });
+    if (this.dt > 0 && e.stunT > 0 && Math.random() < 0.3) this.sparks(e.x, e.y - h * 0.6, '#bfefff', 1, 90);
   }
   drawThread(game, th) {
     const { ctx } = this;
@@ -502,7 +505,7 @@ export class Renderer {
     // 실 끝 매듭
     for (const p of [a, b]) { ctx.fillStyle = c.glow; ctx.beginPath(); ctx.arc(p[0], p[1], 6, 0, Math.PI * 2); ctx.fill(); }
     // 반짝임
-    if (Math.random() < 0.15) {
+    if (this.dt > 0 && Math.random() < 0.15) {
       const u = Math.random(), q = 1 - u;
       const px = q * q * a[0] + 2 * q * u * mx + u * u * b[0], py = q * q * a[1] + 2 * q * u * my + u * u * b[1];
       this.parts.push({ x: px, y: py, vx: 0, vy: 30, g: 0, life: 0, max: 0.5, size: 3, col: c.glow, kind: 'spark' });

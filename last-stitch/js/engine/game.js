@@ -24,6 +24,10 @@ export function pathAt(path, d) {
   const dx = pts[hi][0] - pts[lo][0], dy = pts[hi][1] - pts[lo][1];
   return [pts[lo][0] + dx * t, pts[lo][1] + dy * t, dx / seg, dy / seg];
 }
+function segInter(a, b, c, d) {
+  const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+  return o(a, b, c) !== o(a, b, d) && o(c, d, a) !== o(c, d, b);
+}
 function segDist(px, py, ax, ay, bx, by) {
   const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
   let t = ((px - ax) * dx + (py - ay) * dy) / l2; t = Math.max(0, Math.min(1, t));
@@ -75,6 +79,7 @@ export class Game {
     if (old) for (const e of this.enemies) e.d = e.d / old.paths[e.path].len * this.geo.paths[e.path].len;
     this.shots = [];
     this.updatePositions();
+    if (this.threads) for (const th of this.threads) th.crosses = this.threadCrosses(th.a, th.b);
   }
 
   emit(t, o = {}) { this.events.push({ t, ...o }); }
@@ -120,10 +125,20 @@ export class Game {
     if (this.spoolsFree() <= 0) return 'nospool';
     return 'ok';
   }
+  // 실이 길을 가로지르는가(실 밑 땅 선에서 THREAD_RANGE 안에 길이 지나가는가)
+  threadCrosses(a, b) {
+    const p = this.padPos(a.pad), q = this.padPos(b.pad);
+    for (const P of this.geo.paths) for (const [x, y] of P.pts) if (segDist(x, y, p[0], p[1], q[0], q[1])[0] < THREAD_RANGE + 20) return true;
+    // 점 사이가 성기므로 길 선분끼리도 본다
+    for (const P of this.geo.paths) for (let i = 1; i < P.pts.length; i++) if (segInter(P.pts[i - 1], P.pts[i], p, q)) return true;
+    return false;
+  }
+  // 이 탑과 실로 이어진 상대 탑들의 속성
+  partners(t) { const r = []; for (const th of this.threads) { if (th.a === t) r.push([th.b, th]); else if (th.b === t) r.push([th.a, th]); } return r; }
   link(a, b) {
     if (this.result || this.linkCheck(a, b) !== 'ok') return null;
     const combo = threadCombo(TOWERS[a.type].elem, TOWERS[b.type].elem);
-    const th = { id: this.nextId++, a, b, combo, born: this.time, railT: 0.5, hitCd: new Map() };
+    const th = { id: this.nextId++, a, b, combo, born: this.time, railT: 0.5, hitCd: new Map(), crosses: this.threadCrosses(a, b) };
     this.threads.push(th); this.stats.linked++;
     this.emit('link', { thread: th });
     return th;
@@ -220,8 +235,21 @@ export class Game {
     if (!e.alive) return 0;
     let a = amt * e.vuln;
     if (dtype === 'phys' && e.def.physResist) a *= 1 - e.def.physResist;
-    if (src) a *= this.echoMul(src) * (1 + (this.mods.dmg?.[src.type] || 0));
+    let infuse = null;
+    if (src) {
+      a *= this.echoMul(src) * (1 + (this.mods.dmg?.[src.type] || 0));
+      infuse = this.partners(src);
+      for (const [o] of infuse) if (TOWERS[o.type].elem === 'pierce' && TOWERS[src.type].elem !== 'pierce') a *= 1.2;
+    }
     e.hp -= a;
+    // 실로 나눠 받은 속성: 맞은 적에게 상대 탑의 힘이 섞여 들어간다
+    if (infuse && !quiet && e.hp > 0) for (const [o, th] of infuse) {
+      const el = TOWERS[o.type].elem, mul = this.threadMul(th);
+      if (el === TOWERS[src.type].elem) continue;
+      if (el === 'fire') { e.burnDps = Math.max(e.burnT > 0 ? e.burnDps : 0, 4 * mul); e.burnT = Math.max(e.burnT, 2); }
+      else if (el === 'frost') { e.slow = Math.max(e.slow, 0.22); e.slowT = Math.max(e.slowT, 1); }
+      else if (el === 'shock' && this.rand() < 0.2) { e.stunT = Math.max(e.stunT, 0.25); this.emit('thread_fx', { kind: 'stun_small', x: e.x, y: e.y }); }
+    }
     if (!quiet) { e.hitT = this.time; this.emit('hit', { enemy: e, mat: e.def.mat, dtype, amt: a, src }); }
     if (e.hp <= 0) {
       e.alive = false; this.gold += e.def.reward; this.stats.kills++;
