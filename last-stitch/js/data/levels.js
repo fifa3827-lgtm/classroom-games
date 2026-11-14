@@ -41,9 +41,24 @@ export const LEVELS = [
     ],
     tutorial: true,
   },
+  // 시험판(지도에 안 나옴): 8종 탑·갈래·적 17종 행동 확인용. ?level=test
+  {
+    id: 'test', mapId: '1-1', chapter: 1, name: '시험판', gold: 6000, lives: 60, music: 'ch1', hpMul: 1, test: true, allTowers: true, branches: true,
+    waves: [
+      W('blob*3/1, pawn*3/1, mouse*3/0.8, knight*2/2'),
+      W('splitblob*4/1.4, crane*4/1.4'),
+      W('snowman*3/1.6, mole*3/1.6'),
+      W('scissorbug*3/1.8, bishop*1/1, +1 pawn*6/0.8'),
+      W('ghost*4/1.5, crab*4/1.2'),
+      W('golem*1/1, rook*1/1'),
+      W('queen*1/1, +1 pawn*6/0.6, clockknight*1/1'),
+      W('inkgiant*1/1'),
+    ],
+    talk: [],
+  },
 ];
 
 export function getLevel(id) {
   const L = LEVELS.find(l => l.id === id);
-  return L ? { ...L, map: MAPS[id] } : null;
+  return L ? { ...L, map: MAPS[L.mapId || id] } : null;
 }

@@ -8,7 +8,7 @@ const args = process.argv.slice(2);
 const nIdx = args.indexOf('--n');
 const N = nIdx >= 0 ? +args[nIdx + 1] : 40;
 const ids = args.filter((a, i) => !a.startsWith('--') && (nIdx < 0 || i !== nIdx + 1));
-const levels = ids.length ? ids : LEVELS.map(l => l.id);
+const levels = ids.length ? ids : LEVELS.filter(l => !l.test).map(l => l.id);
 
 // 빈자리를 「길에 가까운 정도」로 줄 세운다(길 점들과 사거리 안에 드는 수)
 function padScore(g, pad) {

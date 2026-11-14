@@ -113,13 +113,17 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .bubble .next { margin-top: 4px; text-align: right; font-size: 12px; color: var(--ink-soft); }
 
 /* 짧은 알림 쪽지 */
-.toast { position: absolute; left: 50%; transform: translateX(-50%); z-index: 9; max-width: min(340px, calc(100vw - 24px)); width: max-content;
+.toast { position: absolute; left: 50%; transform: translateX(-50%); z-index: 12; border-width: 12px; border-image-width: 12px; max-width: min(340px, calc(100vw - 24px)); width: max-content;
   font-size: 14px; font-weight: 700; line-height: 1.45; color: var(--ink); text-align: center; animation: toastIn 2.6s forwards; }
 @keyframes toastIn { 0% { opacity: 0; transform: translate(-50%, -8px); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
 .bubble.tutor { width: min(330px, calc(100vw - 24px)); }
 .bubble.tutor .in { font-size: 14px; line-height: 1.4; }
 .land .bubble.tutor { width: min(420px, 56vw); }
-.bubble.tutor { border-width: 16px; border-image-width: 16px; }
+.bubble.tutor { border-width: 12px; border-image-width: 12px; z-index: 12; }
+.bubble.tutor .in { font-size: 13.5px; line-height: 1.35; }
+.nw { white-space: nowrap; }
+.bubble.tutor.docked { left: 8px !important; right: 8px !important; width: auto !important; transform: none !important; max-width: none; transition: opacity .3s; }
+.bubble.tutor.docked.hide { opacity: 0; }
 /* 가운데 알림 (웨이브 시작 등) */
 .banner { position: absolute; left: 50%; top: 32%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 7;
   font-family: 'Batang', serif; font-weight: 700; font-size: clamp(26px, 6vw, 44px); color: #fff4d6;

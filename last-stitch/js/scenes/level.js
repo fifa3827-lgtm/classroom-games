@@ -152,14 +152,15 @@ export class LevelScene {
     cv.addEventListener('pointerdown', this.onDown);
     window.addEventListener('pointermove', this.onMove);
     window.addEventListener('pointerup', this.onUp);
-    window.addEventListener('pointercancel', this.onUp);
+    this.onCancel = e => { if (this.press && e.pointerId === this.press.id) { this.press = null; this.r.ui.drag = null; this.dTip?.remove(); this.dTip = null; } };
+    window.addEventListener('pointercancel', this.onCancel);
   }
   unbind() {
     const cv = this.view.cv;
     cv.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('pointermove', this.onMove);
     window.removeEventListener('pointerup', this.onUp);
-    window.removeEventListener('pointercancel', this.onUp);
+    window.removeEventListener('pointercancel', this.onCancel);
   }
   towerAtScreen(sx, sy) {
     const g = this.game;
@@ -175,9 +176,9 @@ export class LevelScene {
     return best;
   }
   padAtScreen(sx, sy) {
-    const [wx, wy] = this.view.s2w(sx, sy);
-    let best = -1, bd = PAD_R * 1.2;
-    this.game.geo.pads.forEach(([x, y], i) => { const d = Math.hypot(wx - x, (wy - y) * 1.3); if (d < bd) { bd = d; best = i; } });
+    const v = this.view;
+    let best = -1, bd = Math.max(PAD_R * 1.2 * v.s, 26);
+    this.game.geo.pads.forEach(([x, y], i) => { const [px, py] = v.w2s(x, y); const d = Math.hypot(sx - px, (sy - py) * Math.min(1.3, Math.max(1, PAD_R * 1.2 * v.s / 26 * 1.3))); if (d < bd) { bd = d; best = i; } });
     return best;
   }
   threadAtScreen(sx, sy, mid = false) {
@@ -295,10 +296,17 @@ export class LevelScene {
       let tx, ty;
       if (this.short()) {
         // 낮은 화면: 단추가 한 줄. 줄 위나 아래에 설명 칸, 둘 다 모자라면 설명 칸을 맨 위에 두고 줄을 그 밑으로 내린다
-        tx = x;
-        if (y - 44 - th >= ins.t + 4) ty = y - 44 - th;
-        else if (y + 44 + th <= H - ins.b - 4) ty = y + 44;
-        else { ty = ins.t + 4; y = Math.min(H - ins.b - 34, ty + th + 40); m.node.style.top = y + 'px'; }
+        m.tip.style.maxWidth = '230px';
+        const tw2 = m.tip.offsetWidth, th2 = m.tip.offsetHeight;
+        const busyL = x - 150 - 36, busyR = x + 150 + 36;   // 단추 줄 + 탑
+        if (busyL - 8 >= tw2) { tx = busyL - 4 - tw2 / 2; ty = y - th2 / 2; }
+        else if (W - busyR - 8 >= tw2) { tx = busyR + 4 + tw2 / 2; ty = y - th2 / 2; }
+        else {
+          tx = x;
+          if (y - 44 - th - 300 * this.view.s >= ins.t + 4) ty = y - 44 - th;
+          else if (y + 44 + th <= H - ins.b - 4) ty = y + 44;
+          else { ty = ins.t + 4; y = Math.min(H - ins.b - 34, ty + th + 40); m.node.style.top = y + 'px'; }
+        }
       } else {
         tx = x;
         ty = y > H * 0.45 ? y - R - 34 - th : y + R + 40;
@@ -416,7 +424,7 @@ export class LevelScene {
     if (!text) return;
     this.toastEl?.remove();
     const b = el('div', 'toast parch pass', text);
-    b.style.top = (this.insets().t + 8) + 'px';
+    b.style.top = Math.max(2, this.hudTop.getBoundingClientRect().top + 2) + 'px';
     this.toastEl = b;
     this.ui.append(b);
     this.later(2.7, () => b.remove());
@@ -460,10 +468,10 @@ export class LevelScene {
       tipAt('<b>빈자리</b>를 눌러 탑을 세워 보세요.', [this.tutPad]);
       this.r.ui.pads = true;
     } else if (n === 2) {
-      tipAt('좋아요! 탑을 하나 더 세우거나, 준비되면 <b>▶ 시작</b>을 누르세요.', g.towers.map(t => t.pad));
+      tipAt('좋아요! 탑을 더 세우거나, 준비되면 아래 <b class="nw">▶ 시작</b>을 누르세요.', g.towers.map(t => t.pad));
     } else if (n === 4) {
       this.pickTutPair();
-      tipAt('<b>탑을 꾹 눌러 다른 탑으로 끌어</b> 보세요. 두 탑이 실로 이어져 서로의 힘을 나누고, 실이 길 위를 지나면 그 밑을 지나는 적에게 섞인 힘이 들어갑니다.', [T.dragA?.pad, T.dragB?.pad]);
+      tipAt('<b>빛나는 탑을 꾹 눌러 다른 빛나는 탑으로 끌어</b> 실을 이어 보세요. 이은 두 탑은 힘을 나눠요.', [T.dragA?.pad, T.dragB?.pad]);
       this.hand = el('div', 'hand pass', '👆'); this.ui.append(this.hand);
       
     } else if (n === 9) { this.r.ui.pads = false; }
@@ -481,45 +489,15 @@ export class LevelScene {
   // 안내 풍선을 빈자리·탑을 덜 가리는 높이로 옮긴다
   // 안내 풍선 자리 고르기: 화면 안 여러 자리(가로·세로) 가운데 빈자리·성문·길·손가락을 가장 덜 가리는 곳.
   // 폰 가로처럼 낮은 화면은 위 정보 띠 가운데 빈 곳도 후보로 넣는다.
+  // 안내 풍선은 맵을 가리지 않게 맨 위 정보 띠 자리에 겹쳐 잠깐 보여 준다(그동안 칩은 가려짐)
   placeTip(b, keep = []) {
     if (!b) return;
     b._keep = keep;
-    const g = this.game, v = this.view, W = v.W, H = v.H;
-    const ins = this.insets();
-    b.style.left = '50%'; b.style.transform = 'translateX(-50%)'; b.style.width = '';
-    const w0 = b.offsetWidth, h0 = b.offsetHeight || 90;
-    const pads = g.geo.pads.map((p, i) => { const [x, y] = v.w2s(...p); return [x, y, keep.includes(i) ? 60 : 4, g.towerAt(i) ? 280 : 50]; });
-    const R = 62 * v.s;
-    const pts = []; for (const P of g.geo.paths) for (let i = 0; i < P.pts.length; i += 2) pts.push(v.w2s(...P.pts[i]));
-    const gate = v.w2s(...g.geo.gate);
-    const cost = (l, t, w, h) => {
-      let c = 0;
-      for (const [x, y, wt, head] of pads) if (x + R > l && x - R < l + w && y + R * 0.7 > t && y - head * v.s < t + h) c += wt;
-      for (const [x, y] of pts) if (x > l && x < l + w && y > t && y < t + h) c += 0.25;
-      if (gate[0] + 90 * v.s > l && gate[0] - 90 * v.s < l + w && gate[1] + 40 * v.s > t && gate[1] - 160 * v.s < t + h) c += 3;
-      return c;
-    };
-    const cands = [];
-    for (let t = ins.t + 4; t + h0 < H - ins.b - 4; t += 8) for (const cx of [W / 2, W * 0.3, W * 0.7]) {
-      const l = Math.max(6, Math.min(W - w0 - 6, cx - w0 / 2));
-      cands.push([l, t, w0, h0]);
-    }
-    // 정보 띠 가운데 빈 곳(칩 오른쪽 끝 ~ 단추 왼쪽 끝)
-    const kids = [...this.hudTop.children].filter(c => !c.classList.contains('grow')).map(c => c.getBoundingClientRect());
-    const left = Math.max(...kids.filter(r => r.left < W / 2).map(r => r.right), 0) + 8;
-    const right = Math.min(...kids.filter(r => r.left >= W / 2).map(r => r.left), W) - 8;
-    if (right - left >= 260) {
-      b.style.width = Math.min(right - left, 460) + 'px';
-      const hh = b.offsetHeight; b.style.width = '';
-      cands.push([left + (right - left - Math.min(right - left, 460)) / 2, 4, Math.min(right - left, 460), hh, true]);
-    }
-    let best = cands[0], bc = 1e9;
-    for (const cd of cands) { const c = cost(...cd) + Math.abs(cd[1] + cd[3] / 2 - H * 0.45) / H * 0.5; if (c < bc) { bc = c; best = cd; } }
-    b.style.transform = 'none';
-    b.style.left = best[0] + 'px'; b.style.top = best[1] + 'px';
-    b.style.width = best[4] ? best[2] + 'px' : w0 + 'px';
-    // 손가락이 글자 위에 오면 손가락을 숨긴다(그 동안 빛 고리가 대신 알림)
-    this.tipRect = [best[0], best[1], best[0] + best[2], best[1] + best[3]];
+    const W = this.view.W;
+    const top = this.hudTop.getBoundingClientRect();
+    b.classList.add('docked');
+    b.style.top = Math.max(2, top.top + 2) + 'px';
+    this.tipRect = [8, top.top, W - 8, top.top + b.offsetHeight];
   }
   tutAfterBuild() {
     if (this.tut.step === 1) { this.r.ui.pads = false; this.tutStep(2); }

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>The Last Stitch — 인트로·이야기·엔딩 시험</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  #menu { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(12,9,7,.92); font-family: 'Batang', serif; }
+  #menu.hide { display: none; }
+  #menu h1 { font-family: 'Cinzel Deco', serif; color: #f3c55a; font-size: 26px; margin: 0 0 10px; }
+  #menu button, #menu select { min-height: 44px; min-width: 240px; padding: 0 16px; border-radius: 10px; font-size: 16px; color: #2a180c;
+    background: linear-gradient(#ffe7a6, #e9b44c); border: 0; cursor: pointer; font-family: inherit; }
+  #menu select { background: #f6e7c6; }
+  #menu .row { display: flex; gap: 8px; }
+  #menu .row button { min-width: 0; }
+  #menu p { color: #cdb991; font-size: 13px; margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui"></div>
+<div id="menu">
+  <h1>The Last Stitch</h1>
+  <button data-go="intro">인트로 (처음 켠 것처럼)</button>
+  <button data-go="title">제목만 (두 번째부터)</button>
+  <div class="row"><select id="key"></select><button data-go="story">이야기</button></div>
+  <button data-go="ending">엔딩</button>
+  <p>창 크기를 바꿔 세로·가로를 시험하세요</p>
+</div>
+<script type="module">
+import { View } from './js/engine/view.js';
+import { audio } from './js/engine/audio.js';
+import { SCENES } from './js/data/story.js';
+import { IntroScene } from './js/scenes/intro.js';
+import { StoryScene } from './js/scenes/story.js';
+import { EndingScene } from './js/scenes/ending.js';
+
+const app = { view: new View(document.getElementById('game')), scene: null };
+window.__app = app;
+audio.init();
+const menu = document.getElementById('menu');
+const sel = document.getElementById('key');
+sel.innerHTML = Object.keys(SCENES).filter(k => k !== 'ending').map(k => `<option>${k}</option>`).join('');
+const back = () => { app.scene?.destroy(); app.scene = null; menu.classList.remove('hide'); };
+function go(what, opt = {}) {
+  menu.classList.add('hide');
+  app.scene?.destroy();
+  if (what === 'intro') { try { localStorage.removeItem('last-stitch-intro-seen'); } catch {} app.scene = new IntroScene(app, { onDone: back, ...opt }); }
+  else if (what === 'title') app.scene = new IntroScene(app, { onDone: back, titleOnly: true, ...opt });
+  else if (what === 'story') app.scene = new StoryScene(app, opt.key || sel.value, { onDone: back });
+  else if (what === 'ending') app.scene = new EndingScene(app, { onDone: back, stats: { time: 3725, stars: 49, starsMax: 57, thimbles: 31 } });
+}
+window.__go = go;
+menu.addEventListener('click', e => { const b = e.target.closest('button[data-go]'); if (b) go(b.dataset.go); });
+const q = new URLSearchParams(location.search);
+if (q.get('scene')) go(q.get('scene'), { key: q.get('key') || undefined, manual: q.has('manual') });
+let last = performance.now();
+const loop = now => { const dt = Math.min(0.1, (now - last) / 1000); last = now; if (!window.__noloop) app.scene?.frame(dt); requestAnimationFrame(loop); };
+requestAnimationFrame(loop);
+let rz = 0;
+window.addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => app.scene?.resize()); });
+</script>
+</body>
+</html>

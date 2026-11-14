@@ -19,5 +19,6 @@ else:
 s = re.sub(r'src="(\./)?js/main\.js(\?v=\w+)?"', 'src="./js/main.js?v=' + h(os.path.join(ROOT, 'js', 'main.js')) + '"', s)
 fv = hashlib.md5(b''.join(open(f, 'rb').read() for f in sorted(glob.glob(os.path.join(ROOT, 'assets', 'fonts', '*.woff2'))))).hexdigest()[:6]
 s = re.sub(r'href="css/style\.css(\?v=\w+)?"', f'href="css/style.css?v={h(os.path.join(ROOT, "css", "style.css"))}{fv}"', s)
+s = re.sub(r'href="css/screens\.css(\?v=\w+)?"', f'href="css/screens.css?v={h(os.path.join(ROOT, "css", "screens.css"))}"', s)
 open(idx, 'w', encoding='utf-8').write(s)
 print('stamped', len(imports), 'modules')
