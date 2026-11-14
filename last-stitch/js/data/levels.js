@@ -21,7 +21,7 @@ function W(str) {
 
 export const LEVELS = [
   {
-    id: '1-1', chapter: 1, name: '숲의 입구', gold: 220, lives: 20, music: 'ch1',
+    id: '1-1', chapter: 1, name: '숲의 입구', gold: 200, lives: 20, music: 'ch1', hpMul: 1.6,
     waves: [
       W('blob*6/1.3'),
       W('blob*9/1.0'),

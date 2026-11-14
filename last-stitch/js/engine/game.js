@@ -160,8 +160,8 @@ export class Game {
       this.waveTime += dt;
       while (this.spawning.length && this.spawning[0].at <= this.waveTime) this.spawn(this.spawning.shift());
       if (!this.spawning.length && this.wave < this.level.waves.length - 1) {
-        if (this.betweenT <= 0 && this.enemies.length === 0) this.betweenT = 12;
-        else if (this.betweenT <= 0 && this.waveTime > 0) this.betweenT = 20;  // 남은 적이 있어도 20초 뒤 다음 웨이브
+        if (this.betweenT <= 0 && this.enemies.length === 0) this.betweenT = 8;
+        else if (this.betweenT <= 0 && this.waveTime > 0) this.betweenT = 14;  // 남은 적이 있어도 14초 뒤 다음 웨이브
         this.betweenT -= dt;
         if (this.betweenT <= 0.0001) { this.betweenT = 0; this.callWave(); }
       }

@@ -1,5 +1,6 @@
 // 그리기: 맵, 탑, 적, 실, 탄, 입자, 손맛 연출. 게임 논리는 읽기만 한다.
 import { IMG } from './assets.js';
+import { pathAt } from './game.js';
 import { TOWERS, towerStats } from '../data/towers.js';
 
 const PAD_R = 62;
@@ -188,6 +189,26 @@ export class Renderer {
         ctx.strokeStyle = `rgba(255,236,170,${0.35 + 0.45 * pulse})`; ctx.lineWidth = 5;
         ctx.beginPath(); ctx.ellipse(x, y, PAD_R * 0.95, PAD_R * 0.62, 0, 0, Math.PI * 2); ctx.stroke();
       });
+    }
+    // 적이 들어오는 곳: 정보 띠 바로 아래 길 위에 빨간 화살표
+    const incoming = !game.result && (game.spawning.length > 0 || !game.started || (game.betweenT > 0 && game.betweenT < 6));
+    if (incoming) {
+      const topY = (v.inset.t + 24 - v.oy) / v.s, leftX = (24 - v.ox) / v.s, rightX = (v.W - 24 - v.ox) / v.s, botY = (v.H - 24 - v.oy) / v.s;
+      for (const P of geo.paths) {
+        let d = 0, pt = null;
+        for (; d < P.len * 0.5; d += 8) { const q = pathAt(P, d); if (q[1] > topY && q[0] > leftX && q[0] < rightX && q[1] < botY) { pt = q; break; } }
+        if (!pt) continue;
+        const pulse = 0.5 + 0.5 * Math.sin(this.t * 6);
+        const ang = Math.atan2(pt[3], pt[2]);
+        ctx.save(); ctx.translate(pt[0], pt[1] + 30); ctx.rotate(ang); ctx.scale(1.6, 1.6);
+        for (let i = 0; i < 3; i++) {
+          const off = ((this.t * 60 + i * 26) % 78) - 10;
+          ctx.globalAlpha = (0.6 + 0.4 * pulse) * (1 - off / 90);
+          ctx.fillStyle = '#e8402f'; ctx.strokeStyle = '#5a1008'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(off + 16, 0); ctx.lineTo(off - 6, -20); ctx.lineTo(off - 6, -8); ctx.lineTo(off - 22, -8); ctx.lineTo(off - 22, 8); ctx.lineTo(off - 6, 8); ctx.lineTo(off - 6, 20); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+        ctx.restore(); ctx.globalAlpha = 1;
+      }
     }
     // 실 그림자(효과가 미치는 땅 위 줄)
     for (const th of game.threads) {
