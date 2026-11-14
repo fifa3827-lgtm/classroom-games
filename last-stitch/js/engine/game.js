@@ -282,6 +282,7 @@ export class Game {
       if (!best) { t.cd = 0.05; continue; }
       t.cd = s.rate;
       t.aim = best.x < px ? -1 : 1;
+      { const [tx0, ty0] = this.towerTop(t); t.ang = Math.atan2(best.y - best.def.size * 0.4 - ty0, best.x - tx0); }
       const [ox, oy] = this.towerTop(t);
       const nShots = this.shots.length;
       if (s.proj === 'arrow') this.shots.push({ k: 'arrow', x: ox, y: oy, tgt: best, sp: 950, dmg: s.dmg, src: t, dtype: s.dtype });

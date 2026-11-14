@@ -13,7 +13,15 @@ const MUZZLE = {
   ice: [null, [0, 0.86], [0, 0.88], [0, 0.9]],
   lightning: [null, [0, 0.86], [0, 0.88], [0, 0.9]],
 };
-const faceFlip = t => FACE[t.type] ? (t.aim === FACE[t.type] ? 1 : -1) : 1;
+// 대포: 받침 탑 + 도는 포신. top=받침 그림 바닥에서 포신 축까지(높이 비율), pivot=포신 그림 속 축 위치, tip=축에서 포구까지(포신 폭 비율), bw=포신 그림 폭(맵 단위)
+export const CANNON = {
+  1: { top: 0.60, pivot: [0.15, 0.5], tip: 0.86, bw: 142 },
+  2: { top: 0.64, pivot: [0.15, 0.5], tip: 0.86, bw: 154 },
+  3: { top: 0.69, pivot: [0.14, 0.5], tip: 0.87, bw: 166 },
+};
+const PERSP = 0.9; // 위에서 본 포신을 3/4 시점에 맞게 세로로 눌러 그림
+const hasBarrel = t => t.type === 'cannon' && IMG[`cannon_base_${t.level}`] && IMG[`cannon_barrel_${t.level}`];
+const faceFlip = t => hasBarrel(t) ? 1 : FACE[t.type] ? (t.aim === FACE[t.type] ? 1 : -1) : 1;
 
 // 그림의 흰 실루엣(맞을 때 번쩍) · 파란 실루엣(느려짐) 캐시
 const tintCache = new Map();
@@ -84,6 +92,12 @@ export class Renderer {
     const [x, y] = game.padPos(t.pad);
     if (!img) return game.towerTop(t);
     const w = TOWER_W[t.type] * LV_SCALE[t.level], h = w * img.height / img.width;
+    if (hasBarrel(t)) {
+      const C = CANNON[t.level], ang = t._ra ?? t.ang ?? 2.4;
+      const bimg = IMG[`cannon_barrel_${t.level}`];
+      const len = C.tip * C.bw;
+      return [x + Math.cos(ang) * len, y + PAD_R * 0.32 - C.top * h + Math.sin(ang) * len * PERSP];
+    }
     const m = MUZZLE[t.type][t.level];
     return [x + m[0] * w * faceFlip(t), y + PAD_R * 0.32 - m[1] * h];
   }
@@ -96,7 +110,8 @@ export class Renderer {
     const dir = t.aim || 1;
     if (t.type === 'cannon') {
       this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.14, size: 34 + t.level * 6, col: '#ffd27a', kind: 'flash' });
-      for (let i = 0; i < 6; i++) this.parts.push({ x: mx, y: my, vx: dir * (40 + Math.random() * 80), vy: -30 - Math.random() * 50, g: -20, life: 0, max: 0.7 + Math.random() * 0.4, size: 12 + Math.random() * 10, col: '#d9d2c4', kind: 'puff' });
+      const ca = Math.cos(t._ra ?? 0), sa = Math.sin(t._ra ?? 0);
+      for (let i = 0; i < 6; i++) this.parts.push({ x: mx, y: my, vx: (hasBarrel(t) ? ca : dir) * (40 + Math.random() * 80), vy: (hasBarrel(t) ? sa * 60 : 0) - 30 - Math.random() * 50, g: -20, life: 0, max: 0.7 + Math.random() * 0.4, size: 12 + Math.random() * 10, col: '#d9d2c4', kind: 'puff' });
       this.shake(2);
     } else if (t.type === 'archer') {
       this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.1, size: 16, col: '#fff6d8', kind: 'flash' });
@@ -113,7 +128,7 @@ export class Renderer {
 
   // ── 그리기 ──
   draw(game, dt) {
-    this.t += dt;
+    this.t += dt; this.dt = dt;
     const { ctx, v } = this;
     const s = v.s;
     ctx.setTransform(v.dpr, 0, 0, v.dpr, 0, 0);
@@ -293,7 +308,7 @@ export class Renderer {
     }
   }
 
-  towerImg(t) { return IMG[`${t.type}_${t.level}`]; }
+  towerImg(t) { return hasBarrel(t) ? IMG[`cannon_base_${t.level}`] : IMG[`${t.type}_${t.level}`]; }
   drawTower(game, t) {
     const { ctx } = this;
     const [x, y] = game.padPos(t.pad);
@@ -317,11 +332,29 @@ export class Renderer {
     if (!img) return;
     const h = w * img.height / img.width;
     const flip = faceFlip(t);
-    const kick = r0 !== undefined && this.t - r0 < 0.15 ? Math.sin((this.t - r0) / 0.15 * Math.PI) * (t.type === 'cannon' ? 9 : 3) * -(t.aim || 1) : 0;
+    const barrel = hasBarrel(t);
+    const kick = !barrel && r0 !== undefined && this.t - r0 < 0.15 ? Math.sin((this.t - r0) / 0.15 * Math.PI) * (t.type === 'cannon' ? 9 : 3) * -(t.aim || 1) : 0;
     ctx.save();
     ctx.translate(x + kick, y + PAD_R * 0.32 + dy);
     ctx.scale(sqx * flip, sqy);
     ctx.drawImage(img, -w / 2, -h, w, h);
+    if (barrel) {
+      // 포신이 과녁 쪽으로 부드럽게 돈다
+      const C = CANNON[t.level], bimg = IMG[`cannon_barrel_${t.level}`];
+      const want = t.ang ?? 2.4;
+      if (t._ra === undefined) t._ra = want;
+      let d = want - t._ra; d = Math.atan2(Math.sin(d), Math.cos(d));
+      t._ra += d * Math.min(1, this.dt * 14);
+      const bw = C.bw, bh = bw * bimg.height / bimg.width;
+      const back = r0 !== undefined && this.t - r0 < 0.18 ? Math.sin((this.t - r0) / 0.18 * Math.PI) * 12 : 0;
+      ctx.translate(0, -C.top * h);
+      // 포신 그림자 (받침 위)
+      ctx.save(); ctx.translate(5, 12); ctx.scale(1, PERSP * 0.85); ctx.rotate(t._ra); ctx.globalAlpha = 0.3;
+      ctx.drawImage(tinted(bimg, '#1e140a'), -C.pivot[0] * bw - back, -C.pivot[1] * bh, bw, bh); ctx.restore();
+      ctx.scale(1, PERSP);
+      ctx.rotate(t._ra);
+      ctx.drawImage(bimg, -C.pivot[0] * bw - back, -C.pivot[1] * bh, bw, bh);
+    }
     ctx.restore();
     // 마법 탑의 빛
     if (t.type === 'lightning' || t.type === 'ice') {
