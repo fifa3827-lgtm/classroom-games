@@ -12,7 +12,9 @@ const easeOut = k => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
 
 const STYLE_ID = 'ending-scene-style';
 const CSS = `
-.en-root{position:fixed;inset:0;z-index:20;pointer-events:none;font-family:'Batang',serif;color:#f3e8d2}
+.en-root{position:fixed;inset:0;z-index:20;font-family:'Batang',serif;color:#f3e8d2}
+#ui .en-root,#ui .en-root *,.en-root,.en-root *{pointer-events:none}
+#ui .en-root .en-btn{pointer-events:auto}
 .en-hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(40px + var(--safe-b,0px));width:min(560px,calc(100% - 40px));text-align:center;
   font-size:clamp(15px,2vmin + 6px,19px);line-height:1.7;text-shadow:0 1px 2px #000,0 0 16px rgba(0,0,0,.8);opacity:0;transition:opacity .6s}
 .en-hint.on{opacity:1}
@@ -52,8 +54,7 @@ export class EndingScene {
     if (!this.alive) return;
     this.child?.destroy(); this.child = null;
     this.phase = 'stitch'; this.t = 0; this.drag = null; this.doneAt = null; this.lastAct = 0;
-    const cv = this.view.cv;
-    cv.addEventListener('pointerdown', this.onDown); window.addEventListener('pointermove', this.onMove); window.addEventListener('pointerup', this.onUp); window.addEventListener('pointercancel', this.onUp);
+    window.addEventListener('pointerdown', this.onDown); window.addEventListener('pointermove', this.onMove); window.addEventListener('pointerup', this.onUp); window.addEventListener('pointercancel', this.onUp);
     setTimeout(() => this.alive && this.phase === 'stitch' && this.hint.classList.add('on'), 700);
   }
   holeScreen() {
@@ -223,7 +224,7 @@ export class EndingScene {
   destroy() {
     this.alive = false;
     this.child?.destroy(); this.child = null;
-    this.view.cv.removeEventListener('pointerdown', this.onDown);
+    window.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('pointermove', this.onMove); window.removeEventListener('pointerup', this.onUp); window.removeEventListener('pointercancel', this.onUp);
     this.root.remove();
   }

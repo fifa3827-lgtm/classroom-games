@@ -178,7 +178,7 @@ export class LevelScene {
   padAtScreen(sx, sy) {
     const v = this.view;
     let best = -1, bd = Math.max(PAD_R * 1.2 * v.s, 26);
-    this.game.geo.pads.forEach(([x, y], i) => { const [px, py] = v.w2s(x, y); const d = Math.hypot(sx - px, (sy - py) * Math.min(1.3, Math.max(1, PAD_R * 1.2 * v.s / 26 * 1.3))); if (d < bd) { bd = d; best = i; } });
+    this.game.geo.pads.forEach(([x, y], i) => { const [px, py] = v.w2s(x, y); const d = Math.hypot(sx - px, (sy - py) * Math.max(1, Math.min(1.3, bd / 22))); if (d < bd) { bd = d; best = i; } });
     return best;
   }
   threadAtScreen(sx, sy, mid = false) {
@@ -201,9 +201,11 @@ export class LevelScene {
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY;
     const thMid = this.threadAtScreen(sx, sy, true);
-    const t = thMid ? null : this.towerAtScreen(sx, sy);
-    const th = thMid || (t ? null : this.threadAtScreen(sx, sy));
-    const pad = t || th ? -1 : this.padAtScreen(sx, sy);
+    const emptyPad = thMid ? -1 : this.padAtScreen(sx, sy);
+    const padFirst = emptyPad >= 0 && !this.game.towerAt(emptyPad) ? emptyPad : -1;
+    const t = thMid || padFirst >= 0 ? null : this.towerAtScreen(sx, sy);
+    const th = thMid || (t || padFirst >= 0 ? null : this.threadAtScreen(sx, sy));
+    const pad = padFirst >= 0 ? padFirst : t || th ? -1 : this.padAtScreen(sx, sy);
     this.press = { id: e.pointerId, sx, sy, t, th, pad: pad >= 0 && !this.game.towerAt(pad) ? pad : -1, moved: false, at: performance.now() };
   }
   move(e) {
@@ -288,7 +290,7 @@ export class LevelScene {
     const m = this.menu; if (!m) return;
     let [x, y] = this.view.w2s(...m.anchor);
     const R = 86, W = this.view.W, H = this.view.H;
-    { const ins = this.insets(); const ry = this.short() ? 52 : R; const rx = this.short() ? 150 : R; x = Math.max(rx + 8, Math.min(W - rx - 8, x)); y = Math.max(ins.t + ry, Math.min(H - ins.b - ry, y)); }
+    { const ins = this.insets(); const ry = this.short() ? 52 : R; const rx = this.short() ? 150 : R; x = Math.max(rx + 8, Math.min(W - rx - 8, x)); y = Math.max(ins.t + ry, Math.min(H - ins.b - (this.short() ? 50 : 122), y)); }
     m.node.style.left = x + 'px'; m.node.style.top = y + 'px';
     if (m.tip) {
       const ins = this.insets();
@@ -309,7 +311,15 @@ export class LevelScene {
         }
       } else {
         tx = x;
-        ty = y > H * 0.45 ? y - R - 34 - th : y + R + 40;
+        const ay = this.view.w2s(...m.anchor)[1];
+        const head = ay - 300 * this.view.s;      // 탑(또는 미리보기 탑) 머리
+        const upY = Math.min(y - R - 34, head - 8) - th;
+        ty = upY >= ins.t + 4 ? upY : y + R + 50;
+        if (upY < ins.t + 4 && ty + th > H - ins.b - 4) {
+          // 위(탑 머리)도 아래(화면 끝)도 모자람 → 고리 옆
+          ty = y - th / 2;
+          tx = x + R + 20 + tw / 2 <= W - 6 ? x + R + 20 + tw / 2 : x - R - 20 - tw / 2;
+        }
       }
       tx = Math.max(tw / 2 + 6, Math.min(W - tw / 2 - 6, tx));
       ty = Math.max(ins.t + 4, Math.min(H - ins.b - th - 4, ty));

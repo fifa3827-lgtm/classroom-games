@@ -11,13 +11,24 @@ const MUSIC_LEN = 60;
 
 // ── 그림 안 자리 (그림 폭·높이에 대한 비율). 그림을 바꾸면 여기만 고친다 ──
 const POS = {
-  c1: { candle: [0.22, 0.55], window: [0.82, 0.22], beamTo: [0.36, 0.98] },
-  c1fg: { flame: [0.5, 0.12] },              // 앞 촛대 그림 안 불꽃 자리
-  c3: { candle: [0.08, 0.45], bottle: [0.47, 0.72], bottleH: 0.44 },   // bottle: 병 바닥 가운데
-  c3bottle: { mouth: [0.5, 0.06] },          // 병 그림 안 주둥이 자리
-  c5: { eyes: [] },                          // [x, y, r] 눈 자리 (비율)
-  c6: { path: [[0.42, 0.62], [0.55, 0.45], [0.66, 0.58], [0.78, 0.4], [0.9, 0.52], [1.05, 0.3]] },
-  c6hand: { tip: [0.8, 0.12] },              // 손 그림 안 바늘 끝
+  c1: { candle: [0.19, 0.44], window: [0.87, 0.16], beamTo: [0.42, 0.95] },
+  c1fg: { flame: [0.262, 0.139] },           // 앞 촛대 그림 안 불꽃 자리
+  c3: { candle: [0.075, 0.2], bottle: [0.47, 0.74], bottleH: 0.4 },   // bottle: 병 바닥 가운데
+  c3bottle: { mouth: [0.5, 0.12] },          // 병 그림 안 주둥이 자리
+  // 눈 무리(박마다 한 무리씩 켜짐, 마지막은 가운데 큰 기사). [x, y, r] 비율 — intro_c5_eyes 와 c5_bg 차이로 찾음
+  c5: { eyes: [
+    [[0.267, 0.414, 0.009], [0.300, 0.412, 0.009]],
+    [[0.701, 0.417, 0.009], [0.736, 0.408, 0.009]],
+    [[0.431, 0.342, 0.014], [0.458, 0.326, 0.015], [0.442, 0.316, 0.008], [0.472, 0.291, 0.008], [0.486, 0.295, 0.012], [0.493, 0.317, 0.008], [0.494, 0.243, 0.009], [0.422, 0.373, 0.008]],
+    [[0.031, 0.529, 0.008], [0.017, 0.760, 0.008], [0.035, 0.772, 0.008]],
+    [[0.710, 0.561, 0.008], [0.714, 0.638, 0.008], [0.736, 0.688, 0.010]],
+    [[0.082, 0.823, 0.009], [0.106, 0.814, 0.008], [0.115, 0.829, 0.009], [0.152, 0.770, 0.008]],
+    [[0.227, 0.686, 0.008], [0.257, 0.680, 0.011], [0.303, 0.678, 0.010]],
+    [[0.454, 0.520, 0.008], [0.468, 0.544, 0.017], [0.437, 0.787, 0.008]],
+    [[0.480, 0.439, 0.013], [0.541, 0.432, 0.013]],
+  ] },
+  c6: { path: [[0.42, 0.66], [0.55, 0.5], [0.68, 0.62], [0.78, 0.42], [0.9, 0.48], [1.05, 0.3]] },
+  c6hand: { tip: [0.93, 0.07] },             // 손 그림 안 바늘 끝
 };
 
 // ── 컷 시간표 (음악 시각, 초). 큰 박: 16·24·32·40·48 ──
@@ -110,6 +121,7 @@ function loadMusic() {
   return (cache.loading.music ||= loadBuf(`${BASE}intro_music.${EXT}`).then(b => (cache.music = b)));
 }
 
+function makeDust() { return Array.from({ length: 70 }, (_, i) => { const r = rnd(i * 97 + 13); return { x: r(), y: r(), z: 0.4 + r() * 0.8, p: r() * 6.28, s: 0.3 + r() * 0.7 }; }); }
 // 유기적인 얼룩 모양(물감)
 function blob(ctx, cx, cy, r, seed, t, sy = 1) {
   const N = 48;
@@ -124,12 +136,13 @@ function blob(ctx, cx, cy, r, seed, t, sy = 1) {
 
 const STYLE_ID = 'intro-scene-style';
 const CSS = `
-.intro-root{position:fixed;inset:0;pointer-events:none;z-index:20}
-.intro-skip{position:absolute;top:calc(14px + var(--safe-t,0px));right:calc(14px + var(--safe-r,0px));pointer-events:auto;
+.intro-root{position:fixed;inset:0;z-index:20}
+#ui .intro-root,.intro-root{pointer-events:none}
+.intro-skip,#ui .intro-root .intro-skip{position:absolute;top:calc(14px + var(--safe-t,0px));right:calc(14px + var(--safe-r,0px));pointer-events:auto;
   min-width:44px;min-height:44px;padding:0 18px;border-radius:22px;font-family:'Batang',serif;font-size:14px;letter-spacing:.12em;
   color:rgba(240,226,200,.82);background:rgba(10,8,6,.38);border:1px solid rgba(243,197,90,.28);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
   opacity:0;transition:opacity .6s;cursor:pointer}
-.intro-skip.show{opacity:1}
+#ui .intro-root .intro-skip.show,.intro-skip.show{opacity:1}
 .intro-skip:active{transform:scale(.96)}
 `;
 
@@ -148,7 +161,7 @@ export class IntroScene {
     this.mask = document.createElement('canvas'); this.mask.width = 480; this.mask.height = 270;
     this.tmp = document.createElement('canvas'); this.tmp.width = 960; this.tmp.height = 540;
     this.makeGrain();
-    this.dust = Array.from({ length: 70 }, (_, i) => { const r = rnd(i * 97 + 13); return { x: r(), y: r(), z: 0.4 + r() * 0.8, p: r() * 6.28, s: 0.3 + r() * 0.7 }; });
+    this.dust = makeDust();
     this.drops = Array.from({ length: 46 }, (_, i) => { const r = rnd(i * 31 + 7); return { a: -Math.PI * (0.05 + r() * 0.9), v: 0.35 + r() * 0.75, s: 0.004 + r() * 0.012, d: r() * 0.12 }; });
     if (!document.getElementById(STYLE_ID)) { const st = document.createElement('style'); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
     this.root = document.createElement('div'); this.root.className = 'intro-root';
@@ -156,9 +169,9 @@ export class IntroScene {
     this.skipBtn.addEventListener('click', e => { e.stopPropagation(); this.skip(); });
     this.root.appendChild(this.skipBtn);
     (document.getElementById('ui') || document.body).appendChild(this.root);
-    this.onDown = e => this.press(e);
+    this.onDown = e => { if (!e.target.closest?.('.intro-skip')) this.press(e); };
     this.onKey = e => { if (e.key === 'Enter' || e.key === ' ') this.press(e); else if (e.key === 'Escape' && this.state === 'play') this.skip(); };
-    this.view.cv.addEventListener('pointerdown', this.onDown);
+    window.addEventListener('pointerdown', this.onDown);
     window.addEventListener('keydown', this.onKey);
     this.resize();
     this.load();
@@ -171,7 +184,7 @@ export class IntroScene {
     let done = 0;
     const firstP = Promise.all(need.map(n => loadImg(n).then(() => { done++; })));
     if (!this.titleOnly) all.filter(n => !need.includes(n)).forEach(n => loadImg(n)); // 나머지는 뒤에서
-    await Promise.all([firstP, loadSfx(), this.titleOnly ? null : loadMusic()]);
+    await Promise.all([firstP, loadSfx(), this.titleOnly ? null : loadMusic(), document.fonts?.load?.('700 40px "Cinzel Deco"').catch(() => {})]);
     if (!this.alive) return;
     for (const n of need) blurOf(n);
     if (this.titleOnly) { this.enterTitle(true); return; }
@@ -184,7 +197,7 @@ export class IntroScene {
     if (this.state === 'title') {
       if (this.pressShown) { this.finish(); return; }
       // 꿰매는 중이면 바로 끝까지
-      this.fast = { at: this.now() - 10 };
+      this.fast = { at: this.now() - 10, keepClock: true };
     }
   }
   now() { return performance.now() / 1000; }
@@ -205,7 +218,7 @@ export class IntroScene {
       this.srcs.push(m); this.musicSrc = m;
       audio.playMusic(null, 0.6);
       for (const [at, n, v, r] of SFX_PLAN) this.playAt(n, this.t0 + at, v, r);
-      for (let i = 0; i < POS.c5.eyes.length; i++) if (i < 8) this.playAt('in_eye', this.t0 + this.eyeT(i), 0.55, 0.9 + (i % 3) * 0.08);
+      POS.c5.eyes.forEach((_, i, a) => this.playAt('in_eye', this.t0 + this.eyeT(i), i === a.length - 1 ? 0.95 : 0.5, i === a.length - 1 ? 0.75 : 0.9 + (i % 3) * 0.08));
       for (const k of [0.3, 0.55, 0.8]) this.playAt('in_glint', this.t0 + lerp(THREAD_T[0], THREAD_T[1], k), 0.45, 1.1);
       this.titleLetterSfx(this.t0 + T_STITCH, (T_STITCH_END - T_STITCH));
       this.clock = 'audio';
@@ -246,7 +259,7 @@ export class IntroScene {
     if (fast) {
       this.clock = 'fast';
       this.fast = { at: this.now() };
-      this.t = T_TITLE + 0.01;
+      this.t = T_TITLE + 2.2;
       audio.playMusic('title', 1.5);
       loadImg('intro_c7_bg');
       const ctx = audio.ctx;
@@ -257,7 +270,7 @@ export class IntroScene {
     if (!this.alive || this.done) return;
     this.done = true;
     audio.ctx && this.playAt('in_glint', audio.ctx.currentTime, 0.6);
-    this.opts.onDone?.();
+    this.opts.onDone?.({ t: this.t });
   }
   // 시험용: 원하는 시각으로 옮겨 그리기(소리 없음)
   seek(t) { this.stopSounds(); this.clock = 'manual'; this.t = t; this.state = t >= T_TITLE ? 'title' : 'play'; if (t >= T_PRESS) this.pressShown = true; this.started = true; }
@@ -266,6 +279,7 @@ export class IntroScene {
     if (this.clock === 'audio') {
       const ctx = audio.ctx; this.t = ctx.currentTime - this.t0;
     } else if (this.clock === 'dt') this.t += dt;
+    else if (this.clock === 'fast' && this.fast && !this.fast.keepClock) this.t = T_TITLE + 2.2 + (this.now() - this.fast.at);
     return this.t;
   }
 
@@ -415,7 +429,7 @@ export class IntroScene {
     this.moonbeam(ctx, tf, POS.c1.window, POS.c1.beamTo, t, 1);
     this.glow(ctx, tf, POS.c1.candle, 0.16, t, 1);
     this.drawDust(ctx, t, 1, 0.9);
-    const o = this.ori === 'v' ? { x: -0.02, y: 1.03, px: 0, py: 1, h: 0.62 } : { x: -0.01, y: 1.04, px: 0, py: 1, h: 0.78 };
+    const o = this.ori === 'v' ? { x: -0.04, y: 1.03, px: 0, py: 1, h: 0.36 } : { x: -0.01, y: 1.04, px: 0, py: 1, h: 0.7 };
     o.dx = -(cam.x - 0.5) * 900 * 0.35 * tf.s; o.dy = (t * 2);
     const r = this.layer(ctx, 'intro_c1_fg', o, tf, 0.15 + focus * 0.85);
     if (r) this.flameGlow(ctx, r.x + POS.c1fg.flame[0] * r.w, r.y + POS.c1fg.flame[1] * r.h, r.h * 0.35, t, 0.5 + 0.5 * (1 - focus));
@@ -443,8 +457,8 @@ export class IntroScene {
   // 컷 3: 잉크병이 흔들리다 느리게 기울어 쓰러짐 → 쾅, 흔들림, 잉크가 쏟아짐
   cut3(ctx, t) {
     const slow = ease(seg(t, 21.5, 23.6));
-    const cam = this.cam({ h: [[15.7, 0.5, 0.56, 1.12], [21.5, 0.48, 0.6, 1.24], [23.8, 0.47, 0.62, 1.34], [25.4, 0.5, 0.62, 1.3]],
-      v: [[15.7, 0.56, 0.58, 1.0], [21.5, 0.5, 0.6, 1.1], [23.8, 0.48, 0.62, 1.2], [25.4, 0.52, 0.62, 1.16]] }, t);
+    const cam = this.cam({ h: [[15.7, 0.5, 0.56, 1.12], [21.5, 0.48, 0.6, 1.24], [23.8, 0.5, 0.62, 1.32], [24.3, 0.55, 0.63, 1.3], [25.4, 0.56, 0.63, 1.28]],
+      v: [[15.7, 0.56, 0.58, 1.0], [21.5, 0.5, 0.6, 1.08], [23.7, 0.52, 0.62, 1.1], [24.2, 0.6, 0.63, 1.08], [25.4, 0.62, 0.63, 1.06]] }, t);
     let shake = [0, 0];
     if (t > 24) { const d = Math.exp(-(t - 24) * 5.5) * Math.min(this.W, this.H) * 0.035; shake = [Math.sin(t * 91) * d, Math.cos(t * 77) * d * 0.8]; }
     const tf = this.bg(ctx, 'intro_c3_bg', cam, seg(t, 15.7, 16.4) > 0 ? 1 - ease(seg(t, 15.7, 16.6)) : 1, shake);
@@ -491,7 +505,7 @@ export class IntroScene {
       const l = lt - d.d; if (l <= 0) continue;
       const v = d.v * h * 3.2;
       const x = mx + Math.cos(d.a) * v * l + h * 0.8 * l, y = my + Math.sin(d.a) * v * l + 0.5 * h * 7 * l * l;
-      const r = d.s * h * 6 * (1 - seg(l, 0.6, 1.3));
+      const r = d.s * h * 4 * (1 - seg(l, 0.6, 1.3));
       if (r <= 0.3) continue;
       ctx.fillStyle = '#b3121f'; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
       ctx.fillStyle = 'rgba(255,150,150,.5)'; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.35, 0, 6.283); ctx.fill();
@@ -511,7 +525,7 @@ export class IntroScene {
       m.clearRect(0, 0, MW, MH); m.fillStyle = '#fff';
       const seeds = [[1.0, 0.0, 0, 1.25], [0.62, 0.3, 0.12, 0.6], [0.4, 0.55, 0.3, 0.55], [0.2, 0.25, 0.45, 0.5], [0.75, 0.8, 0.35, 0.55], [0.1, 0.85, 0.6, 0.45]];
       seeds.forEach(([sx, sy, d, R], j) => {
-        const kk = easeOut(seg(k, d, 1) * 1.05) * 0.85 + seg(k, d, 1) * 0.15;
+        const q = seg(k, d, 1), kk = Math.pow(q, 0.8) * 0.75 + easeOut(q) * 0.25;
         if (kk <= 0) return;
         m.beginPath(); blob(m, sx * MW, sy * MH, R * MW * 0.55 * kk, j * 1.7 + 0.5, t * 0.6); m.fill();
       });
@@ -529,7 +543,7 @@ export class IntroScene {
       ctx.fillStyle = g; ctx.fillRect(0, 0, this.W, this.H);
     }
   }
-  eyeT(i) { return EYE_T0 + i * 0.5 + (i >= 6 ? (i - 6) * 0.5 : 0); }
+  eyeT(i) { return EYE_T0 + i * 0.5 + (i === POS.c5.eyes.length - 1 ? 0.5 : 0); }
   // 컷 5: 물든 말들의 눈이 박마다 하나씩 켜짐
   cut5(ctx, t) {
     const cam = this.cam({ h: [[31.85, 0.5, 0.5, 1.06], [40.25, 0.5, 0.48, 1.22]], v: [[31.85, 0.3, 0.5, 1.0], [36, 0.55, 0.5, 1.04], [40.25, 0.7, 0.48, 1.1]] }, t);
@@ -540,20 +554,20 @@ export class IntroScene {
       const m = this.mask.getContext('2d'); const MW = this.mask.width, MH = this.mask.height;
       m.clearRect(0, 0, MW, MH);
       let any = false;
-      eyes.forEach(([ex, ey, er], i) => {
+      eyes.forEach((grp, i) => grp.forEach(([ex, ey, er]) => {
         const a = easeOut(seg(t, this.eyeT(i), this.eyeT(i) + 0.35)); if (a <= 0) return; any = true;
         const g = m.createRadialGradient(ex * MW, ey * MH, 0, ex * MW, ey * MH, er * MW * 2.2);
         g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(0.55, `rgba(255,255,255,${a * 0.8})`); g.addColorStop(1, 'rgba(255,255,255,0)');
         m.fillStyle = g; m.fillRect(0, 0, MW, MH);
-      });
-      if (any && lit && this.eyesAligned) {
+      }));
+      if (any && lit) {
         const T = this.tmp.getContext('2d'); const TW = this.tmp.width, TH = this.tmp.height;
         T.globalCompositeOperation = 'source-over'; T.clearRect(0, 0, TW, TH); T.drawImage(lit, 0, 0, TW, TH);
         T.globalCompositeOperation = 'destination-in'; T.drawImage(this.mask, 0, 0, TW, TH); T.globalCompositeOperation = 'source-over';
         ctx.drawImage(this.tmp, tf.ox, tf.oy, tf.iw * tf.s, tf.ih * tf.s);
       }
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      eyes.forEach(([ex, ey, er], i) => {
+      eyes.forEach((grp, i) => grp.forEach(([ex, ey, er]) => {
         const a = easeOut(seg(t, this.eyeT(i), this.eyeT(i) + 0.25)); if (a <= 0) return;
         const flick = 0.85 + 0.15 * Math.sin(t * 13 + i * 2.1);
         const fl = 1 + 1.5 * Math.exp(-(t - this.eyeT(i)) * 6);   // 켜지는 순간 번쩍
@@ -561,7 +575,7 @@ export class IntroScene {
         const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
         g.addColorStop(0, `rgba(255,190,120,${0.85 * a * flick})`); g.addColorStop(0.25, `rgba(255,60,30,${0.5 * a * flick})`); g.addColorStop(1, 'rgba(160,0,0,0)');
         ctx.fillStyle = g; ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
-      });
+      }));
       ctx.restore();
     }
     this.drawDust(ctx, t, 5, 0.3);
@@ -575,7 +589,7 @@ export class IntroScene {
     this.drawDust(ctx, t, 6, 0.6);
     // 손: 왼쪽 아래에서 미끄러져 들어옴
     const inK = easeOut(seg(t, 40.0, 41.4));
-    const o = this.ori === 'v' ? { x: 0, y: 1, px: 0, py: 1, h: 0.5 } : { x: 0, y: 1, px: 0, py: 1, h: 0.62 };
+    const o = this.ori === 'v' ? { x: 0, y: 1, px: 0, py: 1, h: 0.27 } : { x: 0, y: 1, px: 0, py: 1, h: 0.55 };
     const im = cache.img.intro_c6_hand;
     let tip = null;
     if (im) {
@@ -659,38 +673,40 @@ export class IntroScene {
   }
   // 제목 꿰매기 진행(0~1)
   stitchK(t) {
+    if (this.final) return 1;
     if (this.fast) return seg(this.now(), this.fast.at + 0.4, this.fast.at + 2.4);
     return seg(t, T_STITCH, T_STITCH_END);
   }
   pressK(t) {
+    if (this.final) return this.finalPress ? 1 : 0;
     if (this.fast) return seg(this.now(), this.fast.at + 2.8, this.fast.at + 3.6);
     return seg(t, T_PRESS, T_PRESS + 0.9);
   }
   title(ctx, t) {
     const { W, H } = this;
     const k = this.stitchK(t);
-    const tnow = this.fast ? this.now() - this.fast.at + 60 : t;
-    // 글자 배치: 가로는 한 줄, 좁은 세로는 두 줄
-    const lines = [];
+    // 글자 배치: 가로는 한 줄, 좁은 세로는 두 줄. 글자 사이·낱말 사이를 조금 띄운다
+    const layout = (str, f) => {
+      ctx.font = `700 ${f}px "Cinzel Deco", serif`;
+      const out = []; let x = 0;
+      for (const ch of str) {
+        if (ch === ' ') { x += ctx.measureText(' ').width + f * 0.22; continue; }
+        const w = ctx.measureText(ch).width; out.push({ ch, x, w }); x += w + f * 0.03;
+      }
+      return { out, width: x - f * 0.03 };
+    };
     let fs = Math.min(W * 0.085, H * 0.15);
+    let lines = ['The Last Stitch'];
+    if (this.ori === 'v' || layout(lines[0], fs).width > W * 0.88) { fs = Math.min(W * 0.15, H * 0.1); lines = ['The Last', 'Stitch']; }
     ctx.font = `700 ${fs}px "Cinzel Deco", serif`;
-    if (ctx.measureText('The Last Stitch').width > W * 0.88) {
-      fs = Math.min(W * 0.15, H * 0.1);
-      lines.push('The Last', 'Stitch');
-    } else lines.push('The Last Stitch');
-    ctx.font = `700 ${fs}px "Cinzel Deco", serif`;
-    const lh = fs * 1.08;
+    const lh = fs * 1.12;
     const top = (this.ori === 'v' ? H * 0.2 : H * 0.17) + Math.max(0, (this.view.inset?.t || 0));
-    // 글자마다 위치
     const letters = [];
     lines.forEach((ln, li) => {
-      const lw = ctx.measureText(ln).width; const x0 = W / 2 - lw / 2; const y = top + li * lh + fs * 0.5;
-      for (let i = 0; i < ln.length; i++) {
-        if (ln[i] === ' ') continue;
-        const a = ctx.measureText(ln.slice(0, i)).width, b = ctx.measureText(ln.slice(0, i + 1)).width;
-        letters.push({ ch: ln[i], x: x0 + a, w: b - a, y, cx: x0 + (a + b) / 2 });
-      }
+      const L = layout(ln, fs); const x0 = W / 2 - L.width / 2; const y = top + li * lh + fs * 0.5;
+      for (const c of L.out) letters.push({ ch: c.ch, x: x0 + c.x, w: c.w, y, cx: x0 + c.x + c.w / 2 });
     });
+    ctx.font = `700 ${fs}px "Cinzel Deco", serif`;
     const n = letters.length;
     // 바늘이 지나가는 길: 글자 아래위를 오가는 홈질
     const base = fs * 0.62;
@@ -742,7 +758,7 @@ export class IntroScene {
       }
     }
     // 다 꿰맨 뒤: 빛이 글자 위를 한 번 지나감
-    const sh = this.fast ? seg(this.now(), this.fast.at + 2.4, this.fast.at + 3.6) : seg(t, T_STITCH_END, T_STITCH_END + 1.4);
+    const sh = this.final ? 0 : this.fast ? seg(this.now(), this.fast.at + 2.4, this.fast.at + 3.6) : seg(t, T_STITCH_END, T_STITCH_END + 1.4);
     if (sh > 0 && sh < 1) {
       ctx.globalCompositeOperation = 'lighter';
       const x = lerp(W * 0.1, W * 0.9, sh);
@@ -752,14 +768,17 @@ export class IntroScene {
       ctx.globalCompositeOperation = 'source-over';
     }
     // 부제
-    const sub = this.fast ? seg(this.now(), this.fast.at + 2.2, this.fast.at + 3.2) : seg(t, T_STITCH_END + 0.2, T_STITCH_END + 1.4);
+    const sub = this.final ? 1 : this.fast ? seg(this.now(), this.fast.at + 2.2, this.fast.at + 3.2) : seg(t, T_STITCH_END + 0.2, T_STITCH_END + 1.4);
     if (sub > 0) {
-      const ss = Math.max(13, fs * 0.24);
+      const ss = Math.max(13, fs * 0.22);
       ctx.font = `700 ${ss}px Batang, serif`; ctx.textAlign = 'center';
-      ctx.fillStyle = `rgba(240,222,186,${0.9 * sub})`;
-      if ('letterSpacing' in ctx) ctx.letterSpacing = `${ss * 0.5}px`;
-      ctx.fillText('마 지 막   한   땀'.replace(/ /g, '') === '마지막한땀' ? '마지막 한 땀' : '마지막 한 땀', W / 2 + (('letterSpacing' in ctx) ? ss * 0.25 : 0), top + lines.length * lh + fs * 0.28);
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      ctx.fillStyle = `rgba(240,222,186,${0.92 * sub})`;
+      ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 6;
+      const sp = 'letterSpacing' in ctx;
+      if (sp) ctx.letterSpacing = `${ss * 0.45}px`;
+      ctx.fillText('마지막 한 땀', W / 2 + (sp ? ss * 0.22 : 0), top + (lines.length - 1) * lh + fs * 0.5 + base + ss * 1.7);
+      if (sp) ctx.letterSpacing = '0px';
+      ctx.shadowBlur = 0;
     }
     // 눌러서 시작
     const pk = this.pressK(t);
@@ -777,7 +796,6 @@ export class IntroScene {
       ctx.beginPath(); ctx.moveTo(W / 2 - ps * 3.2, y + ps * 0.95); ctx.lineTo(W / 2 + ps * 3.2, y + ps * 0.95); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
-    void tnow;
   }
 
   // ── 빛·먼지 ──
@@ -831,6 +849,7 @@ export class IntroScene {
   // 맨 위: 처음 어둠에서 밝아짐, 비네트, 필름 결, 위아래 검은 띠, 자막
   drawOverlay(ctx, t) {
     const { W, H } = this;
+    if (this.clock === 'fast' && this.fast && !this.fast.keepClock) { const k = seg(this.now(), this.fast.at, this.fast.at + 0.7); if (k < 1) { ctx.fillStyle = `rgba(0,0,0,${0.85 * (1 - k)})`; ctx.fillRect(0, 0, W, H); } }
     if (this.clock !== 'fast' && t < 1.6) { ctx.fillStyle = `rgba(0,0,0,${0.6 * (1 - ease(t / 1.6))})`; ctx.fillRect(0, 0, W, H); }
     const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.62);
     v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
@@ -873,10 +892,33 @@ export class IntroScene {
   destroy() {
     this.alive = false;
     this.stopSounds();
-    this.view.cv.removeEventListener('pointerdown', this.onDown);
+    window.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('keydown', this.onKey);
     this.root.remove();
   }
 }
 // 미리 받아 두기(제목 화면 전에 불러 두고 싶을 때)
 IntroScene.preload = () => Promise.all([...IMG_LIST.map(loadImg), loadSfx(), loadMusic()]);
+// 시험용(자동 검사가 시간표를 읽음)
+export const INTRO_TIMING = { CUT_T, CAPTIONS, T_TITLE, T_PRESS };
+
+// 제목 화면만 그리기(인트로가 끝난 뒤 다른 장면이 같은 그림·같은 글자 자리 위에 단추를 띄울 때).
+//   drawIntroTitle(app.view, t, { press })  — 매 프레임 부름. t: 인트로 onDone({ t })로 받은 값에서 이어서 늘리면 카메라가 이어짐.
+//   다 꿰매진 제목 + 부제 + 먼지·비네트·필름 결. press: 「눌러서 시작」도 그릴지(기본 false).
+let painter = null;
+export function drawIntroTitle(view, t = 56, { press = false } = {}) {
+  if (!painter) {
+    painter = Object.create(IntroScene.prototype);
+    painter.makeGrain(); painter.dust = makeDust();
+    painter.clock = 'fast'; painter.fast = null; painter.final = true; painter.state = 'title';
+    loadImg('intro_c7_bg');
+    document.fonts?.load?.('700 40px "Cinzel Deco"').catch(() => {});
+  }
+  painter.view = view; painter.finalPress = press;
+  const { ctx, dpr, W, H } = view;
+  painter.W = W; painter.H = H; painter.ori = W < H ? 'v' : 'h';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  painter.cut7(ctx, Math.max(t, 50));
+  painter.drawOverlay(ctx, Math.max(t, 50));
+}

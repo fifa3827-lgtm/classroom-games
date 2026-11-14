@@ -63,7 +63,7 @@ export class ToolboxScene {
       for (const type of TOWER_ORDER_ALL) {
         const open = this.towerOpen(type);
         const row = el('div', 'scr-trow' + (open ? '' : ' locked'));
-        row.innerHTML = `<img class="tw" src="assets/towers/${type}_1.webp" alt=""><div class="tn"><b>${TOWERS[type].name}</b>${open ? '' : `<small>${TOWERS[type].ch}장에서 만나요</small>`}</div><div class="nodes"></div>`;
+        row.innerHTML = `<img class="tw" src="assets/towers/${type}_1.webp" alt=""><div class="tn"><b>${TOWERS[type].name}${open ? '' : `<small>${TOWERS[type].ch}장에서 만나요</small>`}</b><div class="nodes"></div></div>`;
         const box = row.querySelector('.nodes');
         for (const n of TOOL_NODES.filter(n => n.tower === type)) box.append(this.nodeBtn(n, open, free));
         list.append(row);

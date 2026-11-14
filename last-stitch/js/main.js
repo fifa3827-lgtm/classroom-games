@@ -4,7 +4,11 @@ import { loadAll, loadImage, TOWER_IMGS, ENEMY_IMGS, UI_IMGS, CANNON_PARTS, ARCH
 import { audio } from './engine/audio.js';
 import { getLevel, LEVELS } from './data/levels.js';
 import { LevelScene } from './scenes/level.js';
-import { loadSave, writeSave, modsFrom } from './engine/save.js';
+import { loadSave, writeSave, modsFrom, thimblesEarned } from './engine/save.js';
+import { MAPS } from './data/maps.js';
+import { SCENES } from './data/story.js';
+
+const LAST_ID = '5-3';
 
 const SFX = ['tower_place', 'tower_upgrade', 'tower_sell', 'thread_pull', 'thread_ting', 'thread_cut', 'arrow_shoot', 'cannon_fire', 'cannon_hit',
   'ice_shot', 'lightning_zap', 'hit_paint', 'hit_wood', 'hit_metal', 'enemy_pop', 'life_lost', 'wave_start', 'button', 'coin', 'fire_burn', 'freeze',
@@ -13,13 +17,13 @@ const SFX = ['tower_place', 'tower_upgrade', 'tower_sell', 'thread_pull', 'threa
 // 주소에 아무것도 없을 때 처음 화면. (M1 검수 동안은 'level' — 자동 검사가 바로 판을 기다림)
 const FIRST_SCREEN = 'level';
 // 제목·지도·공구함 배경
-const MENU_IMGS = [['menu_v', 'assets/maps/1-1_v.webp'], ['menu_h', 'assets/maps/1-1_h.webp']];
+const MENU_IMGS = [['menu_v', 'assets/intro/intro_c7_bg.webp'], ['menu_h', 'assets/intro/intro_c7_bg.webp']];
 
 const app = {
   view: new View(document.getElementById('game')),
   scene: null,
   data: loadSave(),
-  hasIntro: false,
+  hasIntro: true,
   get settings() { return this.data.settings; },
   ui() { return document.getElementById('ui'); },
   save() { writeSave(this.data); window.__settings = this.settings; },
@@ -47,10 +51,13 @@ const app = {
       Next = name === 'title' ? mod.TitleScene : name === 'map' ? mod.MapScene : mod.ToolboxScene;
     } else if (name === 'intro') {
       const mod = await import('./scenes/intro.js');
-      Next = class { constructor(app) { return new mod.IntroScene(app, { onDone: () => app.go('title', { fromIntro: true }), titleOnly: false }); } };
+      Next = class { constructor(app, o) { return new mod.IntroScene(app, { onDone: r => app.go('title', { t: r?.t, quick: true }), ...(o.replay ? { titleOnly: false } : {}) }); } };
     } else if (name === 'story') {
       const mod = await import('./scenes/story.js');
       Next = class { constructor(app, o) { return new mod.StoryScene(app, o.key, { onDone: () => app.go(o.then || 'map', o.thenOpt || {}) }); } };
+    } else if (name === 'ending') {
+      const mod = await import('./scenes/ending.js');
+      Next = class { constructor(app, o) { return new mod.EndingScene(app, { stats: o.stats || app.endStats(), onDone: () => app.go('title', { quick: true }) }); } };
     } else return;
     if (token !== this.goToken) return;
     this.scene?.destroy();
@@ -59,6 +66,23 @@ const app = {
     document.body.dataset.scene = name;
   },
   startLevel(id) { return this.go('level', { id }); },
+  // 판 고르기: 마지막 판 앞에는 장인의 마지막 일기 장면
+  enterLevel(id) {
+    if (id === LAST_ID && !this.data.seenFinal) { this.data.seenFinal = true; this.save(); return this.go('story', { key: 'before_final', then: 'level', thenOpt: { id } }); }
+    return this.go('level', { id });
+  },
+  // 판을 깬 뒤: 장의 마지막 판이면 이야기 장면, 마지막 판이면 엔딩, 아니면 지도(다음 판에 초점)
+  afterWin(id) {
+    if (id === LAST_ID) return this.go('ending', {});
+    const ids = Object.keys(MAPS).sort(), i = ids.indexOf(id), nx = ids[i + 1];
+    const ch = id.split('-')[0];
+    if (nx && nx.split('-')[0] !== ch && SCENES[`ch${ch}_after`]) return this.go('story', { key: `ch${ch}_after`, then: 'map', thenOpt: { focus: nx } });
+    return this.go('map', { focus: nx || id });
+  },
+  endStats() {
+    const ids = Object.keys(MAPS);
+    return { time: this.data.playTime || 0, stars: ids.reduce((a, id) => a + (this.data.stars[id] || 0), 0), starsMax: ids.length * 3, thimbles: thimblesEarned(this.data) };
+  },
 };
 window.__settings = app.settings;
 window.__app = app; // 시험용

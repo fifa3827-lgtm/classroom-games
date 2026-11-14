@@ -49,8 +49,9 @@ export function playSfx(name, vol = 1, rate = 1) {
 
 const STYLE_ID = 'story-scene-style';
 const CSS = `
-.st-root{position:fixed;inset:0;z-index:20;pointer-events:none;font-family:'Batang','Noto Serif KR',serif}
-.st-root *{pointer-events:none}
+.st-root{position:fixed;inset:0;z-index:20;font-family:'Batang','Noto Serif KR',serif}
+#ui .st-root,#ui .st-root *,.st-root,.st-root *{pointer-events:none}
+#ui .st-root .st-skip{pointer-events:auto}
 .st-skip{position:absolute;top:calc(14px + var(--safe-t,0px));right:calc(14px + var(--safe-r,0px));pointer-events:auto!important;
   min-width:44px;min-height:44px;padding:0 18px;border-radius:22px;font-family:'Batang',serif;font-size:14px;letter-spacing:.12em;
   color:rgba(240,226,200,.82);background:rgba(10,8,6,.38);border:1px solid rgba(243,197,90,.28);cursor:pointer;transition:opacity .4s}
@@ -149,9 +150,8 @@ export class StoryScene {
   closeDiary() {
     this.$('.st-diary').classList.remove('on'); this.$('.st-text').style.opacity = '';
     playSfx('st_page', 0.5, 0.9);
-    this.diaryShown = false; this.state = 'wait';
-    setTimeout(() => this.alive && this.state === 'wait' && this.go(this.i + 1), 380);
-    this.state = 'closing';
+    this.diaryShown = false; this.state = 'closing';
+    setTimeout(() => this.alive && this.state === 'closing' && this.go(this.i + 1), 380);
   }
   end() {
     if (this.state === 'out' || !this.alive) return;

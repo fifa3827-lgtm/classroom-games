@@ -115,7 +115,7 @@ export class Renderer {
       return [x + sp[0] * w, y + PAD_R * 0.32 - A.top * h + sp[1] * h - A.fh * 0.55];
     }
     if (hasBarrel(t)) {
-      const C = CANNON[t.level], ang = t._ra ?? t.ang ?? 2.4;
+      const C = CANNON[t.level], ang = t._ra ?? t.ang ?? this.idleAng(game, t);
       const bimg = IMG[`cannon_barrel_${t.level}`];
       const len = C.tip * C.bw;
       return [x + Math.cos(ang) * len, y + PAD_R * 0.32 - C.top * h + Math.sin(ang) * len * PERSP];
@@ -364,6 +364,14 @@ export class Renderer {
     }
   }
 
+  idleAng(game, t) {
+    if (t._idle !== undefined && t._idleOri === game.ori) return t._idle;
+    const [x, y] = game.padPos(t.pad);
+    let best = null, bd = 1e12;
+    for (const P of game.geo.paths) for (const [px, py] of P.pts) { const d = (px - x) ** 2 + (py - y) ** 2; if (d < bd) { bd = d; best = [px, py]; } }
+    t._idleOri = game.ori;
+    return (t._idle = best ? Math.atan2(best[1] - y, best[0] - x) : 2.4);
+  }
   towerImg(t) { return hasArchers(t) ? IMG[`archer_base_${t.level}`] : hasBarrel(t) ? IMG[`cannon_base_${t.level}`] : IMG[`${t.type}_${t.level}`]; }
   drawTower(game, t) {
     const { ctx } = this;
@@ -414,7 +422,7 @@ export class Renderer {
     if (barrel) {
       // 포신이 과녁 쪽으로 부드럽게 돈다
       const C = CANNON[t.level], bimg = IMG[`cannon_barrel_${t.level}`];
-      const want = t.ang ?? 2.4;
+      const want = t.ang ?? this.idleAng(game, t);
       if (t._ra === undefined) t._ra = want;
       let d = want - t._ra; d = Math.atan2(Math.sin(d), Math.cos(d));
       t._ra += d * Math.min(1, this.dt * 14);

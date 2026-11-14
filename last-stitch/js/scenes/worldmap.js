@@ -151,7 +151,7 @@ export class MapScene {
       <p>${stars ? (stars === 3 ? '별 셋을 모두 받았어요. 다른 전략도 시험해 보세요.' : `별 ${stars}개. 생명을 지키면 별을 더 받아요.`) : '아직 지키지 못한 곳이에요.'}</p>
       <div class="btns row2"><button class="btn small ghost" data-a="x">닫기</button><button class="btn" data-a="go">출발</button></div></div>`;
     this.root.append(sh);
-    sh.querySelector('[data-a=go]').onclick = () => { audio.play('button'); this.app.go('level', { id }); };
+    sh.querySelector('[data-a=go]').onclick = () => { audio.play('button'); this.app.enterLevel(id); };
     sh.querySelector('[data-a=x]').onclick = () => { audio.play('button'); this.closeSheet(); };
   }
   closeSheet() { this.sheet?.remove(); this.sheet = null; }
