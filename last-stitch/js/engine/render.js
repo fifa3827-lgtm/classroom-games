@@ -192,6 +192,16 @@ export class Renderer {
         ctx.shadowBlur = 0;
       });
     }
+    // 안내: 실로 이을 두 탑을 빛나는 고리로
+    if (U.tutPair) {
+      const pulse = 0.5 + 0.5 * Math.sin(this.t * 5);
+      for (const t of U.tutPair) {
+        const [x, y] = game.padPos(t.pad);
+        ctx.shadowColor = '#ffe9a8'; ctx.shadowBlur = 20;
+        ctx.strokeStyle = `rgba(255,233,168,${0.6 + 0.4 * pulse})`; ctx.lineWidth = 7;
+        ctx.beginPath(); ctx.ellipse(x, y, PAD_R * 1.15, PAD_R * 0.74, 0, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0;
+      }
+    }
     // 적이 들어오는 곳: 정보 띠 바로 아래 길 위에 빨간 화살표
     const incoming = !game.result && (game.spawning.length > 0 || !game.started || (game.betweenT > 0 && game.betweenT < 6));
     if (incoming) {

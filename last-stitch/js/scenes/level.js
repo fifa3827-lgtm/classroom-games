@@ -95,14 +95,18 @@ export class LevelScene {
   // 안전 구역: 빈자리 위에 서는 탑 머리(약 200)까지 보이게 위쪽을 넓힌다
   safeRect() {
     const g = this.game.geo, s = SAFE[this.ori].slice();
-    const top = Math.min(...g.pads.map(p => p[1])) - 210;
-    s[1] = Math.max(0, Math.min(s[1], top / g.H));
+    const top = Math.min(...g.pads.map(p => p[1])) - 330;
+    s[1] = Math.min(s[1], top / g.H);   // 맵 위끝보다 위일 수도 있음(그때는 흐린 바탕이 위에 보임)
     return s;
   }
   applyOrientation(first) {
     const ori = this.ori;
     document.body.classList.toggle('land', ori === 'h');
-    if (!first) this.game.setOrientation(ori);
+    if (!first) {
+      this.game.setOrientation(ori);
+      const g = this.game, far = g.threads.filter(th => g.threadLen(th.a, th.b) > g.maxThreadLen());
+      if (far.length) { g.threads = g.threads.filter(th => !far.includes(th)); this.later(0.1, () => this.toast(`화면이 바뀌어 닿지 않는 실 ${far.length}개를 풀었어요. 실패는 바로 다시 쓸 수 있어요.`)); }
+    }
     const M = this.level.map[ori];
     const img = IMG[`map_${this.level.id}_${ori}`];
     this.r.setMap(img);
@@ -167,6 +171,7 @@ export class LevelScene {
   }
   down(e) {
     if (this.paused || this.game.result || this.talking) return;
+    if (this.tutTip) this.tutTip.dataset.until = this.realT;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY;
     const t = this.towerAtScreen(sx, sy);
@@ -194,7 +199,7 @@ export class LevelScene {
       const o = this.towerAtScreen(e.clientX, e.clientY);
       const over = o && o !== D.from ? o : null;
       if (over !== D.over) { D.over = over; if (over) audio.play('button', { vol: 0.4, rate: 1.4 }); this.dragTip(D); }
-      if (this.dTip) { this.dTip.style.left = e.clientX + 'px'; this.dTip.style.top = Math.max(70, e.clientY - 120) + 'px'; }
+
       if (performance.now() - (this.lastPull || 0) > 900) { this.lastPull = performance.now(); audio.play('thread_pull', { vol: 0.35, max: 1 }); }
     }
   }
@@ -229,8 +234,9 @@ export class LevelScene {
     if (why === 'ok') {
       const c = threadCombo(TOWERS[D.from.type].elem, TOWERS[D.over.type].elem);
       const cross = g.threadCrosses(D.from, D.over);
-      b.innerHTML = `<div class="in"><b>${c.name}</b><div class="st">${cross ? '길 위를 지나는 적에게: ' + c.desc : '길을 지나지 않아요. 두 탑이 힘만 나눠요.'}</div><div class="st">나눠 받는 힘: ${this.shareText(D.from, D.over)}</div></div>`;
+      b.innerHTML = `<div class="in"><b>${c.name}</b><div class="st">${cross ? c.desc : '길 위를 지나지 않아요. 두 탑이 힘만 나눠요.'}</div><div class="st">나눠 받는 힘: ${this.shareText(D.from, D.over)}</div></div>`;
     } else b.innerHTML = `<div class="in"><div class="st">${{ far: '실이 닿지 않아요', dup: '이미 이어졌어요', nospool: '남은 실패가 없어요' }[why] || ''}</div></div>`;
+    b.style.left = '50%'; b.style.top = (this.insets().t + 4) + 'px';
     this.ui.append(b); this.dTip = b;
   }
   shareText(a, b) {
@@ -262,14 +268,14 @@ export class LevelScene {
     const node = el('div', 'ring');
     const tip = el('div', 'tip parch'); tip.style.display = 'none';
     this.ui.append(node, tip);
-    this.menu = { node, tip, anchor, opts, sel: -1 };
+    this.menu = { node, tip, anchor, opts, sel: -1, openedAt: performance.now() };
     opts.forEach((o, i) => {
       const b = el('button', 'opt' + (o.cls ? ' ' + o.cls : ''), o.html);
       b.style.left = o.dx + 'px'; b.style.top = o.dy + 'px';
       b.style.animationDelay = (i * 0.03) + 's';
       b.setAttribute('aria-label', o.label);
       b.onpointerdown = ev => ev.stopPropagation();
-      b.onclick = ev => { ev.stopPropagation(); this.pickOpt(i); };
+      b.onclick = ev => { ev.stopPropagation(); if (performance.now() - (this.menu?.openedAt || 0) < 400) return; this.pickOpt(i); };
       o.btn = b;
       node.append(b);
     });
@@ -363,10 +369,12 @@ export class LevelScene {
   }
   toast(text) {
     if (!text) return;
-    const b = el('div', 'banner', `<small>${text}</small>`);
-    b.style.top = '22%'; b.style.fontSize = '30px';
+    this.toastEl?.remove();
+    const b = el('div', 'toast parch pass', text);
+    b.style.top = (this.insets().t + 8) + 'px';
+    this.toastEl = b;
     this.ui.append(b);
-    this.later(1.8, () => b.remove());
+    this.later(2.7, () => b.remove());
   }
   banner(main, sub) {
     const b = el('div', 'banner', `${main}${sub ? `<small>${sub}</small>` : ''}`);
@@ -397,6 +405,7 @@ export class LevelScene {
     const tipAt = (text, keep = []) => {
       const b = el('div', 'bubble parch pass'); b.innerHTML = `<div class="in"><div>${text}</div></div>`;
       this.ui.append(b); this.tutTip = b; this.placeTip(b, keep);
+      b.dataset.until = this.realT + (n === 4 ? 7 : 6);
     };
     if (n === 1) {
       // 입구에서 가까운 빈자리 하나를 가리킨다
@@ -449,6 +458,8 @@ export class LevelScene {
   tutUpdate() {
     const T = this.tut; if (!T) return;
     const g = this.game;
+    if (this.tutTip && this.realT > +this.tutTip.dataset.until) { const tt = this.tutTip; this.tutTip = null; tt.classList.add('hide'); this.later(0.4, () => tt.remove()); }
+    this.r.ui.tutPair = T.step === 4 && T.dragA && T.dragB ? [T.dragA, T.dragB] : null;
     if (T.step === 1 && this.hand) {
       const [x, y] = this.view.w2s(...g.padPos(this.tutPad));
       this.hand.style.left = x + 'px'; this.hand.style.top = y + 'px';
