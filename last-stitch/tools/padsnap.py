@@ -18,28 +18,31 @@ for k in range(0, len(args), 2):
     im = Image.open(os.path.join(SRC, f'{lid}_{ori}.png')).convert('RGB')
     W, H = im.size; S = min(W, H); R = PAD_R * S
     hsv = np.asarray(im.convert('HSV')).astype(float) / 255
-    s, v = hsv[..., 1], hsv[..., 2]
+    hh, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     out = []; moved = []
     for (x, y) in L['pads']:
         cx, cy = x * W, y * H
         r = int(R * 1.8)
         x0, x1 = int(max(0, cx - r)), int(min(W, cx + r)); y0, y1 = int(max(0, cy - r)), int(min(H, cy + r))
         best = None
-        for t in (0.14, 0.17, 0.2, 0.24, 0.28, 0.32):
-            m = (s[y0:y1, x0:x1] < t) & (v[y0:y1, x0:x1] > 0.4)
+        # 받침 = 모래보다 조금 어둡고 붉은 쪽(사막) / 낮은 채도(펠트·풀밭). 기준을 조여 가며 찾음
+        for t in (0.9, 0.92, 0.94, 0.95, 0.96):
+            sub = (slice(y0, y1), slice(x0, x1))
+            m = (v[sub] < t) & (v[sub] > 0.55) & (hh[sub] < 0.085) & (s[sub] < 0.47)
+            m = ndimage.binary_fill_holes(ndimage.binary_closing(m, iterations=5))
             m = ndimage.binary_opening(m, iterations=2)
             lab, n = ndimage.label(m)
             if not n: continue
             for i in range(1, n + 1):
                 yy, xx = np.nonzero(lab == i)
                 area = len(xx)
-                if not (0.45 * math.pi * R * R * 0.65 < area < 1.5 * math.pi * R * R): continue
+                if not (0.45 * math.pi * R * R * 0.65 < area < 2.4 * math.pi * R * R): continue
                 mx, my = xx.mean() + x0, yy.mean() + y0
                 d = math.hypot(mx - cx, my - cy)
-                if d > R * 1.2: continue
+                if d > R * 1.4: continue
                 # 너비가 받침만 한가(가로로 긴 타원)
                 wpx = xx.max() - xx.min()
-                if not (1.2 * R < wpx < 2.6 * R): continue
+                if not (1.2 * R < wpx < 3.0 * R): continue
                 if best is None or d < best[2]: best = (mx, my, d, t)
             if best: break
         if best:

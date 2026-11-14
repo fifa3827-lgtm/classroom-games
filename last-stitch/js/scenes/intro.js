@@ -13,16 +13,16 @@ const MUSIC_LEN = 60;
 const POS = {
   c1: { candle: [0.19, 0.44], window: [0.87, 0.16], beamTo: [0.42, 0.95] },
   c1fg: { flame: [0.262, 0.139] },           // 앞 촛대 그림 안 불꽃 자리
-  c3: { candle: [0.075, 0.2], bottle: [0.47, 0.74], bottleH: 0.4 },   // bottle: 병 바닥 가운데
+  c3: { candle: [0.075, 0.2], bottle: [0.47, 0.74], bottleH: 0.4, bottleHv: 0.34 },   // bottle: 병 바닥 가운데
   c3bottle: { mouth: [0.5, 0.15] },          // 서 있는 병 그림 안 주둥이
-  c3fallen: { len: 0.8, base: 0.0, floor: 0.9, mouth: [0.8, 0.3], stream: [0.95, 0.88] },   // 누운 병 그림: 병 길이(폭 비율), 바닥 끝, 땅에 닿는 높이, 주둥이, 흘러내린 끝
+  c3open: { mouth: [0.5, 0.03] },            // 마개 뺀 병 그림 안 주둥이
           // 병 그림 안 주둥이 자리
   // 눈 무리(박마다 한 무리씩 켜짐, 마지막은 가운데 큰 기사). [x, y, r] 비율 — intro_c5_eyes 와 c5_bg 차이로 찾음
   c5: { eyes: [
     [[0.267, 0.414, 0.009], [0.300, 0.412, 0.009]],      // 왼쪽 기사
     [[0.257, 0.680, 0.011], [0.303, 0.678, 0.010]],      // 젤리
     [[0.701, 0.417, 0.009], [0.736, 0.408, 0.009]],      // 오른쪽 기사
-    [[0.699, 0.677, 0.008, 1], [0.736, 0.688, 0.010]],   // 태엽 쥐(먼 눈·가까운 눈). 넷째 값 1 = 눈 빛 그림에 없어 코드로 눈동자 빛을 그림
+    [[0.699, 0.677, 0.008, 1]],                          // 태엽 쥐(눈 하나). 넷째 값 1 = 눈 빛 그림을 쓰지 않고 코드로 눈동자 빛을 그림
     [[0.480, 0.439, 0.013], [0.541, 0.432, 0.013]],      // 가운데 큰 기사(마지막)
   ], times: [33.0, 34.0, 35.0, 36.0, 37.2] },
   c6: { path: [[0.42, 0.66], [0.55, 0.5], [0.68, 0.62], [0.78, 0.42], [0.9, 0.48], [1.05, 0.3]] },
@@ -62,7 +62,7 @@ const EYE_T0 = 33.0;
 const HEART = [0.3, 1.8, 3.2, 3.6, 4.0, 4.4, 4.7, 5.12, 5.8];   // in_heart.ogg 소리 봉우리(초)         // 첫 눈이 켜지는 때(박마다 하나씩)
 const THREAD_T = [42.0, 46.6];
 
-const IMG_LIST = ['intro_c1_bg', 'intro_c1_fg', 'intro_c2_bg', 'intro_c2_fg', 'intro_c3_bg', 'intro_c3_bottle', 'intro_c3_fallen', 'intro_c3_cork', 'intro_c3_puddle', 'intro_c3_splash', 'intro_c4_bg', 'intro_c4_red',
+const IMG_LIST = ['intro_c1_bg', 'intro_c1_fg', 'intro_c2_bg', 'intro_c2_fg', 'intro_c3_bg', 'intro_c3_bottle', 'intro_c3_bottle_open', 'intro_c3_cork', 'intro_c3_puddle', 'intro_c3_splash', 'intro_c4_bg', 'intro_c4_red',
   'intro_c5_bg', 'intro_c5_eyes', 'intro_c6_bg', 'intro_c6_hand', 'intro_c7_bg'];
 const FIRST = ['intro_c1_bg', 'intro_c1_fg', 'intro_c2_bg', 'intro_c2_fg'];
 const SFX_LIST = ['in_room', 'in_whoosh', 'in_wobble', 'in_crash', 'in_ooze', 'in_heart', 'in_eye', 'in_glint', 'in_thread', 'in_stitch', 'in_title'];
@@ -418,31 +418,53 @@ export class IntroScene {
       const [a0] = CUT_T[i], a1 = CUT_T[act[j - 1]][1];
       const k = seg(t, a0, a1);
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-      if (i === 3) this.inkWipe(ctx, k);
+      if (i === 3) this.inkWipe(ctx, k, t);
       else { ctx.globalAlpha = i === 4 ? ease(k) : ease(k); ctx.drawImage(this.buf, 0, 0); }
       ctx.restore();
     }
   }
   // 잉크가 화면을 덮으며 다음 컷이 드러남
-  // 잉크가 화면을 덮으며 다음 컷이 드러남. 가장자리는 작은 판에 그린 얼룩을 크게 늘려 부드럽게(물감이 스며든 느낌)
-  inkWipe(ctx, k) {
+  // 잉크가 화면을 덮었다가(윤기 있는 잉크 그림으로 채움) 옅어지며 다음 컷이 드러남. 가장자리는 작은 판에 그려 늘려 부드럽게
+  inkWipe(ctx, k, t) {
     const { W, H } = this, cv = this.view.cv;
     const [mx, my] = this.mouthScreen || [W * 0.55, H * 0.6];
-    const R = Math.hypot(W, H) * 1.15 * easeIn(k * 0.85 + 0.15 * k * k) + 2;
+    const g = seg(t, 24.35, 25.05), rv = ease(seg(t, 24.95, 25.4));
+    const g2 = seg(t, 24.5, 25.0), R = Math.hypot(W, H) * 1.2 * (easeIn(g2) * 0.6 + g2 * 0.4) + 2;   // 번지는 잉크는 튀는 잉크 뒤를 따라옴
+    if (rv > 0) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = rv; ctx.drawImage(this.buf, 0, 0); ctx.restore(); }
+    if (rv >= 1) return;
     const q = 6, mw = Math.ceil(W / q), mh = Math.ceil(H / q);
     const m = (this.wmask ||= document.createElement('canvas')); if (m.width !== mw || m.height !== mh) { m.width = mw; m.height = mh; }
-    const r = (this.wrim ||= document.createElement('canvas')); if (r.width !== mw || r.height !== mh) { r.width = mw; r.height = mh; }
     const full = (this.wfull ||= document.createElement('canvas')); if (full.width !== cv.width || full.height !== cv.height) { full.width = cv.width; full.height = cv.height; }
-    const cx = (mx + R * 0.12) / q, cy = (my - R * 0.05) / q, rr = R / q;
-    const mc = m.getContext('2d'); mc.clearRect(0, 0, mw, mh); mc.fillStyle = '#fff'; mc.beginPath(); blobSmooth(mc, cx, cy, rr, 2.3, k * 4); mc.fill();
-    const rc = r.getContext('2d'); rc.clearRect(0, 0, mw, mh); rc.fillStyle = 'rgba(70,0,8,.92)'; rc.beginPath(); blobSmooth(rc, cx, cy, rr * 1.05 + 3, 2.3, k * 4); rc.fill();
-    const fc = full.getContext('2d'); fc.globalCompositeOperation = 'source-over'; fc.clearRect(0, 0, full.width, full.height);
-    fc.drawImage(this.buf, 0, 0); fc.globalCompositeOperation = 'destination-in'; fc.imageSmoothingQuality = 'high'; fc.drawImage(m, 0, 0, full.width, full.height); fc.globalCompositeOperation = 'source-over';
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(r, 0, 0, cv.width, cv.height);      // 젖은 진홍 가장자리
-    ctx.drawImage(full, 0, 0);
-    ctx.restore();
+    const mc = m.getContext('2d'); mc.clearRect(0, 0, mw, mh); mc.fillStyle = '#fff'; mc.beginPath(); blobSmooth(mc, lerp(mx, W / 2, ease(g)) / q, lerp(my, H / 2, ease(g)) / q, R / q, 2.3, t * 4); mc.fill();
+    const fc = full.getContext('2d'); const dpr = this.view.dpr;
+    fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalCompositeOperation = 'source-over'; fc.globalAlpha = 1; fc.clearRect(0, 0, full.width, full.height);
+    // 잉크 바탕: 짙은 진홍 + 웅덩이 그림의 윤기(가운데만 잘라 크게)
+    fc.fillStyle = '#4a0209'; fc.fillRect(0, 0, full.width, full.height);
+    const pud = cache.img.intro_c3_puddle;
+    if (pud) {
+      fc.globalAlpha = 0.9;
+      const sx = pud.width * 0.22, sy = pud.height * 0.3, sw = pud.width * 0.56, sh = pud.height * 0.4;
+      const cw = full.width * 1.25, ch = full.height * 1.25, ox = (mx * dpr) - cw * 0.5 + Math.sin(t * 1.3) * 20, oy = (my * dpr) - ch * 0.45;
+      fc.drawImage(pud, sx, sy, sw, sh, ox, oy, cw, ch);
+      fc.globalAlpha = 1;
+    }
+    const sh2 = fc.createRadialGradient(mx * dpr, my * dpr, 0, mx * dpr, my * dpr, Math.hypot(full.width, full.height) * 0.8);   // 가운데 밝고 바깥 어둡게
+    sh2.addColorStop(0, 'rgba(255,110,110,.2)'); sh2.addColorStop(1, 'rgba(20,0,2,.5)');
+    fc.fillStyle = sh2; fc.fillRect(0, 0, full.width, full.height);
+    fc.globalCompositeOperation = 'destination-in'; fc.imageSmoothingQuality = 'high'; fc.drawImage(m, 0, 0, full.width, full.height);
+    fc.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1 - rv; ctx.drawImage(full, 0, 0); ctx.restore();
+    // 튀는 잉크가 화면(카메라) 쪽으로 덮쳐 옴: 윤기·방울이 살아 있는 그림을 크게 키움
+    const sp = cache.img.intro_c3_splash;
+    if (sp) {
+      const base = Math.min(W, H) * 0.55, sc = lerp(1, 5.5, easeIn(g) * 0.8 + g * 0.2);
+      const sw = base * sc, shh = sw * sp.height / sp.width;
+      const cx = lerp(mx, W / 2, ease(g)), cy = lerp(my, H / 2, ease(g));
+      ctx.save(); ctx.setTransform(this.view.dpr, 0, 0, this.view.dpr, 0, 0); ctx.globalAlpha = (1 - rv) * clamp(g * 4, 0, 1);
+      ctx.translate(cx, cy); ctx.rotate(-0.15 + g * 0.3); ctx.drawImage(sp, -sw / 2, -shh * 0.6, sw, shh); ctx.restore();
+    }
   }
+
 
 
   drawCut(ctx, i, t) {
@@ -486,7 +508,7 @@ export class IntroScene {
   cut3(ctx, t) {
     const slow = ease(seg(t, 21.5, 23.6));
     const cam = this.cam({ h: [[15.7, 0.5, 0.55, 1.1], [21.5, 0.48, 0.55, 1.15], [23.8, 0.5, 0.56, 1.19], [24.3, 0.55, 0.58, 1.19], [25.4, 0.56, 0.58, 1.17]],
-      v: [[15.7, 0.47, 0.56, 1.0], [21.5, 0.48, 0.57, 1.0], [23.7, 0.52, 0.58, 1.0], [24.1, 0.7, 0.6, 1.0], [24.5, 0.76, 0.6, 1.0], [25.4, 0.77, 0.6, 1.0]] }, t);
+      v: [[15.7, 0.47, 0.56, 1.0], [21.5, 0.48, 0.57, 1.0], [23.7, 0.52, 0.58, 1.0], [24.1, 0.6, 0.6, 1.0], [24.5, 0.64, 0.6, 1.0], [25.4, 0.65, 0.6, 1.0]] }, t);
     let shake = [0, 0];
     if (t > 24) { const d = Math.exp(-(t - 24) * 5.5) * Math.min(this.W, this.H) * 0.035; shake = [Math.sin(t * 91) * d, Math.cos(t * 77) * d * 0.8]; }
     const tf = this.bg(ctx, 'intro_c3_bg', cam, seg(t, 15.7, 16.4) > 0 ? 1 - ease(seg(t, 15.7, 16.6)) : 1, shake);
@@ -499,7 +521,7 @@ export class IntroScene {
     const bt = cache.img.intro_c3_bottle;
     const [bx, by] = this.w2s(tf, POS.c3.bottle[0], POS.c3.bottle[1]);
     if (bt) {
-      const h = POS.c3.bottleH * tf.ih * tf.s, w = h * bt.width / bt.height;
+      const h = (this.ori === 'v' ? POS.c3.bottleHv : POS.c3.bottleH) * tf.ih * tf.s, w = h * bt.width / bt.height;
       const right = ang >= 0;                          // 기우는 쪽 모서리를 축으로(흔들릴 때는 양쪽 모서리)
       const pvx = bx + (right ? 1 : -1) * w * 0.42, pvy = by;
       const off = (right ? -1 : 1) * w * 0.42;         // 축에서 병 가운데까지
@@ -511,41 +533,35 @@ export class IntroScene {
         ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(bx, by, w * 0.75, w * 0.15, 0, 0, 6.283); ctx.fill(); ctx.restore();
       }
       const rot = ([x, y]) => [pvx + x * Math.cos(ang) - y * Math.sin(ang), pvy + x * Math.sin(ang) + y * Math.cos(ang)];
-      const fall = cache.img.intro_c3_fallen, F = POS.c3fallen;
-      if (t <= 23.98 || !fall) {
-        // 서 있는·기우는 병(마개까지 한 장)
-        this.dbgBottle = [[off - w / 2, -h], [off + w / 2, -h], [off - w / 2, 0], [off + w / 2, 0]].map(rot);   // 시험용: 병 네 귀퉁이(화면)
-        this.mouthScreen = rot([off - w / 2 + POS.c3bottle.mouth[0] * w, -h + POS.c3bottle.mouth[1] * h]);
-        ctx.save(); ctx.translate(pvx, pvy); ctx.rotate(ang); ctx.drawImage(bt, off - w / 2, -h, w, h); ctx.restore();
-      } else {
-        // 쓰러진 병(따로 그린 그림): 오른쪽 모서리를 축으로 누운 자리에 놓음 + 웅덩이·튀는 잉크·날아가는 마개
-        const l = t - 23.98;
-        const fw = h / F.len, fh = fw * fall.height / fall.width;
-        const fx = pvx - F.base * fw, fy = pvy - fh * F.floor;
-        const bump = Math.sin(l * 18) * 0.03 * Math.exp(-l * 6) * fh;           // 쿵 하고 살짝 튐
-        const tip = [fx + F.stream[0] * fw, fy + F.stream[1] * fh];
-        this.mouthScreen = tip;
-        this.dbgBottle = [[fx, fy], [fx + fw * 0.82, fy], [fx, fy + fh], [fx + fw * 0.82, fy + fh]];
-        const pud = cache.img.intro_c3_puddle;
-        if (pud) {      // 웅덩이: 흘러나온 끝에서 점점 넓어짐
-          const k = easeOut(l / 1.3), pw = h * 1.5 * (0.15 + 0.85 * k), ph = pw * pud.height / pud.width;
-          ctx.save(); ctx.globalAlpha = clamp(l / 0.15, 0, 1);
-          ctx.drawImage(pud, tip[0] - pw * 0.42, tip[1] - ph * 0.35, pw, ph); ctx.restore();
-        }
-        ctx.drawImage(fall, fx, fy - bump, fw, fh);
-        const sp = cache.img.intro_c3_splash;
-        if (sp && l < 0.55) {   // 쾅 하는 순간 튀어 오르는 잉크
-          const k = easeOut(l / 0.35), sw = h * 0.95 * (0.45 + 0.55 * k), sh = sw * sp.height / sp.width;
-          ctx.save(); ctx.globalAlpha = 1 - seg(l, 0.22, 0.55);
-          ctx.drawImage(sp, tip[0] - sw * 0.5, tip[1] - sh * 0.92, sw, sh); ctx.restore();
-        }
-        const ck = cache.img.intro_c3_cork;
-        if (ck) {       // 마개: 포물선으로 날아가며 돈다
-          const cw = w * 0.42, chh = cw * ck.height / ck.width;
-          const x0 = fx + F.mouth[0] * fw, y0 = fy + F.mouth[1] * fh;
-          const x = x0 + h * 1.0 * l, y = y0 - h * 1.5 * l + h * 4.2 * l * l;
-          if (y < this.H + chh) { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 2 + l * 9); ctx.drawImage(ck, -cw / 2, -chh / 2, cw, chh); ctx.restore(); }
-        }
+      const open = cache.img.intro_c3_bottle_open;
+      const l = t - 23.98, down = t > 23.98 && open;
+      // 같은 병을 그대로 돌림. 쓰러지는 순간부터는 마개만 뺀 같은 병 그림(폭·바닥을 맞춤)
+      const img = down ? open : bt, ih2 = down ? w * open.height / open.width : h;
+      this.dbgBottle = [[off - w / 2, -ih2], [off + w / 2, -ih2], [off - w / 2, 0], [off + w / 2, 0]].map(rot);   // 시험용: 병 네 귀퉁이(화면)
+      const M = down ? POS.c3open.mouth : POS.c3bottle.mouth;
+      this.mouthScreen = rot([off - w / 2 + M[0] * w, -ih2 + M[1] * ih2]);
+      const [mx, my] = this.mouthScreen;
+      const pud = cache.img.intro_c3_puddle;
+      if (down && pud) {        // 웅덩이: 주둥이 앞 탁자 위에서 점점 넓어짐
+        const k = easeOut(l / 1.3), pw = h * 1.5 * (0.12 + 0.88 * k), ph = pw * pud.height / pud.width;
+        ctx.save(); ctx.globalAlpha = clamp(l / 0.12, 0, 1);
+        ctx.drawImage(pud, mx - pw * 0.12, pvy - ph * 0.62, pw, ph); ctx.restore();
+      }
+      ctx.save(); ctx.translate(pvx, pvy); ctx.rotate(ang); ctx.drawImage(img, off - w / 2, -ih2, w, ih2); ctx.restore();
+      const sp = cache.img.intro_c3_splash;
+      if (down && sp && l < 0.55) {   // 쾅 하는 순간 주둥이에서 튀어 오르는 잉크
+        const k = easeOut(l / 0.35), sw = h * 0.9 * (0.45 + 0.55 * k), sh = sw * sp.height / sp.width;
+        ctx.save(); ctx.globalAlpha = 1 - seg(l, 0.22, 0.55);
+        ctx.drawImage(sp, mx - sw * 0.35, pvy - sh * 0.95, sw, sh); ctx.restore();
+      }
+      const ck = cache.img.intro_c3_cork;
+      if (down && ck) {         // 마개: 튀어 올랐다가 탁자에 떨어져 구르다 멈춤
+        const cw = w * 0.42, chh = cw * ck.height / ck.width;
+        const floor = pvy - chh * 0.45;
+        let x = mx + h * 0.9 * l, y = my - h * 1.4 * l + h * 4.2 * l * l, r = Math.PI / 2 + l * 9;
+        const tl = (1.4 + Math.sqrt(1.96 + 4 * 4.2 * Math.max(0, (floor - my) / h))) / (2 * 4.2);   // 탁자에 닿는 때
+        if (l > tl) { const d = l - tl; x = mx + h * 0.9 * tl + h * 0.5 * (1 - Math.exp(-d * 4)); y = floor - Math.abs(Math.sin(d * 14)) * h * 0.08 * Math.exp(-d * 6); r = Math.PI / 2 + tl * 9 + (1 - Math.exp(-d * 4)) * 2.5; }
+        ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.drawImage(ck, -cw / 2, -chh / 2, cw, chh); ctx.restore();
       }
     }
     this.drawDust(ctx, t, 3, 0.5, 1 - slow * 0.8);
@@ -594,7 +610,8 @@ export class IntroScene {
       const m = this.mask.getContext('2d'); const MW = this.mask.width, MH = this.mask.height;
       m.clearRect(0, 0, MW, MH);
       let any = false;
-      eyes.forEach((grp, i) => grp.forEach(([ex, ey, er]) => {
+      eyes.forEach((grp, i) => grp.forEach(([ex, ey, er, own]) => {
+        if (own) return;
         const a = easeOut(seg(t, this.eyeT(i), this.eyeT(i) + 0.35)); if (a <= 0) return; any = true;
         const g = m.createRadialGradient(ex * MW, ey * MH, 0, ex * MW, ey * MH, er * MW * 2.2);
         g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(0.55, `rgba(255,255,255,${a * 0.8})`); g.addColorStop(1, 'rgba(255,255,255,0)');
