@@ -5,6 +5,15 @@ import { TOWERS, towerStats } from '../data/towers.js';
 const PAD_R = 62;
 const TOWER_W = { archer: 150, cannon: 150, ice: 140, lightning: 140 };
 const LV_SCALE = [0, 1, 1.08, 1.16];
+// 그림이 원래 보는 쪽: 대포 왼쪽(-1), 궁수 오른쪽(+1). 포구: [가운데에서 x(폭 비율), 바닥에서 y(높이 비율)]
+const FACE = { cannon: -1, archer: 1 };
+const MUZZLE = {
+  cannon: [null, [-0.36, 0.62], [-0.37, 0.64], [-0.34, 0.72]],
+  archer: [null, [0.20, 0.52], [0.16, 0.60], [0.0, 0.74]],
+  ice: [null, [0, 0.86], [0, 0.88], [0, 0.9]],
+  lightning: [null, [0, 0.86], [0, 0.88], [0, 0.9]],
+};
+const faceFlip = t => FACE[t.type] ? (t.aim === FACE[t.type] ? 1 : -1) : 1;
 
 // 그림의 흰 실루엣(맞을 때 번쩍) · 파란 실루엣(느려짐) 캐시
 const tintCache = new Map();
@@ -69,6 +78,34 @@ export class Renderer {
     for (let i = 0; i < 10; i++) this.ember(x, y);
     this.dust(x, y, 10, '#b9a48a');
     this.decals.push({ x, y, r: r * 0.55, life: 0, max: 2.2, col: '#3a2a1a', seed: Math.random() * 10 });
+  }
+  muzzle(game, t) {
+    const img = this.towerImg(t);
+    const [x, y] = game.padPos(t.pad);
+    if (!img) return game.towerTop(t);
+    const w = TOWER_W[t.type] * LV_SCALE[t.level], h = w * img.height / img.width;
+    const m = MUZZLE[t.type][t.level];
+    return [x + m[0] * w * faceFlip(t), y + PAD_R * 0.32 - m[1] * h];
+  }
+  shoot(game, ev) {
+    const t = ev.tower;
+    const [mx, my] = this.muzzle(game, t);
+    const sh = ev.shot;
+    if (sh) { sh.x = mx; sh.y = my; if (sh.k === 'ball') { sh.x0 = mx; sh.y0 = my; } sh.trail = []; }
+    this.pulseTower(t);
+    const dir = t.aim || 1;
+    if (t.type === 'cannon') {
+      this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.14, size: 34 + t.level * 6, col: '#ffd27a', kind: 'flash' });
+      for (let i = 0; i < 6; i++) this.parts.push({ x: mx, y: my, vx: dir * (40 + Math.random() * 80), vy: -30 - Math.random() * 50, g: -20, life: 0, max: 0.7 + Math.random() * 0.4, size: 12 + Math.random() * 10, col: '#d9d2c4', kind: 'puff' });
+      this.shake(2);
+    } else if (t.type === 'archer') {
+      this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.1, size: 16, col: '#fff6d8', kind: 'flash' });
+    } else if (t.type === 'ice') {
+      this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.18, size: 30, col: '#bfefff', kind: 'flash' });
+      this.sparks(mx, my, '#dff6ff', 5, 90);
+    } else if (t.type === 'lightning') {
+      this.parts.push({ x: mx, y: my, vx: 0, vy: 0, g: 0, life: 0, max: 0.2, size: 44, col: '#d6b8ff', kind: 'flash' });
+    }
   }
   dropTower(t) { this.drops.set(t.id, this.t); }
   pulseTower(t) { this.recoil.set(t.id, this.t); }
@@ -200,6 +237,12 @@ export class Renderer {
         fg.addColorStop(0, 'rgba(255,250,220,1)'); fg.addColorStop(0.5, 'rgba(255,190,80,.8)'); fg.addColorStop(1, 'rgba(255,120,30,0)');
         ctx.fillStyle = fg; ctx.globalAlpha = Math.max(0, 1 - u * 2.2);
         ctx.beginPath(); ctx.arc(p.x, p.y - 10, fr, 0, Math.PI * 2); ctx.fill();
+      } else if (p.kind === 'flash') {
+        const fr = p.size * (0.6 + u * 0.6);
+        const fg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, fr);
+        fg.addColorStop(0, 'rgba(255,255,240,1)'); fg.addColorStop(0.35, this.hexA(p.col, 0.9)); fg.addColorStop(1, this.hexA(p.col, 0));
+        ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = fg; ctx.globalAlpha = 1 - u;
+        ctx.beginPath(); ctx.arc(p.x, p.y, fr, 0, Math.PI * 2); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
       } else if (p.kind === 'frost') {
         ctx.fillStyle = p.col; ctx.globalAlpha = 1 - u;
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.life * 4); ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); ctx.restore();
@@ -273,9 +316,10 @@ export class Renderer {
     ctx.beginPath(); ctx.ellipse(x + 6, y + 10, PAD_R * 0.85 * sh, PAD_R * 0.42 * sh, 0, 0, Math.PI * 2); ctx.fill();
     if (!img) return;
     const h = w * img.height / img.width;
-    const flip = t.type === 'cannon' && t.aim < 0 ? -1 : 1;
+    const flip = faceFlip(t);
+    const kick = r0 !== undefined && this.t - r0 < 0.15 ? Math.sin((this.t - r0) / 0.15 * Math.PI) * (t.type === 'cannon' ? 9 : 3) * -(t.aim || 1) : 0;
     ctx.save();
-    ctx.translate(x, y + PAD_R * 0.32 + dy);
+    ctx.translate(x + kick, y + PAD_R * 0.32 + dy);
     ctx.scale(sqx * flip, sqy);
     ctx.drawImage(img, -w / 2, -h, w, h);
     ctx.restore();
@@ -394,25 +438,41 @@ export class Renderer {
   }
   drawShot(sh) {
     const { ctx } = this;
+    if (sh.trail) { sh.trail.push([sh.x, sh.y]); if (sh.trail.length > (sh.k === 'ball' ? 10 : 7)) sh.trail.shift(); }
+    const tr = sh.trail || [];
+    if (tr.length > 1) {
+      const col = sh.k === 'arrow' ? '255,250,230' : sh.k === 'shard' ? '190,235,255' : '210,200,185';
+      ctx.lineCap = 'round';
+      for (let i = 1; i < tr.length; i++) {
+        const u = i / tr.length;
+        ctx.strokeStyle = `rgba(${col},${u * (sh.k === 'ball' ? 0.45 : 0.6)})`;
+        ctx.lineWidth = (sh.k === 'ball' ? 14 : sh.k === 'shard' ? 9 : 5) * u;
+        ctx.beginPath(); ctx.moveTo(tr[i - 1][0], tr[i - 1][1]); ctx.lineTo(tr[i][0], tr[i][1]); ctx.stroke();
+      }
+    }
     if (sh.k === 'arrow') {
       ctx.save(); ctx.translate(sh.x, sh.y); ctx.rotate(sh.ang || 0);
-      ctx.strokeStyle = '#6b4424'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-24, 0); ctx.lineTo(8, 0); ctx.stroke();
-      ctx.fillStyle = '#d9d9d9'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(4, -5); ctx.lineTo(4, 5); ctx.fill();
-      ctx.fillStyle = '#4a7fe0'; ctx.fillRect(-26, -4, 8, 3); ctx.fillRect(-26, 1, 8, 3);
+      ctx.strokeStyle = '#5a3418'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(12, 0); ctx.stroke();
+      ctx.fillStyle = '#e8e8e8'; ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(8, -7); ctx.lineTo(8, 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#3f6fd8'; ctx.beginPath(); ctx.moveTo(-36, -7); ctx.lineTo(-24, -1); ctx.lineTo(-36, -1); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-36, 7); ctx.lineTo(-24, 1); ctx.lineTo(-36, 1); ctx.fill();
       ctx.restore();
     } else if (sh.k === 'shard') {
-      ctx.save(); ctx.translate(sh.x, sh.y); ctx.rotate((sh.ang || 0));
-      ctx.shadowColor = '#bfe9ff'; ctx.shadowBlur = 14;
-      ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(0, -7); ctx.lineTo(-12, 0); ctx.lineTo(0, 7); ctx.fill();
+      ctx.save(); ctx.translate(sh.x, sh.y); ctx.rotate(sh.ang || 0);
+      ctx.shadowColor = '#9fdcff'; ctx.shadowBlur = 20;
+      ctx.fillStyle = '#f2fbff'; ctx.strokeStyle = '#7cc8f0'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(2, -10); ctx.lineTo(-16, 0); ctx.lineTo(2, 10); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.restore();
-      if (Math.random() < 0.5) this.parts.push({ x: sh.x, y: sh.y, vx: 0, vy: 0, g: 0, life: 0, max: 0.3, size: 4, col: '#cdeeff', kind: 'spark' });
+      if (Math.random() < 0.6) this.parts.push({ x: sh.x, y: sh.y, vx: (Math.random() - 0.5) * 30, vy: 20, g: 0, life: 0, max: 0.4, size: 4, col: '#e6f8ff', kind: 'frost' });
     } else if (sh.k === 'ball') {
       const u = sh.t / sh.T;
       const gy = sh.y0 + (sh.ty - sh.y0) * u;
-      ctx.fillStyle = 'rgba(30,20,10,.25)'; ctx.beginPath(); ctx.ellipse(sh.x, gy + 30, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
-      const g = ctx.createRadialGradient(sh.x - 4, sh.y - 4, 2, sh.x, sh.y, 14);
-      g.addColorStop(0, '#6a6a72'); g.addColorStop(1, '#1d1d22');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sh.x, sh.y, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(30,20,10,.28)'; ctx.beginPath(); ctx.ellipse(sh.x, gy + 30, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
+      const g = ctx.createRadialGradient(sh.x - 6, sh.y - 6, 2, sh.x, sh.y, 19);
+      g.addColorStop(0, '#8a8a94'); g.addColorStop(1, '#16161a');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sh.x, sh.y, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ff9a3a'; ctx.beginPath(); ctx.arc(sh.x + 8, sh.y - 12, 4 + Math.random() * 2, 0, Math.PI * 2); ctx.fill();
       if (Math.random() < 0.5) this.ember(sh.x, sh.y);
     }
   }

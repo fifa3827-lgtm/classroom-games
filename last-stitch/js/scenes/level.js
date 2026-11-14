@@ -455,7 +455,7 @@ export class LevelScene {
           break;
         }
         case 'cut': if (!ev.silent) audio.play('thread_cut'); break;
-        case 'shoot': { const [n, v] = SHOT_SFX[ev.tower.type]; audio.play(n, { vol: v, gap: 0.06 }); R.pulseTower(ev.tower); break; }
+        case 'shoot': { const [n, v] = SHOT_SFX[ev.tower.type]; audio.play(n, { vol: v, gap: 0.06 }); R.shoot(g, ev); break; }
         case 'hit': {
           if (ev.src && ev.src.type !== 'lightning') audio.play(HIT_SFX[ev.mat], { vol: 0.45, gap: 0.05 });
           const e = ev.enemy;
@@ -479,7 +479,7 @@ export class LevelScene {
           break;
         }
         case 'boom': audio.play('cannon_hit', { vol: 0.7, gap: 0.05 }); R.boom(ev.x, ev.y, ev.r); R.shake(3 + ev.n * 1.5); if (ev.n >= 3) this.hitstop = Math.max(this.hitstop, 0.045); break;
-        case 'bolt': R.bolt(ev.pts); break;
+        case 'bolt': ev.pts[0] = R.muzzle(g, ev.tower); R.bolt(ev.pts); break;
         case 'thread_fx': {
           if (ev.kind === 'burn') audio.play('fire_burn', { vol: 0.5, gap: 0.2 });
           else if (ev.kind === 'stun') { audio.play('freeze', { vol: 0.6, gap: 0.1 }); R.sparks(ev.x, ev.y - 30, '#bfefff', 10, 160); }

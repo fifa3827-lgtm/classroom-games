@@ -283,7 +283,7 @@ export class Game {
       t.cd = s.rate;
       t.aim = best.x < px ? -1 : 1;
       const [ox, oy] = this.towerTop(t);
-      this.emit('shoot', { tower: t, target: best });
+      const nShots = this.shots.length;
       if (s.proj === 'arrow') this.shots.push({ k: 'arrow', x: ox, y: oy, tgt: best, sp: 950, dmg: s.dmg, src: t, dtype: s.dtype });
       else if (s.proj === 'shard') this.shots.push({ k: 'shard', x: ox, y: oy, tgt: best, sp: 620, dmg: s.dmg, src: t, slow: s.slow, slowDur: s.slowDur, dtype: s.dtype });
       else if (s.proj === 'ball') {
@@ -309,6 +309,7 @@ export class Game {
         }
         this.emit('bolt', { pts, tower: t });
       }
+      this.emit('shoot', { tower: t, target: best, shot: this.shots.length > nShots ? this.shots[this.shots.length - 1] : null });
     }
   }
 
