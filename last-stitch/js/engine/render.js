@@ -79,6 +79,34 @@ export class Renderer {
     const c = document.createElement('canvas'); c.width = 24; c.height = Math.round(24 * img.height / img.width);
     const x = c.getContext('2d'); x.drawImage(img, 0, 0, c.width, c.height);
     this.blurImg = c;
+    this.backdrop = null; this.feather = null;   // 띠가 생길 때 처음 그릴 때 만든다
+  }
+  // 맵이 화면보다 작을 때 둘레: 가장자리를 늘린 그림을 아주 흐리게 한 배경 + 가장자리가 녹아드는 맵 (경계선이 안 보이게)
+  bandArt() {
+    if (this.backdrop) return;
+    const img = this.mapImg, M = 0.5, bw = 120, bh = Math.round(bw * img.height / img.width);
+    const t = document.createElement('canvas'); t.width = Math.round(bw * (1 + 2 * M)); t.height = Math.round(bh * (1 + 2 * M));
+    const tx = t.getContext('2d'), ox = bw * M, oy = bh * M, k = 0.06;
+    tx.drawImage(img, ox, oy, bw, bh);
+    tx.drawImage(img, 0, 0, img.width * k, img.height, 0, oy, ox, bh);
+    tx.drawImage(img, img.width * (1 - k), 0, img.width * k, img.height, ox + bw, oy, ox, bh);
+    tx.drawImage(t, 0, oy, t.width, 2, 0, 0, t.width, oy);
+    tx.drawImage(t, 0, oy + bh - 2, t.width, 2, 0, oy + bh, t.width, oy);
+    const c = document.createElement('canvas'); c.width = t.width; c.height = t.height;
+    const cx = c.getContext('2d'); try { cx.filter = 'blur(6px)'; } catch {}
+    cx.drawImage(t, 0, 0); cx.filter = 'none';
+    cx.fillStyle = 'rgba(16,10,6,.16)'; cx.fillRect(0, 0, c.width, c.height);
+    this.backdrop = { c, M };
+    // 가장자리 3%가 투명해지는 맵
+    const f = document.createElement('canvas'); f.width = img.width; f.height = img.height;
+    const fx = f.getContext('2d'); fx.drawImage(img, 0, 0);
+    fx.globalCompositeOperation = 'destination-out';
+    const e = Math.round(Math.min(img.width, img.height) * 0.1);   // 가장자리 10%를 녹여 경계선이 안 보이게
+    for (const [x0, y0, x1, y1, rx, ry, rw, rh] of [[0, 0, e, 0, 0, 0, e, img.height], [img.width, 0, img.width - e, 0, img.width - e, 0, e, img.height], [0, 0, 0, e, 0, 0, img.width, e], [0, img.height, 0, img.height - e, 0, img.height - e, img.width, e]]) {
+      const gr = fx.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      fx.fillStyle = gr; fx.fillRect(rx, ry, rw, rh);
+    }
+    this.feather = f;
   }
   shake(a) { this.shakeA = Math.max(this.shakeA, a); }
 
@@ -185,7 +213,15 @@ export class Renderer {
     }
     ctx.setTransform(v.dpr * s, 0, 0, v.dpr * s, v.dpr * (v.ox + sx), v.dpr * (v.oy + sy));
     const geo = game.geo;
-    if (this.mapImg) ctx.drawImage(this.mapImg, 0, 0, geo.W, geo.H);
+    // 안전 구역이 화면비 때문에 다 안 들어가 맵이 화면보다 작을 때: 흐린 배경 위에 가장자리가 녹아드는 맵
+    let feathered = false;
+    if (this.mapImg && v.banded) {
+      this.bandArt();
+      const { c, M } = this.backdrop;
+      ctx.drawImage(c, -M * geo.W, -M * geo.H, geo.W * (1 + 2 * M), geo.H * (1 + 2 * M));
+      ctx.drawImage(this.feather, 0, 0, geo.W, geo.H); feathered = true;
+    }
+    if (this.mapImg && !feathered) ctx.drawImage(this.mapImg, 0, 0, geo.W, geo.H);
 
     // 바닥 얼룩
     for (const d of this.decals) {
@@ -632,4 +668,16 @@ export class Renderer {
   }
 }
 
+// 탑 그림이 빈자리 위로 얼마나 높이 올라가는가(맵 단위, 깃발·궁수·포신 포함) — 화면 맞춤에서 탑 머리가 안 잘리게
+export function towerTopExtent(type, key) {
+  const base = type === 'archer' ? IMG[`archer_base_${key}`] : (type === 'cannon' || type === 'crossbow') ? IMG[`${type}_base_${key}`] : IMG[`${type}_${key}`];
+  const img = base || IMG[`${type}_${key}`];
+  if (!img) return 0;
+  const w = TOWER_W[type] * LV_SCALE[key], h = w * img.height / img.width;
+  let top = h;
+  if (type === 'archer' && ARCHER[key]) top = Math.max(top, ARCHER[key].top * h + ARCHER[key].fh);
+  const C = type === 'cannon' ? CANNON[key] : type === 'crossbow' ? CROSSBOW[key] : null;
+  if (C) top = Math.max(top, C.top * h + C.tip * C.bw * PERSP);
+  return top - PAD_R * 0.32;
+}
 export { PAD_R, TOWER_W };

@@ -1,4 +1,4 @@
-# 소리 다듬기: 앞 무음 자르기, 최대 길이 자르기, 끝 페이드, 음량 맞춤 → mp3 + ogg
+# 소리 다듬기: 앞 무음 자르기, 최대 길이 자르기, 끝 페이드, 음량 맞춤 → mp3(96kbps)
 # 사용: python audio_proc.py 입력 출력이름(확장자 없이) [--max 초] [--lufs -18] [--music] [--loop]
 #  --music: 음악(앞 무음만 살짝, 페이드 길게). --loop: 끝 1초를 처음 1초와 겹쳐 이음새 없게
 import sys, argparse, subprocess, json, os, tempfile
@@ -39,9 +39,8 @@ def main():
         run(['-i', a, '-af', f'afade=t=out:st={max(0, d - fade)}:d={fade}', b])
     c = os.path.join(tmp, 'c.wav')
     run(['-i', b, '-af', f'loudnorm=I={o.lufs}:TP=-1.5:LRA=11', '-ar', '44100', c])
-    br = '128k' if o.music else '96k'
-    run(['-i', c, '-b:a', br, o.dst + '.mp3'])
-    run(['-i', c, '-c:a', 'libvorbis', '-q:a', '4' if o.music else '3', o.dst + '.ogg'])
+    # mp3 한 벌, 96kbps (M5: 모든 브라우저가 재생, 용량 40MB 안). 음악 반복은 audio.js 가 소리 장치 버퍼로 이음새 없이
+    run(['-i', c, '-codec:a', 'libmp3lame', '-b:a', '96k', o.dst + '.mp3'])
     print(f'{o.dst}: {dur(o.dst + ".mp3"):.2f}s')
 
 if __name__ == '__main__':

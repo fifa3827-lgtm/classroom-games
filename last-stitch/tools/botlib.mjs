@@ -4,6 +4,7 @@
 //   casual    full 과 같되 2단계까지만, 갈래·손 기술 안 씀, 생각이 느림 (보통 사람)
 //   nothread  full 에서 실만 안 씀
 //   only:<탑> 그 탑 하나만 (올리기·갈래·실·손 기술은 씀)
+//   mix:<탑>+<탑> 공격 탑 둘을 섞기(+종탑) — 잘 섞는 사람
 import { Game } from '../js/engine/game.js';
 import { TOWER_ORDER_ALL, TOWERS } from '../js/data/towers.js';
 
@@ -23,7 +24,9 @@ export function play(level, strat, seed, ori = 'v', mods) {
   const DMG = ['archer', 'cannon', 'lightning', 'crossbow'], SUP = ['ice', 'poison', 'barracks', 'bell'];
   const allow = t => g.towerAllowed(t);
   let types;
+  const mix = S.startsWith('mix:') ? S.slice(4).split('+') : null;   // 두 가지 섞기: 공격 탑 둘 + 보조 탑(종탑만, 길마다)
   if (only) types = [only];
+  else if (mix) { types = [...mix]; if (allow('bell')) types.splice(1, 0, 'bell'); }
   else { const d = DMG.filter(allow), sp = SUP.filter(allow); types = []; d.forEach((t, i) => { types.push(t); if (sp[i]) types.push(sp[i]); }); sp.slice(d.length).forEach(t => types.push(t)); }
   const supCap = t => t === 'bell' ? g.geo.paths.length : 1;
   let ti = 0, tick = 0, bells = 0;
@@ -31,9 +34,10 @@ export function play(level, strat, seed, ori = 'v', mods) {
     const free = pads.filter(p => !g.towerAt(p));
     if (free.length) {
       let type = types[ti % types.length];
-      for (let k = 0; k < types.length && !only && SUP.includes(type) && g.towers.filter(t => t.type === type).length >= supCap(type); k++) { ti++; type = types[ti % types.length]; }
+      for (let k = 0; k < types.length && !only && !mix && SUP.includes(type) && g.towers.filter(t => t.type === type).length >= supCap(type); k++) { ti++; type = types[ti % types.length]; }
       // 나는 적이 보이면 하늘을 칠 수 있는 탑부터
       if (!only && TOWERS[type].ground && g.enemies.some(e => e.def.fly)) { const air = types.find(t => !TOWERS[t].ground && !SUP.includes(t)); if (air) type = air; }
+      if (mix && type === 'bell' && g.towers.filter(t => t.type === 'bell').length >= supCap('bell')) { ti++; type = types[ti % types.length]; }
       if (g.gold >= g.cost(type)) { if (g.build(free[0], type) && type === types[ti % types.length]) ti++; return; }
       if (g.towers.length < 3) return;
     }

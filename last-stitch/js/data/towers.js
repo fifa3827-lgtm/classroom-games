@@ -4,11 +4,11 @@ export const ELEM_NAME = { pierce: '관통', fire: '불', frost: '냉기', shock
 // ch: 이 장부터 세울 수 있음. ground: 나는 적을 못 맞힘
 export const TOWERS = {
   archer: {
-    name: '궁수 망루', elem: 'pierce', cost: 70, range: 230, rate: 0.55, dmg: 9, dtype: 'phys', proj: 'arrow', ch: 1,
+    name: '궁수 망루', elem: 'pierce', cost: 70, range: 230, rate: 0.55, dmg: 8, dtype: 'phys', proj: 'arrow', ch: 1,
     desc: '빠르게 한 발씩 쏩니다.', sfx: 'arrow_shoot', h: 150,
   },
   cannon: {
-    name: '대포탑', elem: 'fire', cost: 110, range: 200, rate: 1.6, dmg: 18, splash: 70, dtype: 'blast', proj: 'ball', ch: 1, ground: true,
+    name: '대포탑', elem: 'fire', cost: 110, range: 200, rate: 1.8, dmg: 18, splash: 55, dtype: 'blast', proj: 'ball', ch: 1, ground: true,
     desc: '넓게 터집니다. 느리지만 무리를 쓸어 냅니다. 나는 적은 못 맞힙니다.', sfx: 'cannon_fire', h: 120,
   },
   ice: {

@@ -113,9 +113,10 @@ export class EndingScene {
     const end = this.root.querySelector('.en-end');
     end.innerHTML = `<div class="en-t">THE LAST STITCH</div><div class="en-fin">끝</div><div class="en-stitch"></div>
       ${rows.length ? `<div class="en-rows">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('')}</div>` : ''}
-      <div class="en-stitch"></div><div class="en-hard"><b>어려운 모드</b>가 열렸어요.<br>${this.opts.hardText || '더 거세진 붉은 물감에 맞서<br>모든 왕국을 다시 지켜 보세요.'}</div>
+      <div class="en-stitch"></div><div class="en-hard"><b>어려운 모드</b>가 열렸어요.<br>${this.opts.hardText || '지도 위 「어려운 모드」를 켜고, 더 거세진 붉은 물감에 맞서<br>모든 왕국을 다시 지켜 보세요.'}</div>
       <button class="en-btn">처음 화면으로</button>`;
-    end.querySelector('.en-btn').addEventListener('click', () => { if (!this.left) { this.left = true; this.opts.onDone?.(); } });
+    const shownAt = performance.now();
+    end.querySelector('.en-btn').addEventListener('click', () => { if (performance.now() - shownAt < 1800) return; if (!this.left) { this.left = true; this.opts.onDone?.(); } });
     requestAnimationFrame(() => end.classList.add('on'));
   }
   resize() { this.view.resize(); this.child?.resize(); }

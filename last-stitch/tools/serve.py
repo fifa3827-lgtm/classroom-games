@@ -7,4 +7,7 @@ class H(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
-http.server.ThreadingHTTPServer(('', port), functools.partial(H, directory=root)).serve_forever()
+class S(http.server.ThreadingHTTPServer):
+    request_queue_size = 256   # 판 그림·소리를 한꺼번에 받을 때 연결이 거절되지 않게 (기본 5)
+    daemon_threads = True
+S(('', port), functools.partial(H, directory=root)).serve_forever()

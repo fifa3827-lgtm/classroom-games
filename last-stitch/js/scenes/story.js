@@ -5,7 +5,7 @@
 import { audio } from '../engine/audio.js';
 import { SCENES, DIARY } from '../data/story.js';
 
-const EXT = (() => { try { return new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3'; } catch { return 'mp3'; } })();
+const EXT = 'mp3';   // 소리는 mp3 한 벌(용량 줄이기 M5, 모든 브라우저가 재생)
 const cache = { img: {}, blur: {}, sfx: {}, loading: {} };
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const ease = k => (k = clamp(k, 0, 1), k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);

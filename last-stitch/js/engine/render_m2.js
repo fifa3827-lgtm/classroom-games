@@ -152,7 +152,7 @@ export function drawBossMarks(R, game, e, top) {
     ctx.fillStyle = '#f2c13a'; R.rr(x - 25, y - 41, 50 * k, 7, 3); ctx.fill();
   }
   if (D.boss === 'ship' && e.bottle > 0) {
-    // 병에 남은 금(3개): 실 밑을 지날 때마다 하나씩 금이 감
+    // 병에 남은 금(SHIP_CRACKS개): 실 밑을 지날 때마다 하나씩 금이 감
     for (let i = 0; i < SHIP_CRACKS; i++) {
       const x = e.x - (SHIP_CRACKS - 1) * 24 + i * 48, y = top - 30, on = i >= e.bottle;
       ctx.fillStyle = 'rgba(30,20,12,.7)'; ctx.beginPath(); ctx.arc(x, y, 21, 0, Math.PI * 2); ctx.fill();

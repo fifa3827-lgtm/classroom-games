@@ -12,6 +12,26 @@ export function loadSave() {
   return d;
 }
 export function writeSave(d) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); return true; } catch { return false; } }
+// 여러 탭: 저장 직전에 저장소의 최신 것과 합친다 (한 탭이 옛 진행으로 덮어쓰지 않게)
+export function mergeSave(mine, since = 0) {
+  const cur = loadSave();
+  // 다른 탭이 이 탭이 불러온 뒤에 진행을 지웠으면, 이 탭의 옛 진행은 버리고(설정만) 지운 것을 따른다
+  if ((cur.wipeAt || 0) > since && !mine.wiped) return { ...cur, settings: mine.settings };
+  const out = { ...cur, ...mine };
+  out.stars = { ...cur.stars };
+  for (const [k, v] of Object.entries(mine.stars || {})) out.stars[k] = Math.max(out.stars[k] || 0, v);
+  if ((cur.toolsAt || 0) > (mine.toolsAt || 0)) { out.tools = cur.tools; out.toolsAt = cur.toolsAt; }
+  out.playTime = Math.max(cur.playTime || 0, mine.playTime || 0);
+  out.seenFinal = !!(cur.seenFinal || mine.seenFinal);
+  out.cleared = !!(cur.cleared || mine.cleared);
+  // 볼 장면: 어느 탭에든 있으면 남기되, 어느 탭에서든 이미 본 것(seen)은 지운다
+  out.seen = [...new Set([...(cur.seen || []), ...(mine.seen || [])])];
+  out.pending = mine.pending || cur.pending;
+  if (out.pending && ((out.pending.kind === 'story' && out.seen.includes(out.pending.key)) || (out.pending.kind === 'ending' && out.cleared && out.endedAt && (!out.pending.at || out.endedAt > out.pending.at)))) delete out.pending;
+  if (!out.pending) delete out.pending;
+  if (mine.wiped) { delete out.wiped; return mine; }
+  return out;
+}
 
 // 지도에 나오는 판(시험판 빼고) 순서
 export const playable = () => LEVELS.filter(l => !l.test);
@@ -55,10 +75,10 @@ export function nextCost(d, n) { const lv = nodeLv(d, n.id); return lv < n.cost.
 export function buyNode(d, n) {
   const c = nextCost(d, n);
   if (!c || thimblesFree(d) < c) return false;
-  d.tools[n.id] = nodeLv(d, n.id) + 1;
+  d.tools[n.id] = nodeLv(d, n.id) + 1; d.toolsAt = Date.now();
   return true;
 }
-export function resetTools(d) { const had = thimblesSpent(d); d.tools = {}; return had; }
+export function resetTools(d) { const had = thimblesSpent(d); d.tools = {}; d.toolsAt = Date.now(); return had; }
 // 공구함 → 게임 강화 값
 export function modsFrom(d) {
   const m = { dmg: {}, range: {}, discount: {}, skill: {} };

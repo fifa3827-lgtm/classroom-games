@@ -5,7 +5,7 @@ import { audio } from './engine/audio.js';
 import { getLevel, LEVELS } from './data/levels.js';
 import { LevelScene } from './scenes/level.js';
 import { M2_IMGS } from './engine/render_m2.js';
-import { loadSave, writeSave, modsFrom, thimblesEarned } from './engine/save.js';
+import { loadSave, writeSave, mergeSave, modsFrom, thimblesEarned } from './engine/save.js';
 import { MAPS } from './data/maps.js';
 import { SCENES } from './data/story.js';
 
@@ -25,11 +25,17 @@ const app = {
   view: new View(document.getElementById('game')),
   scene: null,
   data: loadSave(),
+  loadedAt: Date.now(),
   hasIntro: true,
   get settings() { return this.data.settings; },
   ui() { return document.getElementById('ui'); },
-  save() { writeSave(this.data); window.__settings = this.settings; },
-  wipe() { this.data = { stars: {}, tools: {}, settings: this.data.settings }; this.save(); },
+  save() {
+    const wiped = this.data.wiped;
+    this.data = wiped ? (delete this.data.wiped, this.data) : mergeSave(this.data, this.loadedAt || 0);
+    this.loadedAt = Date.now();
+    writeSave(this.data); window.__settings = this.settings;
+  },
+  wipe() { this.data = { stars: {}, tools: {}, settings: this.data.settings, toolsAt: Date.now(), wipeAt: Date.now(), wiped: true }; this.save(); },
   mods() { return modsFrom(this.data); },
   // 장면 바꾸기. 같은 장면 안 예약(setTimeout 등)은 장면이 스스로 alive로 막는다
   async go(name, opt = {}) {
@@ -61,14 +67,14 @@ const app = {
     } else if (name === 'story') {
       const mod = await import('./scenes/story.js');
       Next = class { constructor(app, o) { return new mod.StoryScene(app, o.key, { onDone: () => {
-        if (o.clear) delete app.data.pending;
+        if (o.clear) { app.data.seen = [...new Set([...(app.data.seen || []), o.key])]; delete app.data.pending; }
         if (o.seen) app.data[o.seen] = true;
         if (o.clear || o.seen) app.save();
         app.go(o.then || 'map', o.thenOpt || {});
       } }); } };
     } else if (name === 'ending') {
       const mod = await import('./scenes/ending.js');
-      Next = class { constructor(app, o) { return new mod.EndingScene(app, { stats: o.stats || app.endStats(), onDone: () => { delete app.data.pending; app.data.cleared = true; app.save(); app.go('title', { quick: true }); } }); } };
+      Next = class { constructor(app, o) { return new mod.EndingScene(app, { stats: o.stats || app.endStats(), onDone: () => { delete app.data.pending; app.data.cleared = true; app.data.endedAt = Date.now(); app.save(); app.go('title', { quick: true, guard: 1200 }); } }); } };
     } else return;
     if (token !== this.goToken) return;
     this.scene?.destroy();
@@ -88,7 +94,7 @@ const app = {
   markWin(id, first) {
     if (!first) return;
     const ids = Object.keys(MAPS).sort(), nx = ids[ids.indexOf(id) + 1], ch = id.split('-')[0];
-    if (id === LAST_ID) this.data.pending = { kind: 'ending' };
+    if (id === LAST_ID) this.data.pending = { kind: 'ending', at: Date.now() };
     else if (nx && nx.split('-')[0] !== ch && SCENES[`ch${ch}_after`]) this.data.pending = { kind: 'story', key: `ch${ch}_after`, focus: nx };
   },
   // 결과 창 「다음으로」: 지도로 (볼 장면이 있으면 go 가 먼저 틀어 줌), 다음 판에 초점
@@ -116,8 +122,8 @@ async function boot() {
   if (q.get('level')) await app.go('level', { id: q.get('level') });
   else await app.go(q.get('screen') || FIRST_SCREEN, {});
   document.getElementById('boot').classList.add('hide');
-  // 인트로가 첫 묶음을 다 받은 뒤(또는 6초 뒤) 판 그림·효과음을 뒤에서 받기
-  { const t0 = performance.now(); const wait = () => (app.scene?.state && app.scene.state === 'load' && performance.now() - t0 < 6000) ? setTimeout(wait, 300) : app.loadGame(); setTimeout(wait, 300); }
+  // 인트로가 첫 묶음을 다 받고 1.5초 뒤(또는 25초 뒤) 판 그림·효과음을 뒤에서 받기
+  { const t0 = performance.now(); const wait = () => (app.scene?.state && app.scene.state === 'load' && performance.now() - t0 < 25000) ? setTimeout(wait, 300) : setTimeout(() => app.loadGame(), 1500); setTimeout(wait, 300); }
   let last = performance.now();
   const loop = now => {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -129,5 +135,8 @@ async function boot() {
   const onResize = () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => app.scene?.resize()); };
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+  // 전체 화면 켜고 끌 때: 화면 크기가 바뀌므로 다시 맞추고, 단추 모양을 바꿈
+  const ui = await import('./scenes/ui.js');
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { ui.syncFsButtons(); setTimeout(onResize, 60); });
 }
 boot();

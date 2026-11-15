@@ -20,13 +20,12 @@ class AudioSys {
     const resume = () => {
       this.resumeAt = performance.now();
       if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
-      if (this.music && this.music.el.paused && this.music.want) this.music.el.play().catch(() => {});
       this.unlocked = true;
     };
     for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) window.addEventListener(ev, resume, { capture: true, passive: true });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { this.ctx.suspend().catch(() => {}); if (this.music) this.music.el.pause(); }
-      else { this.ctx.resume().catch(() => {}); if (this.music && this.music.want) this.music.el.play().catch(() => {}); }
+      if (document.hidden) this.ctx.suspend().catch(() => {});   // 음악도 소리 장치 안에 있어 같이 멈춤
+      else this.ctx.resume().catch(() => {});
     });
   }
   setVolume(kind, v) {
@@ -68,27 +67,37 @@ class AudioSys {
     list.push({ end: now + b.duration / rate });
     return src;
   }
-  // 음악: 서서히 바꾸기
-  playMusic(name, fade = 1.2) {
+  // 음악: 소리 장치 버퍼로 이음새 없이 반복(<audio loop> 은 반복 때 10~25ms 빈틈), 서서히 바꾸기
+  musicBuf(name) {
+    this.mcache ||= new Map();
+    if (this.mcache.has(name)) return this.mcache.get(name);
+    const p = fetch(`assets/music/${name}.${EXT}`).then(r => r.arrayBuffer())
+      .then(ab => new Promise((ok, no) => this.ctx.decodeAudioData(ab, ok, no))).catch(() => { this.mcache.delete(name); return null; });
+    this.mcache.set(name, p);
+    // 메모리: 풀어 둔 곡은 최근 2개만(곡 하나 약 40MB)
+    if (this.mcache.size > 2) this.mcache.delete(this.mcache.keys().next().value);
+    return p;
+  }
+  async playMusic(name, fade = 1.2) {
     if (!this.ctx || this.musicName === name) return;
+    this.ducked = false;   // 장면이 바뀌어 새 곡이면 낮춤을 푼다(이긴 뒤 이야기·엔딩이 작게 나오지 않게)
     const old = this.music;
     this.musicName = name;
     if (old) {
       old.want = false;
       old.g.gain.setTargetAtTime(0, this.ctx.currentTime, fade / 4);
-      setTimeout(() => { old.el.pause(); old.el.src = ''; try { old.node.disconnect(); } catch {} }, fade * 1000 + 300);
+      setTimeout(() => { try { old.src?.stop(); } catch {} try { old.g.disconnect(); } catch {} }, fade * 1000 + 300);
     }
     if (!name) { this.music = null; return; }
-    const el = new Audio(`assets/music/${name}.${EXT}`);
-    el.loop = true; el.preload = 'auto'; el.crossOrigin = 'anonymous';
-    const node = this.ctx.createMediaElementSource(el);
-    const g = this.ctx.createGain(); g.gain.value = 0;
-    node.connect(g); g.connect(this.musicBus);
-    g.gain.setTargetAtTime(1, this.ctx.currentTime + 0.05, fade / 3);
-    this.music = { el, node, g, want: true };
-    el.play().catch(() => {});
+    const g = this.ctx.createGain(); g.gain.value = 0; g.connect(this.musicBus);
+    const m = this.music = { g, want: true, name };
+    const buf = await this.musicBuf(name);
+    if (this.music !== m || !buf) { try { g.disconnect(); } catch {} return; }
+    const src = this.ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(g); src.start();
+    m.src = src;
+    g.gain.setTargetAtTime(this.ducked ? 0.35 : 1, this.ctx.currentTime + 0.05, fade / 3);
   }
-  duck(on) { if (this.music) this.music.g.gain.setTargetAtTime(on ? 0.35 : 1, this.ctx.currentTime, 0.2); }
+  duck(on) { this.ducked = on; if (this.music) this.music.g.gain.setTargetAtTime(on ? 0.35 : 1, this.ctx.currentTime, 0.2); }
 }
 export const audio = new AudioSys();
 

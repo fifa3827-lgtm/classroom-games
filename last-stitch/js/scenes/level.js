@@ -1,11 +1,12 @@
 // 판 장면: 게임 논리 + 그리기 + 누르기 + 정보 띠(HUD)를 잇는다
 import { Game, DT } from '../engine/game.js';
-import { Renderer, PAD_R, TOWER_W } from '../engine/render.js';
+import { Renderer, PAD_R, TOWER_W, towerTopExtent } from '../engine/render.js';
 import { IMG } from '../engine/assets.js';
 import { audio, vibrate } from '../engine/audio.js';
 import { TOWERS, TOWER_ORDER_ALL, towerStats, ELEM_NAME, MAX_LEVEL, threadCombo, SHARE_DESC, BRANCHES, SKILLS } from '../data/towers.js';
 import { fxEvent, iconSrc } from '../engine/render_m2.js';
 import { recordWin, thimblesFree } from '../engine/save.js';
+import { fsSupported, isFs, toggleFs } from './ui.js';
 import { SAFE } from '../data/levels.js';
 
 const SHOT_SFX = { archer: ['arrow_shoot', 0.45], cannon: ['cannon_fire', 0.7], ice: ['ice_shot', 0.5], lightning: ['lightning_zap', 0.55], poison: ['hit_paint', 0.5, 0.7], crossbow: ['arrow_shoot', 0.75, 0.62] };
@@ -43,14 +44,16 @@ export class LevelScene {
     this.timers = []; this.alive = true; this.realT = 0;
     this.press = null; this.menu = null;
     this.ori = this.view.resize();
-    this.game = new Game(level, this.ori, { seed: (Math.random() * 1e9) | 0, mods: level.test ? {} : this.app.mods?.() });
+    this.game = new Game(level, this.ori, { seed: (Math.random() * 1e9) | 0, mods: level.test ? {} : this.app.mods?.(), hard: !level.test && !!(this.app.data.cleared && this.app.data.hard) });
     this.buildHud();
     this.applyOrientation(true);
     this.tut = level.tutorial ? { step: 0 } : null;
     this.bindInput();
     audio.playMusic(level.music);
     audio.duck(false);
+    this.game.prepHold = true;   // 판 시작 말풍선이 닫힐 때까지 준비 시간을 세지 않음
     this.later(0.5, () => this.showTalk(0));
+    if (this.game.hard) { this.cWave.classList.add('hard'); this.cWave.title = '어려운 모드'; this.cWave.insertAdjacentHTML('beforeend', '<small class="hd">어려움</small>'); }
     // 앱을 숨기면 저절로 잠깐 쉬기
     this.onVis = () => { if (document.hidden && this.alive && !this.paused && !this.game.result && !this.talking) this.openPause(); };
     document.addEventListener('visibilitychange', this.onVis);
@@ -119,12 +122,20 @@ export class LevelScene {
         this.spoolBox.append(im);
       }
       this.spoolBox.classList.toggle('many', g.spoolsMax > 2);
+      // 좁은 세로 화면에서 실패가 4개 넘으면 그림 하나 + 「남은/전체」 (아래 띠 단추가 밀려나지 않게)
+      if (g.spoolsMax > 3 && this.view.W < 440) {
+        const free = Math.max(0, g.spoolsMax - g.threads.length - g.spoolCool.length);
+        this.spoolBox.innerHTML = `<img src="assets/ui/icon_spool.webp" alt="" class="${free ? '' : 'used'}"><span class="v">${free}/${g.spoolsMax}</span>`;
+        this.spoolBox.classList.add('count');
+      } else this.spoolBox.classList.remove('count');
     }
-    let wv;
-    if (!g.started) wv = '<span>▶ 시작</span>';
-    else if (g.canCallWave()) { const b = g.earlyBonus(); wv = `<span>다음 웨이브</span>${b ? `<span class="bonus">+${b}</span>` : ''}`; }
-    else wv = '';
-    if (h.wv !== wv) { h.wv = wv; this.bWave.innerHTML = wv; this.bWave.style.visibility = wv ? 'visible' : 'hidden'; this.bWave.classList.toggle('ready', !g.started); }
+    // 웨이브 단추: 지금 웨이브와 다음까지 남은 초를 늘 보여 주고, 누르면 일찍 부름(금화 더)
+    const n = g.level.waves.length;
+    let wv, can = g.canCallWave();
+    if (!g.started) wv = g.prepHold ? `<span class="w">웨이브 1/${n}</span><span class="n">${this.tut && !g.towers.length ? '탑을 세우면 시작' : '▶ 누르면 시작'}</span>` : `<span class="w">웨이브 1/${n}</span><span class="n">${Math.ceil(g.prepT)}초 뒤 · 누르면 바로</span>`;
+    else if (can && g.betweenT > 0) { const b = g.earlyBonus(); wv = `<span class="w">웨이브 ${g.wave + 1}/${n}</span><span class="n">다음까지 ${Math.ceil(g.betweenT)}초${b ? ` <b class="bonus">+${b}</b>` : ''}</span>`; }
+    else wv = `<span class="w">웨이브 ${g.wave + 1}/${n}</span><span class="n">${g.wave === n - 1 ? '마지막 웨이브' : '몰려오는 중'}</span>`;
+    if (h.wv !== wv) { h.wv = wv; this.bWave.innerHTML = wv; this.bWave.style.visibility = 'visible'; this.bWave.classList.toggle('ready', !g.started); this.bWave.classList.toggle('busy', !can); this.bWave.setAttribute('aria-label', can ? '다음 웨이브 일찍 부르기' : '웨이브 진행 중'); }
   }
 
   // ── 화면 방향 ──
@@ -145,7 +156,7 @@ export class LevelScene {
     const lack = () => {
       let d = 0;
       for (const [x, y] of g.pads) {
-        const [sx, hy] = v.w2s(x, y - 295);
+        const [sx, hy] = v.w2s(x, y - this.headH());
         const half = 90 * v.s;
         const under = rects.some(r => sx + half > r.left - 4 && sx - half < r.right + 4);
         d = Math.max(d, (under ? hudB + 2 : 2) - hy);
@@ -160,8 +171,16 @@ export class LevelScene {
       const room = Math.min(-v.oy, (v.H - ins.b) - v.w2s(0, s[3] * g.H)[1]);
       if (room > 0) { const m = Math.min(room, d); v.oy += m; d -= m; }
       if (d <= 0) return;
-      s[1] -= 0.015;   // ② 위쪽을 조금 넓힘
+      s[1] -= 0.015;   // ② 위쪽을 조금 넓힘 (사용자 2026-11-15 「탑이 다 보이게」: 꽉 채우기보다 탑 머리. 남는 둘레는 render 의 녹아드는 액자)
     }
+  }
+  // 이 판에서 세울 수 있는 가장 높은 탑 그림(4단계 갈래 포함)의 머리 높이 — 한 번만 잼
+  headH() {
+    if (this._headH) return this._headH;
+    const g = this.game, keys = ['1', '2', '3', ...(g.branchOpen() ? ['4a', '4b'] : [])];
+    let m = 0;
+    for (const t of TOWER_ORDER_ALL) if (g.towerAllowed(t)) for (const k of keys) m = Math.max(m, towerTopExtent(t, k));
+    return (this._headH = Math.max(260, Math.min(460, m + 8)));
   }
   applyOrientation(first) {
     const ori = this.ori;
@@ -346,7 +365,7 @@ export class LevelScene {
     const m = this.menu; if (!m) return;
     let [x, y] = this.view.w2s(...m.anchor);
     const R = m.R ?? 86, W = this.view.W, H = this.view.H;
-    { const ins = this.insets(); const ry = m.ry ?? (this.short() ? 52 : R); const rx = m.rx ?? (this.short() ? 150 : R); x = Math.max(rx + 8, Math.min(W - rx - 8, x)); y = Math.max(ins.t + ry, Math.min(H - ins.b - (m.rb ?? (this.short() ? 50 : 122)), y)); }
+    { const ins = this.insets(); const ry = m.ry ?? (this.short() ? 52 : Math.max(R, 104)); /* 위쪽 단추(-68)+반지름이 위 띠에 안 닿게 */ const rx = m.rx ?? (this.short() ? 150 : R); x = Math.max(rx + 8, Math.min(W - rx - 8, x)); y = Math.max(ins.t + ry, Math.min(H - ins.b - (m.rb ?? (this.short() ? 50 : 122)), y)); }
     m.node.style.left = x + 'px'; m.node.style.top = y + 'px';
     if (m.tip) {
       const ins = this.insets();
@@ -380,6 +399,19 @@ export class LevelScene {
       }
       tx = Math.max(tw / 2 + 6, Math.min(W - tw / 2 - 6, tx));
       ty = Math.max(ins.t + 4, Math.min(H - ins.b - th - 4, ty));
+      // 설명 칸이 고리 단추(값 표 포함)를 덮으면, 덮지 않는 자리를 차례로 찾는다: 위·아래 끝, 고리 왼쪽·오른쪽
+      {
+        const cy = parseFloat(m.node.style.top), bx = m.opts.map(o => [x + o.dx - 34, cy + o.dy - 34, x + o.dx + 34, cy + o.dy + 46]);
+        const box = [Math.min(...bx.map(b => b[0])), Math.min(...bx.map(b => b[1])), Math.max(...bx.map(b => b[2])), Math.max(...bx.map(b => b[3]))];
+        const hit = (cx, t) => !(cx + tw / 2 < box[0] || cx - tw / 2 > box[2] || t + th < box[1] || t > box[3]);
+        const clampX = v => Math.max(tw / 2 + 6, Math.min(W - tw / 2 - 6, v));
+        if (hit(tx, ty)) {
+          const cands = [[tx, ins.t + 4], [tx, H - ins.b - th - 4], [clampX(box[0] - 8 - tw / 2), ty], [clampX(box[2] + 8 + tw / 2), ty],
+            [clampX(box[0] - 8 - tw / 2), ins.t + 4], [clampX(box[2] + 8 + tw / 2), ins.t + 4], [clampX(box[0] - 8 - tw / 2), H - ins.b - th - 4], [clampX(box[2] + 8 + tw / 2), H - ins.b - th - 4]];
+          const ok = cands.find(([cx, t]) => !hit(cx, t));
+          if (ok) [tx, ty] = ok;
+        }
+      }
       m.tip.style.left = tx + 'px'; m.tip.style.top = ty + 'px'; m.tip.style.bottom = '';
     }
   }
@@ -563,7 +595,7 @@ export class LevelScene {
   // ── 말풍선·안내 ──
   showTalk(i) {
     const lines = this.level.talk || [];
-    if (i >= lines.length) { this.talking = false; this.bubble?.remove(); this.bubble = null; if (this.tut) this.tutStep(1); return; }
+    if (i >= lines.length) { this.talking = false; this.bubble?.remove(); this.bubble = null; this.game.prepHold = false; if (this.tut) this.tutStep(1); return; }
     this.talking = true;
     if (!this.bubble) {
       this.bubble = el('div', 'bubble parch');
@@ -591,12 +623,13 @@ export class LevelScene {
       this.tutPad = pad;
       this.hand = el('div', 'hand tap pass', '👆'); this.ui.append(this.hand);
       tipAt('<b>빈자리</b>를 눌러 탑을 세워 보세요.', [this.tutPad]);
+      if (!g.towers.length) g.prepHold = true;   // 첫 탑을 세우기 전에는 준비 시간을 세지 않음
       this.r.ui.pads = true;
     } else if (n === 2) {
-      tipAt('좋아요! 탑을 더 세우거나, 준비되면 아래 <b class="nw">▶ 시작</b>을 누르세요.', g.towers.map(t => t.pad));
+      tipAt('좋아요! <b>곧 적이 몰려와요.</b> 탑을 더 세워 두세요.', g.towers.map(t => t.pad));
     } else if (n === 4) {
       this.pickTutPair();
-      tipAt('<b>빛나는 탑을 꾹 눌러 다른 빛나는 탑으로 끌어</b> 실을 이어 보세요. 이은 두 탑은 힘을 나눠요.', [T.dragA?.pad, T.dragB?.pad]);
+      tipAt('<b>빛나는 탑을 꾹 눌러</b> 다른 탑으로 끌어 보세요.', [T.dragA?.pad, T.dragB?.pad]);
       this.hand = el('div', 'hand pass', '👆'); this.ui.append(this.hand);
       
     } else if (n === 9) { this.r.ui.pads = false; }
@@ -625,7 +658,7 @@ export class LevelScene {
     this.tipRect = [8, top.top, W - 8, top.top + b.offsetHeight];
   }
   tutAfterBuild() {
-    if (this.tut.step === 1) { this.r.ui.pads = false; this.tutStep(2); }
+    if (this.tut.step === 1) { this.r.ui.pads = false; this.game.prepHold = false; this.tutStep(2); }
   }
   tutUpdate() {
     const T = this.tut; if (!T) return;
@@ -641,6 +674,7 @@ export class LevelScene {
     }
     if (T.step === 2 && this.tutTip && this.menu) this.tutTip.style.display = 'none';
     else if (T.step === 2 && this.tutTip) this.tutTip.style.display = '';
+    if (T.step <= 2 && T.step >= 1 && g.started) this.tutStep(3);   // 저절로 시작했을 때도 안내를 넘김
     if (T.step === 3) { this.tutTip?.remove(); this.tutTip = null; if (g.wave >= 1 && g.towers.length >= 2 && !g.threads.length && g.spawning.length === 0) this.tutStep(4); }
     if (T.step === 4) {
       if (g.threads.length) { this.hand?.remove(); this.hand = null; this.tutTip?.remove(); this.tutTip = null; T.step = 9; this.toast('실이 이어졌어요! 실을 누르면 끊을 수 있어요.'); return; }
@@ -665,12 +699,15 @@ export class LevelScene {
     m.innerHTML = `<div class="box parch"><h2>잠깐 쉬기</h2>
       <div class="row"><span>음악</span><input type="range" min="0" max="1" step="0.05" value="${S.music}" data-k="music"></div>
       <div class="row"><span>효과음</span><input type="range" min="0" max="1" step="0.05" value="${S.sfx}" data-k="sfx"></div>
-      <div class="row"><span>진동</span><button class="toggle ${S.vibe ? 'on' : ''}" aria-label="진동"></button></div>
+      <div class="row tg"><span>진동</span><button class="toggle ${S.vibe ? 'on' : ''}" aria-label="진동"></button></div>
+      ${fsSupported() ? `<div class="row tg"><span>전체 화면</span><button class="toggle ${isFs() ? 'on' : ''}" data-a="fs" aria-label="전체 화면" aria-pressed="${isFs()}"></button></div>` : ''}
       <div class="btns"><button class="btn" data-a="go">계속하기</button><div class="btns row2"><button class="btn small" data-a="retry">처음부터</button><button class="btn small" data-a="map">지도로</button></div></div></div>`;
     this.ui.append(m);
     m.querySelectorAll('input[type=range]').forEach(r => r.oninput = () => { S[r.dataset.k] = +r.value; audio.setVolume(r.dataset.k, +r.value); this.app.save(); });
-    const tg = m.querySelector('.toggle');
+    const tg = m.querySelector('.toggle:not([data-a=fs])');
     tg.onclick = () => { S.vibe = !S.vibe; tg.classList.toggle('on', S.vibe); this.app.save(); vibrate(20); };
+    const fb = m.querySelector('[data-a=fs]');
+    if (fb) fb.onclick = () => { audio.play('button'); toggleFs(); };
     m.querySelector('[data-a=go]').onclick = () => { audio.play('button'); m.remove(); this.paused = false; audio.duck(false); };
     m.querySelector('[data-a=retry]').onclick = () => { audio.play('button'); this.app.startLevel(this.level.id); };
     m.querySelector('[data-a=map]').onclick = () => { audio.play('button'); this.app.go('map', { focus: this.level.id }); };

@@ -1,326 +1,84 @@
 [
  {
-  "id": "1-2",
-  "s": "only:archer",
-  "n": 60,
-  "win": 0.21666666666666667,
-  "winV": 0.43333333333333335,
-  "winH": 0,
-  "lives": 0.45,
-  "star3": 0,
-  "min": 3.188333333334072
- },
- {
-  "id": "1-2",
-  "s": "only:cannon",
-  "n": 60,
-  "win": 1,
-  "winV": 1,
-  "winH": 1,
-  "lives": 20,
-  "star3": 1,
-  "min": 2.659277777778096
- },
- {
-  "id": "1-2",
-  "s": "only:ice",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "1-2",
-  "s": "only:lightning",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "1-3",
-  "s": "only:archer",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "1-3",
-  "s": "only:cannon",
-  "n": 60,
-  "win": 1,
-  "winV": 1,
-  "winH": 1,
-  "lives": 20,
-  "star3": 1,
-  "min": 2.964277777778339
- },
- {
-  "id": "1-3",
-  "s": "only:ice",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "1-3",
-  "s": "only:lightning",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "1-4",
-  "s": "only:archer",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "1-4",
-  "s": "only:cannon",
-  "n": 60,
-  "win": 1,
-  "winV": 1,
-  "winH": 1,
-  "lives": 19.1,
-  "star3": 0.5666666666666667,
-  "min": 3.364675925926806
- },
- {
-  "id": "1-4",
-  "s": "only:ice",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "1-4",
-  "s": "only:lightning",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "2-1",
-  "s": "only:archer",
-  "n": 60,
-  "win": 1,
-  "winV": 1,
-  "winH": 1,
-  "lives": 20,
-  "star3": 1,
-  "min": 3.5014490740750635
- },
- {
-  "id": "2-1",
-  "s": "only:cannon",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "2-1",
-  "s": "only:ice",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "2-1",
-  "s": "only:lightning",
-  "n": 60,
-  "win": 1,
-  "winV": 1,
-  "winH": 1,
-  "lives": 10.55,
-  "star3": 0,
-  "min": 3.2761805555563654
- },
- {
-  "id": "2-1",
-  "s": "only:poison",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
   "id": "3-1",
-  "s": "only:archer",
-  "n": 60,
-  "win": 1,
-  "winV": 1,
-  "winH": 1,
-  "lives": 19.966666666666665,
-  "star3": 0.9833333333333333,
-  "min": 3.502587962963951
- },
- {
-  "id": "3-1",
-  "s": "only:cannon",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "3-1",
-  "s": "only:ice",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "3-1",
-  "s": "only:lightning",
+  "s": "full",
   "n": 60,
   "win": 0.5,
   "winV": 0,
   "winH": 1,
-  "lives": 8.083333333333334,
-  "star3": 0.1,
-  "min": 3.4905000000009805
- },
- {
-  "id": "3-1",
-  "s": "only:poison",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "3-1",
-  "s": "only:crossbow",
-  "n": 60,
-  "win": 0.5333333333333333,
-  "winV": 0.06666666666666667,
-  "winH": 1,
-  "lives": 10.233333333333333,
+  "lives": 10,
   "star3": 0.5,
-  "min": 3.4274218750009307
+  "min": 3.302870370371201
  },
  {
-  "id": "4-2",
-  "s": "only:archer",
+  "id": "3-1",
+  "s": "mix:archer+cannon",
   "n": 60,
-  "win": 0.016666666666666666,
-  "winV": 0.03333333333333333,
-  "winH": 0,
-  "lives": 0.06666666666666667,
-  "star3": 0,
-  "min": 3.1933333333340768
- },
- {
-  "id": "4-2",
-  "s": "only:cannon",
-  "n": 60,
-  "win": 0,
+  "win": 0.5,
   "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
+  "winH": 1,
+  "lives": 9.933333333333334,
+  "star3": 0.4666666666666667,
+  "min": 3.2691944444452483
  },
  {
-  "id": "4-2",
-  "s": "only:ice",
+  "id": "3-1",
+  "s": "mix:archer+lightning",
   "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "4-2",
-  "s": "only:lightning",
-  "n": 60,
-  "win": 0.7333333333333333,
+  "win": 1,
   "winV": 1,
-  "winH": 0.4666666666666667,
-  "lives": 10.616666666666667,
+  "winH": 1,
+  "lives": 13.966666666666667,
   "star3": 0.5,
-  "min": 3.13736111111181
+  "min": 3.268222222223026
  },
  {
-  "id": "4-2",
-  "s": "only:poison",
+  "id": "3-1",
+  "s": "mix:archer+crossbow",
   "n": 60,
-  "win": 0,
+  "win": 0.5,
   "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
+  "winH": 1,
+  "lives": 9.633333333333333,
+  "star3": 0.43333333333333335,
+  "min": 3.6153055555566342
  },
  {
-  "id": "4-2",
-  "s": "only:crossbow",
+  "id": "3-1",
+  "s": "mix:archer+poison",
+  "n": 60,
+  "win": 0.5,
+  "winV": 0,
+  "winH": 1,
+  "lives": 10,
+  "star3": 0.5,
+  "min": 3.0925092592599226
+ },
+ {
+  "id": "3-1",
+  "s": "mix:cannon+lightning",
   "n": 60,
   "win": 0.5,
   "winV": 1,
   "winH": 0,
-  "lives": 3.05,
-  "star3": 0,
-  "min": 3.179009259259991
+  "lives": 5.7,
+  "star3": 0.016666666666666666,
+  "min": 3.0671851851858283
  },
  {
-  "id": "4-2",
-  "s": "only:barracks",
+  "id": "3-1",
+  "s": "mix:cannon+crossbow",
+  "n": 60,
+  "win": 0.9833333333333333,
+  "winV": 1,
+  "winH": 0.9666666666666667,
+  "lives": 11.633333333333333,
+  "star3": 0,
+  "min": 3.287033898305902
+ },
+ {
+  "id": "3-1",
+  "s": "mix:cannon+poison",
   "n": 60,
   "win": 0,
   "winV": 0,
@@ -330,7 +88,40 @@
   "min": 0
  },
  {
-  "id": "4-3",
+  "id": "3-1",
+  "s": "mix:lightning+crossbow",
+  "n": 60,
+  "win": 1,
+  "winV": 1,
+  "winH": 1,
+  "lives": 15.366666666666667,
+  "star3": 0.5,
+  "min": 3.2854074074082247
+ },
+ {
+  "id": "3-1",
+  "s": "mix:lightning+poison",
+  "n": 60,
+  "win": 0.5,
+  "winV": 0,
+  "winH": 1,
+  "lives": 10,
+  "star3": 0.5,
+  "min": 3.3632129629638423
+ },
+ {
+  "id": "3-1",
+  "s": "mix:crossbow+poison",
+  "n": 60,
+  "win": 1,
+  "winV": 1,
+  "winH": 1,
+  "lives": 13.566666666666666,
+  "star3": 0.48333333333333334,
+  "min": 3.099240740741409
+ },
+ {
+  "id": "3-1",
   "s": "only:archer",
   "n": 60,
   "win": 0,
@@ -341,7 +132,7 @@
   "min": 0
  },
  {
-  "id": "4-3",
+  "id": "3-1",
   "s": "only:cannon",
   "n": 60,
   "win": 0,
@@ -352,7 +143,7 @@
   "min": 0
  },
  {
-  "id": "4-3",
+  "id": "3-1",
   "s": "only:ice",
   "n": 60,
   "win": 0,
@@ -363,18 +154,18 @@
   "min": 0
  },
  {
-  "id": "4-3",
+  "id": "3-1",
   "s": "only:lightning",
   "n": 60,
   "win": 0.5,
   "winV": 0,
   "winH": 1,
-  "lives": 5.766666666666667,
-  "star3": 0.03333333333333333,
-  "min": 3.3339166666675224
+  "lives": 9.75,
+  "star3": 0.4166666666666667,
+  "min": 3.5699259259269693
  },
  {
-  "id": "4-3",
+  "id": "3-1",
   "s": "only:poison",
   "n": 60,
   "win": 0,
@@ -385,102 +176,25 @@
   "min": 0
  },
  {
-  "id": "4-3",
+  "id": "3-1",
   "s": "only:crossbow",
   "n": 60,
-  "win": 0,
+  "win": 0.5,
   "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
+  "winH": 1,
+  "lives": 8.883333333333333,
+  "star3": 0.21666666666666667,
+  "min": 3.5244351851861913
  },
  {
-  "id": "4-3",
-  "s": "only:barracks",
+  "id": "3-1",
+  "s": "casual",
   "n": 60,
-  "win": 0,
+  "win": 0.5,
   "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "5-3",
-  "s": "only:archer",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "5-3",
-  "s": "only:cannon",
-  "n": 60,
-  "win": 0.6,
-  "winV": 0.4,
-  "winH": 0.8,
-  "lives": 3.45,
-  "star3": 0,
-  "min": 3.9940509259273065
- },
- {
-  "id": "5-3",
-  "s": "only:ice",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "5-3",
-  "s": "only:lightning",
-  "n": 60,
-  "win": 0.38333333333333336,
-  "winV": 0,
-  "winH": 0.7666666666666667,
-  "lives": 2.533333333333333,
-  "star3": 0,
-  "min": 4.075338164252654
- },
- {
-  "id": "5-3",
-  "s": "only:poison",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
- },
- {
-  "id": "5-3",
-  "s": "only:crossbow",
-  "n": 60,
-  "win": 0.016666666666666666,
-  "winV": 0.03333333333333333,
-  "winH": 0,
-  "lives": 0.11666666666666667,
-  "star3": 0,
-  "min": 3.91750000000132
- },
- {
-  "id": "5-3",
-  "s": "only:barracks",
-  "n": 60,
-  "win": 0,
-  "winV": 0,
-  "winH": 0,
-  "lives": 0,
-  "star3": 0,
-  "min": 0
+  "winH": 1,
+  "lives": 10,
+  "star3": 0.5,
+  "min": 3.709092592593746
  }
 ]

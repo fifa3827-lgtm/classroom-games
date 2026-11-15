@@ -4,7 +4,7 @@ import { ENEMIES, CHAPTER_HP } from '../data/enemies.js';
 
 export const DT = 1 / 60;
 // 웨이브 사이 쉬는 시간 (판 길이 맞춤, M5)
-export const PACE = { clear: 5, left: 8 };
+export const PACE = { clear: 5, left: 8, prep: 20 };   // prep: 첫 웨이브까지 준비 시간(초)
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -65,6 +65,7 @@ export class Game {
     this.level = level;
     this.rand = rng(opt.seed ?? 12345);
     this.mods = opt.mods || {};          // 공구함 강화
+    this.hard = !!opt.hard;               // 어려운 모드(엔딩 뒤): 적 체력 ×1.5, 보스 ×1.4
     this.refGeo = mapGeometry(level.map, 'v');
     this.enemies = []; this.shots = [];
     this.setOrientation(ori);
@@ -75,6 +76,8 @@ export class Game {
     this.waveTime = 0;
     this.betweenT = 0;                    // 다음 웨이브 자동 시작까지 남은 초
     this.started = false;
+    this.prepT = level.prep ?? PACE.prep;   // 첫 웨이브까지 남은 초 (누르지 않아도 저절로 시작)
+    this.prepHold = false;                  // 참이면 준비 시간을 세지 않음(1-1 안내: 첫 탑을 세우기 전)
     this.time = 0;
     this.enemies = []; this.towers = []; this.threads = []; this.shots = [];
     this.spoolsBase = 2 + (this.mods.spools || 0);
@@ -254,6 +257,10 @@ export class Game {
     let extra = 0;
     for (const t of this.towers) if (t.branch === 'b' && t.type === 'bell') extra += 1;
     this.spoolsMax = this.spoolsBase + extra;
+    if (!this.started && !this.result) {
+      if (!this.prepHold) this.prepT -= dt;
+      if (this.prepT <= 0) { this.prepT = 0; this.callWave(); }
+    }
     if (this.started) {
       this.waveTime += dt;
       while (this.spawning.length && this.spawning[0].at <= this.waveTime) this.spawn(this.spawning.shift());
@@ -281,7 +288,11 @@ export class Game {
     }
   }
 
-  hpFor(type) { return ENEMIES[type].hp * Math.pow(CHAPTER_HP, this.level.chapter - 1) * (this.level.hpMul || 1); }
+  hpFor(type) {
+    const D = ENEMIES[type];
+    if (D.boss) return D.hp * (this.hard ? 1.4 : 1);   // 보스는 판 배수와 따로 (마지막 보스가 가장 세게)
+    return D.hp * Math.pow(CHAPTER_HP, this.level.chapter - 1) * (this.level.hpMul || 1) * (this.level.oriMul?.[this.ori] || 1) * (this.hard ? 1.5 : 1);   // oriMul: 세로·가로 길 모양이 달라 난이도가 다른 판
+  }
   spawn(s) {
     const def = ENEMIES[s.type];
     const hp = this.hpFor(s.type);

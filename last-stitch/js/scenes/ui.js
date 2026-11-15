@@ -1,6 +1,32 @@
 // 화면들이 함께 쓰는 것: 요소 만들기, 설정 창, 배경 그림 깔기, 떠다니는 먼지
 import { audio, vibrate } from '../engine/audio.js';
 
+// 전체 화면 (웹킷 접두어 포함). 아이폰 사파리처럼 안 되는 기기에서는 단추를 숨긴다(홈 화면에 추가하면 꽉 참)
+const DE = () => document.documentElement;
+export const fsSupported = () => !!(DE().requestFullscreen || DE().webkitRequestFullscreen) && (document.fullscreenEnabled !== false || document.webkitFullscreenEnabled);
+export const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+export function toggleFs() {
+  try {
+    if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document)?.catch?.(() => {});
+    else (DE().requestFullscreen || DE().webkitRequestFullscreen).call(DE(), { navigationUI: 'hide' })?.catch?.(() => {});
+  } catch {}
+}
+export const FS_ICON = {
+  on: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  off: '<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+// 둥근 전체 화면 단추 html (지원 안 하면 빈 글)
+export const fsButtonHtml = () => fsSupported() ? `<button class="rbtn scr-fs" data-a="fs" aria-label="${isFs() ? '전체 화면 나가기' : '전체 화면'}" aria-pressed="${isFs()}">${isFs() ? FS_ICON.off : FS_ICON.on}</button>` : '';
+// 화면에 있는 전체 화면 단추들의 모양을 지금 상태에 맞춤 (fullscreenchange 때 main.js 가 부름)
+export function syncFsButtons() {
+  const on = isFs();
+  document.querySelectorAll('[data-a=fs]').forEach(b => {
+    if (b.classList.contains('toggle')) b.classList.toggle('on', on);
+    else b.innerHTML = on ? FS_ICON.off : FS_ICON.on;
+    b.setAttribute('aria-pressed', on); if (!b.classList.contains('toggle')) b.setAttribute('aria-label', on ? '전체 화면 나가기' : '전체 화면');
+  });
+}
+
 export const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 // 설정 창: 음악·효과음 크기, 진동, 진행 지우기

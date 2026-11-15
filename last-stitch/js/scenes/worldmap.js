@@ -4,7 +4,7 @@ import { audio } from '../engine/audio.js';
 import { MAPS } from '../data/maps.js';
 import { CHAPTERS, LEVEL_TEXT } from '../data/story.js';
 import { levelUnlocked, playable, thimblesFree } from '../engine/save.js';
-import { el, openSettings, drawCover, vignette, Motes, starsHtml } from './ui.js';
+import { el, openSettings, drawCover, vignette, Motes, starsHtml, fsButtonHtml, toggleFs } from './ui.js';
 
 const ICON = {
   back: '<svg viewBox="0 0 24 24"><path d="M15.5 4.5 8 12l7.5 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -40,14 +40,16 @@ export class MapScene {
   build() {
     const ui = this.ui = this.app.ui();
     ui.innerHTML = '';
-    const root = this.root = el('div', 'scr-map');
+    const root = this.root = el('div', 'scr-map' + (this.app.data.cleared ? ' has-hard' : ''));
     root.innerHTML = `
       <div class="scr-top">
         <button class="rbtn" data-a="back" aria-label="제목으로">${ICON.back}</button>
         <div class="scr-chap"><small></small><span></span></div>
         <button class="chip scr-thimble" data-a="tools" aria-label="장인의 공구함"><img src="assets/ui/icon_thimble.webp" alt=""><span class="v"></span></button>
         <button class="rbtn" data-a="settings" aria-label="설정">${ICON.gear}</button>
+        ${fsButtonHtml()}
       </div>
+      ${this.app.data.cleared ? '<button class="scr-hard" data-a="hard"></button>' : ''}
       <div class="scr-levels"><svg class="scr-thread" aria-hidden="true"></svg></div>
       <button class="scr-arrow l" data-a="prev" aria-label="앞 장">${ICON.back}</button>
       <button class="scr-arrow r" data-a="next" aria-label="다음 장">${ICON.next}</button>
@@ -57,10 +59,18 @@ export class MapScene {
     const on = (a, fn) => { root.querySelector(`[data-a=${a}]`).onclick = () => { if (this.modal) return; audio.play('button'); fn(); }; };
     on('back', () => this.app.go('title', { quick: true }));
     on('tools', () => this.app.go('toolbox', { back: 'map', focus: this.focus }));
-    on('settings', () => { this.closeSheet(); this.modal = openSettings(this.app, () => { this.modal = null; this.root.querySelector('.scr-thimble .v').textContent = thimblesFree(this.app.data); this.layout(); }); });
+    on('settings', () => { this.closeSheet(); this.modal = openSettings(this.app, () => { this.modal = null; this.app.go('map', { focus: this.focus }); }); });
+    if (root.querySelector('[data-a=fs]')) on('fs', () => toggleFs());
     on('prev', () => this.showChapter(this.ch - 1));
     on('next', () => this.showChapter(this.ch + 1));
     root.querySelector('.scr-thimble .v').textContent = thimblesFree(this.app.data);
+    // 어려운 모드(엔딩을 본 뒤): 적 체력 ×1.5
+    const hb = root.querySelector('[data-a=hard]');
+    if (hb) {
+      const show = () => { const on = !!this.app.data.hard; hb.classList.toggle('on', on); hb.innerHTML = on ? '<b>어려운 모드</b> 켜짐' : '어려운 모드 꺼짐'; hb.setAttribute('aria-pressed', on); };
+      hb.onclick = () => { if (this.modal) return; audio.play('button'); this.app.data.hard = !this.app.data.hard; this.app.save(); show(); };
+      show();
+    }
     // 밀어서 장 넘기기
     this.levelsEl.addEventListener('pointerdown', e => { this.swipe = { x: e.clientX, y: e.clientY, id: e.pointerId }; });
     this.onUp = e => {

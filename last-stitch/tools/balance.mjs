@@ -32,7 +32,9 @@ if (!isMainThread) {
   const jobs = [];
   for (const id of levels) {
     const L = getLevel(id);
-    const ss = strats.flatMap(s => s === 'only' ? TOWER_ORDER_ALL.filter(t => t !== 'bell' && (TOWERS[t].ch <= L.chapter)).map(t => 'only:' + t) : [s]);
+    const DMG = ['archer', 'cannon', 'lightning', 'crossbow', 'poison'].filter(t => TOWERS[t].ch <= L.chapter);
+    const pairs = DMG.flatMap((a, i) => DMG.slice(i + 1).map(b => `mix:${a}+${b}`));
+    const ss = strats.flatMap(s => s === 'only' ? TOWER_ORDER_ALL.filter(t => t !== 'bell' && (TOWERS[t].ch <= L.chapter)).map(t => 'only:' + t) : s === 'mix' ? pairs : [s]);
     for (const s of ss) for (let i = 0; i < N; i++) jobs.push({ id, s, ori: i % 2 ? 'h' : 'v', seed: 1000 + i * 7919, hp: hpOver[id] });
   }
   const W = Math.max(1, os.cpus().length - 1);

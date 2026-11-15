@@ -6,7 +6,7 @@ import { audio } from '../engine/audio.js';
 
 const BASE = 'assets/intro/';
 const SEEN_KEY = 'last-stitch-intro-seen';
-const EXT = (() => { try { return new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3'; } catch { return 'mp3'; } })();
+const EXT = 'mp3';   // 소리는 mp3 한 벌(용량 줄이기 M5, 모든 브라우저가 재생)
 const MUSIC_LEN = 60;
 
 // ── 그림 안 자리 (그림 폭·높이에 대한 비율). 그림을 바꾸면 여기만 고친다 ──
@@ -59,7 +59,7 @@ const SFX_PLAN = [
   [46.3, 'in_whoosh', 0.6], [53.85, 'in_title', 1],
 ];
 const EYE_T0 = 33.0;
-const HEART = [0.3, 1.8, 3.2, 3.6, 4.0, 4.4, 4.7, 5.12, 5.8];   // in_heart.ogg 소리 봉우리(초)         // 첫 눈이 켜지는 때(박마다 하나씩)
+const HEART = [0.3, 1.8, 3.2, 3.6, 4.0, 4.4, 4.7, 5.12, 5.8];   // in_heart 소리 봉우리(초)         // 첫 눈이 켜지는 때(박마다 하나씩)
 const THREAD_T = [42.0, 46.6];
 
 const IMG_LIST = ['intro_c1_bg', 'intro_c1_fg', 'intro_c2_bg', 'intro_c2_fg', 'intro_c3_bg', 'intro_c3_bottle', 'intro_c3_bottle_open', 'intro_c3_cork', 'intro_c3_puddle', 'intro_c3_splash', 'intro_c4_bg', 'intro_c4_red',
@@ -186,8 +186,8 @@ export class IntroScene {
     const all = this.titleOnly ? need : IMG_LIST;
     let done = 0;
     const firstP = Promise.all(need.map(n => loadImg(n).then(() => { done++; })));
-    if (!this.titleOnly) all.filter(n => !need.includes(n)).forEach(n => loadImg(n)); // 나머지는 뒤에서
     await Promise.all([firstP, loadSfx(), this.titleOnly ? null : loadMusic(), document.fonts?.load?.('700 40px "Cinzel Deco"').catch(() => {})]);
+    if (!this.titleOnly) all.filter(n => !need.includes(n)).forEach(n => loadImg(n)); // 나머지는 첫 묶음 뒤에(첫 화면까지 받는 양 줄이기)
     if (!this.alive) return;
     for (const n of need) blurOf(n);
     if (this.titleOnly) { this.enterTitle(true); return; }
