@@ -3,6 +3,8 @@ import { TOWERS, towerStats, upgradeCost, MAX_LEVEL, threadCombo, THREAD_RANGE, 
 import { ENEMIES, CHAPTER_HP } from '../data/enemies.js';
 
 export const DT = 1 / 60;
+// 웨이브 사이 쉬는 시간 (판 길이 맞춤, M5)
+export const PACE = { clear: 5, left: 8 };
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -39,16 +41,22 @@ export function mapGeometry(map, ori) {
   const a = M.aspect;
   const W = ori === 'v' ? 1000 : 1000 * a, H = ori === 'v' ? 1000 / a : 1000;
   const paths = M.paths.map(p => buildPath(p.map(([x, y]) => [x * W, y * H])));
+  const pads = M.pads.map(([x, y]) => [x * W, y * H]);
+  // 나는 적의 길: 길을 무시하고 들머리 → 빈자리들의 한가운데 → 성문 (어느 판에서나 탑 위를 지나가게)
+  const mid = pads.length ? [pads.reduce((a, p) => a + p[0], 0) / pads.length, pads.reduce((a, p) => a + p[1], 0) / pads.length] : null;
   return {
     ori, W, H, paths,
-    // 나는 적의 길: 길 들머리에서 끝(성문)까지 곧장
-    fly: paths.map(P => buildPath([P.pts[0], P.pts[P.pts.length - 1]])),
-    pads: M.pads.map(([x, y]) => [x * W, y * H]),
+    fly: paths.map(P => buildPath(mid ? [P.pts[0], mid, P.pts[P.pts.length - 1]] : [P.pts[0], P.pts[P.pts.length - 1]])),
+    pads,
     gate: [M.gate[0] * W, M.gate[1] * H],
   };
 }
 
 const SOLDIER_RESPAWN = 8;
+export const AMP = 1.6;            // 증폭 실(종탑+아무거나): 이은 탑의 피해 배수 (M5에서 봇으로 정함)
+export const THREAD_POWER = 1.25;  // 실 효과 전체 배수 (실을 안 쓰면 후반이 어렵게)
+const GHOST_NEAR = 160;   // 종탑 없이도 천 유령이 보이는 탑과의 거리
+export const SHIP_CRACKS = 2;   // 해적선 병이 깨지는 금 수 (실 밑 지나기·바늘비)
 const BLOCK_R = 46;        // 병사가 적을 붙잡는 거리
 const SOLDIER_SEE = 95;    // 병사가 적을 알아보는 거리(자기 자리에서)
 
@@ -250,8 +258,9 @@ export class Game {
       this.waveTime += dt;
       while (this.spawning.length && this.spawning[0].at <= this.waveTime) this.spawn(this.spawning.shift());
       if (!this.spawning.length && this.wave < this.level.waves.length - 1) {
-        if (this.betweenT <= 0 && this.enemies.length === 0) this.betweenT = 8;
-        else if (this.betweenT <= 0 && this.waveTime > 0) this.betweenT = 14;  // 남은 적이 있어도 14초 뒤 다음 웨이브
+        // 다음 웨이브까지: 다 잡으면 PACE.clear 초, 남은 적이 있어도 PACE.left 초 뒤
+        if (this.betweenT <= 0 && this.enemies.length === 0) this.betweenT = PACE.clear;
+        else if (this.betweenT <= 0 && this.waveTime > 0) this.betweenT = PACE.left;
         this.betweenT -= dt;
         if (this.betweenT <= 0.0001) { this.betweenT = 0; this.callWave(); }
       }
@@ -282,7 +291,7 @@ export class Game {
     const path = def.boss ? 0 : s.path >= 0 ? s.path % npath : auto % npath;
     const e = this.newEnemy(s.type, def, hp, path, -20, def.boss ? 0 : (this.rand() - 0.5) * 34);
     if (def.boss === 'snake') { e.glass = e.glassMax = hp * 0.3; e.flipT = 0; }
-    if (def.boss === 'ship') { e.bottle = 3; e.cracked = new Set(); }
+    if (def.boss === 'ship') { e.bottle = SHIP_CRACKS; e.cracked = new Set(); }
     if (def.boss === 'bear') { e.walkT = 0; }
     this.enemies.push(e);
     this.placeEnemy(e);
@@ -397,7 +406,9 @@ export class Game {
       if (!e.alive) continue;
       const D = e.def;
       if (D.boss) this.bossStep(e, dt);
-      if (D.ghost) e.seen = bells.some(b => { const p = this.padPos(b.pad), r = this.rangeOf(b); return (e.x - p[0]) ** 2 + (e.y - p[1]) ** 2 < r * r; });
+      // 천 유령: 종탑 범위 안이면 보이고, 아니어도 탑 가까이(GHOST_NEAR) 오면 보인다
+      if (D.ghost) e.seen = bells.some(b => { const p = this.padPos(b.pad), r = this.rangeOf(b); return (e.x - p[0]) ** 2 + (e.y - p[1]) ** 2 < r * r; })
+        || this.towers.some(t => { const p = this.padPos(t.pad); return (e.x - p[0]) ** 2 + (e.y - p[1]) ** 2 < GHOST_NEAR * GHOST_NEAR; });
       if (D.burrow && e.d > 0) {
         e.abT += dt;
         const [up, down] = D.burrow, cyc = e.abT % (up + down);
@@ -472,14 +483,19 @@ export class Game {
     if (!e.alive || e.hidden) return 0;
     if (e.bottle > 0) { if (!quiet && this.time - (e.immuneT || -9) > 0.4) { e.immuneT = this.time; this.emit('immune', { enemy: e }); } return 0; }
     let a = amt * e.vuln * (e.meltT > 0 ? 1.3 : 1);
-    if (dtype === 'phys' && e.def.physResist && !(e.meltT > 0)) a *= 1 - e.def.physResist;
+    if (!(e.meltT > 0)) {   // 녹이는 산에 걸리면 저항이 사라짐
+      if (dtype === 'phys' && e.def.physResist) a *= 1 - e.def.physResist;
+      else if (dtype === 'magic' && e.def.magicResist) a *= 1 - e.def.magicResist;
+      else if (dtype === 'blast' && e.def.blastResist) a *= 1 - e.def.blastResist;
+      else if (dtype === 'poison' && e.def.poisonResist) a *= 1 - e.def.poisonResist;
+    }
     let infuse = null;
     if (src) {
       a *= this.echoMul(src) * (1 + (this.mods.dmg?.[src.type] || 0));
       infuse = this.partners(src);
       for (const [o, th] of infuse) {
-        if (TOWERS[o.type].elem === 'pierce' && TOWERS[src.type].elem !== 'pierce') a *= 1.2;
-        if (th.combo.id === 'amp') a *= 1.4;
+        if (TOWERS[o.type].elem === 'pierce' && TOWERS[src.type].elem !== 'pierce') a *= 1.3;
+        if (th.combo.id === 'amp') a *= AMP;
       }
     }
     if (e.glass > 0) {
@@ -501,20 +517,22 @@ export class Game {
     // 골렘: 맞을수록 작은 방울을 흘림
     if (e.def.shed && e.hp > 0) while (e.hp / e.maxHp < e.shedNext) { e.shedNext -= e.def.shed; this.spawnChild(e, 'mini', this.rand()); }
     if (e.hp <= 0) {
-      e.alive = false; this.gold += e.def.reward; this.stats.kills++;
+      e.alive = false; const rw = this.reward(e); this.gold += rw; this.stats.kills++;
       if (!e.def.boss && !e.child) { this.grave.push(e.type); if (this.grave.length > 12) this.grave.shift(); }
       if (e.blocked) this.release(e.blocked);
-      this.emit('kill', { enemy: e, reward: e.def.reward });
+      this.emit('kill', { enemy: e, reward: rw });
       if (e.def.split) for (let i = 0; i < e.def.split; i++) this.spawnChild(e, 'mini', i / Math.max(1, e.def.split - 1));
     }
     return a;
   }
+  // 처치 금화: 장이 뒤로 갈수록 조금씩 많이 (뒤 장은 탑 값·갈래 값이 커서)
+  reward(e) { const k = e.def.elite ? 1 : 1 / (this.level.crowd || 1); return Math.max(1, Math.round(e.def.reward * k * (1 + 0.12 * (this.level.chapter - 1)))); }
   echoMul(t) {
     let m = 1;
-    for (const th of this.threads) if (th.combo.id === 'echo' && (th.a === t || th.b === t)) m *= 1.3 + 0.1 * (this.threadMul(th) - 1);
+    for (const th of this.threads) if (th.combo.id === 'echo' && (th.a === t || th.b === t)) m *= 1.4 + 0.1 * (this.threadMul(th) - 1);
     return m;
   }
-  threadMul(th) { return (1 + 0.3 * ((th.a.level + th.b.level) / 2 - 1)) * (1 + (this.mods.threadPow || 0)); }
+  threadMul(th) { return THREAD_POWER * (1 + 0.3 * ((th.a.level + th.b.level) / 2 - 1)) * (1 + (this.mods.threadPow || 0)); }
 
   threadEffects(dt) {
     for (const th of this.threads) {
@@ -701,7 +719,7 @@ export class Game {
             if (d2 < nd) { nd = d2; nb = e; }
           }
           if (!nb) break;
-          dmg *= 0.85; hit.push(nb); cur = nb;
+          dmg *= 0.75; hit.push(nb); cur = nb;   // 튈 때마다 피해 75%
           pts.push([nb.x, nb.y - nb.def.size * 0.4]);
           this.damage(nb, dmg, 'magic', t);
         }

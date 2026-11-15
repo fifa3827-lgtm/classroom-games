@@ -8,7 +8,7 @@ export const TOWERS = {
     desc: '빠르게 한 발씩 쏩니다.', sfx: 'arrow_shoot', h: 150,
   },
   cannon: {
-    name: '대포탑', elem: 'fire', cost: 110, range: 200, rate: 1.6, dmg: 22, splash: 70, dtype: 'blast', proj: 'ball', ch: 1, ground: true,
+    name: '대포탑', elem: 'fire', cost: 110, range: 200, rate: 1.6, dmg: 18, splash: 70, dtype: 'blast', proj: 'ball', ch: 1, ground: true,
     desc: '넓게 터집니다. 느리지만 무리를 쓸어 냅니다. 나는 적은 못 맞힙니다.', sfx: 'cannon_fire', h: 120,
   },
   ice: {
@@ -16,7 +16,7 @@ export const TOWERS = {
     desc: '맞은 적을 느리게 만듭니다.', sfx: 'ice_shot', h: 140,
   },
   lightning: {
-    name: '번개 구슬', elem: 'shock', cost: 130, range: 210, rate: 1.3, dmg: 16, chain: 3, dtype: 'magic', proj: 'bolt', ch: 1,
+    name: '번개 구슬', elem: 'shock', cost: 130, range: 210, rate: 1.5, dmg: 13, chain: 2, dtype: 'magic', proj: 'bolt', ch: 1,
     desc: '번개가 여러 적에게 튑니다. 갑옷도 통합니다.', sfx: 'lightning_zap', h: 150,
   },
   poison: {
@@ -24,7 +24,7 @@ export const TOWERS = {
     desc: '독을 끼얹어 계속 피해를 줍니다. 갑옷을 무시합니다.', sfx: 'ice_shot', h: 120,
   },
   crossbow: {
-    name: '바늘 석궁', elem: 'pierce', cost: 150, range: 420, rate: 2.4, dmg: 70, pierceN: 2, dtype: 'phys', proj: 'needle', ch: 3,
+    name: '바늘 석궁', elem: 'pierce', cost: 160, range: 420, rate: 2.6, dmg: 48, pierceN: 2, dtype: 'phys', proj: 'needle', ch: 3,
     desc: '아주 멀리 큰 바늘을 쏩니다. 일렬의 적 둘을 꿰뚫습니다.', sfx: 'arrow_shoot', h: 130,
   },
   bell: {
@@ -123,7 +123,7 @@ export function towerStats(type, level, branch) {
 // 실 조합: 두 탑의 속성을 섞은 효과
 export const THREAD_RANGE = 36;   // 실 양쪽 폭
 // 실로 이으면 상대 탑의 속성을 나눠 받는다(맞힌 적에게 섞여 들어감)
-export const SHARE_DESC = { pierce: '피해 +20%', fire: '불붙음', frost: '느려짐', shock: '가끔 멈춤', poison: '독', bind: '가끔 붙잡음', echo: '공격력 +30%' };
+export const SHARE_DESC = { pierce: '피해 +30%', fire: '불붙음', frost: '느려짐', shock: '가끔 멈춤', poison: '독', bind: '가끔 붙잡음', echo: '공격력 +40%' };
 export const THREAD_MAX_LEN = 400;
 const C = (id, name, color, glow, desc) => ({ id, name, color, glow, desc });
 export function threadCombo(e1, e2) {
@@ -131,7 +131,7 @@ export function threadCombo(e1, e2) {
   const any = a => e1 === a || e2 === a;
   if (e1 === e2) return C('echo', '공명 실', '#ffe08a', '#fff3c4', '같은 속성끼리 울려 두 탑의 공격력이 함께 오릅니다.');
   if (any('bind')) return C('snare', '올가미 실', '#d8b98a', '#fff1d6', '실 아래를 지나는 적을 잠깐 붙잡습니다.');
-  if (any('echo')) return C('amp', '증폭 실', '#ffd36a', '#fff8d8', '이은 탑의 공격력이 크게 오르고, 실 아래의 적은 더 아프게 맞습니다.');
+  if (any('echo')) return C('amp', '증폭 실', '#ffd36a', '#fff8d8', '이은 탑의 공격력이 1.6배가 되고, 실 아래의 적은 더 아프게 맞습니다.');
   if (has('poison', 'fire')) return C('smoke', '독연기 실', '#9ccf4a', '#e6ffb8', '실 아래에 넓은 독구름이 피어 지나는 적을 중독시킵니다.');
   if (any('poison')) return C('venom', '독침 실', '#7fd36a', '#dcffd0', '지나는 적이 독에 걸리고, 갑옷이 약해집니다.');
   if (has('fire', 'pierce')) return C('burn', '불화살 실', '#ff8a2a', '#ffd27a', '실 아래를 지나는 적에게 불이 붙습니다.');

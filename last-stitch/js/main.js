@@ -15,6 +15,7 @@ const SFX = ['tower_place', 'tower_upgrade', 'tower_sell', 'thread_pull', 'threa
   'ice_shot', 'lightning_zap', 'hit_paint', 'hit_wood', 'hit_metal', 'enemy_pop', 'life_lost', 'wave_start', 'button', 'coin', 'fire_burn', 'freeze',
   'zap_chain', 'skill_needles', 'skill_rewind', 'star', 'boss_appear', 'whoosh', 'victory', 'defeat'];
 
+const FIRST_SFX = ['button', 'whoosh', 'coin', 'tower_upgrade'];   // 제목·지도·공구함에서 쓰는 소리
 // 주소에 아무것도 없을 때 처음 화면 (자동 검사는 ?level=1-1 로 판을 바로 연다)
 const FIRST_SCREEN = 'intro';
 // 제목·지도·공구함 배경
@@ -40,6 +41,7 @@ const app = {
     if (name === 'level') {
       const L = getLevel(opt.id || LEVELS[0].id);
       if (!L) return this.go('map');
+      await this.loadGame();
       await loadAll(['v', 'h'].map(o => [`map_${L.id}_${o}`, L.map[o].img]));
       if (token !== this.goToken) return;
       this.scene?.destroy();
@@ -75,6 +77,8 @@ const app = {
     document.body.dataset.scene = name;
   },
   startLevel(id) { return this.go('level', { id }); },
+  // 판에서 쓰는 그림·효과음 (한 번만 받음)
+  loadGame() { return (this.gameP ||= Promise.all([loadAll([...TOWER_IMGS, ...CANNON_PARTS, ...ARCHER_PARTS, ...ENEMY_IMGS, ...M2_IMGS]), audio.load(SFX.filter(n => !FIRST_SFX.includes(n)))])); },
   // 판 고르기: 마지막 판 앞에는 장인의 마지막 일기 장면
   enterLevel(id) {
     if (id === LAST_ID && !this.data.seenFinal) return this.go('story', { key: 'before_final', then: 'level', thenOpt: { id }, seen: 'seenFinal' });
@@ -105,11 +109,15 @@ async function boot() {
   audio.setVolume('music', app.settings.music);
   audio.setVolume('sfx', app.settings.sfx);
   app.view.resize();
-  await Promise.all([loadAll([...TOWER_IMGS, ...CANNON_PARTS, ...ARCHER_PARTS, ...ENEMY_IMGS, ...UI_IMGS, ...M2_IMGS]), audio.load(SFX), document.fonts?.load?.('16px Dodum').catch(() => {})]);
+  // 첫 화면(인트로·제목)에 필요한 것만 먼저 받고(3MB 이하), 판 그림·효과음은 뒤에서 받는다
+  await Promise.all([loadAll(UI_IMGS), audio.load(FIRST_SFX), document.fonts?.load?.('16px Dodum').catch(() => {})]);
   const q = new URLSearchParams(location.search);
+  if (q.get('level')) await app.loadGame();
   if (q.get('level')) await app.go('level', { id: q.get('level') });
   else await app.go(q.get('screen') || FIRST_SCREEN, {});
   document.getElementById('boot').classList.add('hide');
+  // 인트로가 첫 묶음을 다 받은 뒤(또는 6초 뒤) 판 그림·효과음을 뒤에서 받기
+  { const t0 = performance.now(); const wait = () => (app.scene?.state && app.scene.state === 'load' && performance.now() - t0 < 6000) ? setTimeout(wait, 300) : app.loadGame(); setTimeout(wait, 300); }
   let last = performance.now();
   const loop = now => {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;

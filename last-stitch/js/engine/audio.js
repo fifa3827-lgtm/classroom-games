@@ -1,7 +1,7 @@
 // 소리 장치: 효과음(AudioBuffer)과 음악(<audio> → 이득 노드). 첫 터치부터 소리가 나도록 여러 입력에서 resume
 const MUTE = /[?&]mute\b/.test(location.search);
-const canOgg = (() => { try { return !!new Audio().canPlayType('audio/ogg; codecs="vorbis"'); } catch { return false; } })();
-const EXT = canOgg ? 'ogg' : 'mp3';
+// 음악·효과음은 mp3 한 벌(모든 브라우저가 재생, 용량 줄이기 M5). LAME 머리말로 반복 이음새를 맞춘다
+const EXT = 'mp3';
 
 class AudioSys {
   constructor() {

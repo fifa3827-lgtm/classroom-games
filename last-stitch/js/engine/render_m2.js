@@ -1,6 +1,7 @@
 // M2 그리기 덧붙임: 새 탑(독·석궁·종·병영)과 4단계 갈래, 적 특수 모습, 손 기술·적 능력 연출, 새 탄.
 // render.js 의 Renderer(R)를 받아 그 위에 그린다. 게임 논리는 읽기만 한다.
 import { IMG } from './assets.js';
+import { SHIP_CRACKS } from './game.js';
 import { TOWERS } from '../data/towers.js';
 
 // 단계 열쇠: 1~3단계는 숫자, 4단계는 '4a'|'4b'
@@ -152,8 +153,8 @@ export function drawBossMarks(R, game, e, top) {
   }
   if (D.boss === 'ship' && e.bottle > 0) {
     // 병에 남은 금(3개): 실 밑을 지날 때마다 하나씩 금이 감
-    for (let i = 0; i < 3; i++) {
-      const x = e.x - 48 + i * 48, y = top - 30, on = i >= e.bottle;
+    for (let i = 0; i < SHIP_CRACKS; i++) {
+      const x = e.x - (SHIP_CRACKS - 1) * 24 + i * 48, y = top - 30, on = i >= e.bottle;
       ctx.fillStyle = 'rgba(30,20,12,.7)'; ctx.beginPath(); ctx.arc(x, y, 21, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = on ? '#fff3c4' : 'rgba(220,240,255,.45)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.stroke();
@@ -289,7 +290,7 @@ export function fxEvent(R, game, ev) {
     case 'hourglass': { const e = ev.enemy; R.sparks(e.x, e.y - 60, '#f6d48a', 24, 220); if (ev.n) R.float(e.x, e.y - e.def.size, '모래시계가 뒤집혔다!', '#f6d48a'); return ['whoosh', 0.7]; }
     case 'glass_break': { const e = ev.enemy; R.sparks(e.x, e.y - 40, '#fff3c4', 30, 260); R.shake(12); R.float(e.x, e.y - e.def.size, '모래시계가 깨졌다!', '#fff3c4'); return ['hit_metal', 1]; }
     case 'immune': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.5, '#e6f6ff', 4, 100); return ['hit_metal', 0.25]; }
-    case 'bottle_crack': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.5, '#e6f6ff', 18, 200); R.shake(6); R.float(e.x, e.y - e.def.size, `병에 금이 갔다! (${3 - ev.left}/3)`, '#e6f6ff'); return ['hit_metal', 0.8]; }
+    case 'bottle_crack': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.5, '#e6f6ff', 18, 200); R.shake(6); R.float(e.x, e.y - e.def.size, `병에 금이 갔다! (${SHIP_CRACKS - ev.left}/${SHIP_CRACKS})`, '#e6f6ff'); return ['hit_metal', 0.8]; }
     case 'bottle_break': { const e = ev.enemy; R.sparks(e.x, e.y - e.def.size * 0.5, '#e6f6ff', 40, 300); R.shake(16); R.float(e.x, e.y - e.def.size, '병이 깨졌다!', '#fff3c4'); return ['cannon_hit', 1]; }
     case 'redline': {
       if (ev.blocked) { const l = ev.line, m = [(l.a[0] + l.b[0]) / 2, (l.a[1] + l.b[1]) / 2]; R.sparks(m[0], m[1], '#ffe08a', 20, 220); R.float(m[0], m[1], '실이 붉은 선을 막았다!', '#ffe08a'); return ['thread_ting', 0.8]; }

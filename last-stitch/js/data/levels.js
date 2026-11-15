@@ -1,6 +1,7 @@
 // 판 자료: 웨이브·금화·대사. 길·빈자리 좌표는 maps.js(그림에서 따낸 좌표)
 import { MAPS } from './maps.js';
 import { LEVEL_TEXT } from './story.js';
+import { ENEMIES } from './enemies.js';
 
 // 어떤 화면비에서도 보여야 하는 구역 (tools/layout.py 의 SAFE 와 같게)
 export const SAFE = { v: [0.14, 0.09, 0.86, 0.91], h: [0.09, 0.17, 0.91, 0.83] };
@@ -22,7 +23,7 @@ function W(str) {
 
 export const LEVELS = [
   {
-    id: '1-1', chapter: 1, name: '숲의 입구', gold: 200, lives: 20, music: 'ch1', hpMul: 1.6,
+    id: '1-1', chapter: 1, name: '숲의 입구', gold: 200, lives: 20, music: 'ch1', hpMul: 0.54,
     waves: [
       W('blob*6/1.3'),
       W('blob*9/1.0'),
@@ -61,91 +62,130 @@ export const LEVELS = [
 
 // ── M3: 1-2 ~ 5-3 ──  적 첫 등장은 기획서 6장, 탑 열림은 towers.js 의 ch
 const M3 = {
-  '1-2': { gold: 220, hpMul: 1.8, waves: [
+  '1-2': { gold: 220, hpMul: 0.67, waves: [
     'blob*8/1.0', 'pawn*5/1.4, blob*5/0.9', 'mouse*6/0.8', 'pawn*6/1.0, +3 mouse*5/0.7', 'knight*2/2.6, blob*10/0.6',
     'blob*12/0.5, +2 pawn*6/1.0', 'knight*3/2.2, +3 mouse*8/0.6', 'pawn*10/0.8, +2 knight*3/2.0', 'mouse*14/0.45, +4 pawn*6/0.9', 'knight*5/1.8, +2 blob*16/0.4, +6 mouse*8/0.5'] },
-  '1-3': { gold: 240, hpMul: 1.55, waves: [
+  '1-3': { gold: 240, hpMul: 0.6, waves: [
     'blob*8/0.9', 'pawn*6/1.1, +2 blob*6/0.8', 'mouse*8/0.6', 'knight*2/2.2, +2 pawn*6/1.0', 'blob*14/0.45, +3 mouse*6/0.6',
     'pawn*8/0.8, +3 knight*3/2.0', 'mouse*12/0.45, +2 blob*12/0.5', 'knight*5/1.6, +4 pawn*8/0.8', 'blob*18/0.35, +3 mouse*10/0.5, +6 knight*3/1.8',
     'pawn*12/0.6, +2 knight*6/1.4, +8 mouse*12/0.4', 'knight*8/1.2, +3 blob*20/0.3, +8 pawn*10/0.6'] },
-  '1-4': { gold: 260, hpMul: 1.9, boss: 'inkbottle', waves: [
+  '1-4': { gold: 260, hpMul: 1.11, boss: 'inkbottle', waves: [
     'blob*10/0.8', 'pawn*8/0.9, +3 mouse*6/0.7', 'knight*3/2.0, +2 blob*12/0.5', 'mouse*14/0.4, +4 pawn*8/0.8', 'knight*5/1.6, +3 pawn*10/0.7',
     'blob*20/0.35, +3 knight*4/1.6, +6 mouse*10/0.5', 'pawn*14/0.6, +4 knight*6/1.4', 'mouse*18/0.35, +3 blob*20/0.3, +8 knight*5/1.4',
     'knight*8/1.2, +4 pawn*14/0.5', 'inkbottle*1/1, +4 blob*16/0.6, +10 pawn*10/0.8'] },
   // 2장: 독 가마솥(2-2부터 ch2라 2-1부터 세움), 갈라지는 방울·종이학·눈사람, 정예 골렘
-  '2-1': { gold: 260, hpMul: 1.4, waves: [
+  '2-1': { gold: 260, hpMul: 0.43, waves: [
     'blob*10/0.8', 'crane*5/1.5', 'pawn*8/0.9, +3 crane*4/1.4', 'splitblob*5/1.4, +3 blob*8/0.7', 'snowman*4/1.8, +3 pawn*8/0.8',
     'crane*8/1.0, +4 mouse*10/0.5', 'splitblob*8/1.0, +3 knight*4/1.6', 'snowman*6/1.4, +3 crane*8/0.9', 'knight*6/1.4, +3 splitblob*8/0.9, +8 crane*6/0.8',
     'mouse*16/0.4, +3 snowman*8/1.1, +8 crane*10/0.6', 'splitblob*12/0.7, +4 knight*8/1.2, +10 crane*10/0.6'] },
-  '2-2': { gold: 280, hpMul: 1.0, waves: [
+  '2-2': { gold: 280, hpMul: 0.56, waves: [
     'pawn*8/0.9', 'splitblob*6/1.2', 'crane*8/1.0, +3 blob*10/0.6', 'knight*4/1.6, +3 snowman*4/1.6', 'splitblob*10/0.8, +3 crane*6/1.0',
     'snowman*8/1.1, +4 mouse*12/0.45', 'golem*1/1, +3 pawn*10/0.7', 'crane*12/0.7, +4 knight*6/1.3', 'splitblob*14/0.6, +4 snowman*8/1.0',
     'golem*2/6, +3 crane*12/0.6, +6 mouse*14/0.4', 'knight*10/1.0, +4 splitblob*14/0.6, +10 crane*12/0.5', 'golem*3/5, +2 snowman*10/0.9, +8 crane*14/0.5'] },
-  '2-3': { gold: 300, hpMul: 1.0, waves: [
+  '2-3': { gold: 300, hpMul: 0.57, waves: [
     'splitblob*8/1.0', 'crane*10/0.9', 'snowman*6/1.3, +3 pawn*10/0.7', 'splitblob*12/0.7, +4 mouse*12/0.45', 'golem*1/1, +3 crane*10/0.8',
     'knight*8/1.1, +3 snowman*6/1.2', 'splitblob*16/0.5, +4 crane*12/0.6', 'golem*2/5, +4 knight*8/1.0', 'snowman*12/0.8, +3 mouse*20/0.35',
     'crane*18/0.45, +4 splitblob*16/0.5', 'golem*3/4, +3 knight*12/0.8, +10 crane*14/0.5', 'splitblob*20/0.4, +3 snowman*14/0.7, +8 golem*2/5'] },
-  '2-4': { gold: 320, hpMul: 1.0, boss: 'bear', waves: [
+  '2-4': { gold: 320, hpMul: 0.42, boss: 'bear', waves: [
     'splitblob*10/0.9', 'crane*10/0.8, +3 snowman*4/1.5', 'golem*1/1, +3 pawn*12/0.6', 'knight*8/1.1, +4 crane*10/0.7', 'snowman*10/1.0, +3 splitblob*12/0.6',
     'golem*2/5, +4 mouse*18/0.4', 'crane*16/0.5, +4 knight*10/0.9', 'splitblob*18/0.45, +4 golem*2/5', 'snowman*14/0.7, +4 crane*16/0.5',
     'bear*1/1, +6 splitblob*14/0.7, +14 snowman*8/1.0'] },
   // 3장: 바늘 석궁, 두더지·가위벌레·치유 주교, 정예 흑성채·태엽 기사
-  '3-1': { gold: 320, hpMul: 0.7, waves: [
+  '3-1': { gold: 320, hpMul: 0.33, waves: [
     'pawn*10/0.8', 'mole*5/1.4', 'knight*6/1.2, +3 mole*5/1.2', 'crane*8/0.9, +3 pawn*10/0.7', 'snowman*6/1.2, +2 knight*8/1.0',
     'mole*10/0.9, +3 crane*8/0.8', 'splitblob*12/0.7, +4 mole*8/0.9', 'golem*1/1, +3 pawn*14/0.6', 'mole*12/0.7, +2 snowman*10/0.9, +6 knight*6/1.0',
     'crane*14/0.6, +4 knight*10/0.9', 'golem*2/6, +3 mole*14/0.6, +8 splitblob*12/0.6', 'golem*2/5, +3 mole*16/0.5, +8 knight*10/0.8'] },
-  '3-2': { gold: 340, hpMul: 0.8, waves: [
+  '3-2': { gold: 340, hpMul: 0.43, waves: [
     'scissorbug*6/1.2', 'mole*8/1.0, +3 pawn*8/0.8', 'scissorbug*6/1.0, +2 knight*8/1.0', 'crane*12/0.7, +3 scissorbug*6/1.0', 'rook*1/1, +3 mole*10/0.8',
     'splitblob*14/0.6, +3 scissorbug*8/0.8', 'rook*1/1, +3 scissorbug*10/0.8', 'mole*16/0.6, +4 knight*10/0.9', 'rook*2/5, +4 snowman*8/0.9, +8 crane*12/0.6',
     'scissorbug*16/0.5, +3 snowman*12/0.8', 'rook*2/5, +3 mole*18/0.5, +10 scissorbug*10/0.6', 'golem*2/5, +3 rook*2/5, +6 scissorbug*18/0.5'] },
-  '3-3': { gold: 360, hpMul: 0.76, waves: [
+  '3-3': { gold: 360, hpMul: 0.53, waves: [
     'bishop*2/3, +1 pawn*12/0.6', 'mole*10/0.9', 'scissorbug*8/1.0, +3 knight*8/1.0', 'rook*1/1, +3 bishop*3/2.5', 'crane*14/0.6, +4 mole*10/0.8',
     'clockknight*1/1, +3 splitblob*16/0.5', 'bishop*5/2, +3 knight*12/0.8', 'scissorbug*16/0.5, +4 rook*2/5', 'mole*20/0.45, +4 clockknight*2/5',
     'golem*2/5, +3 bishop*6/1.6, +8 crane*16/0.5', 'rook*3/4, +3 scissorbug*20/0.4, +10 snowman*12/0.8', 'clockknight*3/4, +3 bishop*6/1.5, +6 mole*20/0.4, +12 golem*2/5'] },
-  '3-4': { gold: 380, hpMul: 0.65, boss: 'snake', waves: [
+  '3-4': { gold: 380, hpMul: 0.39, boss: 'snake', waves: [
     'mole*10/0.9', 'scissorbug*10/0.8, +3 bishop*2/3', 'rook*1/1, +3 knight*10/0.9', 'crane*16/0.5, +4 mole*12/0.7', 'clockknight*2/5, +3 bishop*4/2',
     'splitblob*18/0.45, +4 scissorbug*14/0.6', 'golem*2/5, +4 rook*2/5', 'bishop*6/1.5, +3 mole*20/0.4, +8 clockknight*2/5', 'scissorbug*20/0.4, +4 snowman*14/0.7',
     'snake*1/1, +6 bishop*4/2.5, +12 mole*14/0.7'] },
   // 4장: 종탑·골무 병영, 천 유령·게 기사, 정예 여왕 말. 길 둘(4-2~)
-  '4-1': { gold: 400, hpMul: 0.56, waves: [
+  '4-1': { gold: 400, hpMul: 0.36, waves: [
     'pawn*12/0.7', 'ghost*4/1.5', 'crab*6/1.0, +3 pawn*10/0.7', 'ghost*6/1.2, +3 mole*8/0.9', 'queen*1/1, +2 pawn*14/0.5',
     'crab*10/0.8, +3 scissorbug*8/0.9', 'ghost*10/0.9, +4 bishop*3/2.5', 'rook*2/5, +3 crab*12/0.7', 'queen*1/1, +2 knight*14/0.7, +8 ghost*8/1.0',
     'clockknight*2/5, +3 crab*16/0.55', 'ghost*16/0.6, +4 queen*2/5, +10 splitblob*16/0.5', 'golem*3/4, +3 crab*20/0.45, +8 ghost*12/0.7, +14 queen*1/1'] },
-  '4-2': { gold: 420, hpMul: 0.28, waves: [
+  '4-2': { countMul: 0.7, gold: 600, hpMul: 0.19, waves: [
     'pawn*8/0.8@0, +0 pawn*8/0.8@1', 'crab*6/1.0@0, +2 ghost*5/1.3@1', 'queen*1/1@0, +1 pawn*12/0.6@0, +3 knight*8/1.0@1', 'scissorbug*8/0.9@1, +2 mole*10/0.8@0',
     'ghost*10/0.9, +3 crab*10/0.8', 'rook*1/1@0, +2 bishop*4/2@1, +4 crab*10/0.7@1', 'clockknight*2/5@1, +3 ghost*12/0.7@0', 'queen*2/5, +3 knight*16/0.6',
     'crane*16/0.5, +3 crab*16/0.6', 'golem*2/5@0, +2 rook*2/5@1, +8 ghost*14/0.6', 'queen*2/4, +2 clockknight*2/4, +6 crab*20/0.45, +10 scissorbug*16/0.5',
     'inkgiant*1/1@0, +4 ghost*18/0.5@1, +10 crab*20/0.4'] },
-  '4-3': { gold: 440, hpMul: 0.47, waves: [
+  '4-3': { gold: 620, hpMul: 0.25, waves: [
     'crab*10/0.8', 'ghost*8/1.0, +3 pawn*12/0.6', 'queen*1/1, +2 splitblob*14/0.6', 'scissorbug*10/0.8, +3 crab*10/0.7', 'rook*2/5, +3 ghost*10/0.8',
     'bishop*5/1.8, +3 crab*14/0.6', 'clockknight*2/5, +3 mole*16/0.5', 'queen*2/5, +3 ghost*16/0.55', 'inkgiant*1/1, +4 crab*18/0.5', 'golem*3/4, +3 scissorbug*18/0.45',
     'queen*3/4, +3 ghost*20/0.45, +10 clockknight*2/4', 'inkgiant*2/8, +4 crab*24/0.4, +10 queen*2/4, +16 ghost*16/0.5'] },
-  '4-4': { gold: 460, hpMul: 0.16, boss: 'ship', waves: [
+  '4-4': { gold: 650, hpMul: 0.34, boss: 'ship', waves: [
     'crab*10/0.8', 'ghost*10/0.8, +3 pawn*14/0.5', 'queen*1/1, +2 crab*12/0.6', 'scissorbug*12/0.7, +3 ghost*10/0.8', 'rook*2/5, +3 bishop*4/2',
     'clockknight*2/5, +3 crab*16/0.5', 'inkgiant*1/1, +3 ghost*16/0.55', 'queen*2/5, +3 crab*20/0.45, +8 golem*2/5', 'scissorbug*20/0.4, +4 ghost*20/0.45',
     'ship*1/1, +6 crab*16/0.6, +14 ghost*12/0.7'] },
   // 5장: 모두. 정예 먹물 거인 많음
-  '5-1': { gold: 480, hpMul: 0.5, waves: [
+  '5-1': { gold: 480, hpMul: 0.39, waves: [
     'pawn*14/0.5', 'splitblob*14/0.6, +3 crane*10/0.7', 'mole*12/0.7, +3 scissorbug*8/0.9', 'ghost*12/0.7, +3 crab*10/0.7', 'golem*2/5, +3 bishop*4/2',
     'queen*2/5, +2 knight*16/0.6', 'inkgiant*1/1, +3 scissorbug*14/0.6', 'clockknight*3/4, +3 crane*20/0.4', 'rook*3/4, +3 ghost*18/0.5, +8 snowman*14/0.6',
     'inkgiant*2/6, +4 crab*20/0.45', 'queen*3/4, +3 splitblob*24/0.35, +8 golem*3/4', 'clockknight*4/3, +3 mole*24/0.35, +10 inkgiant*2/6',
     'golem*4/3, +3 queen*3/4, +6 ghost*24/0.35, +12 crab*24/0.4'] },
-  '5-2': { gold: 650, hpMul: 0.18, split: 0.25, waves: [
-    'pawn*10/0.8@0, +2 crane*5/1.2@1', 'splitblob*10/0.8@0, +3 mole*6/1.0@0', 'ghost*6/1.0@0, +2 crab*6/1.0@0, +4 scissorbug*4/1.2@1', 'golem*2/5@0, +2 queen*1/1@1, +3 knight*16/0.6@1',
-    'inkgiant*1/1, +3 crab*18/0.5', 'clockknight*3/4, +3 ghost*18/0.5', 'rook*3/4@0, +2 splitblob*24/0.35@1', 'queen*3/4, +3 crane*24/0.35, +8 mole*20/0.4',
+  '5-2': { gold: 650, hpMul: 0.33, split: 0.25, waves: [
+    'pawn*10/0.8@0, +2 crane*5/1.2@1', 'splitblob*10/0.8@0, +3 mole*6/1.0@0', 'ghost*6/1.0@0, +2 crab*6/1.0@0, +4 scissorbug*4/1.2@0', 'golem*2/5@0, +2 queen*1/1@0, +3 knight*16/0.6@0',
+    'inkgiant*1/1, +3 crab*18/0.5', 'clockknight*3/4, +3 ghost*18/0.5', 'rook*3/4@0, +2 splitblob*24/0.35@0', 'queen*3/4, +3 crane*24/0.35, +8 mole*20/0.4',
     'inkgiant*2/6@0, +4 scissorbug*16/0.5@0, +6 crane*8/0.8@1', 'golem*3/4@0, +3 bishop*4/1.8@0, +8 crab*16/0.5@0', 'queen*2/4@0, +2 clockknight*2/4@0, +6 ghost*16/0.5@0, +10 rook*2/5@0'] },
-  '5-3': { gold: 700, hpMul: 0.25, split: 0.25, boss: 'hand', waves: [
+  '5-3': { gold: 700, hpMul: 0.11, split: 0.25, boss: 'hand', waves: [
     'pawn*10/0.8@0', 'crab*8/0.9@0, +3 crane*5/1.2@1', 'ghost*8/0.9@0, +3 scissorbug*6/1.0@0', 'golem*2/5@0, +3 queen*1/1@0, +4 mole*16/0.5', 'inkgiant*1/1, +3 crane*20/0.4', 'clockknight*3/4, +3 bishop*5/1.8',
     'rook*3/4, +3 crab*22/0.4', 'queen*3/4, +3 ghost*24/0.35, +8 inkgiant*1/1', 'golem*4/3, +3 scissorbug*24/0.35', 'clockknight*4/3, +3 splitblob*28/0.3, +8 queen*2/4',
     'inkgiant*3/5, +4 ghost*28/0.3, +10 crab*24/0.35', 'hand*1/1, +8 golem*3/5, +20 queen*3/5, +30 inkgiant*2/8'] },
 };
 
+// 판 길이 맞춤(M5): 웨이브가 11개(3장부터 10개)를 넘으면 처음 3개·마지막 4개는 두고 가운데를 고르게 덜어 11개로
+function trimWaves(ws, ch) {
+  const MAX_WAVES = ch <= 2 ? 11 : 10;
+  if (ws.length <= MAX_WAVES) return ws;
+  const mid = ws.slice(3, -4), keep = MAX_WAVES - 7;
+  return [...ws.slice(0, 3), ...Array.from({ length: keep }, (_, i) => mid[Math.round(i * (mid.length - 1) / Math.max(1, keep - 1))]), ...ws.slice(-4)];
+}
+// 초반을 가볍게(M5): 웨이브 i/n 의 적 수 × (0.55 → 1.0). 탑이 갖춰지기 전 초반에 몰려 뚫리는 것을 막는다
+function ramp(waves, mul = 1) {
+  const n = waves.length;
+  return waves.map((g, i) => { const f = (0.55 + 0.45 * i / Math.max(1, n - 1)) * mul; return g.map(x => ({ ...x, n: Math.max(1, Math.round(x.n * f)) })); });
+}
+// 하늘 무리(M5): 3장부터 가운데·끝에서 둘째 웨이브에 종이학 무리 → 땅만 치는 탑(대포·독) 하나로는 못 깨게
+function fliers(waves, ch) {
+  if (ch < 3) return waves;
+  const n = waves.length, add = (i, k) => { waves[i] = [...waves[i], { t: 2, type: 'crane', n: k, gap: 0.8, path: -1 }]; };
+  add(Math.floor(n / 2), 3 + ch); add(n - 2, 4 + ch);
+  return waves;
+}
+// 막는 적(M5): 탑 하나로 깨지던 판에 그 탑에 강한 적 무리를 가운데·끝에서 둘째 웨이브에 넣는다 (섞어 써야 깨지게)
+const COUNTERS = {
+  '1-2': [['knight', 3]], '1-3': [['knight', 4]], '1-4': [['knight', 5]], '2-1': [['knight', 4], ['golem', 1]], '3-1': [['knight', 7]],
+  '4-2': [['bishop', 3], ['golem', 2]], '4-3': [['bishop', 4], ['golem', 2]], '5-3': [['ghost', 8], ['crab', 8], ['rook', 1]],
+};
+function counters(waves, id) {
+  const c = COUNTERS[id]; if (!c) return waves;
+  const n = waves.length;
+  for (const i of [Math.floor(n / 2), n - 2]) waves[i] = [...waves[i], ...c.map(([type, k], j) => ({ t: 3 + j * 2, type, n: k, gap: 1.6, path: -1 }))];
+  return waves;
+}
 for (const [id, d] of Object.entries(M3)) {
   const ch = +id[0], T = LEVEL_TEXT[id] || {};
   LEVELS.splice(LEVELS.findIndex(l => l.test), 0, {
     id, chapter: ch, name: T.name || id, gold: d.gold, lives: 20, music: 'ch' + ch, bossMusic: ch <= 2 ? 'boss1' : 'boss2', hpMul: d.hpMul,
-    boss: d.boss || null, split: d.split || 0, waves: d.waves.map(W), talk: (T.talk || []).map(([who, text]) => ({ who, text })),
+    boss: d.boss || null, split: d.split || 0, waves: ramp(counters(fliers(trimWaves(d.waves, ch).map(W), ch), id), d.countMul), talk: (T.talk || []).map(([who, text]) => ({ who, text })),
   });
+}
+
+// 무리 맛(M5, 사용자 「적이 많이 나와야 게임하는 맛」): 졸병은 CROWD 배로 많이, 출발 간격은 그만큼 좁혀 판 길이는 그대로.
+// 한 마리 금화는 game.js reward() 에서 1/CROWD 로 (살림은 그대로), 체력은 hpMul(봇으로 맞춤)로. 정예·보스는 그대로.
+export const CROWD = { '1-1': 1.4, rest: 1.6 };
+for (const L of LEVELS) {
+  if (L.test) continue;
+  const k = L.crowd = CROWD[L.id] || CROWD.rest;
+  L.waves = L.waves.map(w => w.map(g => (ENEMIES[g.type]?.elite ? g : { ...g, n: Math.max(1, Math.round(g.n * k)), gap: g.gap / k })));
 }
 
 export function getLevel(id) {

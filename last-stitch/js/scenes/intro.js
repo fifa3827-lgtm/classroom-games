@@ -34,7 +34,7 @@ const CUT_T = [
   [0, 8.3],      // 1 작업실
   [7.7, 16.3],   // 2 선반 위 왕국들 (8.0 박에 초점 이동으로 넘어감)
   [15.7, 25.0],  // 3 잉크병 (24.0 쓰러짐, 25.0까지 잉크가 다음 컷을 번져 드러냄)
-  [24.35, 32.15],// 4 물감 번짐 (잉크가 화면을 덮으며 넘어감)
+  [24.35, 32.15],// 4 물감 번짐 (쏟아진 잉크가 번진 자리에 드러남)
   [31.85, 40.25],// 5 붉은 눈
   [39.75, 48.6], // 6 바늘과 금빛 실
   [47.8, 1e9],   // 7 제목
@@ -174,6 +174,8 @@ export class IntroScene {
     window.addEventListener('pointerdown', this.onDown);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('click', this.onClick, true);
+    this.onVis = () => { this.lastATReal = this.now(); };   // 숨겼다 돌아오면 소리 장치가 다시 켜질 시간을 줌
+    document.addEventListener('visibilitychange', this.onVis);
     this.resize();
     this.load();
   }
@@ -280,7 +282,15 @@ export class IntroScene {
 
   time(dt) {
     if (this.clock === 'audio') {
-      const ctx = audio.ctx; this.t = ctx.currentTime - this.t0;
+      // 소리 장치 시계를 따라감. 장치가 멈춰 시계가 안 가면(출력 장치 없음 등) 화면 시계로 바꿔 소리 없이 계속
+      const ctx = audio.ctx, at = ctx.currentTime - this.t0, now = this.now();
+      if (this.lastATReal === undefined) this.lastATReal = now;
+      if (at !== this.lastAT) { if (this.lastAT !== undefined) this.atMoved = true; this.lastAT = at; this.lastATReal = now; this.t = at; }
+      // 기다리는 시간: 켜지는 중(suspended) 4초, 아직 한 번도 안 움직임 2초, 가다가 멈춤 0.6초
+      else if (!document.hidden && now - this.lastATReal > (ctx.state !== 'running' ? 4 : this.atMoved ? 0.6 : 2)) {
+        this.stopSounds(); this.clock = 'dt'; this.t = Math.max(this.t, 0) + dt;
+        console.info('인트로: 소리 시계가 멈춰 화면 시계로 바꿈');
+      }
     } else if (this.clock === 'dt') this.t += dt;
     else if (this.clock === 'fast') this.t = T_TITLE + 2.2 + (this.now() - this.clockAt);
     return this.t;
@@ -410,7 +420,7 @@ export class IntroScene {
       ctx.restore();
     }
   }
-  // 잉크가 화면을 덮으며 다음 컷이 드러남
+  // 컷③→④는 inkWipe: 웅덩이에서 번지는 자리에 컷④가 드러남
   // 쏟아진 잉크가 웅덩이에서 고르지 않게 번져 나가며, 그 자리에 컷④(이미 조금 물든 숲 왕국)가 드러남.
   // 덮는 그림이 곧 컷④ 화면이라, 다 덮은 뒤 되돌아가거나 겹쳐 비치는 일이 없음
   inkWipe(ctx, k, t) {
@@ -557,7 +567,7 @@ export class IntroScene {
     cam.z += beat * 0.008;
     const tf = this.bg(ctx, 'intro_c4_bg', cam, 0);
     const red = cache.img.intro_c4_red;
-    const k = 0.32 + 0.68 * seg(t, 24.9, 31.6);       // 잉크가 걷히면 이미 3할쯤 물든 채로 이어서 번짐
+    const k = 0.32 + 0.68 * seg(t, 24.9, 31.6);       // 잉크가 번져 드러날 때 이미 3할쯤 물든 채로 이어서 번짐
     if (red && k > 0) {
       const m = this.mask.getContext('2d'); const MW = this.mask.width, MH = this.mask.height;
       m.clearRect(0, 0, MW, MH); m.fillStyle = '#fff';
@@ -961,6 +971,7 @@ export class IntroScene {
     window.removeEventListener('pointerdown', this.onDown);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('click', this.onClick, true);
+    document.removeEventListener('visibilitychange', this.onVis);
     this.root.remove();
   }
 }

@@ -57,7 +57,7 @@ console.log('탑 특수');
 }
 console.log('적 17종');
 { const g = G(); const e = put(g, 'splitblob', 400); g.damage(e, 1e4, 'magic'); ok(g.enemies.filter(x => x.type === 'mini' && x.alive).length === 2, '갈라지는 방울 → 2'); }
-{ const g = G(); const e = put(g, 'crane', 10); const P = g.geo.fly[0]; ok(P.pts.length === 2, '종이학 곧은 길');
+{ const g = G(); const e = put(g, 'crane', 10); const P = g.geo.fly[0]; ok(P.pts.length === 3, '종이학 길: 들머리→빈자리 한가운데→성문');
   g.build(padNear(g, 300), 'cannon'); run(g, 3); ok(e.hp === e.maxHp, '대포는 종이학 못 맞힘'); }
 { const g = G(); g.build(padNear(g, 500), 'ice'); const e = put(g, 'snowman', 480); e.hp = e.maxHp = 1e5; run(g, 3); ok(e.hp < e.maxHp && e.slow === 0, '눈사람 냉기 무시'); }
 { const g = G(); const e = put(g, 'mole', 300); let hid = false; for (let i = 0; i < 300; i++) { g.step(); if (e.hidden) { hid = true; ok(g.damage(e, 10, 'magic') === 0, '숨은 두더지 안 맞음'); break; } } ok(hid, '두더지 숨음'); }
@@ -71,8 +71,8 @@ console.log('적 17종');
 { const g = G(); const b = put(g, 'bishop', 300), p = put(g, 'pawn', 310); p.hp = 10; run(g, 2.2); ok(p.hp > 10, '치유 주교 회복'); }
 { const g = G(); const e = put(g, 'ghost', 500); e.hp = e.maxHp = 1e5; e.stunT = 99; const pad = padNear(g, 500); g.build(pad, 'archer'); run(g, 2); ok(e.hp === e.maxHp, '종탑 없으면 유령 못 봄');
   g.build(padNear(g, 500, [pad]), 'bell'); run(g, 2); ok(e.hp < e.maxHp, '종탑 있으면 유령 맞음'); }
-{ const g = G(); const e = put(g, 'crab', 300); const h0 = e.hp; g.damage(e, 100, 'phys'); ok(Math.abs(h0 - e.hp - 65) < 0.01, '게 등껍질 물리 35% 막음'); }
-{ const g = G(); const e = put(g, 'golem', 300); g.damage(e, e.maxHp * 0.45, 'magic'); ok(g.enemies.filter(x => x.type === 'mini').length === 2, '골렘 방울 흘림'); }
+{ const g = G(); const e = put(g, 'crab', 300); const h0 = e.hp; g.damage(e, 100, 'phys'); ok(Math.abs(h0 - e.hp - 20) < 0.01, '게 등껍질 물리 80% 막음'); }
+{ const g = G(); const e = put(g, 'golem', 300); g.damage(e, e.maxHp * 0.45, 'poison'); ok(g.enemies.filter(x => x.type === 'mini').length === 2, '골렘 방울 흘림'); }
 { const g = G(); const t = g.build(padNear(g, 400), 'archer'); const e = put(g, 'rook', 400); e.hp = e.maxHp = 1e6; run(g, 4.2); ok(evs(g, 'towerstun').length > 0, '흑성채 탑 멈춤 ' + t.stunT.toFixed(2)); }
 { const g = G(); const q = put(g, 'queen', 300); const p = put(g, 'pawn', 320); g.step(); ok(p.haste > 1.3, '여왕 둘레 빠르게'); }
 { const g = G(); const e = put(g, 'clockknight', 100); e.hp = e.maxHp = 1e6; run(g, 8); ok(e.wind > 1.2, '태엽 기사 빨라짐 ' + e.wind.toFixed(2)); }
