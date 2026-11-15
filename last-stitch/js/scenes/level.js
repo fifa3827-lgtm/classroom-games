@@ -4,7 +4,7 @@ import { Renderer, PAD_R, TOWER_W, towerTopExtent } from '../engine/render.js';
 import { IMG } from '../engine/assets.js';
 import { audio, vibrate } from '../engine/audio.js';
 import { TOWERS, TOWER_ORDER_ALL, towerStats, ELEM_NAME, MAX_LEVEL, threadCombo, SHARE_DESC, BRANCHES, SKILLS } from '../data/towers.js';
-import { fxEvent, iconSrc } from '../engine/render_m2.js';
+import { fxEvent, iconSrc, lvKey } from '../engine/render_m2.js';
 import { recordWin, thimblesFree } from '../engine/save.js';
 import { fsSupported, isFs, toggleFs } from './ui.js';
 import { SAFE } from '../data/levels.js';
@@ -87,7 +87,9 @@ export class LevelScene {
     this.bSpeed.onclick = () => { this.speed = this.speed === 1 ? 2 : 1; this.bSpeed.textContent = this.speed + '×'; this.bSpeed.classList.toggle('on', this.speed === 2); audio.play('button'); };
     this.bPause.onclick = () => { audio.play('button'); this.openPause(); };
     this.bWave.onclick = () => {
-      if (!this.game.canCallWave() || this.talking || this.paused) return;
+      if (!this.game.canCallWave() || this.paused) return;
+      if (this.tut && !this.game.started && !this.game.towers.length) { this.toast('먼저 빈자리를 눌러 탑을 세워 보세요.', 'bot'); return; }
+      if (this.talking) { this.showTalk(1e9); if (this.tut && !this.game.towers.length) return; }
       audio.play('button');
       this.game.callWave();
       this.closeMenu();
@@ -101,7 +103,7 @@ export class LevelScene {
     const set = (k, v, node) => { if (h[k] !== v || force) { h[k] = v; node.querySelector('.v').textContent = v; return true; } };
     set('lives', g.lives, this.cLives);
     set('gold', g.gold, this.cGold);
-    set('wave', `${Math.max(0, g.wave + 1)}/${g.level.waves.length}`, this.cWave);
+    set('wave', `${Math.max(1, g.wave + 1)}/${g.level.waves.length}`, this.cWave);
     for (const k in this.skillBtns) {
       const b = this.skillBtns[k], left = g.skillCd[k], max = g.skillMax?.[k] || 1;
       const key = left > 0 ? Math.ceil(left) : (this.aim === k ? 'aim' : 'ok');
@@ -223,6 +225,19 @@ export class LevelScene {
   }
   // 탑 고르기: 실제로 그린 그림의 불투명한 곳(알파)을 누르면 그 탑. 여럿이면 앞(받침이 아래쪽)에 그려진 탑.
   // 그림이 아직 없으면(첫 장면 전) 받침 둘레로 판정
+  // 병사 그림을 누르면 그 병영 (살아 있는 병사, 발밑에서 위로 몸 높이만큼)
+  soldierAtScreen(sx, sy) {
+    const [wx, wy] = this.view.s2w(sx, sy);
+    let best = null, bd = 1e9;
+    for (const t of this.game.towers) for (const s of t.soldiers || []) {
+      if (s.dead > 0) continue;
+      const cy = s.y - 35;   // 몸 가운데(그림 높이 70)
+      if (Math.abs(wx - s.x) > 30 || wy < s.y - 70 || wy > s.y + 16) continue;
+      const d = Math.hypot(wx - s.x, wy - cy);
+      if (d < bd) { bd = d; best = t; }
+    }
+    return best;
+  }
   towerAtScreen(sx, sy) {
     const g = this.game;
     const [wx, wy] = this.view.s2w(sx, sy);
@@ -327,7 +342,7 @@ export class LevelScene {
     if (P.t) this.openTowerMenu(P.t);
     else if (P.th) this.openThreadMenu(P.th);
     else if (P.pad >= 0) this.openBuildMenu(P.pad);
-    else this.closeMenu();
+    else { const bt = this.soldierAtScreen(P.sx, P.sy); if (bt) this.openTowerMenu(bt); else this.closeMenu(); }
   }
 
   dragTip(D) {
@@ -369,6 +384,7 @@ export class LevelScene {
     m.node.style.left = x + 'px'; m.node.style.top = y + 'px';
     if (m.tip) {
       const ins = this.insets();
+      m.tip.style.maxWidth = this.short() ? '230px' : '';   // 지난번에 좁혀 둔 폭을 풀고 잰다
       const tw = m.tip.offsetWidth || 260, th = m.tip.offsetHeight || 110;
       let tx, ty;
       if (this.short()) {
@@ -381,14 +397,14 @@ export class LevelScene {
         else if (W - busyR - 8 >= tw2) { tx = busyR + 4 + tw2 / 2; ty = y - th2 / 2; }
         else {
           tx = x;
-          if (y - 44 - th - 300 * this.view.s >= ins.t + 4) ty = y - 44 - th;
+          if (y - 44 - th - (m.head ?? 300) * this.view.s >= ins.t + 4) ty = y - (m.head ?? 300) * this.view.s - 8 - th;
           else if (y + 44 + th <= H - ins.b - 4) ty = y + 44;
           else { ty = ins.t + 4; y = Math.min(H - ins.b - 34, ty + th + 40); m.node.style.top = y + 'px'; }
         }
       } else {
         tx = x;
         const ay = this.view.w2s(...m.anchor)[1];
-        const head = ay - 300 * this.view.s;      // 탑(또는 미리보기 탑) 머리
+        const head = ay - (m.head ?? 300) * this.view.s;      // 탑(또는 미리보기 탑) 머리
         const upY = Math.min(y - R - 34, head - 8) - th;
         ty = upY >= ins.t + 4 ? upY : y + R + 50;
         if (upY < ins.t + 4 && ty + th > H - ins.b - 4) {
@@ -399,18 +415,36 @@ export class LevelScene {
       }
       tx = Math.max(tw / 2 + 6, Math.min(W - tw / 2 - 6, tx));
       ty = Math.max(ins.t + 4, Math.min(H - ins.b - th - 4, ty));
-      // 설명 칸이 고리 단추(값 표 포함)를 덮으면, 덮지 않는 자리를 차례로 찾는다: 위·아래 끝, 고리 왼쪽·오른쪽
+      // 설명 칸이 고리 단추(값 표 포함)나 고른 탑을 덮으면, 덮는 넓이가 가장 작은 자리를 찾는다
+      // (고리 단추를 덮는 것은 3배로 나쁘게 친다. 후보는 먼저 고른 자리 → 위·아래 끝 → 고리·탑 양옆)
       {
-        const cy = parseFloat(m.node.style.top), bx = m.opts.map(o => [x + o.dx - 34, cy + o.dy - 34, x + o.dx + 34, cy + o.dy + 46]);
+        const cy = parseFloat(m.node.style.top), bx = m.opts.map(o => [x + o.dx - 40, cy + o.dy - 48, x + o.dx + 40, cy + o.dy + 48]);   // 단추 위 「가·나」 표식과 아래 값 표까지
         const box = [Math.min(...bx.map(b => b[0])), Math.min(...bx.map(b => b[1])), Math.max(...bx.map(b => b[2])), Math.max(...bx.map(b => b[3]))];
-        const hit = (cx, t) => !(cx + tw / 2 < box[0] || cx - tw / 2 > box[2] || t + th < box[1] || t > box[3]);
-        const clampX = v => Math.max(tw / 2 + 6, Math.min(W - tw / 2 - 6, v));
-        if (hit(tx, ty)) {
-          const cands = [[tx, ins.t + 4], [tx, H - ins.b - th - 4], [clampX(box[0] - 8 - tw / 2), ty], [clampX(box[2] + 8 + tw / 2), ty],
-            [clampX(box[0] - 8 - tw / 2), ins.t + 4], [clampX(box[2] + 8 + tw / 2), ins.t + 4], [clampX(box[0] - 8 - tw / 2), H - ins.b - th - 4], [clampX(box[2] + 8 + tw / 2), H - ins.b - th - 4]];
-          const ok = cands.find(([cx, t]) => !hit(cx, t));
-          if (ok) [tx, ty] = ok;
+        const [ax, ay] = this.view.w2s(...m.anchor), sc = this.view.s, hw = (m.hw ?? 100) * sc;
+        const tower = [ax - hw, ay - (m.head ?? 300) * sc, ax + hw, ay];
+        const clampY = (v, h) => Math.max(ins.t + 4, Math.min(H - ins.b - h - 4, v));
+        const search = (w, h, x0, y0) => {
+          const ov = (cx, t, b) => Math.max(0, Math.min(cx + w / 2, b[2]) - Math.max(cx - w / 2, b[0])) * Math.max(0, Math.min(t + h, b[3]) - Math.max(t, b[1]));
+          const score = (cx, t) => ov(cx, t, box) * 3 + ov(cx, t, tower);
+          const clampX = v => Math.max(w / 2 + 6, Math.min(W - w / 2 - 6, v));
+          let best = { x: clampX(x0), y: clampY(y0, h), v: score(clampX(x0), clampY(y0, h)) };
+          if (best.v <= 0) return best;
+          const L = Math.min(box[0], tower[0]), R = Math.max(box[2], tower[2]);
+          const xs = [x0, ax, L - 8 - w / 2, R + 8 + w / 2, box[0] - 8 - w / 2, box[2] + 8 + w / 2].map(clampX);
+          const ys = [y0, ins.t + 4, H - ins.b - h - 4, tower[1] - 8 - h, box[3] + 8, ay - h / 2].map(v => clampY(v, h));
+          for (const cx of xs) for (const t of ys) { const v = score(cx, t); if (v < best.v - 1) best = { x: cx, y: t, v }; }
+          return best;
+        };
+        let best = search(tw, th, tx, ty), mw = '';
+        // 그래도 덮으면 설명 칸을 좁고 길게 바꿔 다시 찾는다 (좁은 휴대폰)
+        for (const w of [220, 190, 170]) {
+          if (best.v <= 0 || w >= tw) continue;
+          m.tip.style.maxWidth = w + 'px';
+          const b2 = search(m.tip.offsetWidth, m.tip.offsetHeight, tx, ty);
+          if (b2.v < best.v - 1) { best = b2; mw = w + 'px'; }
         }
+        m.tip.style.maxWidth = mw || (this.short() ? '230px' : '');
+        tx = best.x; ty = best.y;
       }
       m.tip.style.left = tx + 'px'; m.tip.style.top = ty + 'px'; m.tip.style.bottom = '';
     }
@@ -533,7 +567,7 @@ export class LevelScene {
         sellOpt(sh ? 66 : 0, sh ? 0 : 70),
       ];
     }
-    this.makeMenu(g.padPos(t.pad), opts, opts.length === 3 && sh ? { rx: 112 } : null);
+    this.makeMenu(g.padPos(t.pad), opts, { ...(opts.length === 3 && sh ? { rx: 112 } : {}), head: Math.max(300, towerTopExtent(t.type, lvKey(t)) + 26), hw: t.type === 'cannon' || t.type === 'crossbow' ? 140 : 100 });   // hw: 포신이 돌아 옆으로 나옴   // 키 큰 탑(석궁 3단계 등)은 설명 칸을 그만큼 위로
     this.menu.refresh = () => this.refreshMenu();
     this.r.ui.sel = t;
     const p = g.padPos(t.pad); this.r.ui.range = [p[0], p[1], g.rangeOf(t)]; this.r.ui.rangeOk = true;
@@ -547,11 +581,11 @@ export class LevelScene {
   pickSkill(k) {
     if (this.talking || this.paused || this.game.result) return;
     audio.play('button');
-    if (this.aim === k) { this.aim = null; this.toast('손 기술을 거뒀어요.'); return; }
-    if (!this.game.skillReady(k)) { this.toast(`${SKILLS[k].name}은(는) ${Math.ceil(this.game.skillCd[k])}초 뒤에 다시 쓸 수 있어요.`); return; }
+    if (this.aim === k) { this.aim = null; this.toast('손 기술을 거뒀어요.', 'bot'); return; }
+    if (!this.game.skillReady(k)) { this.toast(`${SKILLS[k].name}은(는) ${Math.ceil(this.game.skillCd[k])}초 뒤에 다시 쓸 수 있어요.`, 'bot'); return; }
     this.closeMenu();
     this.aim = k;
-    this.toast(`${SKILLS[k].name}: 맵에서 쓸 곳을 누르세요. 단추를 다시 누르면 거둬요.`);
+    this.toast(`${SKILLS[k].name}: 맵에서 쓸 곳을 누르세요. 단추를 다시 누르면 거둬요.`, 'bot');
   }
   useAim(sx, sy) {
     const k = this.aim; this.aim = null;
@@ -572,11 +606,12 @@ export class LevelScene {
     this.r.ui.selThread = th;
     this.pickOpt(0);
   }
-  toast(text) {
+  toast(text, where) {
     if (!text) return;
     this.toastEl?.remove();
     const b = el('div', 'toast parch pass', text);
-    b.style.top = Math.max(2, this.hudTop.getBoundingClientRect().top + 2) + 'px';
+    if (where === 'bot') b.style.bottom = Math.max(2, this.view.H - this.hudBot.getBoundingClientRect().top + 6) + 'px';
+    else b.style.top = Math.max(2, this.hudTop.getBoundingClientRect().top + 2) + 'px';
     this.toastEl = b;
     this.ui.append(b);
     this.later(2.7, () => b.remove());
@@ -709,8 +744,15 @@ export class LevelScene {
     const fb = m.querySelector('[data-a=fs]');
     if (fb) fb.onclick = () => { audio.play('button'); toggleFs(); };
     m.querySelector('[data-a=go]').onclick = () => { audio.play('button'); m.remove(); this.paused = false; audio.duck(false); };
-    m.querySelector('[data-a=retry]').onclick = () => { audio.play('button'); this.app.startLevel(this.level.id); };
-    m.querySelector('[data-a=map]').onclick = () => { audio.play('button'); this.app.go('map', { focus: this.level.id }); };
+    // 처음부터·지도로: 한 번 누르면 「정말?」으로 바뀌고, 한 번 더 눌러야 진행(실수로 판을 잃지 않게)
+    const sure = (b, ask, fn) => b.onclick = () => {
+      audio.play('button');
+      if (b.dataset.sure) { if (performance.now() - b.dataset.at > 350) fn(); return; }   // 너무 빨리 두 번 누른 것은 무시
+      m.querySelectorAll('[data-sure]').forEach(o => { delete o.dataset.sure; o.textContent = o.dataset.lab; o.classList.remove('sure'); });
+      b.dataset.lab = b.textContent; b.dataset.sure = '1'; b.dataset.at = performance.now(); b.textContent = ask; b.classList.add('sure');
+    };
+    sure(m.querySelector('[data-a=retry]'), '정말 처음부터?', () => this.app.startLevel(this.level.id));
+    sure(m.querySelector('[data-a=map]'), '정말 지도로?', () => this.app.go('map', { focus: this.level.id }));
   }
   showResult(win) {
     const g = this.game, L = this.level, A = this.app;

@@ -149,9 +149,11 @@ function trimWaves(ws, ch) {
   return [...ws.slice(0, 3), ...Array.from({ length: keep }, (_, i) => mid[Math.round(i * (mid.length - 1) / Math.max(1, keep - 1))]), ...ws.slice(-4)];
 }
 // 초반을 가볍게(M5): 웨이브 i/n 의 적 수 × (0.55 → 1.0). 탑이 갖춰지기 전 초반에 몰려 뚫리는 것을 막는다
+// 전체 난이도(11-15 사용자 「너무 쉬움」 → 약 30% 올림): 보통 적 체력 ×1.2·마릿수 ×1.1, 보스 체력 ×1.3. 시험판은 빼고.
+export const DIFF = { hp: 1.2, n: 1.1, boss: 1.3 };
 function ramp(waves, mul = 1) {
   const n = waves.length;
-  return waves.map((g, i) => { const f = (0.55 + 0.45 * i / Math.max(1, n - 1)) * mul; return g.map(x => ({ ...x, n: Math.max(1, Math.round(x.n * f)) })); });
+  return waves.map((g, i) => { const f = (0.55 + 0.45 * i / Math.max(1, n - 1)) * mul * DIFF.n; return g.map(x => ({ ...x, n: Math.max(1, Math.round(x.n * f)) })); });
 }
 // 하늘 무리(M5): 3장부터 가운데·끝에서 둘째 웨이브에 종이학 무리 → 땅만 치는 탑(대포·독) 하나로는 못 깨게
 function fliers(waves, ch) {
@@ -187,6 +189,16 @@ for (const L of LEVELS) {
   const k = L.crowd = CROWD[L.id] || CROWD.rest;
   L.waves = L.waves.map(w => w.map(g => (ENEMIES[g.type]?.elite ? g : { ...g, n: Math.max(1, Math.round(g.n * k)), gap: g.gap / k })));
 }
+
+// 판마다 더 어렵게(11-15 사용자 「대부분 탑 3~4개로 깸」): 봇이 판마다 가장 좋은 탑 조합 4개로 깨는 비율이
+// 50% 넘던 체력과 25% 아래로 떨어지는 체력의 가운데(tools/tunefew.mjs). 보통 적 체력과 보스 체력에 함께 곱한다. 1-1은 배우는 판이라 덜.
+export const TUNE = { '1-1': 1, '1-2': 2.6, '1-3': 1.7, '1-4': 1.85, '2-1': 2.6, '2-2': 1.22, '2-3': 1.62, '2-4': 2.0, '3-1': 1.22, '3-2': 1.4, '3-3': 1.4,
+  '3-4': 1.62, '4-1': 1.07, '4-2': 1.4, '4-3': 1.4, '4-4': 1, '5-1': 1.07, '5-2': 1.2, '5-3': 1.62 };
+for (const L of LEVELS) if (TUNE[L.id]) { L.hpMul *= TUNE[L.id]; L.bossMul = TUNE[L.id]; }
+// 세로·가로 따로(11-15 검수 「한쪽 화면은 최고 조합도 0%」): 그 화면에서 봇이 가장 잘 고른 조합으로 절반쯤 이기는 배수(tools/tuneori.mjs).
+// 기존 oriMul(3-1 가로 1.5)에 곱한다. 보스 체력에도 들어간다.
+export const ORI_TUNE = { '1-1': { v: 1, h: 0.8 }, '1-2': { v: 1.15, h: 0.6 }, '1-3': { v: 1, h: 0.85 }, '1-4': { v: 0.85, h: 1 }, '2-1': { v: 1.15, h: 0.85 }, '2-2': { v: 0.85, h: 1 }, '2-3': { v: 1, h: 0.72 }, '2-4': { v: 1.15, h: 0.85 }, '3-1': { v: 0.85, h: 1 }, '3-2': { v: 0.85, h: 0.85 }, '3-3': { v: 1, h: 0.85 }, '4-2': { v: 1, h: 0.85 }, '4-3': { v: 0.85, h: 1 }, '4-4': { v: 0.85, h: 1 }, '5-1': { v: 0.72, h: 1 }, '5-3': { v: 1.15, h: 1 } };
+for (const L of LEVELS) { const o = ORI_TUNE[L.id]; if (o) L.oriMul = { v: (L.oriMul?.v || 1) * o.v, h: (L.oriMul?.h || 1) * o.h }; }
 
 export function getLevel(id) {
   const L = LEVELS.find(l => l.id === id);

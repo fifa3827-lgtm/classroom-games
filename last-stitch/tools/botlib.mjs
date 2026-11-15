@@ -5,6 +5,7 @@
 //   nothread  full 에서 실만 안 씀
 //   only:<탑> 그 탑 하나만 (올리기·갈래·실·손 기술은 씀)
 //   mix:<탑>+<탑> 공격 탑 둘을 섞기(+종탑) — 잘 섞는 사람
+//   few:<N>   full 과 같되 탑은 N개까지만 세우고 남는 금화는 올리기·갈래에 (11-15 사용자 「탑 3~4개로 깸」 재기)
 import { Game } from '../js/engine/game.js';
 import { TOWER_ORDER_ALL, TOWERS } from '../js/data/towers.js';
 
@@ -13,8 +14,9 @@ function padScore(g, pad) { const [x, y] = g.padPos(pad); let s = 0; for (const 
 
 export function play(level, strat, seed, ori = 'v', mods) {
   const g = new Game(level, ori, { seed, mods });
-  const S = typeof strat === 'string' ? strat : strat.name;
+  const [S, capS] = (typeof strat === 'string' ? strat : strat.name).split('@');   // 뒤에 @N 을 붙이면 탑 N개까지만 (예: mix:archer+lightning@4)
   const only = S.startsWith('only:') ? S.slice(5) : null;
+  const few = S.startsWith('few:') ? +S.slice(4) : +capS || 0;
   const useThread = S !== 'nothread';
   const useSkill = S !== 'casual';
   const maxLv = S === 'casual' ? 2 : 4;
@@ -32,7 +34,7 @@ export function play(level, strat, seed, ori = 'v', mods) {
   let ti = 0, tick = 0, bells = 0;
   const think = () => {
     const free = pads.filter(p => !g.towerAt(p));
-    if (free.length) {
+    if (free.length && (!few || g.towers.length < few)) {
       let type = types[ti % types.length];
       for (let k = 0; k < types.length && !only && !mix && SUP.includes(type) && g.towers.filter(t => t.type === type).length >= supCap(type); k++) { ti++; type = types[ti % types.length]; }
       // 나는 적이 보이면 하늘을 칠 수 있는 탑부터

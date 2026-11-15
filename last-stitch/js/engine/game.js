@@ -1,6 +1,7 @@
 // 게임 논리 (화면·소리와 분리). 브라우저와 Node(자동 플레이 봇) 둘 다에서 돈다.
 import { TOWERS, towerStats, upgradeCost, MAX_LEVEL, threadCombo, THREAD_RANGE, THREAD_MAX_LEN, BRANCH_CH, SKILLS } from '../data/towers.js';
 import { ENEMIES, CHAPTER_HP } from '../data/enemies.js';
+import { DIFF } from '../data/levels.js';
 
 export const DT = 1 / 60;
 // 웨이브 사이 쉬는 시간 (판 길이 맞춤, M5)
@@ -290,8 +291,9 @@ export class Game {
 
   hpFor(type) {
     const D = ENEMIES[type];
-    if (D.boss) return D.hp * (this.hard ? 1.4 : 1);   // 보스는 판 배수와 따로 (마지막 보스가 가장 세게)
-    return D.hp * Math.pow(CHAPTER_HP, this.level.chapter - 1) * (this.level.hpMul || 1) * (this.level.oriMul?.[this.ori] || 1) * (this.hard ? 1.5 : 1);   // oriMul: 세로·가로 길 모양이 달라 난이도가 다른 판
+    const df = this.level.test ? { hp: 1, boss: 1 } : DIFF;
+    if (D.boss) return D.hp * df.boss * (this.level.bossMul || 1) * (this.level.oriMul?.[this.ori] || 1) * (this.hard ? 1.4 : 1);   // 보스는 판 배수와 따로 (마지막 보스가 가장 세게), bossMul: 판마다 손보기
+    return D.hp * Math.pow(CHAPTER_HP, this.level.chapter - 1) * (this.level.hpMul || 1) * (this.level.oriMul?.[this.ori] || 1) * df.hp * (this.hard ? 1.5 : 1);   // oriMul: 세로·가로 길 모양이 달라 난이도가 다른 판
   }
   spawn(s) {
     const def = ENEMIES[s.type];
@@ -716,7 +718,7 @@ export class Game {
       } else if (s.proj === 'needle') {
         const snipe = s.snipe && best.def.elite ? s.snipe : 1;
         const tx = best.x, ty = best.y - best.def.size * 0.4, l = Math.hypot(tx - ox, ty - oy) || 1;
-        this.shots.push({ k: 'needle', x: ox, y: oy, vx: (tx - ox) / l, vy: (ty - oy) / l, sp: 1500, left: range + 120, dmg: s.dmg * snipe, src: t, dtype: s.dtype,
+        this.shots.push({ k: 'needle', x: ox, y: oy, vx: (tx - ox) / l, vy: (ty - oy) / l, sp: 1500, left: Math.max(range, l) + 120, dmg: s.dmg * snipe, src: t, dtype: s.dtype,   // left: 탑 꼭대기에서 바로 아래 과녁까지가 사거리보다 멀 수 있음
           pierce: s.pierceAll ? 99 : s.pierceN, hit: new Set(), tgt: best, ang: Math.atan2(ty - oy, tx - ox) });
       } else if (s.proj === 'bolt') {
         const hit = [best]; let cur = best, dmg = s.dmg;

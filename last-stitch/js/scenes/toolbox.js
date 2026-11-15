@@ -53,6 +53,7 @@ export class ToolboxScene {
     f.textContent = text; f.classList.remove('pop'); void f.offsetWidth; f.classList.add('pop');
   }
   render() {
+    this.sel = null;
     const d = this.app.data, free = thimblesFree(d);
     this.root.querySelector('.scr-thimble .v').textContent = `${free} / ${thimblesEarned(d)}`;
     this.root.querySelectorAll('[data-t]').forEach(b => { b.classList.toggle('on', b.dataset.t === this.tab); b.setAttribute('aria-selected', b.dataset.t === this.tab); });
@@ -91,6 +92,13 @@ export class ToolboxScene {
     b.onclick = () => {
       if (max) { audio.play('button'); return this.flash(n.desc); }
       if (!open) { audio.play('button'); return this.flash('아직 만나지 않은 탑이에요.'); }
+      // 탑 칸은 이름만 보이니, 처음 누르면 설명을 보여 주고 한 번 더 눌러야 산다
+      if (!big && this.sel !== n.id) {
+        audio.play('button'); this.sel = n.id;
+        this.root.querySelectorAll('.scr-nodebtn.sel').forEach(o => o.classList.remove('sel')); b.classList.add('sel');
+        return this.flash(`${n.desc} — ${c > free ? `골무가 ${c - free}개 모자라요.` : `한 번 더 누르면 골무 ${c}개로 올려요.`}`);
+      }
+      this.sel = null;
       if (!buyNode(d, n)) { audio.play('button', { rate: 0.8 }); b.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 200 }); return this.flash(`골무가 ${c - free}개 모자라요.`); }
       this.app.save(); audio.play('tower_upgrade'); vibrate(15);
       this.flash(`${n.desc}${lv + 1 < n.cost.length ? ` (${lv + 1}/${n.cost.length})` : ''}`);

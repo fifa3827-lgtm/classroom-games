@@ -167,8 +167,36 @@ export class MapScene {
       <p>${stars ? (stars === 3 ? '별 셋을 모두 받았어요. 다른 전략도 시험해 보세요.' : `별 ${stars}개. 생명을 지키면 별을 더 받아요.`) : '아직 지키지 못한 곳이에요.'}</p>
       <div class="btns row2"><button class="btn small ghost" data-a="x">닫기</button><button class="btn" data-a="go">출발</button></div></div>`;
     this.root.append(sh);
+    this.placeSheet(sh, id);
     sh.querySelector('[data-a=go]').onclick = () => { audio.play('button'); this.app.enterLevel(id); };
     sh.querySelector('[data-a=x]').onclick = () => { audio.play('button'); this.closeSheet(); };
+  }
+  // 설명 창 자리: 기본(아래) · 반대쪽 아래 · 위(머리 띠 밑) 가운데 고른 판을 가리지 않고 다른 판도 덜 가리는 곳
+  placeSheet(sh, id) {
+    const nodes = this.nodes.map(n => ({ r: n.getBoundingClientRect(), me: n.querySelector('.nm b').textContent === id }));
+    // 다른 단추(어려운 모드·화살표·뒤로 등)도 덮지 않게: 넓이 비율 ×2
+    const btns = [...this.root.querySelectorAll('button')].filter(b => !sh.contains(b) && !b.closest('.scr-node')).map(b => b.getBoundingClientRect()).filter(q => q.width);
+    const Y = 'sheetInY .3s cubic-bezier(.2,1.3,.4,1)', W = innerWidth, me = nodes.find(n => n.me)?.r;
+    const cands = [{}, { left: 'calc(var(--safe-l) + 10px)', right: 'auto', transform: 'none', animation: Y }, { top: 'calc(var(--safe-t) + 66px)', bottom: 'auto' }, { top: 'calc(var(--safe-t) + 116px)', bottom: 'auto' }];   // 둘째 위 자리: 어려운 모드 단추 밑
+    // 고른 판 오른쪽·왼쪽 빈 곳에 맞춘 폭 (판이 적은 장에서 가운데 판을 덮지 않게)
+    if (me && W - me.right - 16 >= 236) cands.push({ slim: 1, left: 'auto', right: 'calc(var(--safe-r) + 8px)', transform: 'none', animation: Y, width: Math.min(340, W - me.right - 16) + 'px' });
+    if (me && me.left - 16 >= 236) cands.push({ slim: 1, left: 'calc(var(--safe-l) + 8px)', right: 'auto', transform: 'none', animation: Y, width: Math.min(340, me.left - 16) + 'px' });
+    let best = null, bs = 1e9;
+    for (const c of cands) {
+      for (const k of ['left', 'right', 'top', 'bottom', 'transform', 'width']) sh.style[k] = c[k] || '';
+      sh.classList.toggle('slim', !!c.slim);   // 좁은 창: 단추를 줄임
+      sh.style.animation = 'none';   // 떠오르는 움직임 없이 놓일 자리를 잰다
+      const { left: x0, top: y0, right: x1, bottom: y1 } = sh.getBoundingClientRect();
+      let sc = 0;
+      for (const n of nodes) {
+        const q = n.r, ov = Math.max(0, Math.min(q.right, x1) - Math.max(q.left, x0)) * Math.max(0, Math.min(q.bottom, y1) - Math.max(q.top, y0));
+        sc += ov / (q.width * q.height || 1) * (n.me ? 10 : 1);
+      }
+      for (const q of btns) sc += Math.max(0, Math.min(q.right, x1) - Math.max(q.left, x0)) * Math.max(0, Math.min(q.bottom, y1) - Math.max(q.top, y0)) / (q.width * q.height) * 2;
+      if (sc < bs - 0.01) { bs = sc; best = c; }
+    }
+    for (const k of ['left', 'right', 'top', 'bottom', 'transform', 'animation', 'width']) sh.style[k] = best[k] || '';
+    sh.classList.toggle('slim', !!best.slim);
   }
   closeSheet() { this.sheet?.remove(); this.sheet = null; }
   toast(text) {

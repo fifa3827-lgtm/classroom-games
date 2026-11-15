@@ -833,12 +833,13 @@ export class IntroScene {
       ctx.fillStyle = `rgba(240,222,186,${0.92 * sub})`;
       ctx.shadowColor = 'rgba(0,0,0,1)'; ctx.shadowBlur = 12;
       const sp = 'letterSpacing' in ctx;
-      const sy = top + (lines.length - 1) * lh + fs * 0.5 + base + ss * 1.7;
+      // 제목 밑에는 풍차(디오라마)가 바로 와서 겹치므로, 부제를 제목 위 어두운 하늘에 둔다
+      const sy = top + fs * 0.1 - ss * 1.75;
       ctx.save(); ctx.shadowBlur = 0; ctx.translate(W / 2, sy); ctx.scale(1, 0.32);         // 부제 뒤 옅은 어둠(그림 위에서도 읽히게)
       const sb = ctx.createRadialGradient(0, 0, 0, 0, 0, ss * 6); sb.addColorStop(0, `rgba(6,4,3,${0.6 * sub})`); sb.addColorStop(1, 'rgba(6,4,3,0)');
       ctx.fillStyle = sb; ctx.fillRect(-ss * 6, -ss * 6, ss * 12, ss * 12); ctx.restore();
       if (sp) ctx.letterSpacing = `${ss * 0.45}px`;
-      ctx.fillText('마지막 한 땀', W / 2 + (sp ? ss * 0.22 : 0), top + (lines.length - 1) * lh + fs * 0.5 + base + ss * 1.7);
+      ctx.fillText('마지막 한 땀', W / 2 + (sp ? ss * 0.22 : 0), sy);
       if (sp) ctx.letterSpacing = '0px';
       ctx.shadowBlur = 0;
     }

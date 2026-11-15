@@ -102,5 +102,16 @@ console.log('돌리기');
   while (!g.result && n++ < 60 * 60 * 15) { g.step(); g.events.length = 0; }
   ok(!!g.result, '시험판 끝까지 감: ' + g.result + ' 생명 ' + g.lives);
 }
+{ // 석궁 1단계: 탑 바로 아래 사거리 끝의 과녁도 맞힌다(탑 꼭대기에서 재면 사거리보다 멂)
+  const g = G(); let best = null;
+  g.geo.pads.forEach((p, i) => { const P = g.geo.paths[0]; for (let k = 0; k < P.pts.length; k++) { const [x, y] = P.pts[k], dy = y - p[1]; if (Math.abs(x - p[0]) < 40 && dy > 0 && Math.hypot(x - p[0], dy) < 400 && (!best || dy > best.dy)) best = { i, d: P.cum[k], dy }; } });
+  ok(!!best, '석궁 시험 자리 찾음');
+  if (best) {
+    g.build(best.i, 'crossbow');
+    const e = put(g, 'pawn', best.d); e.hp = e.maxHp = 1e6; e.stunT = 99;
+    run(g, 6);
+    ok(e.maxHp - e.hp > 0, `석궁 바로 아래 ${best.dy.toFixed(0)} 떨어진 과녁 맞힘 (피해 ${(e.maxHp - e.hp).toFixed(0)})`);
+  }
+}
 console.log(`\n통과 ${pass} · 실패 ${fail}`);
 process.exit(fail ? 1 : 0);

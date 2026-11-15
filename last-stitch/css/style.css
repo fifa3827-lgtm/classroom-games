@@ -104,6 +104,9 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .tip .in { padding: 0; font-size: 13px; line-height: 1.45; }
 .tip b { font-family: 'Batang', serif; font-size: 15px; color: var(--ink); }
 .tip .st { color: var(--ink-soft); font-size: 12px; margin-top: 2px; }
+/* 좁은 휴대폰(380 폭 이하): 설명 칸을 낮게 해서 탑·고리 단추 위 빈 곳에 들어가게 */
+@media (max-width: 380px) { .tip.parch { border-width: 18px; border-image-width: 18px; padding: 2px 6px; }
+  .tip .in { font-size: 12px; line-height: 1.35; } .tip b { font-size: 14px; } .tip .st { font-size: 11.5px; margin-top: 1px; } }
 
 /* 말풍선 (장인의 일기·제자 혼잣말) */
 .bubble { position: absolute; left: 50%; transform: translateX(-50%); z-index: 8; width: min(360px, calc(100vw - 24px)); pointer-events: auto; transition: opacity .3s, transform .3s; }
@@ -147,6 +150,7 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   font-family: 'Batang', serif; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); text-shadow: 0 1px 0 rgba(255,255,255,.45); }
 .btn:active { transform: scale(.95); }
 .btn.small { width: 160px; height: 46px; font-size: 15px; }
+.btn.sure { color: #7a1606; font-size: 13px; }   /* 글자를 줄여 양쪽 못 장식을 피함 */
 .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 4px; font-size: 15px; color: var(--ink); }
 .row input[type=range] { width: 160px; height: 44px; -webkit-appearance: none; appearance: none; background: transparent; }
 .row input[type=range]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px; background: linear-gradient(#8a5a2b, #5e3a1a); box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
@@ -219,7 +223,10 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .spools.count .v { font-weight: 700; font-size: 16px; color: #fff3da; text-shadow: 0 1px 0 #000; font-variant-numeric: tabular-nums; }
 .chip.hard { border-color: #ff8a6a; box-shadow: 0 0 0 1.5px rgba(255,110,80,.55), 0 2px 6px rgba(0,0,0,.35); }
 .chip.hard .hd { margin-left: 4px; font-size: 11px; font-weight: 700; color: #ffb4a0; }
-@media (max-width: 430px) { .chip.hard .hd { display: none; } }
+/* 좁은 화면: 칩 밑에 작은 꼬리표로 */
+@media (max-width: 430px) { .chip.hard { position: relative; }
+  .chip.hard .hd { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); margin: 0; padding: 0 5px; border-radius: 6px;
+    font-size: 9px; line-height: 13px; white-space: nowrap; color: #ffe6dc; background: #8a2e1c; text-shadow: none; } }
 
 /* 웨이브 단추: 두 줄(웨이브 / 남은 초) */
 .callwave { flex-direction: column; gap: 0; line-height: 1.12; }
