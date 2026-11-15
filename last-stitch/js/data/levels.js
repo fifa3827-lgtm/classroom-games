@@ -150,7 +150,10 @@ function trimWaves(ws, ch) {
 }
 // 초반을 가볍게(M5): 웨이브 i/n 의 적 수 × (0.55 → 1.0). 탑이 갖춰지기 전 초반에 몰려 뚫리는 것을 막는다
 // 전체 난이도(11-15 사용자 「너무 쉬움」 → 약 30% 올림): 보통 적 체력 ×1.2·마릿수 ×1.1, 보스 체력 ×1.3. 시험판은 빼고.
-export const DIFF = { hp: 1.2, n: 1.1, boss: 1.3 };
+// STRENGTH(11-15 밤, 사용자 「1-2부터 못 깸」): 올린 폭을 이 거듭제곱만큼만 씀. 0.5 = 예전(「너무 쉬움」)과 봇으로 맞춘 값의 가운데(곱셈으로).
+export const STRENGTH = 0;   // 0 = 아래 TUNE·ORI_TUNE·DIFF 를 쓰지 않음(기록으로만 남김). 실제 난이도는 맨 아래 FIT
+const P = x => Math.pow(x, STRENGTH);
+export const DIFF = { hp: P(1.2), n: P(1.1), boss: P(1.3) };
 function ramp(waves, mul = 1) {
   const n = waves.length;
   return waves.map((g, i) => { const f = (0.55 + 0.45 * i / Math.max(1, n - 1)) * mul * DIFF.n; return g.map(x => ({ ...x, n: Math.max(1, Math.round(x.n * f)) })); });
@@ -194,11 +197,15 @@ for (const L of LEVELS) {
 // 50% 넘던 체력과 25% 아래로 떨어지는 체력의 가운데(tools/tunefew.mjs). 보통 적 체력과 보스 체력에 함께 곱한다. 1-1은 배우는 판이라 덜.
 export const TUNE = { '1-1': 1, '1-2': 2.6, '1-3': 1.7, '1-4': 1.85, '2-1': 2.6, '2-2': 1.22, '2-3': 1.62, '2-4': 2.0, '3-1': 1.22, '3-2': 1.4, '3-3': 1.4,
   '3-4': 1.62, '4-1': 1.07, '4-2': 1.4, '4-3': 1.4, '4-4': 1, '5-1': 1.07, '5-2': 1.2, '5-3': 1.62 };
-for (const L of LEVELS) if (TUNE[L.id]) { L.hpMul *= TUNE[L.id]; L.bossMul = TUNE[L.id]; }
+for (const L of LEVELS) if (TUNE[L.id]) { L.hpMul *= P(TUNE[L.id]); L.bossMul = P(TUNE[L.id]); }
 // 세로·가로 따로(11-15 검수 「한쪽 화면은 최고 조합도 0%」): 그 화면에서 봇이 가장 잘 고른 조합으로 절반쯤 이기는 배수(tools/tuneori.mjs).
 // 기존 oriMul(3-1 가로 1.5)에 곱한다. 보스 체력에도 들어간다.
 export const ORI_TUNE = { '1-1': { v: 1, h: 0.8 }, '1-2': { v: 1.15, h: 0.6 }, '1-3': { v: 1, h: 0.85 }, '1-4': { v: 0.85, h: 1 }, '2-1': { v: 1.15, h: 0.85 }, '2-2': { v: 0.85, h: 1 }, '2-3': { v: 1, h: 0.72 }, '2-4': { v: 1.15, h: 0.85 }, '3-1': { v: 0.85, h: 1 }, '3-2': { v: 0.85, h: 0.85 }, '3-3': { v: 1, h: 0.85 }, '4-2': { v: 1, h: 0.85 }, '4-3': { v: 0.85, h: 1 }, '4-4': { v: 0.85, h: 1 }, '5-1': { v: 0.72, h: 1 }, '5-3': { v: 1.15, h: 1 } };
-for (const L of LEVELS) { const o = ORI_TUNE[L.id]; if (o) L.oriMul = { v: (L.oriMul?.v || 1) * o.v, h: (L.oriMul?.h || 1) * o.h }; }
+for (const L of LEVELS) { const o = ORI_TUNE[L.id]; if (o) L.oriMul = { v: (L.oriMul?.v || 1) * P(o.v), h: (L.oriMul?.h || 1) * P(o.h) }; }
+// FIT(11-15 밤): 예전(M5) 난이도에 판·화면마다 곱하는 배수. 잘하는 봇(full·탑 4개 full@4 가운데 나은 쪽)이 10판 중 8판 넘게 이기는
+// 가장 큰 배수(tools/tunefit.mjs). 1-1 은 배우는 판이라 1.1. 보통 적·보스 체력 모두(game.js hpFor 의 oriMul).
+export const FIT = { '1-1': { v: 1.1, h: 1.1 }, '1-2': { v: 1.15, h: 1.15 }, '1-3': { v: 1.3, h: 1.15 }, '1-4': { v: 1.75, h: 1 }, '2-1': { v: 1.3, h: 1.3 }, '2-2': { v: 1.15, h: 1.15 }, '2-3': { v: 1.3, h: 1 }, '2-4': { v: 1, h: 1.75 }, '3-1': { v: 1, h: 1.15 }, '3-4': { v: 1.3, h: 1.5 }, '4-1': { v: 1.3, h: 1.15 }, '4-2': { v: 1.5, h: 1.3 }, '4-3': { v: 1.15, h: 1.75 }, '4-4': { v: 1, h: 1.15 }, '5-1': { v: 1, h: 1.15 }, '5-2': { v: 1.5, h: 1.5 }, '5-3': { v: 1.75, h: 1.75 } };
+for (const L of LEVELS) { const o = FIT[L.id]; if (o) L.oriMul = { v: (L.oriMul?.v || 1) * o.v, h: (L.oriMul?.h || 1) * o.h }; }
 
 export function getLevel(id) {
   const L = LEVELS.find(l => l.id === id);
